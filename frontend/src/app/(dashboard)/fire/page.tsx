@@ -433,8 +433,11 @@ export default function FIREPage() {
                           padding: '16px 24px',
                           boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
                         }}
-                        itemStyle={{ color: '#fff', fontWeight: '900', fontSize: '12px', textTransform: 'uppercase' }}
-                        formatter={(value: number) => [formatCurrency(value), t.dashboard.fire.wealth]}
+                        itemStyle={{ color: '#fff', fontWeight: '900', fontSize: '12px' }}
+                        formatter={(value: number | undefined) => {
+                          if (value === undefined) return ['', ''];
+                          return [formatCurrency(value), t.dashboard.fire.wealth];
+                        }}
                         labelFormatter={(label) => `${t.dashboard.fire.age} ${label} ${t.dashboard.fire.yearsOld}`}
                       />
                       <Area 

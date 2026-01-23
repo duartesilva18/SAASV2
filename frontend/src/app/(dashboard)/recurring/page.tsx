@@ -30,7 +30,8 @@ interface RecurringTransaction {
 }
 
 export default function RecurringPage() {
-  const { t, formatCurrency, currency } = useTranslation();
+  const { t: tRaw, formatCurrency, currency } = useTranslation();
+  const t = tRaw as any;
   const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -179,8 +180,8 @@ export default function RecurringPage() {
 
   // Receitas: amount_cents deve ser positivo, usar valor absoluto para segurança
   // Despesas: amount_cents pode ser negativo, usar valor absoluto
-  const totalIncomes = recurringIncomes.reduce((acc, curr) => acc + Math.abs(curr.amount_cents), 0);
-  const totalExpenses = recurringExpenses.reduce((acc, curr) => acc + Math.abs(curr.amount_cents), 0);
+  const totalIncomes = recurringIncomes.reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0);
+  const totalExpenses = recurringExpenses.reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0);
   const netZen = totalIncomes - totalExpenses;
 
   const now = new Date();
@@ -189,7 +190,7 @@ export default function RecurringPage() {
 
   // Filter for the list based on active tab
   const currentList = activeTab === 'expense' ? recurringExpenses : recurringIncomes;
-  const sortedByDay = [...currentList].sort((a, b) => a.day_of_month - b.day_of_month);
+  const sortedByDay = [...currentList].sort((a: any, b: any) => a.day_of_month - b.day_of_month);
 
   const pendingItems = recurringExpenses.filter(r => {
     const alreadyPaid = transactions.some(t => 
@@ -201,10 +202,10 @@ export default function RecurringPage() {
   });
 
   const weeklyPressure = [
-    { name: 'Sem 1', value: currentList.filter(r => r.day_of_month <= 7).reduce((acc, curr) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 2', value: currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc, curr) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 3', value: currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc, curr) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 4', value: currentList.filter(r => r.day_of_month > 21).reduce((acc, curr) => acc + curr.amount_cents / 100, 0) },
+    { name: 'Sem 1', value: currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
+    { name: 'Sem 2', value: currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
+    { name: 'Sem 3', value: currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
+    { name: 'Sem 4', value: currentList.filter(r => r.day_of_month > 21).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
   ];
 
   const filteredRecurring = currentList.filter(item => {
@@ -367,7 +368,7 @@ export default function RecurringPage() {
         <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-8">Fluxo de Pressão</h2>
         <div className="h-[200px] mb-12">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklyPressure}>
+            <BarChart data={weeklyPressure as any}>
               <Bar dataKey="value" fill="#3b82f6" radius={[10, 10, 10, 10]} barSize={60} />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569', fontSize:10}} />
             </BarChart>

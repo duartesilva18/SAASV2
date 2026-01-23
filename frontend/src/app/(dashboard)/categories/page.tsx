@@ -323,7 +323,7 @@ export default function CategoriesPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsPie>
                       <Pie
-                        data={stats}
+                        data={stats as any}
                         dataKey="total_spent_cents"
                         nameKey="name"
                         cx="50%"
@@ -340,7 +340,10 @@ export default function CategoriesPage() {
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                         itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                        formatter={(value: number) => formatCurrency(value / 100)}
+                        formatter={(value: number | undefined) => {
+                          if (value === undefined) return '';
+                          return formatCurrency(value / 100);
+                        }}
                       />
                     </RechartsPie>
                   </ResponsiveContainer>
@@ -612,7 +615,7 @@ export default function CategoriesPage() {
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
               className="relative w-full max-w-xl bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[48px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
             >
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
@@ -687,13 +690,13 @@ export default function CategoriesPage() {
                           <button
                             key={nature.id}
                             type="button"
-                            disabled={editingCategory && (editingCategory.vault_type !== 'none')}
+                            disabled={editingCategory ? (editingCategory.vault_type !== 'none') : false}
                             onClick={() => setFormData({ ...formData, nature: nature.id as any })}
                             className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all cursor-pointer ${
                               formData.nature === nature.id 
                                 ? 'bg-slate-950 border-blue-500/50 shadow-lg shadow-blue-500/10' 
                                 : 'bg-slate-950/30 border-white/5 hover:border-white/10 opacity-60 hover:opacity-100'
-                            } ${editingCategory && (editingCategory.vault_type !== 'none') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${editingCategory ? (editingCategory.vault_type !== 'none' ? 'opacity-50 cursor-not-allowed' : '') : ''}`}
                           >
                             <nature.icon size={16} className={nature.color} />
                             <span className={`text-[10px] font-black uppercase tracking-widest ${formData.nature === nature.id ? 'text-white' : 'text-slate-500'}`}>

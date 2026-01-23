@@ -290,7 +290,7 @@ export default function AnalyticsPage() {
     // Filter and Sort for Recent Transactions
     // Ordenar por created_at (quando foi criada) em vez de transaction_date para incluir transações do Telegram
     const recentTransactions = [...rawData.transactions]
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         // Usar created_at se disponível, senão usar transaction_date
         const dateA = new Date(a.created_at || a.transaction_date).getTime();
         const dateB = new Date(b.created_at || b.transaction_date).getTime();
@@ -316,7 +316,10 @@ export default function AnalyticsPage() {
         amount_cents: t.amount_cents,
         transaction_date: t.transaction_date,
         type: 'manual',
-        id: t.id
+        id: t.id,
+        process_automatically: false,
+        canConfirm: false,
+        alreadyPaid: false
       }));
 
     const upcomingFromRecurring = (rawData.recurring || []).map(r => {
@@ -383,7 +386,7 @@ export default function AnalyticsPage() {
       }));
 
     // Process all transactions for Evolution (Historical)
-    const sortedAll = [...rawData.transactions].sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
+    const sortedAll = [...rawData.transactions].sort((a: any, b: any) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
     sortedAll.forEach((t: any) => {
       const cat = rawData.categories.find((c: any) => c.id === t.category_id);
       const amount = t.amount_cents / 100;
@@ -760,7 +763,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={processedData.distribution}
+                  data={processedData.distribution as any}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -775,9 +778,12 @@ export default function AnalyticsPage() {
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number | undefined) => {
+                    if (value === undefined) return '';
+                    return formatCurrency(value);
+                  }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -833,7 +839,10 @@ export default function AnalyticsPage() {
                   cursor={{ fill: 'rgba(59, 130, 246, 0.03)' }}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number | undefined) => {
+                    if (value === undefined) return '';
+                    return formatCurrency(value);
+                  }}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={30}>
                   {processedData.weekly.map((entry: any, index: number) => (
@@ -949,7 +958,10 @@ export default function AnalyticsPage() {
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number | undefined) => {
+                    if (value === undefined) return '';
+                    return formatCurrency(value);
+                  }}
                 />
                 <Line 
                   type="monotone" 

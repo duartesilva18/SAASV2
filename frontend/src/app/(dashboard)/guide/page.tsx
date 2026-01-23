@@ -12,7 +12,7 @@ import {
 
 export default function GuidePage() {
   const { t } = useTranslation();
-  const guide = t.dashboard.guide;
+  const guide = t.dashboard.guide as any;
 
   const sectionRoutes = [
     'https://t.me/FinanZenApp_bot', // Telegram bot
@@ -48,7 +48,7 @@ export default function GuidePage() {
 
   const itemAnim = {
     hidden: { opacity: 0, y: 30 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring', damping: 20 } }
+    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, damping: 20 } }
   };
 
   return (
@@ -60,7 +60,7 @@ export default function GuidePage() {
           animate={{ opacity: 1, scale: 1 }}
           className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest"
         >
-          <HelpCircle size={14} /> {guide.learningCenter}
+          <HelpCircle size={14} /> {guide.title || 'Learning Center'}
         </motion.div>
         
         <motion.h1 

@@ -28,11 +28,13 @@ interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  vault_type: string;
   color_hex: string;
 }
 
 function TransactionsPageContent() {
-  const { t, formatCurrency, currency } = useTranslation();
+  const { t: tRaw, formatCurrency, currency } = useTranslation();
+  const t = tRaw as any;
   const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -142,7 +144,7 @@ function TransactionsPageContent() {
         const cat = categories.find(c => c.id === t.category_id);
         return cat?.type === 'income' && cat?.vault_type === 'none'; // Excluir vault
       })
-      .reduce((acc, curr) => acc + curr.amount_cents, 0) / 100; // Já é positivo
+      .reduce((acc: number, curr: any) => acc + curr.amount_cents, 0) / 100; // Já é positivo
     
     // Despesas são negativas, converter para positivo
     const expenses = transactions
@@ -150,7 +152,7 @@ function TransactionsPageContent() {
         const cat = categories.find(c => c.id === t.category_id);
         return cat?.type === 'expense' && cat?.vault_type === 'none'; // Excluir vault
       })
-      .reduce((acc, curr) => acc + curr.amount_cents, 0) / -100; // Converte negativo para positivo
+      .reduce((acc: number, curr: any) => acc + curr.amount_cents, 0) / -100; // Converte negativo para positivo
     
     return { income, expenses, balance: income - expenses };
   }, [transactions, categories]);
@@ -227,7 +229,7 @@ function TransactionsPageContent() {
         });
         
         // Calcular saldo: depósitos (positivos) aumentam, resgates (negativos) diminuem
-        const vaultBalance = vaultTransactions.reduce((balance, t) => {
+        const vaultBalance = vaultTransactions.reduce((balance: number, t: any) => {
           if (t.amount_cents > 0) {
             return balance + t.amount_cents; // Depósito (já é positivo)
           } else {
@@ -498,28 +500,28 @@ function TransactionsPageContent() {
             </thead>
             <tbody className="divide-y divide-slate-800/30">
               <AnimatePresence mode="popLayout">
-                {paginatedTransactions.map((t, index) => {
-                  const cat = categories.find(c => c.id === t.category_id);
+                {paginatedTransactions.map((transaction, index) => {
+                  const cat = categories.find(c => c.id === transaction.category_id);
                   return (
                     <motion.tr 
-                      key={t.id}
+                      key={transaction.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ delay: index * 0.05 }}
-                      onClick={() => setSelectedTransaction(t)}
+                      onClick={() => setSelectedTransaction(transaction)}
                       className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
                       <td className="px-8 py-6">
                         <div className="flex flex-col">
-                          <span className="text-xs font-black text-white">{new Date(t.transaction_date).getDate()}</span>
+                          <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
                           <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
-                            {new Date(t.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(t.transaction_date).getFullYear()}
+                            {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
                           </span>
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{t.description}</p>
+                        <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-3">
@@ -529,7 +531,7 @@ function TransactionsPageContent() {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <span className={`text-sm font-black ${cat?.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
-                          {cat?.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(t.amount_cents) / 100)}
+                          {cat?.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
                         </span>
                       </td>
                     </motion.tr>

@@ -18,7 +18,7 @@ import {
   Phone
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
-import { LanguageCode } from '@/lib/languages';
+import { LanguageCode, LanguageConfig } from '@/lib/languages';
 
 // Componente animado para a palavra Telegram
 function AnimatedTelegram() {
@@ -301,10 +301,11 @@ export default function LandingPage() {
               </span>
             </motion.button>
 
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {showLanguageMenu && (
                 <>
                   <motion.div
+                    key="language-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -312,33 +313,36 @@ export default function LandingPage() {
                     onClick={() => setShowLanguageMenu(false)}
                   />
                   <motion.div
+                    key="language-menu"
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     className="absolute right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 min-w-[180px]"
                   >
-                    {Object.values(availableLanguages).map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => {
-                          setLanguage(lang.code as LanguageCode);
-                          setShowLanguageMenu(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer ${
-                          language === lang.code ? 'bg-blue-500/10 text-blue-400' : 'text-slate-300'
-                        }`}
-                      >
-                        <span className="text-lg">{lang.flag}</span>
-                        <div className="flex-1">
-                          <div className="text-sm font-bold">{lang.nativeName}</div>
-                          <div className="text-xs text-slate-500">{lang.name}</div>
-                        </div>
-                        {language === lang.code && (
-                          <CheckCircle2 size={16} className="text-blue-400" />
-                        )}
-                      </button>
-                    ))}
+                    {Object.values(availableLanguages)
+                      .filter((lang): lang is LanguageConfig => lang !== null && lang !== undefined && lang.code !== undefined)
+                      .map((lang) => (
+                        <button
+                          key={`lang-${lang.code}`}
+                          onClick={() => {
+                            setLanguage(lang.code as LanguageCode);
+                            setShowLanguageMenu(false);
+                          }}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer ${
+                            language === lang.code ? 'bg-blue-500/10 text-blue-400' : 'text-slate-300'
+                          }`}
+                        >
+                          <span className="text-lg">{lang.flag}</span>
+                          <div className="flex-1">
+                            <div className="text-sm font-bold">{lang.nativeName}</div>
+                            <div className="text-xs text-slate-500">{lang.name}</div>
+                          </div>
+                          {language === lang.code && (
+                            <CheckCircle2 size={16} className="text-blue-400" />
+                          )}
+                        </button>
+                      ))}
                   </motion.div>
                 </>
               )}
@@ -388,17 +392,7 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl mx-auto relative"
         >
-          {t.hero.title1.split('').map((char, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.02 }}
-              className="inline-block"
-            >
-              {char}
-            </motion.span>
-          ))}
+          {t.hero.title1}
           <motion.span 
             className="text-blue-500 italic block md:inline"
             animate={{
@@ -412,17 +406,7 @@ export default function LandingPage() {
           >
             {' '}{t.hero.titleAccent}
           </motion.span>
-          {t.hero.title2.split('').map((char, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (t.hero.title1.length + t.hero.titleAccent.length + i) * 0.02 }}
-              className="inline-block"
-            >
-              {char}
-            </motion.span>
-          ))}
+          {t.hero.title2}
         </motion.h1>
 
         <motion.div 
@@ -432,11 +416,11 @@ export default function LandingPage() {
           className="text-slate-400 text-lg md:text-xl font-medium max-w-2xl mx-auto italic mb-12"
         >
           {t.hero.description.split('Telegram').map((part, index, array) => {
-            if (index === array.length - 1) return <span key={index}>{part}</span>;
+            if (index === array.length - 1) return <span key={`desc-part-${index}`}>{part}</span>;
             return (
-              <React.Fragment key={index}>
+              <React.Fragment key={`desc-fragment-${index}`}>
                 <span>{part}</span>
-                <AnimatedTelegram />
+                <AnimatedTelegram key={`telegram-${index}`} />
               </React.Fragment>
             );
           })}

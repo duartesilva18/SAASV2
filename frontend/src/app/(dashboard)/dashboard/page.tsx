@@ -717,8 +717,11 @@ export default function DashboardPage() {
                   boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                   padding: '16px 24px'
                 }}
-                itemStyle={{ color: '#fff', fontWeight: '900', fontSize: '12px', textTransform: 'uppercase' }}
-                formatter={(value: number) => [formatCurrency(value), t.dashboard.page.chartSpent]}
+                itemStyle={{ color: '#fff', fontWeight: '900', fontSize: '12px' }}
+                formatter={(value: number | undefined) => {
+                  if (value === undefined) return ['', ''];
+                  return [formatCurrency(value), t.dashboard.page.chartSpent];
+                }}
                 labelFormatter={(label) => `${t.dashboard.page.chartDay} ${label}`}
               />
               {/* ReferenceLine ANTES do Area para garantir que está visível */}
@@ -729,14 +732,12 @@ export default function DashboardPage() {
                   strokeDasharray="5 5" 
                   strokeOpacity={0.9}
                   strokeWidth={2}
-                  isFront={true}
                   label={{ 
-                    position: 'topRight', 
+                    position: 'insideTopRight' as any, 
                     value: `${t.dashboard.page.chartLimit}: ${formatCurrency(stats.dailyAllowance)}`, 
                     fill: '#ef4444', 
                     fontSize: 9, 
                     fontWeight: '900',
-                    textTransform: 'uppercase',
                     offset: 10
                   }} 
                 />
@@ -796,7 +797,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, scale: 0.8, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 40 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
               className="relative w-full max-w-2xl bg-[#020617] border border-amber-500/20 rounded-[64px] p-12 md:p-16 shadow-[0_0_150px_-20px_rgba(245,158,11,0.4)] overflow-hidden text-center z-10"
             >
               <button 

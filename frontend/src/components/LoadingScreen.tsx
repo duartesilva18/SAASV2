@@ -93,7 +93,7 @@ export default function LoadingScreen() {
               transition={{ delay: 0.3 }}
               className="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4"
             >
-              {currentQuote.title.split(' ').map((word, i) => (
+              {currentQuote.title.split(' ').map((word: string, i: number) => (
                 <span
                   key={i}
                   className={i % 2 === 1 ? `text-transparent bg-clip-text bg-gradient-to-r ${currentQuote.color} italic` : ''}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +8,7 @@ import { Sparkles, ArrowRight, Lock, AlertCircle, ChevronLeft, CheckCircle2, Eye
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -181,5 +181,13 @@ export default function ResetPasswordPage() {
         </motion.div>
       </motion.div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

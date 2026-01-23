@@ -1,9 +1,9 @@
 // Tipos de idiomas e moedas suportados
-export type LanguageCode = 'pt' | 'en' | 'es';
+export type LanguageCode = 'pt' | 'en';
 export type CurrencyCode = 'EUR' | 'USD' | 'BRL' | 'GBP';
 
 // Idiomas suportados
-export const SUPPORTED_LANGUAGES: LanguageCode[] = ['pt', 'en', 'es'];
+export const SUPPORTED_LANGUAGES: LanguageCode[] = ['pt', 'en'];
 
 // Moedas suportadas
 export const SUPPORTED_CURRENCIES: CurrencyCode[] = ['EUR', 'USD', 'BRL', 'GBP'];
@@ -15,6 +15,8 @@ export const DEFAULT_LANGUAGE: LanguageCode = 'pt';
 export interface LanguageConfig {
   code: LanguageCode;
   name: string;
+  nativeName: string;
+  flag: string;
   locale: string;
   currency: CurrencyCode;
 }
@@ -23,20 +25,18 @@ export const LANGUAGE_CONFIGS: Record<LanguageCode, LanguageConfig> = {
   pt: {
     code: 'pt',
     name: 'Português',
+    nativeName: 'Português',
+    flag: '🇵🇹',
     locale: 'pt-PT',
     currency: 'EUR',
   },
   en: {
     code: 'en',
     name: 'English',
+    nativeName: 'English',
+    flag: '🇬🇧',
     locale: 'en-US',
     currency: 'USD',
-  },
-  es: {
-    code: 'es',
-    name: 'Español',
-    locale: 'es-ES',
-    currency: 'EUR',
   },
 };
 
@@ -49,11 +49,11 @@ export function getBrowserLanguage(): LanguageCode {
   const browserLang = navigator.language || (navigator as any).userLanguage;
   
   // Extrair código de idioma (ex: 'pt-PT' -> 'pt')
-  const langCode = browserLang.split('-')[0].toLowerCase() as LanguageCode;
+  const langCode = browserLang.split('-')[0].toLowerCase();
   
-  // Verificar se é suportado
-  if (isLanguageSupported(langCode)) {
-    return langCode;
+  // Verificar se é suportado (apenas pt ou en)
+  if (langCode === 'pt' || langCode === 'en') {
+    return langCode as LanguageCode;
   }
   
   // Fallback para idioma padrão

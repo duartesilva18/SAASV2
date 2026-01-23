@@ -596,7 +596,7 @@ export default function Sidebar({
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              transition={{ type: 'spring' as const, damping: 25, stiffness: 200 }}
               className="fixed left-0 top-0 h-screen w-72 bg-[#020617] border-r border-slate-800 z-[70] flex flex-col lg:hidden shadow-2xl"
             >
               {sidebarContent}

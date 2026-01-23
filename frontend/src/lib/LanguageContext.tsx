@@ -11,6 +11,8 @@ import {
   getBrowserLanguage,
   isLanguageSupported,
   getLanguageConfig,
+  LANGUAGE_CONFIGS,
+  LanguageConfig,
 } from './languages';
 
 interface LanguageContextType {
@@ -20,7 +22,7 @@ interface LanguageContextType {
   setCurrency: (curr: CurrencyCode) => void;
   t: typeof translations[LanguageCode];
   formatCurrency: (amount: number) => string;
-  availableLanguages: typeof SUPPORTED_LANGUAGES;
+  availableLanguages: Record<LanguageCode, LanguageConfig>;
   availableCurrencies: typeof SUPPORTED_CURRENCIES;
 }
 
@@ -113,7 +115,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       setCurrency, 
       t, 
       formatCurrency,
-      availableLanguages: SUPPORTED_LANGUAGES,
+      availableLanguages: LANGUAGE_CONFIGS,
       availableCurrencies: SUPPORTED_CURRENCIES,
     }}>
       {children}

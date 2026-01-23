@@ -255,3 +255,5 @@ O bot Telegram será configurado automaticamente ao iniciar o backend, mas pode 
 
 **Boa sorte com o deploy! 🚀**
 
+
+

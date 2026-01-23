@@ -147,7 +147,7 @@ export default function AdminFinancePage() {
                 const revenue = item.revenue_cents / 100;
                 // Calcular média
                 const allRevenues = financeStats.monthly_revenue.map((i: { revenue_cents: number }) => i.revenue_cents / 100);
-                const average = allRevenues.reduce((a, b) => a + b, 0) / allRevenues.length;
+                const average = allRevenues.reduce((a: number, b: number) => a + b, 0) / allRevenues.length;
                 return {
                   ...item,
                   revenue,
@@ -181,7 +181,8 @@ export default function AdminFinancePage() {
                     borderRadius: '12px',
                     color: '#fff'
                   }}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: number | undefined, name: string | undefined) => {
+                    if (value === undefined) return ['', name || ''];
                     if (name === 'average') return [formatEUR(value), 'Média'];
                     return [formatEUR(value), 'Receita'];
                   }}

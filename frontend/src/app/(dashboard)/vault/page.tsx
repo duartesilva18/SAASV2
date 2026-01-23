@@ -119,7 +119,7 @@ export default function VaultPage() {
     const investmentEvolution: any[] = [];
 
     // Calcular totais e evolução
-    const sortedTransactions = [...transactions].sort((a, b) => 
+    const sortedTransactions = [...transactions].sort((a: any, b: any) => 
       new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
     );
 
@@ -197,10 +197,10 @@ export default function VaultPage() {
       investmentCategory,
       emergencyTotal,
       investmentTotal,
-      emergencyTransactions: emergencyTransactions.sort((a, b) => 
+      emergencyTransactions: emergencyTransactions.sort((a: any, b: any) => 
         new Date(b.transaction_date || b.created_at).getTime() - new Date(a.transaction_date || a.created_at).getTime()
       ),
-      investmentTransactions: investmentTransactions.sort((a, b) => 
+      investmentTransactions: investmentTransactions.sort((a: any, b: any) => 
         new Date(b.transaction_date || b.created_at).getTime() - new Date(a.transaction_date || a.created_at).getTime()
       ),
       emergencyEvolution,

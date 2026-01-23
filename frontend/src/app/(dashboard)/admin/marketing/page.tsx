@@ -24,7 +24,7 @@ export default function MarketingAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
+  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
     fetchStats();
@@ -59,7 +59,7 @@ export default function MarketingAdminPage() {
     try {
       const res = await api.post('/admin/marketing/broadcast', { subject, message });
       setToast({
-        show: true,
+        isVisible: true,
         message: `Sucesso! Campanha disparada por email para ${res.data.sent} utilizadores.`,
         type: 'success'
       });
@@ -68,7 +68,7 @@ export default function MarketingAdminPage() {
       fetchStats(); // Atualizar stats e histórico
     } catch (err: any) {
       setToast({
-        show: true,
+        isVisible: true,
         message: err.response?.data?.detail || 'Erro ao enviar broadcast.',
         type: 'error'
       });
@@ -299,10 +299,10 @@ export default function MarketingAdminPage() {
       </div>
 
       <Toast 
-        show={toast.show}
+        isVisible={toast.isVisible}
         message={toast.message}
         type={toast.type}
-        onClose={() => setToast({ ...toast, show: false })}
+        onClose={() => setToast({ ...toast, isVisible: false })}
       />
 
       {/* Selected Campaign Details Modal */}
