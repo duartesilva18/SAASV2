@@ -1,0 +1,46 @@
+# Arquivos e pastas a ignorar no deploy do Render
+
+# Node modules (serão instalados durante o build)
+**/node_modules/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+
+# Logs
+**/*.log
+**/security.log
+
+# Arquivos de ambiente locais
+**/.env
+**/.env.local
+**/.env.development
+
+# Arquivos de desenvolvimento
+**/.git/
+**/.vscode/
+**/.idea/
+
+# Arquivos temporários
+**/*.tmp
+**/*.temp
+**/.DS_Store
+
+# Documentação local
+**/README.md
+**/PRODUCTION_SETUP.md
+
+# Arquivos de teste
+**/test/
+**/tests/
+**/*_test.py
+**/*.test.ts
+**/*.test.tsx
+
+# Arquivos de dados locais
+**/dados/
+**/*.txt
+

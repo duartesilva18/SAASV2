@@ -1,0 +1,17 @@
+# robots.txt para Finly
+# Permite todos os crawlers a indexar o site
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /_next/
+Disallow: /static/
+
+# Sitemap
+Sitemap: https://finly.pt/sitemap.xml
+
+# Crawl-delay (opcional, em segundos)
+Crawl-delay: 1
