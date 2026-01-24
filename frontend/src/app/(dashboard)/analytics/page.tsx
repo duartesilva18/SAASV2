@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
-import { DEMO_TRANSACTIONS, DEMO_CATEGORIES, DEMO_INSIGHTS, DEMO_RECURRING } from '@/lib/mockData';
+import { getDemoTransactions, getDemoCategories, getDemoInsights, getDemoRecurring } from '@/lib/mockData';
 import Link from 'next/link';
 import { Lock, ArrowRight } from 'lucide-react';
 import { ChartSkeleton, DashboardSkeleton } from '@/components/LoadingSkeleton';
 
 export default function AnalyticsPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, formatCurrency, language } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
   const [rawData, setRawData] = useState<{ transactions: any[], categories: any[], insights: any, recurring: any[] }>({ transactions: [], categories: [], insights: null, recurring: [] });
@@ -89,10 +89,10 @@ export default function AnalyticsPage() {
       if (!hasActiveSub && compositeData.transactions.length === 0) {
         compositeData = {
           ...compositeData,
-          transactions: DEMO_TRANSACTIONS,
-          categories: DEMO_CATEGORIES,
-          insights: DEMO_INSIGHTS,
-          recurring: DEMO_RECURRING
+          transactions: getDemoTransactions(language),
+          categories: getDemoCategories(language),
+          insights: getDemoInsights(language) || { insights: [], summary: '', health_score: 0 },
+          recurring: getDemoRecurring(language)
         };
       }
 

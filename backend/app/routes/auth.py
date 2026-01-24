@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone, date
+from typing import Optional
 import secrets
 import re
 import uuid
@@ -271,7 +272,7 @@ def create_seed_transactions(db: Session, workspace_id: uuid.UUID, categories_ma
     logger.info(f'Transações de exemplo criadas para workspace {workspace_id}')
 
 @router.get('/verify-email')
-async def verify_email(request: Request, token: str, db: Session = Depends(get_db)):
+async def verify_email(request: Request, token: str, ref: Optional[str] = None, db: Session = Depends(get_db)):
     verification = db.query(models.EmailVerification).filter(
         models.EmailVerification.token == token,
         models.EmailVerification.is_used == False,
@@ -297,6 +298,16 @@ async def verify_email(request: Request, token: str, db: Session = Depends(get_d
         db.add(user)
         db.commit()
         db.refresh(user)
+        
+        # Rastrear referência de afiliado se houver código
+        if ref:
+            from ..core.affiliate_tracking import track_referral
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get('user-agent')
+            try:
+                track_referral(db, str(user.id), ref, client_ip, user_agent)
+            except Exception as e:
+                logger.error(f'Erro ao rastrear referência: {e}')
         
         new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
         db.add(new_workspace)
@@ -337,6 +348,7 @@ async def complete_onboarding(onboarding_data: schemas.UserUpdateOnboarding, cur
     current_user.full_name = onboarding_data.full_name
     current_user.phone_number = onboarding_data.phone_number
     current_user.currency = onboarding_data.currency
+    current_user.language = onboarding_data.language
     current_user.gender = onboarding_data.gender
     current_user.marketing_opt_in = onboarding_data.marketing_opt_in
     current_user.is_onboarded = True
@@ -622,6 +634,16 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
         db.add(user)
         db.commit()
         db.refresh(user)
+        
+        # Rastrear referência de afiliado se houver código
+        if ref:
+            from ..core.affiliate_tracking import track_referral
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get('user-agent')
+            try:
+                track_referral(db, str(user.id), ref, client_ip, user_agent)
+            except Exception as e:
+                logger.error(f'Erro ao rastrear referência: {e}')
         
         new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
         db.add(new_workspace)

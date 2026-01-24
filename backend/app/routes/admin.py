@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
+from sqlalchemy import func, or_
+from typing import List, Optional
 from uuid import UUID
 from ..core.dependencies import get_db, conf
 from ..models import database as models
@@ -134,8 +134,25 @@ async def get_audit_logs(
     }
 
 @router.get('/users', response_model=List[schemas.AdminUserResponse])
-async def get_admin_users(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
-    return db.query(models.User).order_by(models.User.created_at.desc()).all()
+async def get_admin_users(
+    search: Optional[str] = None,
+    limit: int = 20,
+    db: Session = Depends(get_db), 
+    admin: models.User = Depends(check_admin)
+):
+    """Lista utilizadores, opcionalmente filtrados por email ou nome"""
+    query = db.query(models.User)
+    
+    if search:
+        search_term = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(models.User.email).like(search_term),
+                func.lower(models.User.full_name).like(search_term)
+            )
+        )
+    
+    return query.order_by(models.User.created_at.desc()).limit(limit).all()
 
 @router.get('/users/{user_id}', response_model=schemas.AdminUserDetail)
 async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):

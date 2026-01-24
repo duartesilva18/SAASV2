@@ -295,10 +295,71 @@ export const translations = {
                             title: "Alerta de Lazer",
                             message: "Os teus gastos em \"Lazer e Compras\" este mês já excedem em 15% a tua média histórica. Considera um período de \"No Spend\".",
                             icon: "alert-circle"
+                        },
+                        {
+                            type: "success",
+                            title: "Ritmo Semanal Zen",
+                            message: "Conseguiste manter os teus gastos de Terça a Quinta abaixo dos 10€ diários. Um excelente hábito de micro-poupança!",
+                            icon: "sparkles"
+                        },
+                        {
+                            type: "info",
+                            title: "Dica de Investimento",
+                            message: "Com o teu excedente mensal atual, podes atingir a tua meta de Fundo de Emergência 2 meses antes do previsto.",
+                            icon: "brain"
                         }
                     ],
                     summary: "O teu ecossistema financeiro demonstra uma resiliência notável. O foco estratégico deve agora virar-se para a otimização de gastos variáveis e consolidação do fundo de reserva.",
-                    health_score: 88
+                    health_score: 88,
+                    transactions: [
+                        { id: 'd1', amount_cents: 250000, description: 'Salário Mensal', category_id: 'income_cat', transaction_date: '2026-01-01' },
+                        { id: 'd2', amount_cents: 85000, description: 'Renda Casa', category_id: 'rent_cat', transaction_date: '2026-01-05' },
+                        { id: 'd3', amount_cents: 4500, description: 'Netflix', category_id: 'subs_cat', transaction_date: '2026-01-10' },
+                        { id: 'd4', amount_cents: 12000, description: 'Supermercado', category_id: 'food_cat', transaction_date: '2026-01-12' },
+                        { id: 'd5', amount_cents: 3500, description: 'Jantar Fora', category_id: 'food_cat', transaction_date: '2026-01-15' },
+                        { id: 'd6', amount_cents: 50000, description: 'Dividendos', category_id: 'income_cat', transaction_date: '2026-01-18' },
+                        { id: 'd7', amount_cents: 6500, description: 'Gasolina', category_id: 'transport_cat', transaction_date: '2026-01-20' },
+                        { id: 'd8', amount_cents: 1500, description: 'Spotify', category_id: 'subs_cat', transaction_date: '2026-01-15' },
+                        { id: 'd9', amount_cents: 4200, description: 'Farmácia', category_id: 'health_cat', transaction_date: '2026-01-18' },
+                        { id: 'd_inv1', amount_cents: 20000, description: 'Reforço PPR', category_id: 'invest_cat', transaction_date: '2026-01-20' },
+                        { id: 'd_em1', amount_cents: 10000, description: 'Fundo de Emergência', category_id: 'em_cat', transaction_date: '2026-01-22' },
+                        { id: 'd10', amount_cents: 250000, description: 'Salário Mensal', category_id: 'income_cat', transaction_date: '2025-12-01' },
+                        { id: 'd11', amount_cents: 50000, description: 'Bónus Natal', category_id: 'income_cat', transaction_date: '2025-12-15' },
+                        { id: 'd12', amount_cents: 85000, description: 'Renda Casa', category_id: 'rent_cat', transaction_date: '2025-12-05' },
+                        { id: 'd13', amount_cents: 20000, description: 'Prendas Natal', category_id: 'leisure_cat', transaction_date: '2025-12-20' },
+                        { id: 'd14', amount_cents: 15000, description: 'Jantar Natal', category_id: 'food_cat', transaction_date: '2025-12-24' },
+                        { id: 'd15', amount_cents: 6000, description: 'Gasolina', category_id: 'transport_cat', transaction_date: '2025-12-10' },
+                        { id: 'd16', amount_cents: 4500, description: 'Netflix', category_id: 'subs_cat', transaction_date: '2025-12-10' },
+                        { id: 'd17', amount_cents: 250000, description: 'Salário Mensal', category_id: 'income_cat', transaction_date: '2025-11-01' },
+                        { id: 'd18', amount_cents: 85000, description: 'Renda Casa', category_id: 'rent_cat', transaction_date: '2025-11-05' },
+                        { id: 'd19', amount_cents: 10000, description: 'Ginásio', category_id: 'health_cat', transaction_date: '2025-11-02' },
+                        { id: 'd20', amount_cents: 30000, description: 'Compra Telemóvel', category_id: 'leisure_cat', transaction_date: '2025-11-15' },
+                        { id: 'd21', amount_cents: 12000, description: 'Supermercado', category_id: 'food_cat', transaction_date: '2025-11-10' },
+                        { id: 'd22', amount_cents: 5500, description: 'Gasolina', category_id: 'transport_cat', transaction_date: '2025-11-20' },
+                        { id: 'd23', amount_cents: 250000, description: 'Salário Mensal', category_id: 'income_cat', transaction_date: '2025-10-01' },
+                        { id: 'd24', amount_cents: 85000, description: 'Renda Casa', category_id: 'rent_cat', transaction_date: '2025-10-05' },
+                        { id: 'd25', amount_cents: 45000, description: 'Concerto', category_id: 'leisure_cat', transaction_date: '2025-10-12' },
+                        { id: 'd26', amount_cents: 15000, description: 'Supermercado', category_id: 'food_cat', transaction_date: '2025-10-15' },
+                        { id: 'd27', amount_cents: 7000, description: 'Restaurante Sushi', category_id: 'food_cat', transaction_date: '2025-10-20' }
+                    ],
+                    categories: [
+                        { id: 'income_cat', name: 'Rendimentos', type: 'income', color_hex: '#10b981', vault_type: 'none' },
+                        { id: 'rent_cat', name: 'Habitação', type: 'expense', color_hex: '#3b82f6', vault_type: 'none' },
+                        { id: 'subs_cat', name: 'Subscrições', type: 'expense', color_hex: '#8b5cf6', vault_type: 'none' },
+                        { id: 'food_cat', name: 'Alimentação', type: 'expense', color_hex: '#f59e0b', vault_type: 'none' },
+                        { id: 'transport_cat', name: 'Transporte', type: 'expense', color_hex: '#ef4444', vault_type: 'none' },
+                        { id: 'health_cat', name: 'Saúde e Bem-estar', type: 'expense', color_hex: '#10b981', vault_type: 'none' },
+                        { id: 'leisure_cat', name: 'Lazer e Compras', type: 'expense', color_hex: '#ec4899', vault_type: 'none' },
+                        { id: 'invest_cat', name: 'Investimentos', type: 'expense', color_hex: '#6366f1', vault_type: 'investment' },
+                        { id: 'em_cat', name: 'Reserva de Emergência', type: 'expense', color_hex: '#06b6d4', vault_type: 'emergency' }
+                    ],
+                    recurring: [
+                        { id: 'r1', description: 'Renda Casa', amount_cents: 85000, day_of_month: 5, process_automatically: true },
+                        { id: 'r2', description: 'Netflix', amount_cents: 1499, day_of_month: 10, process_automatically: true },
+                        { id: 'r3', description: 'Spotify', amount_cents: 999, day_of_month: 15, process_automatically: true },
+                        { id: 'r4', description: 'Ginásio', amount_cents: 3500, day_of_month: 2, process_automatically: false },
+                        { id: 'r5', description: 'Internet/TV', amount_cents: 4500, day_of_month: 20, process_automatically: true }
+                    ]
                 }
             },
             loading: {
@@ -595,10 +656,14 @@ export const translations = {
                 title: "Bem-vindo ao ",
                 titleAccent: "Finly",
                 subtitle: "Precisamos de mais alguns detalhes para personalizar a tua experiência.",
-                fullName: "Nome Completo",
+                fullName: "Primeiro e Último Nome",
+                fullNamePlaceholder: "Ex: Duarte Silva",
                 phone: "Telemóvel (Telegram)",
+                phonePlaceholder: "912 345 678",
                 currency: "Moeda Principal",
+                language: "Idioma",
                 gender: "Género",
+                genderPlaceholder: "Seleciona...",
                 genderOptions: {
                     male: "Masculino",
                     female: "Feminino",
@@ -606,8 +671,17 @@ export const translations = {
                     prefer_not_to_say: "Prefiro não dizer"
                 },
                 submit: "Concluir Configuração",
-                marketingOptIn: "Aceito receber novidades e dicas financeiras por email ou SMS.",
-                success: "Tudo pronto! Vamos começar."
+                marketingOptIn: "Dicas & Novidades Zen",
+                marketingOptInDescription: "Relatórios e insights exclusivos no teu email.",
+                success: "Tudo pronto! Vamos começar.",
+                validation: {
+                    fullNameEmpty: "O nome completo é obrigatório.",
+                    fullName: "Por favor, introduz o teu primeiro e último nome (ex: João Silva).",
+                    phoneEmpty: "O número de telefone é obrigatório.",
+                    phone: "Por favor, introduz um número de telefone válido (mínimo 7 dígitos).",
+                    gender: "Por favor, seleciona o teu gênero.",
+                    language: "Por favor, seleciona o idioma."
+                }
             },
             settings: {
                 title: "Definições",
@@ -710,6 +784,30 @@ export const translations = {
             pricing: {
                 pageTitle: "Preços",
                 pageSubtitle: "Escolhe o plano que se adapta à tua jornada financeira.",
+                modal: {
+                    welcomeOffer: "Oferta de Boas-Vindas",
+                    choosePlan: "Escolhe o teu plano",
+                    subtitle: "A tua liberdade financeira começa com um clique.",
+                    monthlyBilling: "Faturação Mensal",
+                    yearlyBilling: "Faturação Anual",
+                    discount: "-25% OFF",
+                    activatePro: "Ativar Plano Pro",
+                    cancelInfo: "Podes cancelar a tua subscrição a qualquer momento no portal de faturação.",
+                    recommended: "Recomendado",
+                    month: "Mês",
+                    year: "Ano"
+                },
+                leftSide: {
+                    title: "A tua",
+                    titleAccent: "Nova Era",
+                    titleEnd: "Financeira.",
+                    description: "Desbloqueia ferramentas de elite que os bancos não querem que uses. IA, automação e clareza total.",
+                    unlimitedPower: "Poder Ilimitado",
+                    unlimitedPowerDesc: "Sem limites de despesas ou categorias para sempre.",
+                    aiBrain: "Cérebro de IA",
+                    aiBrainDesc: "Conselhos de poupança gerados por algoritmos avançados.",
+                    securePayment: "Pagamento Seguro & Encriptado"
+                },
                 monthlyPlan: {
                     name: "Plano Mensal",
                     description: "Ideal para quem quer testar a potência da gestão zen.",
@@ -732,6 +830,61 @@ export const translations = {
                         "Acesso Antecipado a Novas Funções",
                         "Selo VIP na Dashboard",
                     ]
+                },
+                page: {
+                    headerTag: "Investimento na tua Liberdade",
+                    title: "Escolhe o teu",
+                    titleAccent: "Ritmo de Sucesso",
+                    subtitle: "\"O preço é o que pagas, o valor é o que recebes.\" Começa hoje a tua jornada para a paz financeira plena.",
+                    monthly: "Mensal",
+                    annual: "Anual",
+                    discount: "-25% OFF",
+                    bestValue: "Melhor Valor",
+                    month: "Mês",
+                    year: "Ano",
+                    equivalentTo: "Equivale a",
+                    perMonth: "mês",
+                    saveAmount: "Economiza",
+                    perYearOnAnnual: "por ano no Anual",
+                    activateNow: "Ativar Agora",
+                    trustBadges: {
+                        bankingSecurity: {
+                            title: "Segurança Bancária",
+                            description: "Dados encriptados com tecnologia militar."
+                        },
+                        easyCancellation: {
+                            title: "Cancelamento Fácil",
+                            description: "Cancela quando quiseres, sem perguntas."
+                        },
+                        zenGuarantee: {
+                            title: "Garantia Zen",
+                            description: "Satisfeito ou o teu dinheiro de volta em 7 dias."
+                        }
+                    }
+                },
+                modal: {
+                    welcomeOffer: "Oferta de Boas-Vindas",
+                    choosePlan: "Escolhe o teu plano",
+                    subtitle: "A tua liberdade financeira começa com um clique.",
+                    monthlyBilling: "Faturação Mensal",
+                    yearlyBilling: "Faturação Anual",
+                    discount: "-25% OFF",
+                    activatePro: "Ativar Plano Pro",
+                    cancelInfo: "Podes cancelar a tua subscrição a qualquer momento no portal de faturação.",
+                    recommended: "Recomendado",
+                    month: "Mês",
+                    year: "Ano"
+                },
+                leftSide: {
+                    title: "A tua",
+                    titleAccent: "Nova Era",
+                    titleEnd: "Financeira.",
+                    description: "Desbloqueia ferramentas de elite que os bancos não querem que uses. IA, automação e clareza total.",
+                    unlimitedPower: "Poder Ilimitado",
+                    unlimitedPowerDesc: "Sem limites de despesas ou categorias para sempre.",
+                    aiBrain: "Cérebro de IA",
+                    aiBrainDesc: "Conselhos de poupança gerados por algoritmos avançados.",
+                    securePayment: "Pagamento Seguro & Encriptado"
                 }
             },
             transactions: {
@@ -1257,10 +1410,71 @@ export const translations = {
                             title: "Leisure Alert",
                             message: "Your \"Leisure & Shopping\" spending this month is already 15% above your historical average. Consider a short \"No Spend\" period.",
                             icon: "alert-circle"
+                        },
+                        {
+                            type: "success",
+                            title: "Zen Weekly Rhythm",
+                            message: "You managed to keep your spending from Tuesday to Thursday below €10 daily. An excellent micro-savings habit!",
+                            icon: "sparkles"
+                        },
+                        {
+                            type: "info",
+                            title: "Investment Tip",
+                            message: "With your current monthly surplus, you can reach your Emergency Fund goal 2 months earlier than expected.",
+                            icon: "brain"
                         }
                     ],
                     summary: "Your financial ecosystem shows notable resilience. Your strategic focus should now shift to optimizing variable spending and strengthening your reserve fund.",
-                    health_score: 88
+                    health_score: 88,
+                    transactions: [
+                        { id: 'd1', amount_cents: 250000, description: 'Monthly Salary', category_id: 'income_cat', transaction_date: '2026-01-01' },
+                        { id: 'd2', amount_cents: 85000, description: 'House Rent', category_id: 'rent_cat', transaction_date: '2026-01-05' },
+                        { id: 'd3', amount_cents: 4500, description: 'Netflix', category_id: 'subs_cat', transaction_date: '2026-01-10' },
+                        { id: 'd4', amount_cents: 12000, description: 'Supermarket', category_id: 'food_cat', transaction_date: '2026-01-12' },
+                        { id: 'd5', amount_cents: 3500, description: 'Dinner Out', category_id: 'food_cat', transaction_date: '2026-01-15' },
+                        { id: 'd6', amount_cents: 50000, description: 'Dividends', category_id: 'income_cat', transaction_date: '2026-01-18' },
+                        { id: 'd7', amount_cents: 6500, description: 'Gasoline', category_id: 'transport_cat', transaction_date: '2026-01-20' },
+                        { id: 'd8', amount_cents: 1500, description: 'Spotify', category_id: 'subs_cat', transaction_date: '2026-01-15' },
+                        { id: 'd9', amount_cents: 4200, description: 'Pharmacy', category_id: 'health_cat', transaction_date: '2026-01-18' },
+                        { id: 'd_inv1', amount_cents: 20000, description: 'PPR Top-up', category_id: 'invest_cat', transaction_date: '2026-01-20' },
+                        { id: 'd_em1', amount_cents: 10000, description: 'Emergency Fund', category_id: 'em_cat', transaction_date: '2026-01-22' },
+                        { id: 'd10', amount_cents: 250000, description: 'Monthly Salary', category_id: 'income_cat', transaction_date: '2025-12-01' },
+                        { id: 'd11', amount_cents: 50000, description: 'Christmas Bonus', category_id: 'income_cat', transaction_date: '2025-12-15' },
+                        { id: 'd12', amount_cents: 85000, description: 'House Rent', category_id: 'rent_cat', transaction_date: '2025-12-05' },
+                        { id: 'd13', amount_cents: 20000, description: 'Christmas Gifts', category_id: 'leisure_cat', transaction_date: '2025-12-20' },
+                        { id: 'd14', amount_cents: 15000, description: 'Christmas Dinner', category_id: 'food_cat', transaction_date: '2025-12-24' },
+                        { id: 'd15', amount_cents: 6000, description: 'Gasoline', category_id: 'transport_cat', transaction_date: '2025-12-10' },
+                        { id: 'd16', amount_cents: 4500, description: 'Netflix', category_id: 'subs_cat', transaction_date: '2025-12-10' },
+                        { id: 'd17', amount_cents: 250000, description: 'Monthly Salary', category_id: 'income_cat', transaction_date: '2025-11-01' },
+                        { id: 'd18', amount_cents: 85000, description: 'House Rent', category_id: 'rent_cat', transaction_date: '2025-11-05' },
+                        { id: 'd19', amount_cents: 10000, description: 'Gym', category_id: 'health_cat', transaction_date: '2025-11-02' },
+                        { id: 'd20', amount_cents: 30000, description: 'Phone Purchase', category_id: 'leisure_cat', transaction_date: '2025-11-15' },
+                        { id: 'd21', amount_cents: 12000, description: 'Supermarket', category_id: 'food_cat', transaction_date: '2025-11-10' },
+                        { id: 'd22', amount_cents: 5500, description: 'Gasoline', category_id: 'transport_cat', transaction_date: '2025-11-20' },
+                        { id: 'd23', amount_cents: 250000, description: 'Monthly Salary', category_id: 'income_cat', transaction_date: '2025-10-01' },
+                        { id: 'd24', amount_cents: 85000, description: 'House Rent', category_id: 'rent_cat', transaction_date: '2025-10-05' },
+                        { id: 'd25', amount_cents: 45000, description: 'Concert', category_id: 'leisure_cat', transaction_date: '2025-10-12' },
+                        { id: 'd26', amount_cents: 15000, description: 'Supermarket', category_id: 'food_cat', transaction_date: '2025-10-15' },
+                        { id: 'd27', amount_cents: 7000, description: 'Sushi Restaurant', category_id: 'food_cat', transaction_date: '2025-10-20' }
+                    ],
+                    categories: [
+                        { id: 'income_cat', name: 'Income', type: 'income', color_hex: '#10b981', vault_type: 'none' },
+                        { id: 'rent_cat', name: 'Housing', type: 'expense', color_hex: '#3b82f6', vault_type: 'none' },
+                        { id: 'subs_cat', name: 'Subscriptions', type: 'expense', color_hex: '#8b5cf6', vault_type: 'none' },
+                        { id: 'food_cat', name: 'Food', type: 'expense', color_hex: '#f59e0b', vault_type: 'none' },
+                        { id: 'transport_cat', name: 'Transport', type: 'expense', color_hex: '#ef4444', vault_type: 'none' },
+                        { id: 'health_cat', name: 'Health & Wellness', type: 'expense', color_hex: '#10b981', vault_type: 'none' },
+                        { id: 'leisure_cat', name: 'Leisure & Shopping', type: 'expense', color_hex: '#ec4899', vault_type: 'none' },
+                        { id: 'invest_cat', name: 'Investments', type: 'expense', color_hex: '#6366f1', vault_type: 'investment' },
+                        { id: 'em_cat', name: 'Emergency Reserve', type: 'expense', color_hex: '#06b6d4', vault_type: 'emergency' }
+                    ],
+                    recurring: [
+                        { id: 'r1', description: 'House Rent', amount_cents: 85000, day_of_month: 5, process_automatically: true },
+                        { id: 'r2', description: 'Netflix', amount_cents: 1499, day_of_month: 10, process_automatically: true },
+                        { id: 'r3', description: 'Spotify', amount_cents: 999, day_of_month: 15, process_automatically: true },
+                        { id: 'r4', description: 'Gym', amount_cents: 3500, day_of_month: 2, process_automatically: false },
+                        { id: 'r5', description: 'Internet/TV', amount_cents: 4500, day_of_month: 20, process_automatically: true }
+                    ]
                 }
             },
             loading: {
@@ -1395,6 +1609,30 @@ export const translations = {
             pricing: {
                 pageTitle: "Pricing",
                 pageSubtitle: "Choose the plan that fits your financial journey.",
+                modal: {
+                    welcomeOffer: "Welcome Offer",
+                    choosePlan: "Choose Your Plan",
+                    subtitle: "Your financial freedom starts with a click.",
+                    monthlyBilling: "Monthly Billing",
+                    yearlyBilling: "Annual Billing",
+                    discount: "-25% OFF",
+                    activatePro: "Activate Pro Plan",
+                    cancelInfo: "You can cancel your subscription at any time in the billing portal.",
+                    recommended: "Recommended",
+                    month: "Month",
+                    year: "Year"
+                },
+                leftSide: {
+                    title: "Your",
+                    titleAccent: "New Financial",
+                    titleEnd: "Era.",
+                    description: "Unlock elite tools that banks don't want you to use. AI, automation, and total clarity.",
+                    unlimitedPower: "Unlimited Power",
+                    unlimitedPowerDesc: "No limits on expenses or categories forever.",
+                    aiBrain: "AI Brain",
+                    aiBrainDesc: "Savings advice generated by advanced algorithms.",
+                    securePayment: "Secure & Encrypted Payment"
+                },
                 monthlyPlan: {
                     name: "Monthly Plan",
                     description: "Ideal for those who want to test the power of zen management.",
@@ -1417,6 +1655,37 @@ export const translations = {
                         "Early Access to New Features",
                         "VIP Badge on Dashboard",
                     ]
+                },
+                page: {
+                    headerTag: "Investment in Your Freedom",
+                    title: "Choose Your",
+                    titleAccent: "Rhythm of Success",
+                    subtitle: "\"The price is what you pay, the value is what you receive.\" Start your journey to full financial peace today.",
+                    monthly: "Monthly",
+                    annual: "Annual",
+                    discount: "-25% OFF",
+                    bestValue: "Best Value",
+                    month: "Month",
+                    year: "Year",
+                    equivalentTo: "Equivalent to",
+                    perMonth: "month",
+                    saveAmount: "Save",
+                    perYearOnAnnual: "per year on Annual",
+                    activateNow: "Activate Now",
+                    trustBadges: {
+                        bankingSecurity: {
+                            title: "Banking Security",
+                            description: "Data encrypted with military-grade technology."
+                        },
+                        easyCancellation: {
+                            title: "Easy Cancellation",
+                            description: "Cancel whenever you want, no questions asked."
+                        },
+                        zenGuarantee: {
+                            title: "Zen Guarantee",
+                            description: "Satisfied or your money back in 7 days."
+                        }
+                    }
                 }
             },
             billing: {
@@ -1660,10 +1929,14 @@ export const translations = {
                 title: "Welcome to ",
                 titleAccent: "Finly",
                 subtitle: "We need a few more details to personalize your experience.",
-                fullName: "Full Name",
+                fullName: "First and Last Name",
+                fullNamePlaceholder: "Ex: John Doe",
                 phone: "Phone (Telegram)",
+                phonePlaceholder: "912 345 678",
                 currency: "Primary Currency",
+                language: "Language",
                 gender: "Gender",
+                genderPlaceholder: "Select...",
                 genderOptions: {
                     male: "Male",
                     female: "Female",
@@ -1671,8 +1944,17 @@ export const translations = {
                     prefer_not_to_say: "Prefer not to say"
                 },
                 submit: "Complete Setup",
-                marketingOptIn: "I agree to receive news and financial tips via email or SMS.",
-                success: "All set! Let's get started."
+                marketingOptIn: "Tips & Zen News",
+                marketingOptInDescription: "Exclusive reports and insights in your email.",
+                success: "All set! Let's get started.",
+                validation: {
+                    fullNameEmpty: "Full name is required.",
+                    fullName: "Please enter your first and last name (e.g., John Doe).",
+                    phoneEmpty: "Phone number is required.",
+                    phone: "Please enter a valid phone number (minimum 7 digits).",
+                    gender: "Please select your gender.",
+                    language: "Please select a language."
+                }
             },
             settings: {
                 title: "Settings",

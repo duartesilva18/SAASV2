@@ -29,7 +29,9 @@ import {
   Lightbulb,
   Compass,
   Target,
-  Zap
+  Zap,
+  Users,
+  Link2
 } from 'lucide-react';
 
 const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -136,6 +138,12 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.settings,
         href: '/settings',
         icon: Settings,
+      },
+      {
+        name: 'Afiliados',
+        href: '/affiliate',
+        icon: Link2,
+        affiliateOnly: true
       }
     ]
   },
@@ -159,6 +167,12 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.marketing || "Marketing",
         href: '/admin/marketing',
         icon: Megaphone,
+        adminOnly: true
+      },
+      {
+        name: 'Gestão de Afiliados',
+        href: '/admin/affiliates',
+        icon: Users,
         adminOnly: true
       }
     ]
@@ -326,6 +340,7 @@ export default function Sidebar({
     ...section,
     items: section.items.filter((item: any) => {
       if (item.adminOnly) return user?.is_admin === true;
+      if (item.affiliateOnly) return user?.is_affiliate === true;
       if (isPro) return true;
       return item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/vault' || item.href === '/transactions' || item.href === '/categories' || item.href === '/recurring';
     })

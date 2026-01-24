@@ -13,8 +13,7 @@ import { ArrowUpCircle, ArrowDownCircle, Wallet, Info, Lock, ArrowRight, Chevron
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import ZenInsights from '@/components/ZenInsights';
-import PricingModal from '@/components/PricingModal';
-import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
+import { getDemoTransactions, getDemoCategories } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
@@ -25,13 +24,12 @@ import { DashboardSkeleton } from '@/components/LoadingSkeleton';
 import LoadingScreen from '@/components/LoadingScreen';
 
 export default function DashboardPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, formatCurrency, language } = useTranslation();
   const { refreshUser } = useUser();
   const searchParams = useSearchParams();
   const [isPro, setIsPro] = useState(false);
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [stats, setStats] = useState({
     income: 0,
@@ -68,9 +66,6 @@ export default function DashboardPage() {
     return userData ? ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status) : false;
   }, [userData]);
   
-  const shouldShowPaywall = useMemo(() => {
-    return !hasActiveSub && !searchParams.get('session_id');
-  }, [hasActiveSub, searchParams]);
 
   const fetchData = useCallback(async () => {
       try {
@@ -101,10 +96,6 @@ export default function DashboardPage() {
         // Usar hasActiveSub memoizado
         setIsPro(hasActiveSub);
         
-        // Só mostrar o Paywall se não for Pro E não estivermos a voltar de um pagamento (session_id)
-        if (shouldShowPaywall) {
-          setShowPaywall(true);
-        }
 
         // Usar snapshot calculado pelo backend (sem cálculos no frontend!)
         const transactions = collections.recent_transactions || [];
@@ -114,8 +105,8 @@ export default function DashboardPage() {
         let finalTransactions = transactions;
         let finalCategories = categories;
         if (!hasActiveSub && transactions.length === 0) {
-          finalTransactions = DEMO_TRANSACTIONS;
-          finalCategories = DEMO_CATEGORIES;
+          finalTransactions = getDemoTransactions(language);
+          finalCategories = getDemoCategories(language);
         }
 
         // Calcular alertas baseado em categories e snapshot
@@ -224,7 +215,7 @@ export default function DashboardPage() {
           });
         }
       }
-    }, [snapshot, collections, snapshotLoading, userData, invoicesData, hasActiveSub, shouldShowPaywall, formatCurrency, isPro]);
+    }, [snapshot, collections, snapshotLoading, userData, invoicesData, hasActiveSub, formatCurrency, isPro]);
   
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -245,7 +236,6 @@ export default function DashboardPage() {
             
             // Atualizar estado para remover modo demo e banners
             setIsPro(true);
-            setShowPaywall(false); // Fechar paywall se estiver aberto
             setShowUpgradeSuccess(true);
             setIsProcessingUpgrade(false);
             
@@ -846,11 +836,6 @@ export default function DashboardPage() {
           </div>
         )}
       </AnimatePresence>
-
-      <PricingModal 
-        isVisible={showPaywall} 
-        onClose={() => setShowPaywall(false)} 
-      />
 
       <Toast 
         isVisible={toast.show}

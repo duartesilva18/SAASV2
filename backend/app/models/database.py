@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -29,10 +29,16 @@ class User(Base):
     stripe_customer_id = Column(String(255), unique=True, nullable=True)
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
     telegram_auto_confirm = Column(Boolean, nullable=False, default=False)
+    is_affiliate = Column(Boolean, nullable=False, default=False)
+    affiliate_code = Column(String(20), unique=True, nullable=True, index=True)
+    referred_by_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
     workspaces = relationship('Workspace', back_populates='owner', cascade='all, delete-orphan')
+    referred_by = relationship('User', remote_side=[id], foreign_keys=[referred_by_id], back_populates='referrals')
+    referrals = relationship('User', foreign_keys=[referred_by_id], back_populates='referred_by')
+    affiliate_record = relationship('Affiliate', foreign_keys='Affiliate.affiliate_id', back_populates='affiliate_user', uselist=False)
 
 class Workspace(Base):
     __tablename__ = 'workspaces'
@@ -224,5 +230,95 @@ class CategoryMappingCache(Base):
     
     __table_args__ = (
         UniqueConstraint('workspace_id', 'description_normalized', 'transaction_type', name='unique_workspace_mapping'),
+    )
+
+class Affiliate(Base):
+    """Tabela para gerir afiliados e suas configurações"""
+    __tablename__ = 'affiliates'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    affiliate_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    code = Column(String(20), unique=True, nullable=False, index=True)
+    commission_percentage = Column(Numeric(5, 2), nullable=False, default=10.00)  # Percentagem padrão, pode ser sobrescrita
+    is_active = Column(Boolean, nullable=False, default=True)
+    total_referrals = Column(Integer, nullable=False, default=0)
+    total_conversions = Column(Integer, nullable=False, default=0)  # Utilizadores que pagaram Pro
+    total_earnings_cents = Column(Integer, nullable=False, default=0)  # Total ganho em cêntimos
+    total_paid_cents = Column(Integer, nullable=False, default=0)  # Total já pago
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    affiliate_user = relationship('User', foreign_keys=[affiliate_id], back_populates='affiliate_record')
+    referrals = relationship('Referral', back_populates='affiliate')
+    commissions = relationship('Commission', back_populates='affiliate')
+    
+    __table_args__ = (
+        CheckConstraint('commission_percentage >= 0 AND commission_percentage <= 100'),
+        CheckConstraint('total_earnings_cents >= 0'),
+        CheckConstraint('total_paid_cents >= 0'),
+    )
+
+class Referral(Base):
+    """Tabela para rastrear referências (utilizadores que se registaram via link de afiliado)"""
+    __tablename__ = 'referrals'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    affiliate_id = Column(UUID(as_uuid=True), ForeignKey('affiliates.id', ondelete='CASCADE'), nullable=False, index=True)
+    referred_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    ip_address = Column(String(50), nullable=True)  # Para detetar fraude
+    user_agent = Column(Text, nullable=True)  # Para detetar fraude
+    has_converted = Column(Boolean, nullable=False, default=False)  # Se pagou Pro
+    conversion_date = Column(DateTime(timezone=True), nullable=True)
+    conversion_amount_cents = Column(Integer, nullable=True)  # Valor da primeira subscrição
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    affiliate = relationship('Affiliate', back_populates='referrals')
+    referred_user = relationship('User', foreign_keys=[referred_user_id])
+    
+    __table_args__ = (
+        UniqueConstraint('affiliate_id', 'referred_user_id', name='unique_referral'),
+    )
+
+class Commission(Base):
+    """Tabela para rastrear comissões mensais dos afiliados"""
+    __tablename__ = 'commissions'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    affiliate_id = Column(UUID(as_uuid=True), ForeignKey('affiliates.id', ondelete='CASCADE'), nullable=False, index=True)
+    month = Column(Integer, nullable=False)  # 1-12
+    year = Column(Integer, nullable=False)
+    total_referrals = Column(Integer, nullable=False, default=0)
+    total_conversions = Column(Integer, nullable=False, default=0)
+    total_revenue_cents = Column(Integer, nullable=False, default=0)  # Receita total gerada
+    commission_percentage = Column(Numeric(5, 2), nullable=False)
+    commission_amount_cents = Column(Integer, nullable=False, default=0)  # Comissão calculada
+    is_paid = Column(Boolean, nullable=False, default=False)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    payment_reference = Column(String(100), nullable=True)  # Referência do pagamento
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    affiliate = relationship('Affiliate', back_populates='commissions')
+    
+    __table_args__ = (
+        CheckConstraint('month >= 1 AND month <= 12'),
+        CheckConstraint('year >= 2020'),
+        CheckConstraint('total_referrals >= 0'),
+        CheckConstraint('total_conversions >= 0'),
+        CheckConstraint('total_revenue_cents >= 0'),
+        CheckConstraint('commission_amount_cents >= 0'),
+        UniqueConstraint('affiliate_id', 'month', 'year', name='unique_monthly_commission'),
+    )
+
+class AffiliateSettings(Base):
+    """Configurações globais do sistema de afiliados"""
+    __tablename__ = 'affiliate_settings'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    default_commission_percentage = Column(Numeric(5, 2), nullable=False, default=10.00)
+    admin_email = Column(String(255), nullable=True)  # Email para receber relatórios mensais
+    is_system_active = Column(Boolean, nullable=False, default=True)
+    min_payout_cents = Column(Integer, nullable=False, default=1000)  # Mínimo para pagamento (10€)
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    __table_args__ = (
+        CheckConstraint('default_commission_percentage >= 0 AND default_commission_percentage <= 100'),
+        CheckConstraint('min_payout_cents >= 0'),
     )
 

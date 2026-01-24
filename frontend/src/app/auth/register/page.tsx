@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -25,7 +25,7 @@ const MagneticButton = ({ children, className, onClick, disabled, type = "button
 
 // registerBenefits agora vem das traduções
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const { t, language } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +35,8 @@ export default function RegisterPage() {
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const affiliateRef = searchParams.get('ref'); // Capturar código de afiliado da URL
 
   const registerBenefits = t.auth.register.registerBenefits;
 
@@ -71,6 +73,11 @@ export default function RegisterPage() {
         password,
         language
       });
+      
+      // Guardar código de afiliado no localStorage para usar depois na verificação
+      if (affiliateRef) {
+        localStorage.setItem('affiliate_ref', affiliateRef);
+      }
       
       confetti({
         particleCount: 150,
@@ -332,3 +339,10 @@ export default function RegisterPage() {
   );
 }
 
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#020617] flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}>
+      <RegisterPageContent />
+    </Suspense>
+  );
+}

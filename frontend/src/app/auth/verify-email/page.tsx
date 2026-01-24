@@ -23,7 +23,18 @@ function VerifyEmailContent() {
       }
 
       try {
-        const response = await api.get(`/auth/verify-email?token=${token}`);
+        // Obter código de afiliado do localStorage se existir
+        const affiliateRef = localStorage.getItem('affiliate_ref');
+        const verifyUrl = affiliateRef 
+          ? `/auth/verify-email?token=${token}&ref=${affiliateRef}`
+          : `/auth/verify-email?token=${token}`;
+        
+        const response = await api.get(verifyUrl);
+        
+        // Limpar código de afiliado após usar
+        if (affiliateRef) {
+          localStorage.removeItem('affiliate_ref');
+        }
         
         // Guardar tokens se vierem na resposta
         if (response.data.access_token) {

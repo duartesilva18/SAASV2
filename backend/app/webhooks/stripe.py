@@ -87,16 +87,29 @@ def handle_checkout_completed(session: dict, db: Session):
         user.stripe_subscription_id = subscription_id
         # Para checkout.session.completed, a subscrição pode ainda não estar completamente ativa
         # Vamos buscar o status real da subscrição do Stripe
+        amount_paid = 0
         if subscription_id:
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 user.subscription_status = subscription.status  # 'active', 'trialing', etc.
                 logger.info(f'Status da subscrição do Stripe: {subscription.status}')
+                
+                # Obter valor pago da subscrição
+                if subscription.items.data:
+                    amount_paid = subscription.items.data[0].price.unit_amount or 0
             except Exception as e:
                 logger.warning(f'Erro ao buscar subscrição do Stripe: {str(e)}, usando status "active"')
                 user.subscription_status = 'active'
         else:
             user.subscription_status = 'active'
+        
+        # Rastrear conversão de afiliado (primeira vez que paga)
+        if amount_paid > 0:
+            try:
+                from ..core.affiliate_tracking import track_conversion
+                track_conversion(db, str(user.id), amount_paid)
+            except Exception as e:
+                logger.error(f'Erro ao rastrear conversão de afiliado: {str(e)}')
         
         if not user.stripe_customer_id:
             user.stripe_customer_id = customer_id
@@ -200,6 +213,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
     """Processa invoice.paid - quando uma fatura é paga com sucesso"""
     customer_id = invoice.get('customer')
     subscription_id = invoice.get('subscription')
+    amount_paid = invoice.get('amount_paid', 0)  # Em cêntimos
     
     logger.info(f'Fatura paga com sucesso - Invoice: {invoice.get("id")}, Customer: {customer_id}, Subscription: {subscription_id}')
     
@@ -217,4 +231,11 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         logger.info(f'Subscrição reativada após pagamento: {user.email}')
                 except Exception as e:
                     logger.error(f'Erro ao verificar subscrição após pagamento: {str(e)}')
+            
+            # Rastrear conversão de afiliado (apenas primeira vez que paga)
+            try:
+                from ..core.affiliate_tracking import track_conversion
+                track_conversion(db, str(user.id), amount_paid)
+            except Exception as e:
+                logger.error(f'Erro ao rastrear conversão de afiliado: {str(e)}')
 

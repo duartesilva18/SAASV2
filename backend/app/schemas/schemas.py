@@ -34,6 +34,7 @@ class UserUpdateOnboarding(BaseModel):
     full_name: str
     phone_number: str
     currency: str
+    language: str
     gender: str
     marketing_opt_in: bool = False
 
@@ -322,4 +323,88 @@ class SavingsGoalResponse(SavingsGoalBase):
 
     class Config:
         from_attributes = True
+
+# Affiliate Schemas
+class AffiliateResponse(BaseModel):
+    id: UUID
+    affiliate_id: UUID
+    code: str
+    commission_percentage: float
+    is_active: bool
+    total_referrals: int
+    total_conversions: int
+    total_earnings_cents: int
+    total_paid_cents: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class AffiliateStats(BaseModel):
+    total_referrals: int
+    total_conversions: int
+    conversion_rate: float
+    total_earnings_cents: int
+    total_paid_cents: int
+    pending_earnings_cents: int
+    monthly_stats: List[dict] = []
+
+class ReferralResponse(BaseModel):
+    id: UUID
+    affiliate_id: UUID
+    referred_user_id: UUID
+    has_converted: bool
+    conversion_date: Optional[datetime] = None
+    conversion_amount_cents: Optional[int] = None
+    created_at: datetime
+    referred_user_email: Optional[str] = None
+    referred_user_name: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class CommissionResponse(BaseModel):
+    id: UUID
+    affiliate_id: UUID
+    month: int
+    year: int
+    total_referrals: int
+    total_conversions: int
+    total_revenue_cents: int
+    commission_percentage: float
+    commission_amount_cents: int
+    is_paid: bool
+    paid_at: Optional[datetime] = None
+    payment_reference: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class AffiliateSettingsResponse(BaseModel):
+    id: UUID
+    default_commission_percentage: float
+    admin_email: Optional[str] = None
+    is_system_active: bool
+    min_payout_cents: int
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class AffiliateSettingsUpdate(BaseModel):
+    default_commission_percentage: Optional[float] = None
+    admin_email: Optional[EmailStr] = None
+    is_system_active: Optional[bool] = None
+    min_payout_cents: Optional[int] = None
+
+class PromoteToAffiliateRequest(BaseModel):
+    user_id: UUID
+    commission_percentage: Optional[float] = None  # Se None, usa o padrão
+
+class AffiliateLinkResponse(BaseModel):
+    code: str
+    link: str
+    qr_code_url: Optional[str] = None
 
