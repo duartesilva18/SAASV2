@@ -144,6 +144,22 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_referral_id ON affiliate_co
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_is_paid ON affiliate_commissions(is_paid);
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_stripe_transfer_id ON affiliate_commissions(stripe_transfer_id) WHERE stripe_transfer_id IS NOT NULL;
 
+-- Criar tabela email_verifications se não existir
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR NOT NULL,
+    token VARCHAR NOT NULL UNIQUE,
+    password_hash VARCHAR,
+    referral_code VARCHAR(20),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Criar índices para email_verifications
+CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON email_verifications(email);
+CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token);
+
 -- Criar tabela system_settings se não existir
 CREATE TABLE IF NOT EXISTS system_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
