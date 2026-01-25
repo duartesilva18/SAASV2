@@ -104,7 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_referral_code ON affiliate_re
 CREATE TABLE IF NOT EXISTS affiliate_commissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL,
-    referral_id UUID NOT NULL,
+    referral_id UUID,
     amount_cents INTEGER NOT NULL,
     commission_percentage DECIMAL(5,2) NOT NULL,
     is_paid BOOLEAN NOT NULL DEFAULT FALSE,
@@ -115,6 +115,16 @@ CREATE TABLE IF NOT EXISTS affiliate_commissions (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+-- Adicionar coluna referral_id se a tabela já existir mas não tiver a coluna
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'affiliate_commissions') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'referral_id') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN referral_id UUID;
+        END IF;
+    END IF;
+END $$;
 
 -- Adicionar foreign keys para affiliate_commissions se não existirem
 DO $$
