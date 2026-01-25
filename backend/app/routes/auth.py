@@ -729,7 +729,8 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
             try:
                 google_response = requests.get(
                     'https://www.googleapis.com/oauth2/v3/userinfo',
-                    headers={'Authorization': f'Bearer {data.token}'}
+                    headers={'Authorization': f'Bearer {data.token}'},
+                    timeout=10  # Timeout de 10 segundos
                 )
                 if google_response.status_code != 200:
                     logger.error(f'Erro ao validar token Google: {google_response.status_code} - {google_response.text}')
@@ -753,82 +754,82 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
                 logger.warning(f'⚠️ Tentativa de criar referência para usuário existente bloqueada via social login: {user.email} (código: {referral_code}). Referências só são válidas para contas novas.')
         
         if not user:
-        # Get language from request data or default to 'pt'
-        user_language = getattr(data, 'language', 'pt') or 'pt'
-        if user_language not in ['pt', 'en']:
-            user_language = 'pt'
-        
-        # Validar código de referência se fornecido
-        referrer_id = None
-        referral_code = getattr(data, 'referral_code', None)
-        if referral_code:
-            referrer = db.query(models.User).filter(
-                and_(
-                    models.User.affiliate_code == referral_code,
-                    models.User.is_affiliate == True
-                )
-            ).first()
-            if referrer:
-                # Prevenir auto-referência (verificar depois de criar o user)
-                referrer_id = referrer.id
-            else:
-                logger.warning(f'Código de referência inválido no social login: {referral_code}')
-        
-        user = models.User(
-            email=email,
-            google_id=social_id if data.provider == 'google' else None,
-            is_email_verified=True,
-            language=user_language,
-            login_count=1,
-            last_login=datetime.now(timezone.utc),
-            referrer_id=referrer_id
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-        # Criar referência de afiliado se aplicável (verificar auto-referência)
-        if referrer_id and referral_code and referrer_id != user.id:
-            # Verificar se já existe referência para este usuário
-            existing_referral = db.query(models.AffiliateReferral).filter(
-                models.AffiliateReferral.referred_user_id == user.id
-            ).first()
+            # Get language from request data or default to 'pt'
+            user_language = getattr(data, 'language', 'pt') or 'pt'
+            if user_language not in ['pt', 'en']:
+                user_language = 'pt'
             
-            if not existing_referral:
-                ip_address = request.client.host if request.client else None
-                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
-                
-                referral = models.AffiliateReferral(
-                    referrer_id=referrer_id,
-                    referred_user_id=user.id,
-                    referral_code=referral_code,
-                    has_subscribed=False,  # Será atualizado quando subscrever
-                    ip_address=ip_address,
-                    user_agent=user_agent
-                )
-                db.add(referral)
-                db.commit()
-                logger.info(f'✅ Referência criada via social login: {referrer.email} -> {user.email} (código: {referral_code})')
-            else:
-                logger.warning(f'⚠️ Referência já existe para {user.email} via social login, não criando duplicado')
-        elif referrer_id == user.id:
-            logger.warning(f'🚫 Tentativa de auto-referência bloqueada: {email}')
-            # Remover referrer_id se for auto-referência
-            user.referrer_id = None
-            db.commit()
-        else:
+            # Validar código de referência se fornecido
+            referrer_id = None
+            referral_code = getattr(data, 'referral_code', None)
             if referral_code:
-                logger.warning(f'⚠️ Código de referência fornecido ({referral_code}) mas referrer_id não foi definido ou é inválido')
-            logger.info(f'ℹ️ Nenhuma referência criada para {user.email} via social login (referral_code={referral_code}, referrer_id={referrer_id})')
-        
-        new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
-        db.add(new_workspace)
-        db.commit()
-        db.refresh(new_workspace)
-        
-        # Criar categorias padrão (Investimento e Fundo de Emergência)
-        categories_map = create_default_categories(db, new_workspace.id)
-        
+                referrer = db.query(models.User).filter(
+                    and_(
+                        models.User.affiliate_code == referral_code,
+                        models.User.is_affiliate == True
+                    )
+                ).first()
+                if referrer:
+                    # Prevenir auto-referência (verificar depois de criar o user)
+                    referrer_id = referrer.id
+                else:
+                    logger.warning(f'Código de referência inválido no social login: {referral_code}')
+            
+            user = models.User(
+                email=email,
+                google_id=social_id if data.provider == 'google' else None,
+                is_email_verified=True,
+                language=user_language,
+                login_count=1,
+                last_login=datetime.now(timezone.utc),
+                referrer_id=referrer_id
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+            # Criar referência de afiliado se aplicável (verificar auto-referência)
+            if referrer_id and referral_code and referrer_id != user.id:
+                # Verificar se já existe referência para este usuário
+                existing_referral = db.query(models.AffiliateReferral).filter(
+                    models.AffiliateReferral.referred_user_id == user.id
+                ).first()
+                
+                if not existing_referral:
+                    ip_address = request.client.host if request.client else None
+                    user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+                    
+                    referral = models.AffiliateReferral(
+                        referrer_id=referrer_id,
+                        referred_user_id=user.id,
+                        referral_code=referral_code,
+                        has_subscribed=False,  # Será atualizado quando subscrever
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
+                    db.add(referral)
+                    db.commit()
+                    logger.info(f'✅ Referência criada via social login: {referrer.email} -> {user.email} (código: {referral_code})')
+                else:
+                    logger.warning(f'⚠️ Referência já existe para {user.email} via social login, não criando duplicado')
+            elif referrer_id == user.id:
+                logger.warning(f'🚫 Tentativa de auto-referência bloqueada: {email}')
+                # Remover referrer_id se for auto-referência
+                user.referrer_id = None
+                db.commit()
+            else:
+                if referral_code:
+                    logger.warning(f'⚠️ Código de referência fornecido ({referral_code}) mas referrer_id não foi definido ou é inválido')
+                logger.info(f'ℹ️ Nenhuma referência criada para {user.email} via social login (referral_code={referral_code}, referrer_id={referrer_id})')
+            
+            new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
+            db.add(new_workspace)
+            db.commit()
+            db.refresh(new_workspace)
+            
+            # Criar categorias padrão (Investimento e Fundo de Emergência)
+            categories_map = create_default_categories(db, new_workspace.id)
+            
             # Criar transações de exemplo para ajudar o Telegram a categorizar
             create_seed_transactions(db, new_workspace.id, categories_map)
         else:
