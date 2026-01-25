@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
@@ -54,7 +54,7 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { t, language } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -473,5 +473,17 @@ export default function LoginPage() {
         </div>
       </div>
     </GoogleOAuthProvider>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#020617] text-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
@@ -55,7 +55,7 @@ function GoogleRegisterButton({ onLoginSuccess, referralCode }: { onLoginSuccess
   );
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const { t, language } = useTranslation();
   const { refreshUser } = useUser();
   const router = useRouter();
@@ -450,6 +450,18 @@ export default function RegisterPage() {
       </div>
     </div>
     </GoogleOAuthProvider>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#020617] text-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   );
 }
 

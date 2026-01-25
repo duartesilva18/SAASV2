@@ -523,7 +523,10 @@ export default function AffiliatePage() {
                       border: '1px solid #334155',
                       borderRadius: '12px'
                     }}
-                    formatter={(value: number) => formatPrice(value * 100)}
+                    formatter={(value: number | undefined) => {
+                      if (value === undefined) return '';
+                      return formatPrice(value * 100);
+                    }}
                   />
                   <Area type="monotone" dataKey="receita" stroke="#f59e0b" fillOpacity={1} fill="url(#colorReceita)" />
                   <Area type="monotone" dataKey="comissão" stroke="#3b82f6" fillOpacity={1} fill="url(#colorComissao)" />
@@ -578,7 +581,10 @@ export default function AffiliatePage() {
                       border: '1px solid #334155',
                       borderRadius: '12px'
                     }}
-                    formatter={(value: number) => formatPrice(value * 100)}
+                    formatter={(value: number | undefined) => {
+                      if (value === undefined) return '';
+                      return formatPrice(value * 100);
+                    }}
                   />
                   <Legend />
                   <Area 
