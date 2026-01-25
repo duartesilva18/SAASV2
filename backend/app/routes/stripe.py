@@ -110,6 +110,7 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                 # Atualizar o utilizador na base de dados
                 # Usar uma sessão de DB separada para garantir atualização
                 from ..core.dependencies import SessionLocal
+                from datetime import datetime
                 db = SessionLocal()
                 try:
                     user = db.query(models.User).filter(models.User.id == current_user.id).first()
@@ -119,6 +120,21 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                         session_customer = getattr(session, 'customer', None)
                         if not user.stripe_customer_id and session_customer:
                             user.stripe_customer_id = session_customer
+                        
+                        # Marcar conversão de afiliado se aplicável (garantir que está marcado)
+                        if user.referrer_id and subscription_status in ['active', 'trialing']:
+                            referral = db.query(models.AffiliateReferral).filter(
+                                models.AffiliateReferral.referred_user_id == user.id
+                            ).first()
+                            if referral and not referral.has_subscribed:
+                                referral.has_subscribed = True
+                                referral.subscription_date = datetime.now()
+                                logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (verify-session)')
+                            elif referral:
+                                logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
+                            else:
+                                logger.warning(f'⚠️ Usuário tem referrer_id ({user.referrer_id}) mas não foi encontrada referência em affiliate_referrals para {user.email}')
+                        
                         db.commit()
                         db.refresh(user)
                         logger.info(f'Subscrição verificada e atualizada para {user.email}: {subscription_status}')

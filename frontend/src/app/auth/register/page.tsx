@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Sparkles, ArrowRight, Mail, Lock, AlertCircle, ChevronLeft, CheckCircle2, ShieldCheck, Zap, Trophy, Heart, Star, Eye, EyeOff } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
+import { useUser } from '@/lib/UserContext';
 
 // Reusable Simplified Button Component
 const MagneticButton = ({ children, className, onClick, disabled, type = "button" }: any) => {
@@ -25,18 +27,55 @@ const MagneticButton = ({ children, className, onClick, disabled, type = "button
 
 // registerBenefits agora vem das traduções
 
-function RegisterPageContent() {
+function GoogleRegisterButton({ onLoginSuccess, referralCode }: { onLoginSuccess: (token: string) => void, referralCode: string | null }) {
+  const { t } = useTranslation();
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => onLoginSuccess(tokenResponse.access_token),
+    onError: () => console.log('Registo com Google Falhou'),
+    flow: 'implicit',
+    prompt: 'select_account'
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => login()}
+      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-[28px] hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
+    >
+      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-2.64-2.81c-.73.48-1.66.76-2.64.76-2.85 0-5.27-1.92-6.13-4.51H2.18v2.98C3.99 20.24 7.75 23 12 23z" fill="#34A853" />
+        <path d="M5.87 13.78c-.22-.65-.35-1.35-.35-2.08s.13-1.43.35-2.08V6.64H2.18C1.43 8.24 1 10.07 1 12s.43 3.76 1.18 5.36l3.69-2.98z" fill="#FBBC05" />
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.75 1 3.99 3.76 2.18 7.36l3.69 2.98c.86-2.59 3.28-4.51 6.13-4.51z" fill="#EA4335" />
+      </svg>
+      <span className="text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors">
+        Continuar com Google
+      </span>
+    </button>
+  );
+}
+
+export default function RegisterPage() {
   const { t, language } = useTranslation();
+  const { refreshUser } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const affiliateRef = searchParams.get('ref'); // Capturar código de afiliado da URL
+
+  // Pegar referral code da URL se existir
+  useEffect(() => {
+    const ref = searchParams?.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [searchParams]);
 
   const registerBenefits = t.auth.register.registerBenefits;
 
@@ -49,6 +88,43 @@ function RegisterPageContent() {
 
   const validateEmail = (email: string) => {
     return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+  };
+
+  const handleSocialLogin = async (token: string, provider: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.post('/auth/social-login', {
+        token,
+        provider,
+        language,
+        referral_code: referralCode || undefined
+      });
+      const storage = localStorage;
+      storage.setItem('token', response.data.access_token);
+      if (response.data.refresh_token) {
+        storage.setItem('refresh_token', response.data.refresh_token);
+      }
+      await refreshUser();
+      
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#3b82f6', '#ffffff']
+      });
+
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      setError(detail || 'Erro ao registar com Google');
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,13 +147,9 @@ function RegisterPageContent() {
       await api.post('/auth/register', {
         email,
         password,
-        language
+        language,
+        referral_code: referralCode || undefined
       });
-      
-      // Guardar código de afiliado no localStorage para usar depois na verificação
-      if (affiliateRef) {
-        localStorage.setItem('affiliate_ref', affiliateRef);
-      }
       
       confetti({
         particleCount: 150,
@@ -99,7 +171,10 @@ function RegisterPageContent() {
     }
   };
 
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "168035889326-q6bstt3rkcg40o6u9ijgar0uh6h179j8.apps.googleusercontent.com";
+
   return (
+    <GoogleOAuthProvider clientId={googleClientId}>
     <div className="min-h-screen bg-[#020617] text-slate-50 flex flex-col md:flex-row relative overflow-hidden">
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -314,6 +389,44 @@ function RegisterPageContent() {
                 )}
               </MagneticButton>
             </form>
+
+            {/* Referral Code Field */}
+            <div className="mt-6 pt-6 border-t border-slate-800">
+              <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-3 ml-2">
+                Código de Referência (Opcional)
+              </label>
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] py-4 pl-5 pr-5 text-sm focus:outline-none focus:border-amber-500 transition-all placeholder:text-slate-800 font-medium"
+                placeholder="Ex: MM2HQR2K"
+                maxLength={20}
+              />
+              {referralCode && (
+                <p className="text-xs text-amber-400 mt-2 ml-2 font-medium">
+                  Código aplicado: {referralCode}
+                </p>
+              )}
+            </div>
+
+            {/* Google Login */}
+            <div className="mt-8">
+              <div className="relative mb-6 text-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-800" />
+                </div>
+                <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em]">
+                  <span className="bg-slate-900/60 px-4 text-slate-600">ou</span>
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <GoogleRegisterButton 
+                  onLoginSuccess={(token) => handleSocialLogin(token, 'google')} 
+                  referralCode={referralCode}
+                />
+              </div>
+            </div>
           </motion.div>
 
           <div className="mt-10 lg:mt-14 text-center">
@@ -336,13 +449,7 @@ function RegisterPageContent() {
         {t.auth.register.securePrivate}
       </div>
     </div>
+    </GoogleOAuthProvider>
   );
 }
 
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#020617] flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>}>
-      <RegisterPageContent />
-    </Suspense>
-  );
-}

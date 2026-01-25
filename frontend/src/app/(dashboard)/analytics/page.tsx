@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
-import { getDemoTransactions, getDemoCategories, getDemoInsights, getDemoRecurring } from '@/lib/mockData';
+import { DEMO_TRANSACTIONS, DEMO_CATEGORIES, DEMO_INSIGHTS, DEMO_RECURRING } from '@/lib/mockData';
 import Link from 'next/link';
 import { Lock, ArrowRight } from 'lucide-react';
 import { ChartSkeleton, DashboardSkeleton } from '@/components/LoadingSkeleton';
 
 export default function AnalyticsPage() {
-  const { t, formatCurrency, language } = useTranslation();
+  const { t, formatCurrency } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
   const [rawData, setRawData] = useState<{ transactions: any[], categories: any[], insights: any, recurring: any[] }>({ transactions: [], categories: [], insights: null, recurring: [] });
@@ -89,10 +89,10 @@ export default function AnalyticsPage() {
       if (!hasActiveSub && compositeData.transactions.length === 0) {
         compositeData = {
           ...compositeData,
-          transactions: getDemoTransactions(language),
-          categories: getDemoCategories(language),
-          insights: getDemoInsights(language) || { insights: [], summary: '', health_score: 0 },
-          recurring: getDemoRecurring(language)
+          transactions: DEMO_TRANSACTIONS,
+          categories: DEMO_CATEGORIES,
+          insights: DEMO_INSIGHTS,
+          recurring: DEMO_RECURRING
         };
       }
 
@@ -548,25 +548,8 @@ export default function AnalyticsPage() {
       animate={{ opacity: 1 }}
       className="space-y-10 pb-20 relative"
     >
-      {!isPro && (
-        <div className="sticky top-20 z-[100] w-full bg-amber-500/90 backdrop-blur-md p-4 rounded-3xl border border-amber-400 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-black/20 rounded-2xl flex items-center justify-center text-black">
-              <Lock size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black uppercase text-black leading-none mb-1">{t.dashboard.analytics.demoMode}</h3>
-              <p className="text-[10px] font-bold text-black/70 uppercase tracking-widest">{t.dashboard.analytics.demoModeText}</p>
-            </div>
-          </div>
-          <Link href="/pricing" className="bg-black text-white px-8 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl">
-            {t.dashboard.analytics.activateProNow}
-          </Link>
-        </div>
-      )}
-
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex items-center justify-between mb-12">
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-white mb-2">
             {t.dashboard.analytics.title}
@@ -576,7 +559,25 @@ export default function AnalyticsPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl">
+        <div className="flex items-center gap-4">
+          {!isPro && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl"
+            >
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
+              <Link 
+                href="/pricing"
+                className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer"
+              >
+                {t.dashboard.page.upgradePro}
+              </Link>
+            </motion.div>
+          )}
+          
+          <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl">
           <div className="flex -space-x-2">
             {[1, 2, 3].map(i => (
               <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-950 bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">
@@ -586,8 +587,9 @@ export default function AnalyticsPage() {
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 pr-2 border-r border-slate-800">Zen Engine v2.0</span>
           <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Hero Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
     language: Optional[str] = 'pt'
+    referral_code: Optional[str] = None  # Código de afiliado (opcional)
 
 class UserResponse(UserBase):
     id: UUID
@@ -34,7 +35,6 @@ class UserUpdateOnboarding(BaseModel):
     full_name: str
     phone_number: str
     currency: str
-    language: str
     gender: str
     marketing_opt_in: bool = False
 
@@ -65,6 +65,7 @@ class SocialLoginRequest(BaseModel):
     token: str
     provider: str
     language: Optional[str] = 'pt'
+    referral_code: Optional[str] = None  # Código de afiliado (opcional)
 
 class CategoryBase(BaseModel):
     name: str
@@ -324,87 +325,88 @@ class SavingsGoalResponse(SavingsGoalBase):
     class Config:
         from_attributes = True
 
-# Affiliate Schemas
+# Schemas de Afiliados
+class AffiliateRequest(BaseModel):
+    """Solicitação para se tornar afiliado"""
+    pass
+
 class AffiliateResponse(BaseModel):
+    """Resposta com informações do afiliado"""
+    is_affiliate: bool
+    affiliate_code: Optional[str] = None
+    affiliate_link: Optional[str] = None
+    total_referrals: int = 0
+    total_conversions: int = 0
+    total_earnings_cents: int = 0
+    pending_earnings_cents: int = 0
+
+    class Config:
+        from_attributes = True
+
+class AffiliateReferralResponse(BaseModel):
+    """Informações de uma referência"""
     id: UUID
-    affiliate_id: UUID
-    code: str
-    commission_percentage: float
-    is_active: bool
-    total_referrals: int
-    total_conversions: int
-    total_earnings_cents: int
-    total_paid_cents: int
+    referred_user_email: str
+    referred_user_full_name: Optional[str] = None
+    has_subscribed: bool
+    subscription_date: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
-    
+    payment_info: Optional[dict] = None  # Informações de pagamento do Stripe
+
     class Config:
         from_attributes = True
 
 class AffiliateStats(BaseModel):
+    """Estatísticas do afiliado"""
     total_referrals: int
     total_conversions: int
     conversion_rate: float
     total_earnings_cents: int
-    total_paid_cents: int
     pending_earnings_cents: int
-    monthly_stats: List[dict] = []
+    paid_earnings_cents: int
+    referrals: List[AffiliateReferralResponse]
+    monthly_commissions: List[dict]  # {month: str, revenue_cents: int, commission_cents: int, conversions: int}
+    weekly_revenue: List[dict]  # {week: str, revenue_cents: int, commission_cents: int, week_label: str}
 
-class ReferralResponse(BaseModel):
+class AffiliateCommissionResponse(BaseModel):
+    """Comissão mensal"""
     id: UUID
-    affiliate_id: UUID
-    referred_user_id: UUID
-    has_converted: bool
-    conversion_date: Optional[datetime] = None
-    conversion_amount_cents: Optional[int] = None
-    created_at: datetime
-    referred_user_email: Optional[str] = None
-    referred_user_name: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
-
-class CommissionResponse(BaseModel):
-    id: UUID
-    affiliate_id: UUID
-    month: int
-    year: int
-    total_referrals: int
-    total_conversions: int
+    month: date
     total_revenue_cents: int
     commission_percentage: float
     commission_amount_cents: int
+    referrals_count: int
+    conversions_count: int
     is_paid: bool
     paid_at: Optional[datetime] = None
-    payment_reference: Optional[str] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
-class AffiliateSettingsResponse(BaseModel):
-    id: UUID
-    default_commission_percentage: float
-    admin_email: Optional[str] = None
-    is_system_active: bool
-    min_payout_cents: int
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
+# Schemas Admin Afiliados
+class AdminAffiliateResponse(BaseModel):
+    """Resposta admin com informações do afiliado"""
+    user_id: UUID
+    email: str
+    full_name: Optional[str] = None
+    affiliate_code: Optional[str] = None
+    is_affiliate: bool
+    total_referrals: int
+    total_conversions: int
+    total_earnings_cents: int
+    created_at: datetime
 
-class AffiliateSettingsUpdate(BaseModel):
-    default_commission_percentage: Optional[float] = None
-    admin_email: Optional[EmailStr] = None
-    is_system_active: Optional[bool] = None
-    min_payout_cents: Optional[int] = None
+class AdminAffiliateDetail(AdminAffiliateResponse):
+    """Detalhes completos do afiliado para admin"""
+    referrals: List[AffiliateReferralResponse]
+    commissions: List[AffiliateCommissionResponse]
 
 class PromoteToAffiliateRequest(BaseModel):
+    """Promover utilizador a afiliado"""
     user_id: UUID
-    commission_percentage: Optional[float] = None  # Se None, usa o padrão
 
-class AffiliateLinkResponse(BaseModel):
-    code: str
-    link: str
-    qr_code_url: Optional[str] = None
+class AffiliateSettingsUpdate(BaseModel):
+    """Atualizar percentagem de comissão"""
+    commission_percentage: float = Field(..., ge=0, le=100)
 

@@ -13,6 +13,7 @@ interface User {
   gender?: string;
   is_active: boolean;
   is_admin: boolean;
+  is_affiliate?: boolean;
   is_email_verified: boolean;
   is_onboarded: boolean;
   marketing_opt_in: boolean;

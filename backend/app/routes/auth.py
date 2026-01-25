@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from datetime import datetime, timedelta, timezone, date
-from typing import Optional
 import secrets
 import re
 import uuid
@@ -84,16 +84,45 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
     token = secrets.token_urlsafe(48)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     
+    # Validar código de referência se fornecido
+    referrer_id = None
+    referral_code = getattr(user_in, 'referral_code', None)
+    if referral_code:
+        logger.info(f'🔍 Processando código de referência no registo: {referral_code} para email: {user_in.email}')
+        referrer = db.query(models.User).filter(
+            and_(
+                models.User.affiliate_code == referral_code,
+                models.User.is_affiliate == True
+            )
+        ).first()
+        if referrer:
+            referrer_id = referrer.id
+            logger.info(f'✅ Código de referência válido no registo: {referral_code} -> afiliado {referrer.email} (ID: {referrer_id})')
+        else:
+            logger.warning(f'⚠️ Código de referência inválido no registo: {referral_code}')
+            # Não bloquear o registo, apenas ignorar o código inválido
+    else:
+        logger.info(f'ℹ️ Nenhum código de referência fornecido no registo para {user_in.email}')
+    
     verification = models.EmailVerification(
         email=user_in.email,
         password_hash=hashed_pw,
         token=token,
         expires_at=expires_at
     )
+    # Armazenar referrer_id temporariamente (precisamos adicionar este campo ao modelo)
+    # Por enquanto, vamos usar uma abordagem diferente - armazenar no token ou criar uma tabela temporária
+    # Vamos usar uma abordagem mais simples: armazenar o referral_code no token URL
     db.add(verification)
     db.commit()
     
+    # Adicionar referral_code ao token se existir
     verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={token}"
+    if referral_code and referrer_id:
+        verify_url += f"&ref={referral_code}"
+        logger.info(f'✅ URL de verificação criada com código de referência: {verify_url}')
+    else:
+        logger.info(f'ℹ️ URL de verificação criada sem código de referência (referral_code={referral_code}, referrer_id={referrer_id})')
     # Get user language preference from user_in or default to 'pt'
     user_lang = getattr(user_in, 'language', 'pt') or 'pt'
     # Validate language (only 'pt' or 'en' supported)
@@ -158,14 +187,10 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         'id': uuid.uuid4(),
         'email': user_in.email,
         'is_active': True,
-        'is_admin': False,
         'is_email_verified': False,
         'is_onboarded': False,
         'marketing_opt_in': False,
         'currency': 'EUR',
-        'language': user_lang,
-        'subscription_status': 'none',
-        'terms_accepted': False,
         'created_at': datetime.now(timezone.utc)
     }
 
@@ -272,7 +297,7 @@ def create_seed_transactions(db: Session, workspace_id: uuid.UUID, categories_ma
     logger.info(f'Transações de exemplo criadas para workspace {workspace_id}')
 
 @router.get('/verify-email')
-async def verify_email(request: Request, token: str, ref: Optional[str] = None, db: Session = Depends(get_db)):
+async def verify_email(request: Request, token: str, ref: str = None, db: Session = Depends(get_db)):
     verification = db.query(models.EmailVerification).filter(
         models.EmailVerification.token == token,
         models.EmailVerification.is_used == False,
@@ -284,6 +309,30 @@ async def verify_email(request: Request, token: str, ref: Optional[str] = None, 
     
     user = db.query(models.User).filter(models.User.email == verification.email).first()
     
+    # Processar referência se fornecida
+    referrer_id = None
+    referral_code = None
+    if ref:
+        logger.info(f'🔍 Processando código de referência: {ref} para email: {verification.email}')
+        referrer = db.query(models.User).filter(
+            and_(
+                models.User.affiliate_code == ref,
+                models.User.is_affiliate == True
+            )
+        ).first()
+        if referrer:
+            # Prevenir auto-referência (mesmo utilizador)
+            if referrer.email != verification.email:
+                referrer_id = referrer.id
+                referral_code = ref
+                logger.info(f'✅ Código de referência válido: {ref} -> afiliado {referrer.email} (ID: {referrer_id})')
+            else:
+                logger.warning(f'🚫 Auto-referência bloqueada: {verification.email} tentou usar seu próprio código')
+        else:
+            logger.warning(f'⚠️ Código de referência inválido ou afiliado não encontrado: {ref}')
+    else:
+        logger.info(f'ℹ️ Nenhum código de referência fornecido na URL (ref={ref})')
+    
     if not user:
         # Get language from verification if stored, or default to 'pt'
         user_language = getattr(verification, 'language', 'pt') or 'pt'
@@ -293,21 +342,41 @@ async def verify_email(request: Request, token: str, ref: Optional[str] = None, 
             email=verification.email,
             password_hash=verification.password_hash,
             is_email_verified=True,
-            language=user_language
+            language=user_language,
+            referrer_id=referrer_id  # Definir referrer se existir
         )
         db.add(user)
         db.commit()
         db.refresh(user)
         
-        # Rastrear referência de afiliado se houver código
-        if ref:
-            from ..core.affiliate_tracking import track_referral
-            client_ip = request.client.host if request.client else None
-            user_agent = request.headers.get('user-agent')
-            try:
-                track_referral(db, str(user.id), ref, client_ip, user_agent)
-            except Exception as e:
-                logger.error(f'Erro ao rastrear referência: {e}')
+        # Criar referência de afiliado se aplicável
+        if referrer_id and referral_code:
+            # Verificar se já existe referência para este usuário
+            existing_referral = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == user.id
+            ).first()
+            
+            if not existing_referral:
+                ip_address = request.client.host if request.client else None
+                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+                
+                referral = models.AffiliateReferral(
+                    referrer_id=referrer_id,
+                    referred_user_id=user.id,
+                    referral_code=referral_code,
+                    has_subscribed=False,  # Será atualizado quando subscrever
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.add(referral)
+                db.commit()
+                logger.info(f'✅ Referência criada: {referrer.email} -> {user.email} (código: {referral_code})')
+            else:
+                logger.warning(f'⚠️ Referência já existe para {user.email}, não criando duplicado')
+        else:
+            if ref:
+                logger.warning(f'⚠️ Código de referência fornecido ({ref}) mas referrer_id ou referral_code não foi definido')
+            logger.info(f'ℹ️ Nenhuma referência criada para {user.email} (ref={ref}, referrer_id={referrer_id}, referral_code={referral_code})')
         
         new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
         db.add(new_workspace)
@@ -323,7 +392,10 @@ async def verify_email(request: Request, token: str, ref: Optional[str] = None, 
         logger.info(f'Utilizador criado e verificado: {user.email}')
         await log_action(db, action='register_success', user_id=user.id, details=f'Novo utilizador registado: {user.email}', request=request)
     else:
+        # Usuário já existe - referências só podem ser criadas para contas novas
         user.is_email_verified = True
+        if ref:
+            logger.warning(f'⚠️ Tentativa de criar referência para usuário existente bloqueada: {user.email} (código: {ref}). Referências só são válidas para contas novas.')
         db.commit()
     
     verification.is_used = True
@@ -344,14 +416,41 @@ async def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 @router.post('/onboarding', response_model=schemas.UserResponse)
-async def complete_onboarding(onboarding_data: schemas.UserUpdateOnboarding, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def complete_onboarding(request: Request, onboarding_data: schemas.UserUpdateOnboarding, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     current_user.full_name = onboarding_data.full_name
     current_user.phone_number = onboarding_data.phone_number
     current_user.currency = onboarding_data.currency
-    current_user.language = onboarding_data.language
     current_user.gender = onboarding_data.gender
     current_user.marketing_opt_in = onboarding_data.marketing_opt_in
     current_user.is_onboarded = True
+    
+    # Verificar se o usuário tem referrer_id mas ainda não tem referência criada
+    if current_user.referrer_id:
+        existing_referral = db.query(models.AffiliateReferral).filter(
+            models.AffiliateReferral.referred_user_id == current_user.id
+        ).first()
+        
+        if not existing_referral:
+            # Buscar o afiliado para obter o código
+            referrer = db.query(models.User).filter(models.User.id == current_user.referrer_id).first()
+            if referrer and referrer.is_affiliate and referrer.affiliate_code:
+                ip_address = request.client.host if request.client else None
+                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+                
+                referral = models.AffiliateReferral(
+                    referrer_id=current_user.referrer_id,
+                    referred_user_id=current_user.id,
+                    referral_code=referrer.affiliate_code,
+                    has_subscribed=False,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.add(referral)
+                logger.info(f'✅ Referência criada no onboarding: {referrer.email} -> {current_user.email} (código: {referrer.affiliate_code})')
+            else:
+                logger.warning(f'⚠️ Usuário tem referrer_id mas afiliado não encontrado ou inválido: {current_user.referrer_id}')
+        else:
+            logger.info(f'ℹ️ Referência já existe para {current_user.email}, não criando duplicado no onboarding')
     
     db.commit()
     db.refresh(current_user)
@@ -618,32 +717,80 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
     
     user = db.query(models.User).filter(models.User.email == email).first()
     
+    # Se o usuário já existe, não criar referência (referências só para contas novas)
+    if user:
+        referral_code = getattr(data, 'referral_code', None)
+        if referral_code:
+            logger.warning(f'⚠️ Tentativa de criar referência para usuário existente bloqueada via social login: {user.email} (código: {referral_code}). Referências só são válidas para contas novas.')
+    
     if not user:
         # Get language from request data or default to 'pt'
         user_language = getattr(data, 'language', 'pt') or 'pt'
         if user_language not in ['pt', 'en']:
             user_language = 'pt'
+        
+        # Validar código de referência se fornecido
+        referrer_id = None
+        referral_code = getattr(data, 'referral_code', None)
+        if referral_code:
+            referrer = db.query(models.User).filter(
+                and_(
+                    models.User.affiliate_code == referral_code,
+                    models.User.is_affiliate == True
+                )
+            ).first()
+            if referrer:
+                # Prevenir auto-referência (verificar depois de criar o user)
+                referrer_id = referrer.id
+            else:
+                logger.warning(f'Código de referência inválido no social login: {referral_code}')
+        
         user = models.User(
             email=email,
             google_id=social_id if data.provider == 'google' else None,
             is_email_verified=True,
             language=user_language,
             login_count=1,
-            last_login=datetime.now(timezone.utc)
+            last_login=datetime.now(timezone.utc),
+            referrer_id=referrer_id
         )
         db.add(user)
         db.commit()
         db.refresh(user)
         
-        # Rastrear referência de afiliado se houver código
-        if ref:
-            from ..core.affiliate_tracking import track_referral
-            client_ip = request.client.host if request.client else None
-            user_agent = request.headers.get('user-agent')
-            try:
-                track_referral(db, str(user.id), ref, client_ip, user_agent)
-            except Exception as e:
-                logger.error(f'Erro ao rastrear referência: {e}')
+        # Criar referência de afiliado se aplicável (verificar auto-referência)
+        if referrer_id and referral_code and referrer_id != user.id:
+            # Verificar se já existe referência para este usuário
+            existing_referral = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == user.id
+            ).first()
+            
+            if not existing_referral:
+                ip_address = request.client.host if request.client else None
+                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+                
+                referral = models.AffiliateReferral(
+                    referrer_id=referrer_id,
+                    referred_user_id=user.id,
+                    referral_code=referral_code,
+                    has_subscribed=False,  # Será atualizado quando subscrever
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.add(referral)
+                db.commit()
+                logger.info(f'✅ Referência criada via social login: {referrer.email} -> {user.email} (código: {referral_code})')
+            else:
+                logger.warning(f'⚠️ Referência já existe para {user.email} via social login, não criando duplicado')
+        elif referrer_id == user.id:
+            logger.warning(f'🚫 Tentativa de auto-referência bloqueada: {email}')
+            # Remover referrer_id se for auto-referência
+            user.referrer_id = None
+            db.commit()
+        else:
+            if referral_code:
+                logger.warning(f'⚠️ Código de referência fornecido ({referral_code}) mas referrer_id não foi definido ou é inválido')
+            logger.info(f'ℹ️ Nenhuma referência criada para {user.email} via social login (referral_code={referral_code}, referrer_id={referrer_id})')
         
         new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
         db.add(new_workspace)

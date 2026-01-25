@@ -1,21 +1,93 @@
 'use client';
 
-import { useState } from 'react';
-import api from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { 
-  Check, Star, Zap, Crown, ShieldCheck, 
-  ArrowRight, Sparkles, Trophy, CreditCard
+  Check, Zap, Crown, ShieldCheck, 
+  ArrowRight, Sparkles, Trophy, CreditCard, Lock
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
+import { useUser } from '@/lib/UserContext';
+import api from '@/lib/api';
 import Toast from '@/components/Toast';
 
 export default function PricingPage() {
   const { t, formatCurrency } = useTranslation();
+  const { isPro, refreshUser } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
+  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Verificar se voltou do Stripe com session_id
+  useEffect(() => {
+    const sessionId = searchParams?.get('session_id');
+    if (sessionId) {
+      setIsProcessingPayment(true);
+      
+      const verifyAndActivate = async (retryCount = 0) => {
+        try {
+          const verifyRes = await api.get(`/stripe/verify-session/${sessionId}`);
+          
+          if (verifyRes.data.success && verifyRes.data.is_active) {
+            // Atualizar contexto do usuário
+            await refreshUser();
+            
+            // Limpar URL
+            window.history.replaceState({}, '', '/pricing');
+            
+            // Confetti
+            confetti({
+              particleCount: 200,
+              spread: 100,
+              origin: { y: 0.6 },
+              colors: ['#3b82f6', '#fbbf24', '#ffffff']
+            });
+            
+            setIsProcessingPayment(false);
+            setToast({
+              isVisible: true,
+              message: 'Parabéns! Agora és Pro! 🎉',
+              type: 'success'
+            });
+            
+            // Redirecionar para dashboard após 2 segundos
+            setTimeout(() => {
+              router.push('/dashboard');
+            }, 2000);
+          } else if (retryCount < 5) {
+            setTimeout(() => verifyAndActivate(retryCount + 1), 1500);
+          } else {
+            setIsProcessingPayment(false);
+            setToast({
+              isVisible: true,
+              message: 'O pagamento está a ser processado. A subscrição será ativada em breve.',
+              type: 'success'
+            });
+            window.history.replaceState({}, '', '/pricing');
+          }
+        } catch (err: any) {
+          if (retryCount < 5 && err.response?.status !== 403) {
+            setTimeout(() => verifyAndActivate(retryCount + 1), 1500);
+          } else {
+            setIsProcessingPayment(false);
+            setToast({
+              isVisible: true,
+              message: 'Erro ao verificar pagamento. Por favor, recarrega a página.',
+              type: 'error'
+            });
+            window.history.replaceState({}, '', '/pricing');
+          }
+        }
+      };
+      
+      setTimeout(() => verifyAndActivate(), 2000);
+    }
+  }, [searchParams, refreshUser, router]);
 
   const handleSubscribe = async (priceId: string) => {
     try {
@@ -24,9 +96,13 @@ export default function PricingPage() {
         params: { price_id: priceId }
       });
       window.location.href = res.data.url;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert(t.dashboard.pricing.monthlyPlan.error);
+      setToast({
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao processar pagamento',
+        type: 'error'
+      });
     } finally {
       setLoading(null);
     }
@@ -41,194 +117,283 @@ export default function PricingPage() {
       description: t.dashboard.pricing.monthlyPlan.description,
       features: t.dashboard.pricing.monthlyPlan.features,
       icon: Zap,
-      color: 'blue'
     },
     {
       id: 'yearly',
       name: t.dashboard.pricing.yearlyPlan.name,
-      price: 89.90, // ~7.49/mês
+      price: 89.90,
       priceId: 'price_1SrkUrLtWlVpaXrb8zFq6OvW',
       description: t.dashboard.pricing.yearlyPlan.description,
       features: t.dashboard.pricing.yearlyPlan.features,
       icon: Crown,
       popular: true,
-      color: 'indigo'
     }
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="py-6 sm:py-8 md:py-12 px-4 sm:px-6 md:px-0"
-    >
-      {/* Header Section */}
-      <div className="text-center mb-8 sm:mb-12 md:mb-16 relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 sm:w-64 sm:h-64 bg-blue-600/10 blur-[100px] -z-10" />
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] sm:rounded-[40px] p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full -z-10" />
         
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-4 sm:mb-6"
-        >
-          <Sparkles size={12} className="sm:w-3.5 sm:h-3.5" />
-          {t.dashboard.pricing.page.headerTag}
-        </motion.div>
-        
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter mb-4 sm:mb-6 leading-none px-2">
-          {t.dashboard.pricing.page.title} <span className="text-blue-500">{t.dashboard.pricing.page.titleAccent}</span>
-        </h1>
-        <p className="text-slate-400 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto italic px-2">
-          {t.dashboard.pricing.page.subtitle}
-        </p>
-
-        {/* Billing Toggle */}
-        <div className="mt-8 sm:mt-10 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-          <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>{t.dashboard.pricing.page.monthly}</span>
-          <button 
-            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-            className="w-14 h-7 sm:w-16 sm:h-8 bg-slate-800 rounded-full relative p-0.5 sm:p-1 transition-all hover:bg-slate-700 cursor-pointer"
+        <div className="relative z-10 text-center space-y-4 sm:space-y-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg"
           >
-            <div 
-              className={`w-5 h-5 sm:w-6 sm:h-6 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)] absolute top-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out ${
-                billingCycle === 'monthly' 
-                  ? 'left-0.5 sm:left-1' 
-                  : 'left-[calc(100%-1.375rem)] sm:left-[calc(100%-1.75rem)]'
-              }`}
-            />
-          </button>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors ${billingCycle === 'yearly' ? 'text-white' : 'text-slate-500'}`}>{t.dashboard.pricing.page.annual}</span>
-            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest animate-pulse">
-              {t.dashboard.pricing.page.discount}
+            <Sparkles size={14} className="animate-pulse" />
+            Escolhe o teu plano
+          </motion.div>
+          
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tighter leading-tight"
+          >
+            Investe na tua <span className="text-blue-400 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Liberdade Financeira</span>
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-slate-400 text-xs font-medium max-w-xl mx-auto leading-relaxed"
+          >
+            A tua liberdade financeira começa com um clique. Desbloqueia ferramentas de elite que os bancos não querem que uses.
+          </motion.p>
+
+          {/* Billing Toggle */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-6"
+          >
+            <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors duration-300 ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>
+              Mensal
             </span>
-          </div>
+            <button 
+              onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+              className="w-16 sm:w-20 h-8 sm:h-10 bg-slate-800/80 rounded-full relative p-1 transition-all hover:bg-slate-700/80 border border-slate-700/50 cursor-pointer"
+            >
+              <motion.div 
+                animate={{ x: billingCycle === 'monthly' ? 0 : 32 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
+              />
+            </button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors duration-300 ${billingCycle === 'yearly' ? 'text-white' : 'text-slate-500'}`}>
+                Anual
+              </span>
+              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg">
+                -25% OFF
+              </span>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto px-2 sm:px-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.id}
-            initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className={`relative group h-full`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ y: -5, scale: 1.01 }}
+            className={`relative bg-slate-900/40 backdrop-blur-xl border rounded-[24px] sm:rounded-[32px] p-4 sm:p-5 lg:p-6 shadow-xl overflow-visible group transition-all duration-500 flex flex-col ${
+              plan.popular 
+                ? 'border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.1)]' 
+                : 'border-white/5 hover:border-white/10'
+            }`}
           >
-            {/* Background Glow */}
-            <div className={`absolute inset-0 bg-gradient-to-b ${plan.popular ? 'from-blue-600/10 to-indigo-600/10' : 'from-slate-800/20 to-transparent'} rounded-2xl sm:rounded-3xl md:rounded-[48px] blur-2xl transition-all group-hover:blur-3xl`} />
+            <div className={`absolute top-0 right-0 w-64 h-64 ${
+              plan.popular ? 'bg-blue-600/10' : 'bg-slate-800/20'
+            } blur-[100px] rounded-full transition-opacity duration-500 group-hover:opacity-80`} />
+            <div className={`absolute bottom-0 left-0 w-48 h-48 ${
+              plan.popular ? 'bg-indigo-600/5' : 'bg-transparent'
+            } blur-[80px] rounded-full`} />
             
-            <div className={`relative h-full bg-[#0f172a]/80 backdrop-blur-xl border ${plan.popular ? 'border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.1)]' : 'border-slate-800'} rounded-2xl sm:rounded-3xl md:rounded-[48px] p-6 sm:p-8 md:p-12 flex flex-col transition-all duration-500 hover:-translate-y-1 md:hover:-translate-y-2`}>
-              
-              {plan.popular && (
-                <div className="absolute -top-3 sm:-top-4 md:-top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] shadow-xl flex items-center gap-1.5 sm:gap-2">
-                  <Trophy size={12} className="sm:w-3.5 sm:h-3.5" />
-                  {t.dashboard.pricing.page.bestValue}
-                </div>
-              )}
-
-              <div className="flex justify-between items-start mb-6 sm:mb-8">
-                <div className="flex-1">
-                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tighter uppercase mb-2">{plan.name}</h2>
-                  <p className="text-slate-500 text-xs sm:text-sm font-medium leading-relaxed max-w-[200px]">
-                    {plan.description}
-                  </p>
-                </div>
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/5 flex items-center justify-center shrink-0 ${plan.popular ? 'text-blue-400' : 'text-slate-500'}`}>
-                  <plan.icon size={24} className="sm:w-7 sm:h-7" />
-                </div>
-              </div>
-
-              <div className="mb-6 sm:mb-8 md:mb-10">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl sm:text-5xl font-black text-white tracking-tighter">
+            {plan.popular && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] shadow-xl flex items-center gap-1.5 sm:gap-2 z-30 whitespace-nowrap"
+              >
+                <Trophy size={10} className="sm:w-3 sm:h-3 animate-pulse shrink-0" />
+                <span>Recomendado</span>
+              </motion.div>
+            )}
+            
+            <div className="relative z-10 flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3 sm:mb-4 shrink-0">
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${
+                    plan.popular 
+                      ? 'from-blue-500/30 to-indigo-500/30' 
+                      : 'from-slate-800/50 to-slate-900/50'
+                  } rounded-xl sm:rounded-2xl flex items-center justify-center border ${
+                    plan.popular ? 'border-blue-500/40' : 'border-slate-700/50'
+                  } shadow-lg transition-all duration-300 shrink-0`}
+                >
+                  <plan.icon size={20} className="sm:w-6 sm:h-6" style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
+                </motion.div>
+                <div className="text-right min-w-0 flex-shrink ml-2">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5 truncate">{plan.name}</p>
+                  <p className="text-2xl sm:text-3xl font-black text-white tracking-tighter leading-none">
                     {billingCycle === 'yearly' && plan.id === 'yearly' 
                       ? formatCurrency(plan.price) 
                       : formatCurrency(plan.id === 'yearly' ? 9.99 : plan.price)}
-                  </span>
-                  <span className="text-slate-500 font-black uppercase tracking-widest text-[9px] sm:text-[10px]">
-                    / {billingCycle === 'monthly' ? t.dashboard.pricing.page.month : t.dashboard.pricing.page.year}
-                  </span>
-                </div>
-                {billingCycle === 'yearly' && plan.id === 'yearly' && (
-                  <motion.p 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-emerald-400 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2 flex items-center gap-1.5 sm:gap-2"
-                  >
-                    <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5" />
-                    {t.dashboard.pricing.page.equivalentTo} {formatCurrency(plan.price / 12)}/{t.dashboard.pricing.page.perMonth}
-                  </motion.p>
-                )}
-                {billingCycle === 'monthly' && plan.id === 'yearly' && (
-                  <p className="text-slate-500 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2">
-                    {t.dashboard.pricing.page.saveAmount} {formatCurrency((9.99 * 12) - 89.90)} {t.dashboard.pricing.page.perYearOnAnnual}
                   </p>
-                )}
+                  <p className="text-[9px] sm:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
+                    / {billingCycle === 'monthly' ? 'Mês' : 'Ano'}
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-3 sm:space-y-4 md:space-y-5 mb-8 sm:mb-10 md:mb-12 flex-grow">
+              {billingCycle === 'yearly' && plan.id === 'yearly' && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-1.5 sm:p-2 mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2 shrink-0"
+                >
+                  <ShieldCheck size={11} className="sm:w-3 sm:h-3 text-emerald-400 shrink-0" />
+                  <p className="text-emerald-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                    Equivale a {formatCurrency(plan.price / 12)}/mês
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Features */}
+              <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                 {plan.features.map((feature: string, fIndex: number) => (
-                  <div key={fIndex} className="flex items-start gap-3 sm:gap-4 group/item">
-                    <div className={`mt-0.5 sm:mt-1 p-0.5 rounded-full shrink-0 ${plan.popular ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
-                      <Check size={12} className="sm:w-3.5 sm:h-3.5" strokeWidth={4} />
+                  <motion.div
+                    key={fIndex}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + fIndex * 0.05 }}
+                    className="flex items-start gap-2 group/feature"
+                  >
+                    <div className={`mt-0.5 p-0.5 rounded-full shrink-0 transition-all duration-300 ${
+                      plan.popular 
+                        ? 'bg-blue-500/20 text-blue-400 group-hover/feature:bg-blue-500/30' 
+                        : 'bg-slate-800 text-slate-500 group-hover/feature:bg-slate-700'
+                    }`}>
+                      <Check size={8} className="sm:w-3 sm:h-3" strokeWidth={4} />
                     </div>
-                    <span className="text-slate-300 text-xs sm:text-sm font-medium group-hover/item:text-white transition-colors leading-relaxed">
+                    <span className="text-slate-300 text-[10px] sm:text-xs font-medium group-hover/feature:text-white transition-colors duration-300 leading-snug">
                       {feature}
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
-              <button
-                disabled={loading !== null}
+              {/* CTA Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={loading !== null || isPro}
                 onClick={() => handleSubscribe(plan.priceId)}
-                className={`w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl md:rounded-[24px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[9px] sm:text-[10px] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer ${
+                className={`w-full py-2.5 sm:py-3.5 rounded-[16px] sm:rounded-[18px] font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] transition-all flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden shrink-0 ${
                   plan.popular 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 active:scale-95' 
-                    : 'bg-white/5 text-slate-300 border border-slate-800 hover:bg-white/10 active:scale-95'
-                }`}
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:from-blue-500 hover:to-indigo-500' 
+                    : 'bg-white/5 text-slate-300 border border-slate-800 hover:bg-white/10 hover:border-slate-700'
+                } ${isPro ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
+                {plan.popular && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                )}
                 {loading === plan.priceId ? (
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : isPro ? (
+                  <>
+                    <Check size={16} />
+                    Já és Pro
+                  </>
                 ) : (
                   <>
-                    {t.dashboard.pricing.page.activateNow}
-                    <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                    Ativar Agora
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* Trust Badges */}
-      <div className="mt-12 sm:mt-16 md:mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12"
+      >
         {[
-          { icon: ShieldCheck, title: t.dashboard.pricing.page.trustBadges.bankingSecurity.title, description: t.dashboard.pricing.page.trustBadges.bankingSecurity.description },
-          { icon: CreditCard, title: t.dashboard.pricing.page.trustBadges.easyCancellation.title, description: t.dashboard.pricing.page.trustBadges.easyCancellation.description },
-          { icon: Trophy, title: t.dashboard.pricing.page.trustBadges.zenGuarantee.title, description: t.dashboard.pricing.page.trustBadges.zenGuarantee.description }
+          { icon: ShieldCheck, title: 'Segurança Bancária', desc: 'Dados encriptados com tecnologia militar.', color: 'blue' },
+          { icon: CreditCard, title: 'Cancelamento Fácil', desc: 'Cancela quando quiseres, sem perguntas.', color: 'emerald' },
+          { icon: Trophy, title: 'Garantia Zen', desc: 'Satisfeito ou o teu dinheiro de volta em 7 dias.', color: 'amber' }
         ].map((item, i) => (
-          <div key={i} className="flex flex-col items-center text-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-500">
-              <item.icon size={20} className="sm:w-6 sm:h-6" />
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 + i * 0.1 }}
+            whileHover={{ y: -3 }}
+            className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 text-center hover:border-white/10 transition-all duration-300 group"
+          >
+            <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${
+              item.color === 'blue' ? 'from-blue-500/20 to-indigo-500/20' :
+              item.color === 'emerald' ? 'from-emerald-500/20 to-green-500/20' :
+              'from-amber-500/20 to-orange-500/20'
+            } rounded-xl sm:rounded-2xl flex items-center justify-center ${
+              item.color === 'blue' ? 'text-blue-400' :
+              item.color === 'emerald' ? 'text-emerald-400' :
+              'text-amber-400'
+            } mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 border ${
+              item.color === 'blue' ? 'border-blue-500/30' :
+              item.color === 'emerald' ? 'border-emerald-500/30' :
+              'border-amber-500/30'
+            }`}>
+              <item.icon size={24} className="sm:w-7 sm:h-7" />
             </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest mb-1 px-2">{item.title}</h4>
-              <p className="text-slate-500 text-[11px] sm:text-xs font-medium leading-relaxed px-2">{item.description}</p>
-            </div>
-          </div>
+            <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest mb-1 sm:mb-2">{item.title}</h4>
+            <p className="text-slate-400 text-[10px] sm:text-xs font-medium leading-relaxed">{item.desc}</p>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
+
+      {isProcessingPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-slate-900 border border-blue-500/20 rounded-2xl p-8 text-center max-w-md mx-4"
+          >
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-xl font-black text-white mb-2">A processar pagamento...</h3>
+            <p className="text-slate-400 text-sm">Aguarda enquanto verificamos a tua subscrição</p>
+          </motion.div>
+        </div>
+      )}
 
       <Toast 
-        message={toastMsg} 
-        onClose={() => setShowToast(false)} 
-        type={toastMsg.includes('Erro') ? 'error' : 'success'} 
-        isVisible={showToast}
+        message={toast.message} 
+        onClose={() => setToast({ ...toast, isVisible: false })} 
+        type={toast.type} 
+        isVisible={toast.isVisible}
       />
-    </motion.div>
+    </div>
   );
 }

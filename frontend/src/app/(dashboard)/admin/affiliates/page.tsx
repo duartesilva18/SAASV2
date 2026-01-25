@@ -1,119 +1,116 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import api from '@/lib/api';
-import { 
-  Users, TrendingUp, DollarSign, Settings, Plus, 
-  Crown, Search, Filter, Mail, Copy, Check, Link2, ExternalLink, X, Trash2, UserPlus, Sparkles, LineChart
-} from 'lucide-react';
-import {
-  LineChart as RechartsLineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, TrendingUp, DollarSign, Search, 
+  CheckCircle2, X, Loader2, Sparkles, Trophy,
+  Eye, ArrowUpRight, Calendar, Copy, Plus,
+  AlertCircle, CheckCircle, BarChart3, LineChart,
+  PieChart, Activity, UserPlus, Crown, Edit
+} from 'lucide-react';
+import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
+import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
+import { useRouter } from 'next/navigation';
+import { 
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, Cell, PieChart as RechartsPieChart, Pie, Legend
+} from 'recharts';
 
 interface Affiliate {
-  id: string;
-  affiliate_id: string;
-  code: string;
-  commission_percentage: number;
-  is_active: boolean;
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  affiliate_code: string | null;
+  is_affiliate: boolean;
   total_referrals: number;
   total_conversions: number;
   total_earnings_cents: number;
-  total_paid_cents: number;
-  affiliate_email?: string;
-  affiliate_name?: string;
-  affiliate_link?: string;
+  created_at: string;
 }
 
-interface AffiliateSettings {
-  default_commission_percentage: number;
-  admin_email: string | null;
-  is_system_active: boolean;
-  min_payout_cents: number;
+interface RevenueData {
+  month: string;
+  month_label: string;
+  revenue_cents: number;
+  commission_cents: number;
+  commissions_count: number;
 }
 
-interface SystemStats {
-  total_affiliates: number;
-  total_referrals: number;
-  total_conversions: number;
-  total_earnings_cents: number;
-  total_paid_cents: number;
-  pending_payments_cents: number;
-  conversion_rate: number;
+interface AffiliateRevenue {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  affiliate_code: string | null;
+  total_revenue_cents: number;
+  total_commission_cents: number;
+  months_active: number;
+  last_month: string | null;
 }
 
 export default function AdminAffiliatesPage() {
   const { t, formatCurrency } = useTranslation();
-  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [topAffiliates, setTopAffiliates] = useState<Affiliate[]>([]);
-  const [settings, setSettings] = useState<AffiliateSettings | null>(null);
-  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const { user } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null);
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [revenueTimeline, setRevenueTimeline] = useState<RevenueData[]>([]);
+  const [revenueByAffiliate, setRevenueByAffiliate] = useState<AffiliateRevenue[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-
-  // Form states
-  const [promoteUserId, setPromoteUserId] = useState('');
-  const [promoteCommission, setPromoteCommission] = useState('');
-  const [userSearch, setUserSearch] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [settingsForm, setSettingsForm] = useState({
-    default_commission_percentage: '',
-    admin_email: '',
-    is_system_active: true,
-    min_payout_cents: ''
-  });
+  const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [usersToPromote, setUsersToPromote] = useState<any[]>([]);
+  const [searchUserTerm, setSearchUserTerm] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [detailData, setDetailData] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [promoting, setPromoting] = useState<string | null>(null);
+  const [referralsPage, setReferralsPage] = useState(1);
+  const [referralsPerPage] = useState(10);
+  const [commissionPercentage, setCommissionPercentage] = useState<number>(20.0);
+  const [editingCommission, setEditingCommission] = useState(false);
+  const [savingCommission, setSavingCommission] = useState(false);
 
   useEffect(() => {
+    if (user && !user.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [user]);
 
   const fetchData = async () => {
     try {
-      const [affiliatesRes, topRes, settingsRes, statsRes, revenueRes] = await Promise.all([
-        api.get('/affiliates/admin/all'),
-        api.get('/affiliates/admin/top?limit=3'),
-        api.get('/affiliates/admin/settings'),
-        api.get('/affiliates/admin/stats'),
-        api.get('/affiliates/admin/revenue-comparison').catch(() => ({ data: [] }))
+      const [affiliatesRes, statsRes, timelineRes, revenueRes, commissionRes] = await Promise.all([
+        api.get('/admin/affiliates'),
+        api.get('/admin/affiliates/stats').catch(() => ({ data: null })),
+        api.get('/admin/affiliates/revenue-timeline').catch(() => ({ data: { timeline: [] } })),
+        api.get('/admin/affiliates/revenue-by-affiliate').catch(() => ({ data: { affiliates: [] } })),
+        api.get('/admin/affiliates/commission-percentage').catch(() => ({ data: { percentage: 20.0 } }))
       ]);
-
       setAffiliates(affiliatesRes.data);
-      setTopAffiliates(topRes.data);
-      setSettings(settingsRes.data);
-      setSystemStats(statsRes.data);
-      setRevenueData(revenueRes.data || []);
-
-      // Preencher formulário de settings
-      if (settingsRes.data) {
-        setSettingsForm({
-          default_commission_percentage: settingsRes.data.default_commission_percentage.toString(),
-          admin_email: settingsRes.data.admin_email || '',
-          is_system_active: settingsRes.data.is_system_active,
-          min_payout_cents: (settingsRes.data.min_payout_cents / 100).toString()
-        });
+      if (statsRes?.data) {
+        setStats(statsRes.data);
       }
-    } catch (err) {
+      if (timelineRes?.data?.timeline) {
+        setRevenueTimeline(timelineRes.data.timeline.reverse());
+      }
+      if (revenueRes?.data?.affiliates) {
+        setRevenueByAffiliate(revenueRes.data.affiliates);
+      }
+      if (commissionRes?.data?.percentage) {
+        setCommissionPercentage(commissionRes.data.percentage);
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar afiliados:', err);
       setToast({
-        show: true,
-        message: 'Erro ao carregar dados',
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao carregar afiliados',
         type: 'error'
       });
     } finally {
@@ -121,166 +118,138 @@ export default function AdminAffiliatesPage() {
     }
   };
 
-  const searchUsers = async (searchTerm: string) => {
-    if (!searchTerm || searchTerm.length < 2) {
-      setUserSearchResults([]);
+  const handleSaveCommission = async () => {
+    if (commissionPercentage < 0 || commissionPercentage > 100) {
+      setToast({
+        isVisible: true,
+        message: 'A percentagem deve estar entre 0 e 100',
+        type: 'error'
+      });
       return;
     }
-
-    setIsSearching(true);
+    
+    setSavingCommission(true);
     try {
-      const res = await api.get(`/admin/users?search=${encodeURIComponent(searchTerm)}&limit=10`);
-      setUserSearchResults(res.data);
-    } catch (err) {
-      setUserSearchResults([]);
+      await api.post('/admin/affiliates/commission-percentage', null, {
+        params: { percentage: commissionPercentage }
+      });
+      setEditingCommission(false);
+      setToast({
+        isVisible: true,
+        message: `Percentagem de comissão atualizada para ${commissionPercentage}%`,
+        type: 'success'
+      });
+    } catch (err: any) {
+      setToast({
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao atualizar percentagem',
+        type: 'error'
+      });
     } finally {
-      setIsSearching(false);
+      setSavingCommission(false);
+    }
+  };
+
+  const fetchUsersToPromote = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await api.get('/admin/affiliates/users', {
+        params: { search: searchUserTerm || undefined }
+      });
+      setUsersToPromote(res.data);
+    } catch (err: any) {
+      setToast({
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao carregar utilizadores',
+        type: 'error'
+      });
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
   useEffect(() => {
     if (showPromoteModal) {
-      // Reset quando o modal abre
-      setUserSearch('');
-      setSelectedUser(null);
-      setPromoteUserId('');
-      setUserSearchResults([]);
+      fetchUsersToPromote();
     }
-  }, [showPromoteModal]);
+  }, [showPromoteModal, searchUserTerm]);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (userSearch && !selectedUser) {
-        searchUsers(userSearch);
-      } else {
-        setUserSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [userSearch, selectedUser]);
-
-  const handleSelectUser = (user: any) => {
-    setSelectedUser(user);
-    setPromoteUserId(user.id);
-    setUserSearch(user.email || user.full_name || '');
-    setUserSearchResults([]);
-  };
-
-  const handlePromote = async () => {
-    if (!promoteUserId) {
+  const fetchAffiliateDetail = async (userId: string) => {
+    setLoadingDetail(true);
+    setReferralsPage(1); // Reset pagination when opening modal
+    try {
+      const res = await api.get(`/admin/affiliates/${userId}`);
+      setDetailData(res.data);
+      setShowDetailModal(true);
+    } catch (err: any) {
       setToast({
-        show: true,
-        message: 'Por favor, seleciona um utilizador',
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao carregar detalhes',
         type: 'error'
       });
-      return;
+    } finally {
+      setLoadingDetail(false);
     }
+  };
 
+  const handlePromoteToAffiliate = async (userId: string) => {
+    if (!confirm('Tem a certeza que deseja promover este utilizador a afiliado?')) return;
+    
+    setPromoting(userId);
     try {
-      await api.post('/affiliates/admin/promote', {
-        user_id: promoteUserId,
-        commission_percentage: promoteCommission ? parseFloat(promoteCommission) : undefined
-      });
-
+      await api.post('/admin/affiliates/promote', { user_id: userId });
       setToast({
-        show: true,
+        isVisible: true,
         message: 'Utilizador promovido a afiliado com sucesso!',
         type: 'success'
       });
-
       setShowPromoteModal(false);
-      setPromoteUserId('');
-      setPromoteCommission('');
-      setUserSearch('');
-      setSelectedUser(null);
-      setUserSearchResults([]);
       fetchData();
+      fetchUsersToPromote();
     } catch (err: any) {
       setToast({
-        show: true,
-        message: err.response?.data?.detail || 'Erro ao promover utilizador',
+        isVisible: true,
+        message: err?.response?.data?.detail || 'Erro ao promover utilizador',
         type: 'error'
       });
+    } finally {
+      setPromoting(null);
     }
   };
 
-  const handleUpdateSettings = async () => {
-    try {
-      await api.put('/affiliates/admin/settings', {
-        default_commission_percentage: settingsForm.default_commission_percentage ? parseFloat(settingsForm.default_commission_percentage) : undefined,
-        admin_email: settingsForm.admin_email || undefined,
-        is_system_active: settingsForm.is_system_active,
-        min_payout_cents: settingsForm.min_payout_cents ? Math.round(parseFloat(settingsForm.min_payout_cents) * 100) : undefined
-      });
-
-      setToast({
-        show: true,
-        message: 'Configurações atualizadas com sucesso!',
-        type: 'success'
-      });
-
-      setShowSettingsModal(false);
-      fetchData();
-    } catch (err: any) {
-      setToast({
-        show: true,
-        message: err.response?.data?.detail || 'Erro ao atualizar configurações',
-        type: 'error'
-      });
-    }
+  // Formatar sempre em EUR para esta página
+  const formatPrice = (cents: number) => {
+    return new Intl.NumberFormat('pt-PT', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(cents / 100);
   };
 
-  const toggleAffiliateActive = async (affiliateId: string) => {
-    try {
-      await api.post(`/affiliates/admin/${affiliateId}/toggle-active`);
-      fetchData();
-      setToast({
-        show: true,
-        message: 'Estado do afiliado atualizado!',
-        type: 'success'
-      });
-    } catch (err) {
-      setToast({
-        show: true,
-        message: 'Erro ao alterar estado do afiliado',
-        type: 'error'
-      });
-    }
-  };
-
-  const removeAffiliate = async (affiliateId: string, affiliateName: string) => {
-    if (!confirm(`Tens a certeza que queres remover o afiliado "${affiliateName}"? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
-
-    try {
-      await api.delete(`/affiliates/admin/${affiliateId}/remove`);
-      fetchData();
-      setToast({
-        show: true,
-        message: 'Afiliado removido com sucesso!',
-        type: 'success'
-      });
-    } catch (err: any) {
-      setToast({
-        show: true,
-        message: err.response?.data?.detail || 'Erro ao remover afiliado',
-        type: 'error'
-      });
-    }
-  };
-
-  const filteredAffiliates = affiliates.filter(aff => 
-    aff.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aff.affiliate_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aff.affiliate_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAffiliates = affiliates.filter(aff =>
+    aff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (aff.full_name && aff.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (aff.affiliate_code && aff.affiliate_code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Preparar dados para gráficos
+  const chartData = revenueTimeline.map(item => ({
+    month: item.month_label,
+    receita: item.revenue_cents / 100,
+    comissão: item.commission_cents / 100
+  }));
+
+  const pieData = revenueByAffiliate.slice(0, 5).map(aff => ({
+    name: aff.full_name || aff.email.split('@')[0],
+    value: aff.total_revenue_cents / 100
+  }));
+
+  const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 animate-pulse">Carregando afiliados...</p>
       </div>
     );
   }
@@ -289,734 +258,842 @@ export default function AdminAffiliatesPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="text-white pb-20"
+      className="space-y-10 pb-20"
     >
-      <div className="flex items-center justify-between mb-12">
+      {/* Header */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white mb-2">Gestão de Afiliados</h1>
-          <p className="text-slate-400">Gere o programa de afiliados</p>
+          <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase flex items-center gap-3">
+            <Trophy className="w-8 h-8 text-amber-400" />
+            Gestão de <span className="text-amber-400 italic">Afiliados</span>
+          </h1>
+          <p className="text-slate-500 font-medium italic text-sm">Gerir e monitorizar o programa de afiliados</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Settings size={16} />
-            Configurações
-          </button>
-          <button
-            onClick={() => setShowPromoteModal(true)}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus size={16} />
-            Promover Afiliado
-          </button>
+        <button
+          onClick={() => setShowPromoteModal(true)}
+          className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer hover:scale-105 active:scale-95"
+        >
+          <UserPlus className="w-5 h-5" />
+          Promover Utilizador
+        </button>
+      </header>
+
+      {/* Commission Percentage Setting - Discreet */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-slate-900/30 backdrop-blur-xl border border-slate-800/50 rounded-xl p-4 shadow-lg"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="text-xs font-black uppercase tracking-widest text-slate-500">Percentagem de Comissão</div>
+            {editingCommission ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={commissionPercentage}
+                  onChange={(e) => setCommissionPercentage(parseFloat(e.target.value) || 0)}
+                  className="w-20 bg-slate-800/50 border border-amber-500/30 rounded-lg px-3 py-1.5 text-white font-black text-sm focus:outline-none focus:border-amber-500 transition-all"
+                  autoFocus
+                />
+                <span className="text-sm font-black text-slate-400">%</span>
+                <button
+                  onClick={handleSaveCommission}
+                  disabled={savingCommission}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black rounded-lg font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingCommission ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-3 h-3" />
+                  )}
+                  Guardar
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingCommission(false);
+                    fetchData(); // Reset to original value
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black text-amber-400/80">{commissionPercentage}%</span>
+                <button
+                  onClick={() => setEditingCommission(true)}
+                  className="p-1.5 hover:bg-slate-800/50 text-slate-400 hover:text-amber-400 rounded-lg transition-all cursor-pointer"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            <div className="text-[10px] text-slate-500 italic ml-auto">
+              Aplica-se apenas a comissões futuras
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Estatísticas Gerais */}
-      {systemStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Users size={24} className="text-blue-400" />
-              <div>
-                <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Total Afiliados</p>
-                <p className="text-2xl font-black text-white">{systemStats.total_affiliates}</p>
-              </div>
+      {/* Stats Overview */}
+      {stats && stats.total_affiliates !== undefined && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Users className="w-8 h-8 text-amber-400" />
+              <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
-          </div>
+            <p className="text-3xl font-black text-white mb-1">{stats.total_affiliates}</p>
+            <p className="text-sm text-slate-400">Total de Afiliados</p>
+          </motion.div>
 
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <TrendingUp size={24} className="text-emerald-400" />
-              <div>
-                <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Total Referências</p>
-                <p className="text-2xl font-black text-white">{systemStats.total_referrals}</p>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/10 transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <DollarSign className="w-8 h-8 text-blue-400" />
+              <Activity className="w-5 h-5 text-green-400" />
             </div>
-            <p className="text-xs text-slate-500 mt-2">Taxa: {systemStats.conversion_rate}%</p>
-          </div>
+            <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_revenue_cents || 0)}</p>
+            <p className="text-sm text-slate-400">Receita Total</p>
+          </motion.div>
 
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign size={24} className="text-amber-400" />
-              <div>
-                <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Total de Comissões</p>
-                <p className="text-2xl font-black text-white">{formatCurrency(systemStats.total_earnings_cents / 100)}</p>
-                <p className="text-[10px] text-slate-500 mt-1">Comissões geradas</p>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-green-500/20 rounded-2xl p-6 shadow-xl hover:shadow-green-500/10 transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+              <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
-          </div>
+            <p className="text-3xl font-black text-white mb-1">{stats.total_conversions}</p>
+            <p className="text-sm text-slate-400">Conversões</p>
+            <p className="text-xs text-slate-500 mt-2">Taxa: {stats.conversion_rate?.toFixed(1) || 0}%</p>
+          </motion.div>
 
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign size={24} className="text-purple-400" />
-              <div>
-                <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Pendente de Pagamento</p>
-                <p className="text-2xl font-black text-white">{formatCurrency(systemStats.pending_payments_cents / 100)}</p>
-                <p className="text-[10px] text-slate-500 mt-1">Ainda não pago</p>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Trophy className="w-8 h-8 text-amber-400" />
+              <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
-          </div>
+            <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_paid_earnings_cents || stats.total_earnings_cents || 0)}</p>
+            <p className="text-sm text-slate-400">Comissões Pagas</p>
+          </motion.div>
         </div>
       )}
 
-      {/* Top 3 Afiliados */}
-      {topAffiliates.length > 0 && (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Crown size={24} className="text-amber-400" />
-            <h2 className="text-2xl font-black text-white">Top 3 Afiliados</h2>
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Timeline Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <LineChart className="w-5 h-5 text-amber-400" />
+              Timeline de Faturamento
+            </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {topAffiliates.map((aff, idx) => (
-              <div
-                key={aff.id}
-                className={`bg-slate-950 border rounded-2xl p-6 ${
-                  idx === 0 ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    {idx === 0 && <Crown size={20} className="text-amber-400" />}
-                    <div className="flex-1">
-                      <p className="font-black text-white">{aff.affiliate_name || aff.affiliate_email || 'Sem nome'}</p>
-                      <p className="text-xs text-slate-400">{aff.affiliate_email}</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Código: {aff.code}</p>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-black text-slate-600">#{idx + 1}</span>
-                </div>
-                <div className="space-y-2">
-                  {aff.affiliate_link && (
-                    <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-lg">
-                      <Link2 size={12} className="text-blue-400 shrink-0" />
-                      <input
-                        type="text"
-                        value={aff.affiliate_link}
-                        readOnly
-                        className="flex-1 bg-transparent text-[10px] text-slate-300 font-mono truncate outline-none"
-                      />
-                      <button
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(aff.affiliate_link!);
-                            setCopiedLink(aff.id);
-                            setTimeout(() => setCopiedLink(null), 2000);
-                          } catch (err) {}
-                        }}
-                        className="shrink-0 p-1 hover:bg-slate-800 rounded transition-colors cursor-pointer"
-                      >
-                        {copiedLink === aff.id ? (
-                          <Check size={12} className="text-emerald-400" />
-                        ) : (
-                          <Copy size={12} className="text-slate-400" />
-                        )}
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Conversões</span>
-                    <span className="font-black text-white">{aff.total_conversions}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mb-2">Utilizadores que pagaram Pro</div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Comissões Geradas</span>
-                    <span className="font-black text-emerald-400">{formatCurrency(aff.total_earnings_cents / 100)}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mb-2">Total que o afiliado vai receber</div>
-                  {aff.total_paid_cents > 0 && (
-                    <div className="flex justify-between text-xs pt-2 border-t border-slate-800">
-                      <span className="text-slate-500">Já Pago</span>
-                      <span className="text-slate-400">{formatCurrency(aff.total_paid_cents / 100)}</span>
-                    </div>
-                  )}
-                  {aff.total_paid_cents > 0 && (
-                    <div className="flex justify-between text-xs pt-1 border-t border-slate-800">
-                      <span className="text-slate-500">Já Pago</span>
-                      <span className="text-slate-400">{formatCurrency(aff.total_paid_cents / 100)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Lista de Afiliados */}
-      <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-white">Todos os Afiliados</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Pesquisar..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm outline-none focus:border-blue-500"
-              />
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorComissao" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1e293b', 
+                    border: '1px solid #334155',
+                    borderRadius: '12px'
+                  }}
+                  formatter={(value: number) => formatPrice(value * 100)}
+                />
+                <Area type="monotone" dataKey="receita" stroke="#f59e0b" fillOpacity={1} fill="url(#colorReceita)" />
+                <Area type="monotone" dataKey="comissão" stroke="#3b82f6" fillOpacity={1} fill="url(#colorComissao)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-slate-500">
+              <p>Sem dados disponíveis</p>
             </div>
+          )}
+        </motion.div>
+
+        {/* Top Affiliates Podium */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-400" />
+              Top 5 Afiliados
+            </h3>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {filteredAffiliates.map((aff) => (
-            <div
-              key={aff.id}
-              className="bg-slate-950 border border-slate-800 rounded-2xl p-6"
-            >
-              <div className="space-y-4">
-                {/* Informações principais */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      aff.is_active ? 'bg-emerald-500/20' : 'bg-slate-800'
-                    }`}>
-                      <Users size={24} className={aff.is_active ? 'text-emerald-400' : 'text-slate-500'} />
+          {revenueByAffiliate.length > 0 ? (
+            <div className="space-y-4">
+              {/* Podium */}
+              <div className="flex items-end justify-center gap-3 h-[200px]">
+                {/* 2nd Place */}
+                {revenueByAffiliate[1] && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="flex flex-col items-center gap-2 flex-1 max-w-[120px]"
+                  >
+                    <div className="w-full bg-gradient-to-b from-slate-700 to-slate-800 rounded-t-xl border border-slate-600/50 p-4 flex flex-col items-center gap-2" style={{ height: '60%' }}>
+                      <div className="w-12 h-12 rounded-full bg-slate-600 flex items-center justify-center text-white font-black text-lg">
+                        2
+                      </div>
+                      <p className="text-xs font-black text-white text-center truncate w-full">
+                        {revenueByAffiliate[1].full_name || revenueByAffiliate[1].email.split('@')[0]}
+                      </p>
+                      <p className="text-[10px] font-black text-amber-400">
+                        {formatPrice(revenueByAffiliate[1].total_revenue_cents)}
+                      </p>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-black text-white text-lg">{aff.affiliate_name || 'Sem nome'}</p>
-                      <p className="text-sm text-slate-400">{aff.affiliate_email}</p>
-                      <p className="text-xs text-slate-500 mt-1">Código: {aff.code}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleAffiliateActive(aff.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-                        aff.is_active
-                          ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                          : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                      }`}
-                    >
-                      {aff.is_active ? 'Ativo' : 'Inativo'}
-                    </button>
-                    <button
-                      onClick={() => removeAffiliate(aff.id, aff.affiliate_name || aff.affiliate_email || aff.code)}
-                      className="px-4 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center gap-2"
-                      title="Remover afiliado"
-                    >
-                      <Trash2 size={14} />
-                      Remover
-                    </button>
-                  </div>
-                </div>
-
-                {/* Link de afiliado */}
-                {aff.affiliate_link && (
-                  <div className="flex items-center gap-2 p-3 bg-slate-900 rounded-xl border border-slate-800">
-                    <Link2 size={16} className="text-blue-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={aff.affiliate_link}
-                      readOnly
-                      className="flex-1 bg-transparent text-xs text-slate-300 font-mono truncate outline-none"
-                    />
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(aff.affiliate_link!);
-                          setCopiedLink(aff.id);
-                          setTimeout(() => setCopiedLink(null), 2000);
-                          setToast({
-                            show: true,
-                            message: 'Link copiado!',
-                            type: 'success'
-                          });
-                        } catch (err) {
-                          setToast({
-                            show: true,
-                            message: 'Erro ao copiar link',
-                            type: 'error'
-                          });
-                        }
-                      }}
-                      className="shrink-0 p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                      title="Copiar link"
-                    >
-                      {copiedLink === aff.id ? (
-                        <Check size={16} className="text-emerald-400" />
-                      ) : (
-                        <Copy size={16} className="text-slate-400" />
-                      )}
-                    </button>
-                    <a
-                      href={aff.affiliate_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                      title="Abrir link"
-                    >
-                      <ExternalLink size={16} className="text-blue-400" />
-                    </a>
-                  </div>
+                  </motion.div>
                 )}
-
-                {/* Estatísticas */}
-                <div className="grid grid-cols-4 gap-4 pt-4 border-t border-slate-800">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-400 mb-1">Taxa de Comissão</p>
-                    <p className="font-black text-white">{aff.commission_percentage}%</p>
-                    <p className="text-[10px] text-slate-500 mt-1">Por conversão</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-400 mb-1">Utilizadores Referidos</p>
-                    <p className="font-black text-white">{aff.total_referrals}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">Total registados</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-400 mb-1">Conversões</p>
-                    <p className="font-black text-emerald-400">{aff.total_conversions}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">Que pagaram Pro</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-400 mb-1">Comissões Geradas</p>
-                    <p className="font-black text-white">{formatCurrency(aff.total_earnings_cents / 100)}</p>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {aff.total_paid_cents > 0 ? (
-                        <>Pago: {formatCurrency(aff.total_paid_cents / 100)}</>
-                      ) : (
-                        <>A receber</>
-                      )}
-                    </p>
-                  </div>
-                </div>
+                
+                {/* 1st Place */}
+                {revenueByAffiliate[0] && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex flex-col items-center gap-2 flex-1 max-w-[140px]"
+                  >
+                    <div className="w-full bg-gradient-to-b from-amber-500/30 to-amber-600/20 rounded-t-xl border border-amber-500/50 p-4 flex flex-col items-center gap-2 relative" style={{ height: '100%' }}>
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <Crown className="w-6 h-6 text-amber-400" />
+                      </div>
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-500/50 mt-2">
+                        1
+                      </div>
+                      <p className="text-sm font-black text-white text-center truncate w-full">
+                        {revenueByAffiliate[0].full_name || revenueByAffiliate[0].email.split('@')[0]}
+                      </p>
+                      <p className="text-xs font-black text-amber-400">
+                        {formatPrice(revenueByAffiliate[0].total_revenue_cents)}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {/* 3rd Place */}
+                {revenueByAffiliate[2] && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="flex flex-col items-center gap-2 flex-1 max-w-[120px]"
+                  >
+                    <div className="w-full bg-gradient-to-b from-amber-600/20 to-amber-700/10 rounded-t-xl border border-amber-600/30 p-4 flex flex-col items-center gap-2" style={{ height: '40%' }}>
+                      <div className="w-12 h-12 rounded-full bg-amber-600/30 flex items-center justify-center text-amber-400 font-black text-lg border border-amber-500/50">
+                        3
+                      </div>
+                      <p className="text-xs font-black text-white text-center truncate w-full">
+                        {revenueByAffiliate[2].full_name || revenueByAffiliate[2].email.split('@')[0]}
+                      </p>
+                      <p className="text-[10px] font-black text-amber-400">
+                        {formatPrice(revenueByAffiliate[2].total_revenue_cents)}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
               </div>
+              
+              {/* Rest of Top 5 */}
+              {revenueByAffiliate.length > 3 && (
+                <div className="space-y-2 pt-4 border-t border-white/5">
+                  {revenueByAffiliate.slice(3, 5).map((aff, index) => (
+                    <motion.div
+                      key={aff.user_id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.8 + index * 0.1 }}
+                      className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-white/5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-black text-xs">
+                          {index + 4}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-white">
+                            {aff.full_name || aff.email.split('@')[0]}
+                          </p>
+                          <p className="text-xs text-slate-500">{aff.email}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-black text-amber-400">
+                        {formatPrice(aff.total_revenue_cents)}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-slate-500">
+              <p>Sem dados disponíveis</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Revenue by Affiliate Table */}
+      {revenueByAffiliate.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
+        >
+          <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-amber-400" />
+            Receita por Afiliado
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Afiliado</th>
+                  <th className="text-right py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Receita Total</th>
+                  <th className="text-right py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Comissão</th>
+                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Meses Ativos</th>
+                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Último Mês</th>
+                </tr>
+              </thead>
+              <tbody>
+                {revenueByAffiliate.map((aff) => (
+                  <tr key={aff.user_id} className="border-b border-white/5 hover:bg-white/5 transition-all cursor-pointer">
+                    <td className="py-4 px-4">
+                      <div>
+                        <p className="font-black text-white">{aff.full_name || aff.email}</p>
+                        <p className="text-xs text-slate-500">{aff.email}</p>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <p className="font-black text-amber-400">{formatPrice(aff.total_revenue_cents)}</p>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <p className="font-black text-blue-400">{formatPrice(aff.total_commission_cents)}</p>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <p className="font-black text-white">{aff.months_active}</p>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <p className="text-xs text-slate-400">{aff.last_month || 'N/A'}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Search */}
+      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-xl hover:border-white/10 transition-all">
+        <div className="flex items-center gap-3">
+          <Search className="w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Pesquisar por email, nome ou código..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none focus:text-white transition-colors"
+          />
         </div>
       </div>
 
-      {/* Gráfico de Comparação de Faturamento */}
-      {revenueData.length > 0 && (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <LineChart size={24} className="text-blue-400" />
-            <div>
-              <h2 className="text-2xl font-black text-white">Comparação de Faturamento</h2>
-              <p className="text-xs text-slate-400">Faturamento com e sem programa de afiliados</p>
-            </div>
-          </div>
-          
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsLineChart
-                data={revenueData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis
-                  dataKey="month"
-                  stroke="#64748b"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => formatCurrency(value / 100)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #1e293b',
-                    borderRadius: '12px',
-                    color: '#fff'
-                  }}
-                  formatter={(value: number) => formatCurrency(value / 100)}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: '20px' }}
-                  iconType="line"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue_without_affiliates_cents"
-                  name="Sem Afiliados"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ fill: '#ef4444', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue_with_affiliates_cents"
-                  name="Com Afiliados"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <div>
-                <p className="text-xs text-slate-400">Faturamento Sem Afiliados</p>
-                <p className="text-sm font-black text-white">
-                  {formatCurrency(
-                    revenueData.reduce((sum, item) => sum + item.revenue_without_affiliates_cents, 0) / 100
-                  )}
-                </p>
-                <p className="text-[10px] text-slate-500">Faturamento + Comissões pagas</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <div>
-                <p className="text-xs text-slate-400">Faturamento Com Afiliados</p>
-                <p className="text-sm font-black text-white">
-                  {formatCurrency(
-                    revenueData.reduce((sum, item) => sum + item.revenue_with_affiliates_cents, 0) / 100
-                  )}
-                </p>
-                <p className="text-[10px] text-slate-500">Faturamento real (após comissões)</p>
-              </div>
-            </div>
-          </div>
+      {/* Affiliates List */}
+      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-6 border-b border-white/10">
+          <h2 className="text-xl font-black text-white">Afiliados ({filteredAffiliates.length})</h2>
         </div>
-      )}
-
-      {/* Gráfico de Comparação de Faturamento */}
-      {revenueData.length > 0 && (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <LineChart size={24} className="text-blue-400" />
-            <div>
-              <h2 className="text-2xl font-black text-white">Comparação de Faturamento</h2>
-              <p className="text-xs text-slate-400">Faturamento com e sem programa de afiliados</p>
+        <div className="divide-y divide-white/5">
+          {filteredAffiliates.length === 0 ? (
+            <div className="p-12 text-center">
+              <Users className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">Nenhum afiliado encontrado</p>
             </div>
-          </div>
-          
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsLineChart
-                data={revenueData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          ) : (
+            filteredAffiliates.map((aff) => (
+              <motion.div
+                key={aff.user_id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-6 hover:bg-white/5 transition-all cursor-pointer group"
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis
-                  dataKey="month"
-                  stroke="#64748b"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => formatCurrency(value / 100)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #1e293b',
-                    borderRadius: '12px',
-                    color: '#fff'
-                  }}
-                  formatter={(value: number) => formatCurrency(value / 100)}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: '20px' }}
-                  iconType="line"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue_without_affiliates_cents"
-                  name="Sem Afiliados"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ fill: '#ef4444', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue_with_affiliates_cents"
-                  name="Com Afiliados"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <div>
-                <p className="text-xs text-slate-400">Faturamento Sem Afiliados</p>
-                <p className="text-sm font-black text-white">
-                  {formatCurrency(
-                    revenueData.reduce((sum, item) => sum + item.revenue_without_affiliates_cents, 0) / 100
-                  )}
-                </p>
-                <p className="text-[10px] text-slate-500">Faturamento + Comissões pagas</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <div>
-                <p className="text-xs text-slate-400">Faturamento Com Afiliados</p>
-                <p className="text-sm font-black text-white">
-                  {formatCurrency(
-                    revenueData.reduce((sum, item) => sum + item.revenue_with_affiliates_cents, 0) / 100
-                  )}
-                </p>
-                <p className="text-[10px] text-slate-500">Faturamento real (após comissões)</p>
-              </div>
-            </div>
-          </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-black text-white">{aff.full_name || aff.email}</h3>
+                      {aff.is_affiliate && (
+                        <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-black uppercase">
+                          Afiliado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-400 mb-3">{aff.email}</p>
+                    {aff.affiliate_code && (
+                      <div className="flex flex-col gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-mono text-amber-400 bg-slate-900/50 px-2 py-1 rounded border border-amber-500/20">
+                            {aff.affiliate_code}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(aff.affiliate_code!);
+                              setToast({
+                                isVisible: true,
+                                message: 'Código copiado!',
+                                type: 'success'
+                              });
+                            }}
+                            className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
+                            title="Copiar código"
+                          >
+                            <Copy className="w-4 h-4 text-slate-400 hover:text-amber-400 transition-colors" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono text-blue-400 bg-slate-900/50 px-2 py-1 rounded flex-1 truncate border border-blue-500/20">
+                            {typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${aff.affiliate_code}` : ''}
+                          </code>
+                          <button
+                            onClick={() => {
+                              const fullLink = typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${aff.affiliate_code}` : '';
+                              navigator.clipboard.writeText(fullLink);
+                              setToast({
+                                isVisible: true,
+                                message: 'Link completo copiado!',
+                                type: 'success'
+                              });
+                            }}
+                            className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
+                            title="Copiar link completo"
+                          >
+                            <Copy className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-6 text-sm">
+                      <div>
+                        <p className="text-slate-500">Referências</p>
+                        <p className="font-black text-white">{aff.total_referrals}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Conversões</p>
+                        <p className="font-black text-green-400">{aff.total_conversions}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Ganhos</p>
+                        <p className="font-black text-amber-400">{formatPrice(aff.total_earnings_cents)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Desde</p>
+                        <p className="font-black text-slate-400 text-xs">
+                          {new Date(aff.created_at).toLocaleDateString('pt-PT')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 ml-6">
+                    {aff.is_affiliate && (
+                      <button
+                        onClick={() => fetchAffiliateDetail(aff.user_id)}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-amber-600/20"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Ver Detalhes
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Modal Promover Afiliado */}
+      {/* Promote Modal */}
       <AnimatePresence>
         {showPromoteModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowPromoteModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full"
+              className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <h3 className="text-2xl font-black text-white mb-6">Promover a Afiliado</h3>
-              
-              <div className="space-y-4">
-                <div className="relative">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block flex items-center gap-2">
-                    <Search size={14} />
-                    Email ou Nome do Utilizador
-                  </label>
-                  <div className="relative">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                      type="text"
-                      value={userSearch}
-                      onChange={(e) => {
-                        setUserSearch(e.target.value);
-                        setSelectedUser(null);
-                        setPromoteUserId('');
-                      }}
-                      placeholder="Digita o email ou nome do utilizador..."
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-colors"
-                    />
-                    {isSearching && (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Lista de resultados */}
-                  {userSearchResults.length > 0 && !selectedUser && (
-                    <div className="absolute z-10 w-full mt-2 bg-slate-950 border border-slate-800 rounded-xl max-h-60 overflow-y-auto shadow-2xl">
-                      {userSearchResults.map((user) => (
-                        <button
-                          key={user.id}
-                          onClick={() => handleSelectUser(user)}
-                          className="w-full px-4 py-3 text-left hover:bg-slate-900 transition-colors border-b border-slate-800 last:border-b-0 cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-white font-medium">{user.full_name || 'Sem nome'}</p>
-                              <p className="text-xs text-slate-400">{user.email}</p>
-                            </div>
-                            {user.is_affiliate && (
-                              <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-1 rounded">
-                                Já é afiliado
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                  <UserPlus className="w-6 h-6 text-amber-400" />
+                  Promover Utilizador a Afiliado
+                </h2>
+                <button
+                  onClick={() => setShowPromoteModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-xl transition-all cursor-pointer hover:scale-110 active:scale-95"
+                >
+                  <X className="w-5 h-5 text-slate-400 hover:text-white transition-colors" />
+                </button>
+              </div>
 
-                  {/* Utilizador selecionado */}
-                  {selectedUser && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-3 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                            <Users size={18} className="text-blue-400" />
-                          </div>
-                          <div>
-                            <p className="text-white font-black">{selectedUser.full_name || 'Sem nome'}</p>
-                            <p className="text-xs text-slate-400">{selectedUser.email}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedUser(null);
-                            setPromoteUserId('');
-                            setUserSearch('');
-                          }}
-                          className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <X size={16} className="text-slate-400" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block flex items-center gap-2">
-                    <DollarSign size={14} />
-                    Percentagem de Comissão (opcional)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={promoteCommission}
-                      onChange={(e) => setPromoteCommission(e.target.value)}
-                      placeholder={settings?.default_commission_percentage.toString() || '10'}
-                      className="w-full px-4 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition-colors pr-12"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">%</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                    <Sparkles size={12} />
-                    Se vazio, usa o padrão ({settings?.default_commission_percentage}%)
-                  </p>
+              <div className="mb-6">
+                <div className="flex items-center gap-3 bg-slate-900/50 rounded-xl p-3">
+                  <Search className="w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar por email ou nome..."
+                    value={searchUserTerm}
+                    onChange={(e) => setSearchUserTerm(e.target.value)}
+                    className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none"
+                  />
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-8 pt-6 border-t border-slate-800">
-                <button
-                  onClick={() => setShowPromoteModal(false)}
-                  className="flex-1 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <X size={16} />
-                  Cancelar
-                </button>
-                <button
-                  onClick={handlePromote}
-                  disabled={!promoteUserId}
-                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
-                >
-                  <UserPlus size={16} />
-                  Promover
-                </button>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {loadingUsers ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                  </div>
+                ) : usersToPromote.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <p>Nenhum utilizador encontrado</p>
+                  </div>
+                ) : (
+                  usersToPromote.map((u) => (
+                    <div
+                      key={u.user_id}
+                      className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl hover:bg-slate-900/70 transition-colors"
+                    >
+                      <div>
+                        <p className="font-black text-white">{u.full_name || u.email}</p>
+                        <p className="text-sm text-slate-400">{u.email}</p>
+                      </div>
+                      <button
+                        onClick={() => handlePromoteToAffiliate(u.user_id)}
+                        disabled={promoting === u.user_id}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-amber-600/20"
+                      >
+                        {promoting === u.user_id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            A processar...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Promover
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Modal Configurações */}
+      {/* Detail Modal */}
       <AnimatePresence>
-        {showSettingsModal && (
+        {showDetailModal && detailData && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowSettingsModal(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setShowDetailModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full"
+              className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <h3 className="text-2xl font-black text-white mb-6">Configurações de Afiliados</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">
-                    Comissão Padrão (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={settingsForm.default_commission_percentage}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, default_commission_percentage: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">
-                    Email do Admin (para relatórios mensais)
-                  </label>
-                  <input
-                    type="email"
-                    value={settingsForm.admin_email}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, admin_email: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 block">
-                    Mínimo para Pagamento (€)
-                  </label>
-                  <input
-                    type="number"
-                    value={settingsForm.min_payout_cents}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, min_payout_cents: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={settingsForm.is_system_active}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, is_system_active: e.target.checked })}
-                    className="w-5 h-5 rounded bg-slate-950 border-slate-800"
-                  />
-                  <label className="text-sm text-white">Sistema de afiliados ativo</label>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-black text-white">Detalhes do Afiliado</h2>
                 <button
-                  onClick={() => setShowSettingsModal(false)}
-                  className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer"
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-xl transition-all cursor-pointer hover:scale-110 active:scale-95"
                 >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleUpdateSettings}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer"
-                >
-                  Guardar
+                  <X className="w-5 h-5 text-slate-400 hover:text-white transition-colors" />
                 </button>
               </div>
+
+              {loadingDetail ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Info */}
+                  <div className="bg-slate-900/50 rounded-2xl p-6">
+                    <h3 className="text-lg font-black text-white mb-4">Informações</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-slate-500 mb-1">Email</p>
+                        <p className="font-black text-white">{detailData.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 mb-1">Código</p>
+                        <p className="font-black text-amber-400">{detailData.affiliate_code}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 mb-1">Referências</p>
+                        <p className="font-black text-white">{detailData.total_referrals}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500 mb-1">Conversões</p>
+                        <p className="font-black text-green-400">{detailData.total_conversions}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Referrals */}
+                  {detailData.referrals && detailData.referrals.length > 0 && (() => {
+                    const totalReferrals = detailData.referrals.length;
+                    const paidCount = detailData.referrals.filter((r: any) => r.has_subscribed).length;
+                    const startIndex = 0;
+                    const endIndex = referralsPage * referralsPerPage;
+                    const displayedReferrals = detailData.referrals.slice(startIndex, endIndex);
+                    const hasMore = endIndex < totalReferrals;
+                    
+                    return (
+                      <div className="bg-slate-900/50 rounded-2xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-black text-white">Quem Pagou com o Link</h3>
+                          <span className="text-xs text-slate-500">
+                            {paidCount} pagaram de {totalReferrals} referências
+                          </span>
+                        </div>
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                          {displayedReferrals.map((ref: any) => (
+                          <div
+                            key={ref.id}
+                            className={`p-4 rounded-xl border transition-all ${
+                              ref.has_subscribed 
+                                ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/5 border-green-500/20' 
+                                : 'bg-slate-800/50 border-slate-700/50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <p className="font-black text-white">{ref.referred_user_full_name || ref.referred_user_email}</p>
+                                  {ref.has_subscribed ? (
+                                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-[10px] font-black uppercase">
+                                      Pago
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 bg-slate-700/50 text-slate-400 rounded-full text-[10px] font-black uppercase">
+                                      Pendente
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-400 mb-2">{ref.referred_user_email}</p>
+                                <div className="flex items-center gap-4 text-xs">
+                                  <div>
+                                    <p className="text-slate-500">Registado</p>
+                                    <p className="text-slate-300 font-medium">
+                                      {new Date(ref.created_at).toLocaleDateString('pt-PT', { 
+                                        day: 'numeric', 
+                                        month: 'short', 
+                                        year: 'numeric' 
+                                      })}
+                                    </p>
+                                  </div>
+                                  {ref.subscription_date && (
+                                    <div>
+                                      <p className="text-slate-500">Pagou em</p>
+                                      <p className="text-green-400 font-black">
+                                        {new Date(ref.subscription_date).toLocaleDateString('pt-PT', { 
+                                          day: 'numeric', 
+                                          month: 'short', 
+                                          year: 'numeric' 
+                                        })}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {ref.has_subscribed && (
+                                <div className="text-right min-w-[140px]">
+                                  {ref.payment_info ? (
+                                    <>
+                                      <p className="text-lg font-black text-amber-400 mb-1">
+                                        {formatPrice(ref.payment_info.amount_paid_cents)}
+                                      </p>
+                                      {ref.payment_info.plan_name && (
+                                        <p className="text-xs text-slate-400 mb-1">
+                                          {ref.payment_info.plan_name}
+                                        </p>
+                                      )}
+                                      {ref.payment_info.plan_interval && (
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                                          {ref.payment_info.plan_interval === 'month' ? 'Mensal' : 'Anual'}
+                                        </p>
+                                      )}
+                                      {ref.payment_info.paid_at && (
+                                        <p className="text-[10px] text-slate-500 mt-1">
+                                          {new Date(ref.payment_info.paid_at).toLocaleDateString('pt-PT', { 
+                                            day: 'numeric', 
+                                            month: 'short' 
+                                          })}
+                                        </p>
+                                      )}
+                                      <div className="mt-2">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                          ref.payment_info.subscription_status === 'active' 
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : ref.payment_info.subscription_status === 'trialing'
+                                            ? 'bg-blue-500/20 text-blue-400'
+                                            : 'bg-slate-700/50 text-slate-400'
+                                        }`}>
+                                          {ref.payment_info.subscription_status}
+                                        </span>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-sm font-black text-green-400 mb-1">
+                                        Pagou
+                                      </p>
+                                      {ref.subscription_date && (
+                                        <p className="text-xs text-slate-400">
+                                          {new Date(ref.subscription_date).toLocaleDateString('pt-PT', { 
+                                            day: 'numeric', 
+                                            month: 'short',
+                                            year: 'numeric'
+                                          })}
+                                        </p>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        </div>
+                        {hasMore && (
+                          <div className="mt-4 flex justify-center">
+                            <button
+                              onClick={() => setReferralsPage(prev => prev + 1)}
+                              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border border-slate-700 hover:border-slate-600"
+                            >
+                              Carregar Mais ({totalReferrals - endIndex} restantes)
+                              <ArrowUpRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        {referralsPage > 1 && (
+                          <div className="mt-2 text-center">
+                            <button
+                              onClick={() => setReferralsPage(1)}
+                              className="text-xs text-slate-500 hover:text-slate-400 transition-colors cursor-pointer"
+                            >
+                              Mostrar menos
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Commissions */}
+                  {detailData.commissions && detailData.commissions.length > 0 && (
+                    <div className="bg-slate-900/50 rounded-2xl p-6">
+                      <h3 className="text-lg font-black text-white mb-4">Comissões</h3>
+                      <div className="space-y-3">
+                        {detailData.commissions.map((comm: any) => (
+                          <div
+                            key={comm.id}
+                            className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl"
+                          >
+                            <div>
+                              <p className="font-black text-white">{comm.month}</p>
+                              <p className="text-sm text-slate-400">
+                                {comm.conversions_count} conversões • {formatPrice(comm.total_revenue_cents)} receita
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <p className="text-xl font-black text-amber-400">{formatPrice(comm.commission_amount_cents)}</p>
+                              {comm.is_paid ? (
+                                <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-black uppercase">
+                                  Pago
+                                </span>
+                              ) : (
+                                <span className="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs font-black uppercase">
+                                  Pendente
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Toast
-        message={toast.message}
-        onClose={() => setToast({ ...toast, show: false })}
-        type={toast.type}
-        isVisible={toast.show}
-      />
+      <Toast {...toast} onClose={() => setToast({ ...toast, isVisible: false })} />
     </motion.div>
   );
 }
-

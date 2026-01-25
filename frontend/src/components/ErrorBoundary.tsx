@@ -12,7 +12,6 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorMessage: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -21,35 +20,13 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
-      errorMessage: '',
     };
   }
 
-  static getDerivedStateFromError(error: any): State {
-    // Converter qualquer tipo de erro para string de forma segura
-    let errorMessage = '';
-    let errorObj: Error | null = null;
-    
-    if (error instanceof Error) {
-      errorObj = error;
-      errorMessage = error.message || error.toString();
-    } else if (typeof error === 'object' && error !== null) {
-      // Se for um objeto (ex: erro de validação do Pydantic)
-      try {
-        errorMessage = JSON.stringify(error, null, 2);
-      } catch {
-        errorMessage = String(error);
-      }
-      errorObj = new Error(errorMessage);
-    } else {
-      errorMessage = String(error);
-      errorObj = new Error(errorMessage);
-    }
-    
+  static getDerivedStateFromError(error: Error): State {
     return {
       hasError: true,
-      error: errorObj,
-      errorMessage,
+      error,
     };
   }
 
@@ -61,7 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorMessage: '',
     });
   };
 
@@ -86,13 +62,13 @@ export class ErrorBoundary extends Component<Props, State> {
               Ocorreu um erro inesperado. Por favor, tenta novamente.
             </p>
 
-            {this.state.errorMessage && (
+            {this.state.error && (
               <details className="mb-6 text-left">
                 <summary className="text-xs text-slate-500 cursor-pointer mb-2">
                   Detalhes técnicos
                 </summary>
                 <pre className="text-[10px] text-red-400 bg-slate-950 p-3 rounded-lg overflow-auto max-h-32">
-                  {this.state.errorMessage}
+                  {this.state.error.toString()}
                 </pre>
               </details>
             )}

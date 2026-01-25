@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliates
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
 from .models.database import Base, SystemSetting
@@ -135,6 +137,15 @@ app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Handler para erros de validação (422)
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Erro de validação em {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body) if hasattr(exc, 'body') else None}
+    )
+
 # Configuração de CORS
 allowed_origins_str = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
@@ -163,8 +174,8 @@ app.include_router(recurring.router)
 app.include_router(admin.router)
 app.include_router(goals.router)
 app.include_router(dashboard.router)
-app.include_router(affiliates.router)
 app.include_router(stripe_routes.router)
+app.include_router(affiliate.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(whatsapp_webhooks.router)
 app.include_router(telegram_webhooks.router)
@@ -187,28 +198,6 @@ async def get_public_settings(db: Session = Depends(get_db)):
 @limiter.limit('5/minute')
 async def root(request: Request):
     return {'message': 'Bem-vindo à API de Gestão Financeira'}
-
-# Endpoint para cron jobs externos (protegido por secret)
-@app.post('/cron/monthly-commissions')
-async def cron_monthly_commissions(request: Request, db: Session = Depends(get_db)):
-    """
-    Endpoint para ser chamado por cron jobs externos (GitHub Actions, Vercel, etc.)
-    Protegido por secret token
-    """
-    import os
-    cron_secret = os.getenv('CRON_SECRET')
-    auth_header = request.headers.get('authorization', '')
-    
-    if not cron_secret or auth_header != f'Bearer {cron_secret}':
-        raise HTTPException(
-            status_code=401,
-            detail='Unauthorized'
-        )
-    
-    from ..core.monthly_commission_job import run_monthly_commission_job
-    await run_monthly_commission_job()
-    
-    return {'message': 'Comissões mensais calculadas e emails enviados'}
 
 if __name__ == '__main__':
     import uvicorn

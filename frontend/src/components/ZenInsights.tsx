@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
-import { getDemoInsights } from '@/lib/mockData';
+import { DEMO_INSIGHTS } from '@/lib/mockData';
 import { useRouter } from 'next/navigation';
 
 const InsightIcon = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -57,8 +57,8 @@ export default function ZenInsights() {
         // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
         const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
         if (!hasActiveSub) {
-          const translatedDemo = getDemoInsights(language);
-          setData(translatedDemo || { insights: [], summary: '', health_score: 0 });
+          const translatedDemo = t?.dashboard?.zenInsights?.demo;
+          setData(translatedDemo?.insights ? translatedDemo : DEMO_INSIGHTS);
         } else {
           const insightsData = insightsRes.data;
           setData(insightsData);
@@ -70,8 +70,7 @@ export default function ZenInsights() {
         }
       } catch (err) {
         console.error('Erro ao procurar insights:', err);
-        const fallbackInsights = getDemoInsights(language);
-        setData(fallbackInsights || { insights: [], summary: '', health_score: 0 });
+        setData(DEMO_INSIGHTS);
       } finally {
         setLoading(false);
       }

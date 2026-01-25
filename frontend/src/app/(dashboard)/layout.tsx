@@ -53,6 +53,7 @@ export default function DashboardLayout({
     }
   }, [user, loading, router, setCurrency, setLanguage]);
 
+
   if (loading) {
     return <LoadingScreen />;
   }

@@ -87,32 +87,33 @@ def handle_checkout_completed(session: dict, db: Session):
         user.stripe_subscription_id = subscription_id
         # Para checkout.session.completed, a subscrição pode ainda não estar completamente ativa
         # Vamos buscar o status real da subscrição do Stripe
-        amount_paid = 0
         if subscription_id:
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 user.subscription_status = subscription.status  # 'active', 'trialing', etc.
                 logger.info(f'Status da subscrição do Stripe: {subscription.status}')
-                
-                # Obter valor pago da subscrição
-                if subscription.items.data:
-                    amount_paid = subscription.items.data[0].price.unit_amount or 0
             except Exception as e:
                 logger.warning(f'Erro ao buscar subscrição do Stripe: {str(e)}, usando status "active"')
                 user.subscription_status = 'active'
         else:
             user.subscription_status = 'active'
         
-        # Rastrear conversão de afiliado (primeira vez que paga)
-        if amount_paid > 0:
-            try:
-                from ..core.affiliate_tracking import track_conversion
-                track_conversion(db, str(user.id), amount_paid)
-            except Exception as e:
-                logger.error(f'Erro ao rastrear conversão de afiliado: {str(e)}')
-        
         if not user.stripe_customer_id:
             user.stripe_customer_id = customer_id
+        
+        # Marcar conversão de afiliado se aplicável (após atualizar subscription_status)
+        if user.referrer_id:
+            referral = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == user.id
+            ).first()
+            if referral and not referral.has_subscribed:
+                referral.has_subscribed = True
+                referral.subscription_date = datetime.now()
+                logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (checkout.completed)')
+            elif referral:
+                logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
+            else:
+                logger.warning(f'⚠️ Usuário tem referrer_id ({user.referrer_id}) mas não foi encontrada referência em affiliate_referrals para {user.email}')
         
         db.commit()
         db.refresh(user)
@@ -134,6 +135,21 @@ def handle_subscription_created(subscription: dict, db: Session):
     if user:
         user.stripe_subscription_id = subscription_id
         user.subscription_status = status
+        
+        # Marcar conversão de afiliado se aplicável
+        if user.referrer_id:
+            referral = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == user.id
+            ).first()
+            if referral and not referral.has_subscribed:
+                referral.has_subscribed = True
+                referral.subscription_date = datetime.now()
+                logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (subscription.created)')
+            elif referral:
+                logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
+            else:
+                logger.warning(f'⚠️ Usuário tem referrer_id ({user.referrer_id}) mas não foi encontrada referência em affiliate_referrals para {user.email}')
+        
         db.commit()
         logger.info(f'Subscrição criada atualizada para {user.email}: {status}')
 
@@ -213,7 +229,6 @@ def handle_invoice_paid(invoice: dict, db: Session):
     """Processa invoice.paid - quando uma fatura é paga com sucesso"""
     customer_id = invoice.get('customer')
     subscription_id = invoice.get('subscription')
-    amount_paid = invoice.get('amount_paid', 0)  # Em cêntimos
     
     logger.info(f'Fatura paga com sucesso - Invoice: {invoice.get("id")}, Customer: {customer_id}, Subscription: {subscription_id}')
     
@@ -227,15 +242,25 @@ def handle_invoice_paid(invoice: dict, db: Session):
                     subscription = stripe.Subscription.retrieve(subscription_id)
                     if subscription.status == 'active':
                         user.subscription_status = 'active'
-                        db.commit()
                         logger.info(f'Subscrição reativada após pagamento: {user.email}')
                 except Exception as e:
                     logger.error(f'Erro ao verificar subscrição após pagamento: {str(e)}')
             
-            # Rastrear conversão de afiliado (apenas primeira vez que paga)
-            try:
-                from ..core.affiliate_tracking import track_conversion
-                track_conversion(db, str(user.id), amount_paid)
-            except Exception as e:
-                logger.error(f'Erro ao rastrear conversão de afiliado: {str(e)}')
+            # Marcar conversão de afiliado se aplicável (garantir que está marcado mesmo se outros webhooks falharam)
+            if user.referrer_id:
+                referral = db.query(models.AffiliateReferral).filter(
+                    models.AffiliateReferral.referred_user_id == user.id
+                ).first()
+                if referral and not referral.has_subscribed:
+                    referral.has_subscribed = True
+                    referral.subscription_date = datetime.now()
+                    logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
+                elif referral and user.subscription_status in ['active', 'trialing']:
+                    # Garantir que está marcado se a subscrição está ativa
+                    if not referral.has_subscribed:
+                        referral.has_subscribed = True
+                        referral.subscription_date = datetime.now()
+                        logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
+            
+            db.commit()
 

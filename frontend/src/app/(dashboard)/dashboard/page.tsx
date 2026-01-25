@@ -13,7 +13,8 @@ import { ArrowUpCircle, ArrowDownCircle, Wallet, Info, Lock, ArrowRight, Chevron
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import ZenInsights from '@/components/ZenInsights';
-import { getDemoTransactions, getDemoCategories } from '@/lib/mockData';
+import PricingModal from '@/components/PricingModal';
+import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
@@ -24,12 +25,13 @@ import { DashboardSkeleton } from '@/components/LoadingSkeleton';
 import LoadingScreen from '@/components/LoadingScreen';
 
 export default function DashboardPage() {
-  const { t, formatCurrency, language } = useTranslation();
+  const { t, formatCurrency } = useTranslation();
   const { refreshUser } = useUser();
   const searchParams = useSearchParams();
   const [isPro, setIsPro] = useState(false);
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [stats, setStats] = useState({
     income: 0,
@@ -66,6 +68,10 @@ export default function DashboardPage() {
     return userData ? ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status) : false;
   }, [userData]);
   
+  // Paywall removido - não mostrar automaticamente para contas free
+  // const shouldShowPaywall = useMemo(() => {
+  //   return !hasActiveSub && !searchParams.get('session_id');
+  // }, [hasActiveSub, searchParams]);
 
   const fetchData = useCallback(async () => {
       try {
@@ -96,6 +102,7 @@ export default function DashboardPage() {
         // Usar hasActiveSub memoizado
         setIsPro(hasActiveSub);
         
+        // Paywall removido - contas free vão direto para o dashboard
 
         // Usar snapshot calculado pelo backend (sem cálculos no frontend!)
         const transactions = collections.recent_transactions || [];
@@ -105,8 +112,8 @@ export default function DashboardPage() {
         let finalTransactions = transactions;
         let finalCategories = categories;
         if (!hasActiveSub && transactions.length === 0) {
-          finalTransactions = getDemoTransactions(language);
-          finalCategories = getDemoCategories(language);
+          finalTransactions = DEMO_TRANSACTIONS;
+          finalCategories = DEMO_CATEGORIES;
         }
 
         // Calcular alertas baseado em categories e snapshot
@@ -236,6 +243,7 @@ export default function DashboardPage() {
             
             // Atualizar estado para remover modo demo e banners
             setIsPro(true);
+            setShowPaywall(false); // Fechar paywall se estiver aberto
             setShowUpgradeSuccess(true);
             setIsProcessingUpgrade(false);
             
@@ -836,6 +844,11 @@ export default function DashboardPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <PricingModal 
+        isVisible={showPaywall} 
+        onClose={() => setShowPaywall(false)} 
+      />
 
       <Toast 
         isVisible={toast.show}

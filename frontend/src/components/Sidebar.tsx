@@ -30,8 +30,9 @@ import {
   Compass,
   Target,
   Zap,
-  Users,
-  Link2
+  Lock,
+  Trophy,
+  Gift
 } from 'lucide-react';
 
 const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -117,7 +118,8 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.telegramBot || "Bot Telegram",
         href: 'https://t.me/FinanZenApp_bot',
         icon: Send,
-        isExternal: true
+        isExternal: true,
+        isBlocked: true
       },
       {
         name: t.dashboard.sidebar.guide,
@@ -138,12 +140,17 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.settings,
         href: '/settings',
         icon: Settings,
-      },
+      }
+    ]
+  },
+  {
+    title: "Afiliados",
+    isAffiliateSection: true,
+    items: [
       {
-        name: 'Afiliados',
+        name: "Programa de Afiliados",
         href: '/affiliate',
-        icon: Link2,
-        affiliateOnly: true
+        icon: Trophy
       }
     ]
   },
@@ -170,9 +177,9 @@ const menuSections = (t: any) => [
         adminOnly: true
       },
       {
-        name: 'Gestão de Afiliados',
+        name: "Gestão de Afiliados",
         href: '/admin/affiliates',
-        icon: Users,
+        icon: Sparkles,
         adminOnly: true
       }
     ]
@@ -197,6 +204,7 @@ export default function Sidebar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [hasCritical, setHasCritical] = useState(false);
+  const router = useRouter();
 
   const handleMarkAsRead = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -336,13 +344,21 @@ export default function Sidebar({
 
   if (!mounted) return null;
 
+  // Para free users: mostrar todos os itens mas marcar como bloqueados
   const sections = menuSections(t).map((section) => ({
     ...section,
-    items: section.items.filter((item: any) => {
+    items: section.items.map((item: any) => {
+      // Se já tiver isBlocked definido, manter. Caso contrário, marcar como bloqueado se for free user e não for dashboard/analytics
+      if (!isPro && !item.adminOnly && !section.isAffiliateSection && !item.affiliateOnly && item.isBlocked === undefined) {
+        const isAllowed = item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/affiliate';
+        return { ...item, isBlocked: !isAllowed };
+      }
+      return item;
+    }).filter((item: any) => {
       if (item.adminOnly) return user?.is_admin === true;
+      if (section.isAffiliateSection) return true;
       if (item.affiliateOnly) return user?.is_affiliate === true;
-      if (isPro) return true;
-      return item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/vault' || item.href === '/transactions' || item.href === '/categories' || item.href === '/recurring';
+      return true; // Mostrar todos os itens agora
     })
   })).filter((section) => section.items.length > 0);
 
@@ -370,7 +386,7 @@ export default function Sidebar({
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-3">
             {(!isCollapsed || isMobileOpen) && (
-              <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
+              <h3 className={`px-4 text-[10px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
                 {section.title}
               </h3>
             )}
@@ -379,7 +395,32 @@ export default function Sidebar({
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
                 const isAdminItem = section.isAdminSection;
+                const isAffiliateItem = section.isAffiliateSection;
+                const isBlocked = item.isBlocked && !isPro;
+                
                 if (item.isExternal) {
+                  const isExternalBlocked = item.isBlocked && !isPro;
+                  
+                  if (isExternalBlocked) {
+                    return (
+                      <div
+                        key={item.href}
+                        onClick={() => router.push('/pricing')}
+                        className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                      >
+                        <div className="relative">
+                          <Icon size={20} className="text-slate-600" />
+                          <Lock size={12} className="absolute -top-1 -right-1 text-amber-400" />
+                        </div>
+                        {(!isCollapsed || isMobileOpen) && (
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-600">
+                            {item.name}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  
                   return (
                     <a
                       key={item.href}
@@ -400,20 +441,49 @@ export default function Sidebar({
                     </a>
                   );
                 }
+                
+                // Se estiver bloqueado, usar div com onClick para redirecionar para pricing
+                if (isBlocked) {
+                  return (
+                    <div
+                      key={item.href}
+                      onClick={() => router.push('/pricing')}
+                      className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                    >
+                      <div className="relative">
+                        <Icon size={20} className="text-slate-600" />
+                        <Lock size={12} className="absolute -top-1 -right-1 text-amber-400" />
+                      </div>
+                      {(!isCollapsed || isMobileOpen) && (
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-600">
+                          {item.name}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+                
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : ''}`}
+                    className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
                   >
-                    <Icon size={20} className={isActive ? (isAdminItem ? 'text-amber-500' : 'text-blue-500') : ''} />
+                    <div className="relative">
+                      <Icon size={20} className={isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')} />
+                      {isAffiliateItem && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className={`w-6 h-6 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
+                        </div>
+                      )}
+                    </div>
                     {(!isCollapsed || isMobileOpen) && (
                       <span className="text-xs font-black uppercase tracking-widest text-inherit">
                         {item.name}
                       </span>
                     )}
                     {isActive && (
-                      <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : 'bg-blue-500'}`} />
+                      <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : isAffiliateItem ? 'bg-amber-500' : 'bg-blue-500'}`} />
                     )}
                   </Link>
                 );

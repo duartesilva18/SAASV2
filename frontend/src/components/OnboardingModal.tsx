@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, User, Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
-import { DEFAULT_LANGUAGE, LanguageCode } from '@/lib/languages';
 import api from '@/lib/api';
 import confetti from 'canvas-confetti';
 
@@ -13,49 +12,17 @@ interface OnboardingModalProps {
 }
 
 export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
-  const { t, setCurrency, setLanguage, availableLanguages, language: currentLanguage, currency: currentCurrency } = useTranslation();
+  const { t, setCurrency } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Carregar idioma e moeda do localStorage (ou usar os valores atuais do contexto)
-  const getInitialLanguage = (): LanguageCode => {
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('language');
-      if (savedLang && (savedLang === 'pt' || savedLang === 'en')) {
-        return savedLang as LanguageCode;
-      }
-    }
-    return currentLanguage || DEFAULT_LANGUAGE;
-  };
-
-  const getInitialCurrency = (): string => {
-    if (typeof window !== 'undefined') {
-      const savedCurrency = localStorage.getItem('currency');
-      if (savedCurrency && ['EUR', 'USD', 'BRL', 'GBP'].includes(savedCurrency)) {
-        return savedCurrency;
-      }
-    }
-    return currentCurrency || 'EUR';
-  };
-
   const [formData, setFormData] = useState({
     full_name: '',
     country_code: '+351',
     phone_number: '',
-    currency: getInitialCurrency(),
-    language: getInitialLanguage(),
-    gender: '',
+    currency: 'EUR',
+    gender: 'prefer_not_to_say',
     marketing_opt_in: false
   });
-
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Atualizar o idioma do contexto quando o utilizador muda o idioma no formulário
-  useEffect(() => {
-    if (formData.language && formData.language !== currentLanguage) {
-      setLanguage(formData.language);
-    }
-  }, [formData.language, currentLanguage, setLanguage]);
 
   const countries = [
     { code: '+351', flag: '🇵🇹', name: 'Portugal' },
@@ -72,83 +39,34 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     { code: '+258', flag: '🇲🇿', name: 'Moçambique' },
   ];
 
-  const validateField = (field: string, value: any): string => {
-    switch (field) {
-      case 'full_name':
-        if (!value || value.trim() === '') {
-          return t.dashboard.onboarding.validation?.fullNameEmpty || 'O nome completo é obrigatório.';
-        }
-        const nameParts = value.trim().split(/\s+/);
-        if (nameParts.length < 2) {
-          return t.dashboard.onboarding.validation?.fullName || 'Por favor, introduz o teu primeiro e último nome.';
-        }
-        return '';
-      case 'phone_number':
-        if (!value || value.trim() === '') {
-          return t.dashboard.onboarding.validation?.phoneEmpty || 'O número de telefone é obrigatório.';
-        }
-        const cleanPhone = value.replace(/\D/g, '');
-        if (cleanPhone.length < 7) {
-          return t.dashboard.onboarding.validation?.phone || 'Por favor, introduz um número de telefone válido (mínimo 7 dígitos).';
-        }
-        return '';
-      case 'gender':
-        if (!value || value === '') {
-          return t.dashboard.onboarding.validation?.gender || 'Por favor, seleciona o teu gênero.';
-        }
-        return '';
-      case 'language':
-        if (!value || value === '') {
-          return t.dashboard.onboarding.validation?.language || 'Por favor, seleciona o idioma.';
-        }
-        return '';
-      default:
-        return '';
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setFieldErrors({});
 
-    // Validar todos os campos
-    const errors: Record<string, string> = {};
-    const nameError = validateField('full_name', formData.full_name);
-    if (nameError) errors.full_name = nameError;
+    // Validação de Nome (Pelo menos dois nomes)
+    const nameParts = formData.full_name.trim().split(/\s+/);
+    if (nameParts.length < 2) {
+      setError('Por favor, introduz o teu primeiro e último nome.');
+      return;
+    }
 
-    const phoneError = validateField('phone_number', formData.phone_number);
-    if (phoneError) errors.phone_number = phoneError;
-
-    const genderError = validateField('gender', formData.gender);
-    if (genderError) errors.gender = genderError;
-
-    const languageError = validateField('language', formData.language);
-    if (languageError) errors.language = languageError;
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      // Mostrar o primeiro erro como mensagem geral
-      setError(Object.values(errors)[0]);
+    // Validação de Telefone (Mínimo de 7 dígitos além do código do país)
+    const cleanPhone = formData.phone_number.replace(/\D/g, '');
+    if (cleanPhone.length < 7) {
+      setError('Por favor, introduz um número de telefone válido.');
       return;
     }
 
     setLoading(true);
     try {
-      const cleanPhone = formData.phone_number.replace(/\D/g, '');
       const fullPhone = `${formData.country_code}${cleanPhone}`;
-      
-      // Preparar dados para enviar (remover country_code que não é necessário no backend)
-      const { country_code, ...dataToSend } = formData;
-      
       await api.post('/auth/onboarding', {
-        ...dataToSend,
+        ...formData,
         full_name: formData.full_name.trim(),
         phone_number: fullPhone
       });
 
       setCurrency(formData.currency as any);
-      setLanguage(formData.language as any);
 
       confetti({
         particleCount: 150,
@@ -161,12 +79,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
         onComplete();
       }, 2000);
     } catch (err: any) {
-      console.error('Erro ao guardar dados de onboarding:', err);
-      const errorMessage = err.response?.data?.detail || 
-                          err.response?.data?.message || 
-                          err.message || 
-                          'Erro ao guardar os teus dados. Por favor, tenta novamente.';
-      setError(errorMessage);
+      setError(err.response?.data?.detail || 'Erro ao guardar os teus dados.');
     } finally {
       setLoading(false);
     }
@@ -201,11 +114,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
               <Sparkles size={32} />
             </div>
             <h2 className="text-3xl lg:text-4xl font-black tracking-tighter text-white mb-3">
-              {t.dashboard.onboarding.title}{' '}
-              <span className="text-blue-500 italic">{t.dashboard.onboarding.titleAccent}</span>
+              Bem-vindo ao seu <span className="text-blue-500 italic">Novo Eu Financeiro</span>
             </h2>
             <p className="text-slate-400 font-medium italic">
-              {t.dashboard.onboarding.subtitle}
+              Apenas alguns detalhes para começarmos a sua jornada Zen.
             </p>
           </div>
 
@@ -214,78 +126,36 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
               {/* Full Name */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  {t.dashboard.onboarding.fullName} *
+                  Primeiro e Último Nome
                 </label>
                 <div className="relative group">
                   <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={20} />
                   <input
                     type="text"
+                    required
                     value={formData.full_name}
-                    onChange={(e) => {
-                      setFormData({ ...formData, full_name: e.target.value });
-                      if (fieldErrors.full_name) {
-                        const error = validateField('full_name', e.target.value);
-                        if (error) {
-                          setFieldErrors({ ...fieldErrors, full_name: error });
-                        } else {
-                          const newErrors = { ...fieldErrors };
-                          delete newErrors.full_name;
-                          setFieldErrors(newErrors);
-                        }
-                      }
-                    }}
-                    onBlur={() => {
-                      const error = validateField('full_name', formData.full_name);
-                      if (error) {
-                        setFieldErrors({ ...fieldErrors, full_name: error });
-                      } else {
-                        const newErrors = { ...fieldErrors };
-                        delete newErrors.full_name;
-                        setFieldErrors(newErrors);
-                      }
-                    }}
-                    onInvalid={(e) => {
-                      e.preventDefault();
-                    }}
-                    className={`w-full bg-slate-950 border rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all font-medium ${
-                      fieldErrors.full_name 
-                        ? 'border-orange-500 focus:border-orange-500' 
-                        : 'border-slate-800 focus:border-blue-500'
-                    }`}
-                    placeholder={t.dashboard.onboarding.fullNamePlaceholder || "Ex: Duarte Silva"}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium"
+                    placeholder="Ex: Duarte Silva"
                   />
                 </div>
-                {fieldErrors.full_name && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-orange-400 text-xs font-medium"
-                  >
-                    <AlertCircle size={14} />
-                    <span>{fieldErrors.full_name}</span>
-                  </motion.div>
-                )}
               </div>
 
               {/* Currency */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  {t.dashboard.onboarding.currency} *
+                  Moeda Base
                 </label>
                 <div className="relative group">
                   <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={20} />
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    onInvalid={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none"
                   >
                     <option value="EUR">Euro (€)</option>
                     <option value="USD">Dólar ($)</option>
                     <option value="BRL">Real (R$)</option>
-                    <option value="GBP">Libra (£)</option>
                   </select>
                 </div>
               </div>
@@ -293,16 +163,13 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
               {/* Phone Number */}
               <div className="md:col-span-2 space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  {t.dashboard.onboarding.phone} *
+                  Número de Telegram (para registar despesas)
                 </label>
                 <div className="flex gap-3">
                   <select
                     value={formData.country_code}
                     onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                    onInvalid={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="bg-slate-950 border border-slate-800 rounded-2xl py-4 px-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none w-32 shrink-0 cursor-pointer"
+                    className="bg-slate-950 border border-slate-800 rounded-2xl py-4 px-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none w-32 shrink-0"
                   >
                     {countries.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -312,137 +179,30 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   </select>
                   <input
                     type="tel"
+                    required
                     value={formData.phone_number}
-                    onChange={(e) => {
-                      setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') });
-                      if (fieldErrors.phone_number) {
-                        const error = validateField('phone_number', e.target.value.replace(/\D/g, ''));
-                        if (error) {
-                          setFieldErrors({ ...fieldErrors, phone_number: error });
-                        } else {
-                          const newErrors = { ...fieldErrors };
-                          delete newErrors.phone_number;
-                          setFieldErrors(newErrors);
-                        }
-                      }
-                    }}
-                    onBlur={() => {
-                      const error = validateField('phone_number', formData.phone_number);
-                      if (error) {
-                        setFieldErrors({ ...fieldErrors, phone_number: error });
-                      } else {
-                        const newErrors = { ...fieldErrors };
-                        delete newErrors.phone_number;
-                        setFieldErrors(newErrors);
-                      }
-                    }}
-                    onInvalid={(e) => {
-                      e.preventDefault();
-                    }}
-                    className={`flex-1 bg-slate-950 border rounded-2xl py-4 px-6 text-white focus:outline-none transition-all font-medium ${
-                      fieldErrors.phone_number 
-                        ? 'border-orange-500 focus:border-orange-500' 
-                        : 'border-slate-800 focus:border-blue-500'
-                    }`}
-                    placeholder={t.dashboard.onboarding.phonePlaceholder || "912 345 678"}
+                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-blue-500 transition-all font-medium"
+                    placeholder="912 345 678"
                   />
                 </div>
-                {fieldErrors.phone_number && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-orange-400 text-xs font-medium"
-                  >
-                    <AlertCircle size={14} />
-                    <span>{fieldErrors.phone_number}</span>
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Language */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  {t.dashboard.onboarding.language || 'Idioma'} *
-                </label>
-                <div className="relative group">
-                  <select
-                    value={formData.language}
-                    onChange={(e) => {
-                      setFormData({ ...formData, language: e.target.value });
-                      if (fieldErrors.language) {
-                        const newErrors = { ...fieldErrors };
-                        delete newErrors.language;
-                        setFieldErrors(newErrors);
-                      }
-                    }}
-                    onInvalid={(e) => {
-                      e.preventDefault();
-                    }}
-                    className={`w-full bg-slate-950 border rounded-2xl py-4 px-6 text-white focus:outline-none transition-all font-medium appearance-none cursor-pointer ${
-                      fieldErrors.language 
-                        ? 'border-orange-500 focus:border-orange-500' 
-                        : 'border-slate-800 focus:border-blue-500'
-                    }`}
-                  >
-                    {Object.values(availableLanguages).map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.flag} {lang.nativeName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {fieldErrors.language && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-orange-400 text-xs font-medium"
-                  >
-                    <AlertCircle size={14} />
-                    <span>{fieldErrors.language}</span>
-                  </motion.div>
-                )}
               </div>
 
               {/* Gender */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  {t.dashboard.onboarding.gender} *
+                  Gênero (opcional)
                 </label>
                 <select
                   value={formData.gender}
-                  onChange={(e) => {
-                    setFormData({ ...formData, gender: e.target.value });
-                    if (fieldErrors.gender) {
-                      const newErrors = { ...fieldErrors };
-                      delete newErrors.gender;
-                      setFieldErrors(newErrors);
-                    }
-                  }}
-                  onInvalid={(e) => {
-                    e.preventDefault();
-                  }}
-                  className={`w-full bg-slate-950 border rounded-2xl py-4 px-6 text-white focus:outline-none transition-all font-medium appearance-none cursor-pointer ${
-                    fieldErrors.gender 
-                      ? 'border-orange-500 focus:border-orange-500' 
-                      : 'border-slate-800 focus:border-blue-500'
-                  }`}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none"
                 >
-                  <option value="">{t.dashboard.onboarding.genderPlaceholder || 'Seleciona...'}</option>
-                  <option value="male">{t.dashboard.onboarding.genderOptions.male}</option>
-                  <option value="female">{t.dashboard.onboarding.genderOptions.female}</option>
-                  <option value="other">{t.dashboard.onboarding.genderOptions.other}</option>
-                  <option value="prefer_not_to_say">{t.dashboard.onboarding.genderOptions.prefer_not_to_say}</option>
+                  <option value="male">Masculino</option>
+                  <option value="female">Feminino</option>
+                  <option value="other">Outro</option>
+                  <option value="prefer_not_to_say">Prefiro não dizer</option>
                 </select>
-                {fieldErrors.gender && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-orange-400 text-xs font-medium"
-                  >
-                    <AlertCircle size={14} />
-                    <span>{fieldErrors.gender}</span>
-                  </motion.div>
-                )}
               </div>
 
               {/* Marketing Opt-in */}
@@ -465,10 +225,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                       <p className={`text-xs font-black uppercase tracking-widest transition-colors ${
                         formData.marketing_opt_in ? 'text-white' : 'text-slate-500'
                       }`}>
-                        {t.dashboard.onboarding.marketingOptIn || 'Dicas & Novidades Zen'}
+                        Dicas & Novidades Zen
                       </p>
                       <p className="text-[10px] text-slate-600 font-medium italic">
-                        {t.dashboard.onboarding.marketingOptInDescription || 'Relatórios e insights exclusivos no teu email.'}
+                        Relatórios e insights exclusivos no teu email.
                       </p>
                     </div>
                   </div>
@@ -487,15 +247,15 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             </div>
 
             <AnimatePresence>
-              {error && Object.keys(fieldErrors).length === 0 && (
+              {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-xs font-medium"
+                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-xs font-black tracking-tight"
                 >
                   <AlertCircle size={16} />
-                  <span>{error}</span>
+                  {error}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -509,7 +269,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 <Loader2 size={20} className="animate-spin" />
               ) : (
                 <>
-                  {t.dashboard.onboarding.submit || 'Entrar no Ecossistema'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  Entrar no Ecossistema <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
