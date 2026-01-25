@@ -3,10 +3,17 @@ from sqlalchemy.orm import Session
 import stripe
 import uuid
 import logging
+from uuid import UUID
+from datetime import datetime, date
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..models import database as models
-from datetime import datetime
+from .stripe_connect_handlers import (
+    handle_payment_intent_succeeded,
+    handle_transfer_created,
+    handle_transfer_reversed,
+    handle_account_updated
+)
 
 router = APIRouter(prefix='/webhooks', tags=['webhooks'])
 logger = logging.getLogger(__name__)
@@ -48,6 +55,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == 'invoice.paid':
         invoice = event['data']['object']
         handle_invoice_paid(invoice, db)
+    elif event_type == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        handle_payment_intent_succeeded(payment_intent, db)
+    elif event_type == 'transfer.created':
+        transfer = event['data']['object']
+        handle_transfer_created(transfer, db)
+    elif event_type == 'transfer.reversed':
+        transfer = event['data']['object']
+        handle_transfer_reversed(transfer, db)
+    elif event_type == 'account.updated':
+        account = event['data']['object']
+        handle_account_updated(account, db)
 
     return {'status': 'success'}
 

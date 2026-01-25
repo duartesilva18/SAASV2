@@ -13,6 +13,7 @@ from slowapi import _rate_limit_exceeded_handler
 from sqlalchemy.orm import Session
 import logging
 import os
+import asyncio
 
 # Configuração de logging com UTF-8 para evitar erros de encoding no Windows
 import sys
@@ -32,6 +33,11 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger('FinlyAPI')
+
+# Suprimir erros de conexão do asyncio no Windows (não críticos)
+if sys.platform == 'win32':
+    asyncio_logger = logging.getLogger('asyncio')
+    asyncio_logger.setLevel(logging.CRITICAL)  # Só mostra erros críticos do asyncio
 
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)

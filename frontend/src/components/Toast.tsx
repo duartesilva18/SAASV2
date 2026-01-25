@@ -9,17 +9,18 @@ interface ToastProps {
   type: 'success' | 'error';
   isVisible: boolean;
   onClose: () => void;
+  duration?: number; // Duração em milissegundos, padrão 6000ms (6 segundos)
 }
 
-export default function Toast({ message, type, isVisible, onClose }: ToastProps) {
+export default function Toast({ message, type, isVisible, onClose, duration = 6000 }: ToastProps) {
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
         onClose();
-      }, 4000);
+      }, duration);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, onClose, duration]);
 
   return (
     <AnimatePresence>

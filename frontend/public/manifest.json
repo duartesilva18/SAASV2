@@ -1,0 +1,15 @@
+{
+  "name": "Finly - Gestão Financeira Pessoal",
+  "short_name": "Finly",
+  "description": "Registe despesas no Telegram em 3 segundos. O Finly elimina a confusão das contas e ajuda-te a alcançar a paz financeira.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["finance", "productivity", "utilities"],
+  "lang": "pt-PT",
+  "dir": "ltr"
+}
+

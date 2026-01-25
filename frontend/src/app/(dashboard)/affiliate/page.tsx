@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
 import { 
   Users, TrendingUp, Copy, CheckCircle2, 
   ExternalLink, DollarSign, Calendar, AlertCircle,
-  Sparkles, ArrowRight, Loader2, Clock, LineChart as LineChartIcon
+  Sparkles, ArrowRight, Loader2, Clock, LineChart as LineChartIcon,
+  CreditCard
 } from 'lucide-react';
+import Link from 'next/link';
 import { 
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Cell, PieChart as RechartsPieChart, Pie, Legend
@@ -24,6 +27,8 @@ interface AffiliateStatus {
   total_conversions: number;
   total_earnings_cents: number;
   pending_earnings_cents: number;
+  stripe_connect_configured: boolean;
+  stripe_connect_account_id: string | null;
 }
 
 interface AffiliateStats {
@@ -69,6 +74,7 @@ interface AffiliateStats {
 export default function AffiliatePage() {
   const { t, formatCurrency } = useTranslation();
   const { user } = useUser();
+  const router = useRouter();
   const [status, setStatus] = useState<AffiliateStatus | null>(null);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,38 +82,48 @@ export default function AffiliatePage() {
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number } | null>(null);
+  const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
-    fetchData();
+    // Garantir que só carrega uma vez, mesmo com React Strict Mode
+    if (hasLoadedData.current) {
+      return;
+    }
+    hasLoadedData.current = true;
+
+    const loadData = async () => {
+      try {
+        const statusRes = await api.get('/affiliate/status');
+        setStatus(statusRes.data);
+        
+        // Se é afiliado, carregar stats
+        if (statusRes.data.is_affiliate) {
+          try {
+            const statsRes = await api.get('/affiliate/stats');
+            setStats(statsRes.data);
+          } catch (err) {
+            console.warn('Erro ao carregar stats:', err);
+          }
+        }
+      } catch (err: any) {
+        console.error('Erro ao carregar dados de afiliado:', err);
+        setToast({
+          isVisible: true,
+          message: err?.response?.data?.detail || 'Erro ao carregar dados',
+          type: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const statusRes = await api.get('/affiliate/status');
-      setStatus(statusRes.data);
-      
-      // Se é afiliado, carregar stats
-      if (statusRes.data.is_affiliate) {
-        try {
-          const statsRes = await api.get('/affiliate/stats');
-          setStats(statsRes.data);
-        } catch (err) {
-          console.warn('Erro ao carregar stats:', err);
-        }
-      }
-    } catch (err: any) {
-      console.error('Erro ao carregar dados de afiliado:', err);
-      setToast({
-        isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao carregar dados',
-        type: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRequestAffiliate = async () => {
+    if (requesting) return; // Evitar múltiplos cliques
+    
     setRequesting(true);
     setErrorInfo(null); // Limpar erro anterior
     try {
@@ -115,8 +131,8 @@ export default function AffiliatePage() {
       const newStatus = response.data;
       setStatus(newStatus);
       
-      // Se foi aprovado automaticamente, carregar stats e atualizar user context
-      if (newStatus.is_affiliate && newStatus.affiliate_code) {
+      // Se foi aprovado, carregar stats
+      if (newStatus.is_affiliate) {
         try {
           const statsRes = await api.get('/affiliate/stats');
           setStats(statsRes.data);
@@ -315,7 +331,7 @@ export default function AffiliatePage() {
             )}
           </div>
         </motion.div>
-        <Toast {...toast} onClose={() => {
+        <Toast {...toast} duration={8000} onClose={() => {
           setToast({ ...toast, isVisible: false });
           setErrorInfo(null);
         }} />
@@ -705,6 +721,87 @@ export default function AffiliatePage() {
 
         {/* Right Column - Side Info */}
         <div className="space-y-6">
+          {/* Stripe Connect Status */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-amber-400" />
+                Pagamentos Automáticos
+              </h3>
+              {/* Status Badge */}
+              {status && (
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                  status.stripe_connect_configured
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+                }`}>
+                  {status.stripe_connect_configured ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3" />
+                      Configurado
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="w-3 h-3" />
+                      Não Configurado
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 font-medium mb-4 leading-relaxed">
+              {status?.stripe_connect_configured
+                ? 'A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.'
+                : 'Conecta a tua conta Stripe para receberes comissões automaticamente.'}
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  if (status?.stripe_connect_configured) {
+                    // Se já está configurado, abrir dashboard do Stripe
+                    const res = await api.get('/affiliate/stripe-connect/dashboard');
+                    if (res.data.dashboard_url) {
+                      window.open(res.data.dashboard_url, '_blank');
+                    }
+                  } else {
+                    // Se não está configurado, iniciar onboarding
+                    const res = await api.get('/affiliate/stripe-connect/onboard');
+                    if (res.data.onboard_url) {
+                      window.location.href = res.data.onboard_url;
+                    }
+                  }
+                } catch (err: any) {
+                  setToast({
+                    isVisible: true,
+                    message: err?.response?.data?.detail || 'Erro ao aceder ao Stripe',
+                    type: 'error'
+                  });
+                }
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 cursor-pointer ${
+                status?.stripe_connect_configured
+                  ? 'bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white border border-slate-500/50'
+                  : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black'
+              }`}
+            >
+              {status?.stripe_connect_configured ? (
+                <>
+                  <ExternalLink className="w-4 h-4" />
+                  Abrir Dashboard Stripe
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-4 h-4" />
+                  Configurar Stripe Connect
+                </>
+              )}
+            </button>
+          </motion.div>
+
           {/* Affiliate Link */}
           {status.affiliate_link && (
             <motion.div

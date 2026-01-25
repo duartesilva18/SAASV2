@@ -339,6 +339,8 @@ class AffiliateResponse(BaseModel):
     total_conversions: int = 0
     total_earnings_cents: int = 0
     pending_earnings_cents: int = 0
+    stripe_connect_configured: bool = False  # Se tem Stripe Connect configurado e ativo
+    stripe_connect_account_id: Optional[str] = None
 
     class Config:
         from_attributes = True

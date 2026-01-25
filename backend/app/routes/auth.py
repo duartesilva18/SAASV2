@@ -417,6 +417,19 @@ async def get_me(current_user: models.User = Depends(get_current_user)):
 
 @router.post('/onboarding', response_model=schemas.UserResponse)
 async def complete_onboarding(request: Request, onboarding_data: schemas.UserUpdateOnboarding, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Verificar se o número de telefone já existe noutra conta
+    if onboarding_data.phone_number:
+        existing_user = db.query(models.User).filter(
+            models.User.phone_number == onboarding_data.phone_number,
+            models.User.id != current_user.id
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=400,
+                detail=f'O número de telefone {onboarding_data.phone_number} já está associado a outra conta.'
+            )
+    
     current_user.full_name = onboarding_data.full_name
     current_user.phone_number = onboarding_data.phone_number
     current_user.currency = onboarding_data.currency
@@ -460,6 +473,19 @@ async def complete_onboarding(request: Request, onboarding_data: schemas.UserUpd
 
 @router.patch('/profile', response_model=schemas.UserResponse)
 async def update_profile(request: Request, onboarding_data: schemas.UserUpdateOnboarding, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Verificar se o número de telefone já existe noutra conta
+    if onboarding_data.phone_number:
+        existing_user = db.query(models.User).filter(
+            models.User.phone_number == onboarding_data.phone_number,
+            models.User.id != current_user.id
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=400,
+                detail=f'O número de telefone {onboarding_data.phone_number} já está associado a outra conta.'
+            )
+    
     current_user.full_name = onboarding_data.full_name
     current_user.phone_number = onboarding_data.phone_number
     current_user.currency = onboarding_data.currency

@@ -19,6 +19,45 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/affiliate', tags=['affiliate'])
 
+def check_stripe_connect_status(user: models.User, db: Session) -> bool:
+    """Verifica o status do Stripe Connect em tempo real e atualiza os campos locais"""
+    from ..core.config import settings
+    if not user.stripe_connect_account_id or not settings.STRIPE_API_KEY:
+        # Se não tem account_id, usar status local
+        return (
+            user.stripe_connect_account_id is not None and
+            user.stripe_connect_onboarding_completed and
+            user.stripe_connect_account_status == 'active'
+        )
+    
+    try:
+        account = stripe.Account.retrieve(user.stripe_connect_account_id)
+        details_submitted = account.get('details_submitted', False)
+        charges_enabled = account.get('charges_enabled', False)
+        payouts_enabled = account.get('payouts_enabled', False)
+        
+        # Atualizar campos locais com status real do Stripe
+        if details_submitted and charges_enabled:
+            user.stripe_connect_onboarding_completed = True
+            user.stripe_connect_account_status = 'active' if payouts_enabled else 'pending'
+            user.affiliate_payout_enabled = payouts_enabled
+            # Considerar configurado se onboarding está completo e charges estão ativos
+            db.commit()
+            return True
+        else:
+            user.stripe_connect_onboarding_completed = False
+            user.stripe_connect_account_status = 'pending'
+            user.affiliate_payout_enabled = False
+            db.commit()
+            return False
+    except stripe.error.StripeError as e:
+        logger.warning(f"Erro ao verificar status Stripe Connect: {str(e)}. Usando status local.")
+        # Em caso de erro, usar status local
+        return (
+            user.stripe_connect_onboarding_completed and
+            user.stripe_connect_account_status == 'active'
+        )
+
 def generate_affiliate_code() -> str:
     """Gera um código único de afiliado (8 caracteres alfanuméricos)"""
     while True:
@@ -33,6 +72,7 @@ async def get_affiliate_status(
     current_user: models.User = Depends(get_current_user)
 ):
     """Retorna o status do afiliado do utilizador atual"""
+    logger.info(f"📊 GET /affiliate/status - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings
     
     # Verificar se o utilizador tem 5+ meses de criação
@@ -55,6 +95,7 @@ async def get_affiliate_status(
         months_since_creation = 0
     
     if not current_user.is_affiliate:
+        logger.info(f"   → User não é afiliado")
         return schemas.AffiliateResponse(
             is_affiliate=False,
             affiliate_code=None,
@@ -62,7 +103,9 @@ async def get_affiliate_status(
             total_referrals=0,
             total_conversions=0,
             total_earnings_cents=0,
-            pending_earnings_cents=0
+            pending_earnings_cents=0,
+            stripe_connect_configured=False,
+            stripe_connect_account_id=None
         )
     
     # Calcular estatísticas
@@ -91,6 +134,13 @@ async def get_affiliate_status(
     
     affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}" if current_user.affiliate_code else None
     
+    # Verificar se tem Stripe Connect configurado e ativo (em tempo real)
+    stripe_connect_configured = check_stripe_connect_status(current_user, db)
+    
+    logger.info(f"   → Status: is_affiliate={current_user.is_affiliate}, "
+                f"stripe_connect_configured={stripe_connect_configured}, "
+                f"referrals={total_referrals}, conversions={total_conversions}")
+    
     return schemas.AffiliateResponse(
         is_affiliate=current_user.is_affiliate,
         affiliate_code=current_user.affiliate_code,
@@ -98,7 +148,9 @@ async def get_affiliate_status(
         total_referrals=total_referrals,
         total_conversions=total_conversions,
         total_earnings_cents=int(total_earnings),
-        pending_earnings_cents=int(pending_earnings)
+        pending_earnings_cents=int(pending_earnings),
+        stripe_connect_configured=stripe_connect_configured,
+        stripe_connect_account_id=current_user.stripe_connect_account_id
     )
 
 @router.post('/request', response_model=schemas.AffiliateResponse)
@@ -108,6 +160,7 @@ async def request_affiliate_status(
     current_user: models.User = Depends(get_current_user)
 ):
     """Solicita para se tornar afiliado - aprova automaticamente se tiver 5+ meses"""
+    logger.info(f"📝 POST /affiliate/request - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings
     
     # Verificar se já é afiliado
@@ -133,6 +186,9 @@ async def request_affiliate_status(
             )
         ).scalar() or 0
         
+        # Verificar Stripe Connect (em tempo real)
+        stripe_connect_configured = check_stripe_connect_status(current_user, db)
+        
         return schemas.AffiliateResponse(
             is_affiliate=True,
             affiliate_code=current_user.affiliate_code,
@@ -140,7 +196,9 @@ async def request_affiliate_status(
             total_referrals=total_referrals,
             total_conversions=total_conversions,
             total_earnings_cents=int(total_earnings),
-            pending_earnings_cents=int(pending_earnings)
+            pending_earnings_cents=int(pending_earnings),
+            stripe_connect_configured=stripe_connect_configured,
+            stripe_connect_account_id=current_user.stripe_connect_account_id
         )
     
     # Verificar se tem 5+ meses
@@ -189,6 +247,9 @@ async def request_affiliate_status(
     # Retornar status atualizado
     affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}"
     
+    # Verificar Stripe Connect (em tempo real)
+    stripe_connect_configured = check_stripe_connect_status(current_user, db)
+    
     return schemas.AffiliateResponse(
         is_affiliate=True,
         affiliate_code=current_user.affiliate_code,
@@ -196,7 +257,9 @@ async def request_affiliate_status(
         total_referrals=0,
         total_conversions=0,
         total_earnings_cents=0,
-        pending_earnings_cents=0
+        pending_earnings_cents=0,
+        stripe_connect_configured=stripe_connect_configured,
+        stripe_connect_account_id=current_user.stripe_connect_account_id
     )
 
 @router.get('/stats', response_model=schemas.AffiliateStats)
@@ -205,6 +268,7 @@ async def get_affiliate_stats(
     current_user: models.User = Depends(get_current_user)
 ):
     """Retorna estatísticas detalhadas do afiliado"""
+    logger.info(f"📈 GET /affiliate/stats - User: {current_user.email} (ID: {current_user.id})")
     if not current_user.is_affiliate:
         raise HTTPException(
             status_code=403,
@@ -427,5 +491,224 @@ async def get_affiliate_stats(
         monthly_commissions=monthly_commissions,
         weekly_revenue=weekly_revenue
     )
+
+
+# =====================================================
+# STRIPE CONNECT ENDPOINTS
+# =====================================================
+
+@router.get('/stripe-connect/onboard')
+async def create_stripe_connect_onboard(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Cria conta Stripe Connect Express e retorna link de onboarding"""
+    if not current_user.is_affiliate:
+        raise HTTPException(
+            status_code=403,
+            detail='Não és afiliado.'
+        )
+    
+    if not settings.STRIPE_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail='Stripe não está configurado.'
+        )
+    
+    try:
+        # Se já tem conta, retornar link de onboarding existente
+        if current_user.stripe_connect_account_id:
+            account = stripe.Account.retrieve(current_user.stripe_connect_account_id)
+            
+            # Criar link de onboarding (pode ser usado para completar ou atualizar)
+            account_link = stripe.AccountLink.create(
+                account=current_user.stripe_connect_account_id,
+                refresh_url=f"{settings.FRONTEND_URL}/affiliate/stripe-connect?refresh=true",
+                return_url=f"{settings.FRONTEND_URL}/affiliate/stripe-connect?success=true",
+                type='account_onboarding',
+            )
+            
+            return {
+                'onboard_url': account_link.url,
+                'account_id': current_user.stripe_connect_account_id,
+                'status': current_user.stripe_connect_account_status
+            }
+        
+        # Criar nova conta Express
+        account = stripe.Account.create(
+            type='express',
+            country='PT',  # Pode ser configurável
+            email=current_user.email,
+            capabilities={
+                'card_payments': {'requested': True},
+                'transfers': {'requested': True},
+            },
+            metadata={
+                'user_id': str(current_user.id),
+                'email': current_user.email
+            }
+        )
+        
+        # Guardar account_id
+        current_user.stripe_connect_account_id = account.id
+        current_user.stripe_connect_account_status = 'pending'
+        db.commit()
+        
+        # Criar link de onboarding
+        account_link = stripe.AccountLink.create(
+            account=account.id,
+            refresh_url=f"{settings.FRONTEND_URL}/affiliate/stripe-connect?refresh=true",
+            return_url=f"{settings.FRONTEND_URL}/affiliate/stripe-connect?success=true",
+            type='account_onboarding',
+        )
+        
+        logger.info(f'Stripe Connect account criada para afiliado {current_user.email}: {account.id}')
+        
+        return {
+            'onboard_url': account_link.url,
+            'account_id': account.id,
+            'status': 'pending'
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro ao criar conta Stripe Connect: {str(e)}')
+        raise HTTPException(
+            status_code=400,
+            detail=f'Erro ao criar conta Stripe: {str(e)}'
+        )
+    except Exception as e:
+        logger.error(f'Erro inesperado ao criar conta Stripe Connect: {str(e)}', exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail='Erro inesperado ao criar conta Stripe Connect.'
+        )
+
+
+@router.get('/stripe-connect/status')
+async def get_stripe_connect_status(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retorna status da conta Stripe Connect do afiliado"""
+    logger.info(f"🔗 GET /affiliate/stripe-connect/status - User: {current_user.email} (ID: {current_user.id})")
+    if not current_user.is_affiliate:
+        raise HTTPException(
+            status_code=403,
+            detail='Não és afiliado.'
+        )
+    
+    if not current_user.stripe_connect_account_id:
+        return {
+            'connected': False,
+            'status': None,
+            'onboarding_completed': False,
+            'payout_enabled': False
+        }
+    
+    try:
+        if settings.STRIPE_API_KEY:
+            account = stripe.Account.retrieve(current_user.stripe_connect_account_id)
+            
+            # Atualizar status local se necessário
+            details_submitted = account.get('details_submitted', False)
+            charges_enabled = account.get('charges_enabled', False)
+            payouts_enabled = account.get('payouts_enabled', False)
+            
+            if details_submitted and charges_enabled:
+                current_user.stripe_connect_onboarding_completed = True
+                current_user.stripe_connect_account_status = 'active' if payouts_enabled else 'pending'
+                current_user.affiliate_payout_enabled = payouts_enabled
+            else:
+                current_user.stripe_connect_account_status = 'pending'
+                current_user.affiliate_payout_enabled = False
+            
+            db.commit()
+            
+            return {
+                'connected': True,
+                'account_id': current_user.stripe_connect_account_id,
+                'status': current_user.stripe_connect_account_status,
+                'onboarding_completed': current_user.stripe_connect_onboarding_completed,
+                'payout_enabled': current_user.affiliate_payout_enabled,
+                'details_submitted': details_submitted,
+                'charges_enabled': charges_enabled,
+                'payouts_enabled': payouts_enabled
+            }
+        else:
+            # Se Stripe não está configurado, retornar status local
+            return {
+                'connected': True,
+                'account_id': current_user.stripe_connect_account_id,
+                'status': current_user.stripe_connect_account_status,
+                'onboarding_completed': current_user.stripe_connect_onboarding_completed,
+                'payout_enabled': current_user.affiliate_payout_enabled
+            }
+            
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro ao buscar status da conta Stripe Connect: {str(e)}')
+        # Retornar status local em caso de erro
+        return {
+            'connected': True,
+            'account_id': current_user.stripe_connect_account_id,
+            'status': current_user.stripe_connect_account_status,
+            'onboarding_completed': current_user.stripe_connect_onboarding_completed,
+            'payout_enabled': current_user.affiliate_payout_enabled,
+            'error': str(e)
+        }
+    except Exception as e:
+        logger.error(f'Erro inesperado ao buscar status: {str(e)}', exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail='Erro inesperado ao buscar status da conta Stripe Connect.'
+        )
+
+
+@router.get('/stripe-connect/dashboard')
+async def get_stripe_connect_dashboard(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Retorna link do dashboard Stripe do afiliado"""
+    if not current_user.is_affiliate:
+        raise HTTPException(
+            status_code=403,
+            detail='Não és afiliado.'
+        )
+    
+    if not current_user.stripe_connect_account_id:
+        raise HTTPException(
+            status_code=400,
+            detail='Conta Stripe Connect não configurada. Completa o onboarding primeiro.'
+        )
+    
+    if not settings.STRIPE_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail='Stripe não está configurado.'
+        )
+    
+    try:
+        login_link = stripe.Account.create_login_link(
+            current_user.stripe_connect_account_id,
+            redirect_url=f"{settings.FRONTEND_URL}/affiliate"
+        )
+        
+        return {
+            'dashboard_url': login_link.url,
+            'expires_at': login_link.expires_at
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro ao criar login link: {str(e)}')
+        raise HTTPException(
+            status_code=400,
+            detail=f'Erro ao aceder ao dashboard: {str(e)}'
+        )
+    except Exception as e:
+        logger.error(f'Erro inesperado: {str(e)}', exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail='Erro inesperado ao aceder ao dashboard Stripe.'
+        )
 
 

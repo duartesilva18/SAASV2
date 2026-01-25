@@ -34,6 +34,11 @@ class User(Base):
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)
     referrer_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     affiliate_requested_at = Column(DateTime(timezone=True), nullable=True)
+    # Campos Stripe Connect
+    stripe_connect_account_id = Column(String(255), unique=True, nullable=True, index=True)
+    stripe_connect_onboarding_completed = Column(Boolean, nullable=False, default=False)
+    stripe_connect_account_status = Column(String(50), nullable=True, default='pending')
+    affiliate_payout_enabled = Column(Boolean, nullable=False, default=False)  # Cache lógico
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
@@ -258,6 +263,10 @@ class AffiliateCommission(Base):
     is_paid = Column(Boolean, nullable=False, default=False)  # Se já foi pago
     paid_at = Column(DateTime(timezone=True), nullable=True)
     payment_reference = Column(String(100), nullable=True)  # Referência do pagamento
+    # Campos Stripe Connect
+    stripe_transfer_id = Column(String(255), nullable=True, index=True)
+    transfer_status = Column(String(50), nullable=True)  # 'created', 'reversed', 'failed'
+    payout_error_message = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     

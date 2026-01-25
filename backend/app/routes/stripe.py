@@ -6,6 +6,7 @@ from ..core.dependencies import get_db
 from ..models import database as models
 from .auth import get_current_user
 import logging
+from sqlalchemy import and_
 
 router = APIRouter(prefix='/stripe', tags=['stripe'])
 stripe.api_key = settings.STRIPE_API_KEY
@@ -26,25 +27,95 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             customer_id = customer.id
             current_user.stripe_customer_id = customer_id
             db.commit()
+        
+        # Buscar preço para calcular total
+        price = stripe.Price.retrieve(price_id)
+        total_amount_cents = price.unit_amount  # Valor total em cêntimos
+        
+        # Verificar se cliente tem referrer_id e se referrer tem Stripe Connect ativo
+        application_fee_amount = None
+        transfer_data = None
+        referrer_id = None
+        
+        if current_user.referrer_id:
+            referrer = db.query(models.User).filter(models.User.id == current_user.referrer_id).first()
+            logger.info(f'🔍 Verificando referrer para divisão automática: referrer_id={current_user.referrer_id}, referrer={referrer.email if referrer else None}, is_affiliate={referrer.is_affiliate if referrer else False}, has_connect_account={bool(referrer.stripe_connect_account_id) if referrer else False}')
             
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{
+            if referrer and referrer.is_affiliate and referrer.stripe_connect_account_id:
+                # Verificar se conta está ativa (verificar em tempo real com Stripe)
+                # Considerar ativa se onboarding está completo e charges estão habilitados
+                # (payouts pode demorar a ativar, mas a conta já está funcional)
+                try:
+                    if settings.STRIPE_API_KEY:
+                        account = stripe.Account.retrieve(referrer.stripe_connect_account_id)
+                        details_submitted = account.get('details_submitted', False)
+                        charges_enabled = account.get('charges_enabled', False)
+                        payouts_enabled = account.get('payouts_enabled', False)
+                        is_connect_active = details_submitted and charges_enabled
+                        logger.info(f'📊 Status Stripe Connect do afiliado {referrer.email}: details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}, is_connect_active={is_connect_active}')
+                    else:
+                        # Se Stripe não está configurado, usar status local
+                        is_connect_active = referrer.stripe_connect_onboarding_completed
+                        logger.info(f'⚠️ Stripe API não configurada, usando status local: is_connect_active={is_connect_active}')
+                except Exception as e:
+                    logger.warning(f'Erro ao verificar status Stripe Connect do afiliado: {str(e)}. Usando status local.')
+                    is_connect_active = referrer.stripe_connect_onboarding_completed
+                
+                if is_connect_active:
+                    # Buscar percentagem de comissão
+                    commission_setting = db.query(models.SystemSetting).filter(
+                        models.SystemSetting.key == 'affiliate_commission_percentage'
+                    ).first()
+                    commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+                    
+                    # Calcular comissão
+                    application_fee_amount = int(total_amount_cents * (commission_percentage / 100))
+                    referrer_id = str(referrer.id)
+                    
+                    transfer_data = {
+                        'destination': referrer.stripe_connect_account_id,
+                    }
+                    
+                    logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
+        
+        # Criar checkout session
+        subscription_data = {
+            'metadata': {
+                'user_id': str(current_user.id),
+                'referrer_id': referrer_id if referrer_id else ''
+            }
+        }
+        
+        # Adicionar divisão automática se aplicável
+        # Para subscriptions, usar subscription_data com application_fee_percent
+        if application_fee_amount and transfer_data:
+            # Calcular percentagem da comissão e arredondar para 2 casas decimais (máximo do Stripe)
+            application_fee_percent = round((application_fee_amount / total_amount_cents) * 100, 2)
+            
+            subscription_data['application_fee_percent'] = application_fee_percent
+            subscription_data['transfer_data'] = transfer_data
+            subscription_data['metadata']['commission_percentage'] = str(commission_percentage)
+            subscription_data['metadata']['commission_amount_cents'] = str(application_fee_amount)
+        
+        session_params = {
+            'customer': customer_id,
+            'payment_method_types': ['card'],
+            'line_items': [{
                 'price': price_id,
                 'quantity': 1,
             }],
-            mode='subscription',
-            client_reference_id=str(current_user.id),
-            success_url=f"{settings.FRONTEND_URL}/dashboard?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{settings.FRONTEND_URL}/pricing",
-            subscription_data={
-                'metadata': {'user_id': str(current_user.id)}
-            }
-        )
+            'mode': 'subscription',
+            'client_reference_id': str(current_user.id),
+            'success_url': f"{settings.FRONTEND_URL}/dashboard?session_id={{CHECKOUT_SESSION_ID}}",
+            'cancel_url': f"{settings.FRONTEND_URL}/pricing",
+            'subscription_data': subscription_data
+        }
+        
+        checkout_session = stripe.checkout.Session.create(**session_params)
+        
         return {'url': checkout_session.url}
     except Exception as e:
-        logger.error(f'Erro Stripe Checkout: {str(e)}')
+        logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post('/portal')
