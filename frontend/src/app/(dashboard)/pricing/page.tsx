@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { mutate } from 'swr';
 import { motion } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import { 
   Check, Zap, Crown, ShieldCheck, 
   ArrowRight, Sparkles, Trophy, CreditCard, Lock
@@ -23,6 +23,19 @@ export default function PricingPage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // Verificar se há mensagem de sucesso após refresh
+  useEffect(() => {
+    const successActivated = sessionStorage.getItem('pro_activated_success');
+    if (successActivated === 'true') {
+      sessionStorage.removeItem('pro_activated_success');
+      setToast({
+        isVisible: true,
+        message: 'Parabéns! O Pro foi ativado com sucesso! 🎉',
+        type: 'success'
+      });
+    }
+  }, []);
+
   // Verificar se voltou do Stripe com session_id
   useEffect(() => {
     const sessionId = searchParams?.get('session_id');
@@ -34,31 +47,19 @@ export default function PricingPage() {
           const verifyRes = await api.get(`/stripe/verify-session/${sessionId}`);
           
           if (verifyRes.data.success && verifyRes.data.is_active) {
+            // Invalidar cache do SWR para forçar refresh
+            await mutate('/auth/me');
+            await mutate('/stripe/invoices');
+            
             // Atualizar contexto do usuário
             await refreshUser();
             
-            // Limpar URL
-            window.history.replaceState({}, '', '/pricing');
+            // Guardar mensagem de sucesso no sessionStorage para mostrar após refresh
+            sessionStorage.setItem('pro_activated_success', 'true');
             
-            // Confetti
-            confetti({
-              particleCount: 200,
-              spread: 100,
-              origin: { y: 0.6 },
-              colors: ['#3b82f6', '#fbbf24', '#ffffff']
-            });
-            
-            setIsProcessingPayment(false);
-            setToast({
-              isVisible: true,
-              message: 'Parabéns! Agora és Pro! 🎉',
-              type: 'success'
-            });
-            
-            // Redirecionar para dashboard após 2 segundos
-            setTimeout(() => {
-              router.push('/dashboard');
-            }, 2000);
+            // Limpar URL e redirecionar para dashboard (que vai recarregar com dados atualizados)
+            window.history.replaceState({}, '', '/dashboard');
+            window.location.reload();
           } else if (retryCount < 5) {
             setTimeout(() => verifyAndActivate(retryCount + 1), 1500);
           } else {
@@ -119,6 +120,21 @@ export default function PricingPage() {
       icon: Zap,
     },
     {
+      id: '3months',
+      name: 'Plano 3 Meses',
+      price: 24.99,
+      priceId: 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
+      description: 'Acesso completo + Programa de Afiliados',
+      features: [
+        'Dashboard completo',
+        'Programa de Afiliados',
+        'Todas as funcionalidades Pro',
+        'Suporte prioritário'
+      ],
+      icon: Trophy,
+      popular: true,
+    },
+    {
       id: 'yearly',
       name: t.dashboard.pricing.yearlyPlan.name,
       price: 89.90,
@@ -126,7 +142,6 @@ export default function PricingPage() {
       description: t.dashboard.pricing.yearlyPlan.description,
       features: t.dashboard.pricing.yearlyPlan.features,
       icon: Crown,
-      popular: true,
     }
   ];
 
@@ -202,7 +217,7 @@ export default function PricingPage() {
       </motion.div>
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.id}

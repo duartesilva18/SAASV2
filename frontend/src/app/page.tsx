@@ -20,122 +20,16 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig } from '@/lib/languages';
 
-// Componente animado para a palavra Telegram
+// Componente simplificado para a palavra Telegram
 function AnimatedTelegram() {
-  const [isHovered, setIsHovered] = useState(false);
-  const controls = useAnimation();
-
-  useEffect(() => {
-    // Animação contínua de pulso
-    controls.start({
-      scale: [1, 1.05, 1],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    });
-  }, [controls]);
-
   return (
-    <motion.span
-      className="inline-block relative mx-1"
-      onMouseEnter={() => {
-        setIsHovered(true);
-        controls.stop();
-        controls.start({
-          scale: 1.15,
-          rotate: [0, -5, 5, -5, 0],
-          transition: { duration: 0.5 }
-        });
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        controls.start({
-          scale: [1, 1.05, 1],
-          transition: {
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }
-        });
-      }}
-      animate={controls}
-      style={{ display: 'inline-block' }}
-    >
-      <motion.span
-        className="relative inline-block font-black text-blue-400 cursor-pointer"
-        style={{
-          textShadow: isHovered 
-            ? '0 0 20px rgba(96, 165, 250, 0.8), 0 0 40px rgba(96, 165, 250, 0.4)' 
-            : '0 0 10px rgba(96, 165, 250, 0.5)'
-        }}
-      >
-        Telegram
-        {/* Efeito de brilho animado */}
-        <motion.span
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/30 to-transparent pointer-events-none"
-          animate={{
-            x: ['-100%', '200%'],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          style={{
-            clipPath: 'polygon(0 0, 20% 0, 30% 100%, 0% 100%)',
-          }}
-        />
-      </motion.span>
-    </motion.span>
+    <span className="inline-block relative mx-1 font-black text-blue-400">
+      Telegram
+    </span>
   );
 }
 
-// Componente de partículas flutuantes para background
-function FloatingParticles() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      {[...Array(20)].map((_, i) => {
-        // Usar valores fixos baseados no índice para evitar problemas de hidratação
-        const baseX = (i * 50) % 1920;
-        const baseY = (i * 100) % 1080;
-        const offsetX = i % 2 === 0 ? 50 : -50;
-        return (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-blue-500/20 rounded-full"
-            initial={{
-              x: baseX,
-              y: baseY,
-              opacity: 0
-            }}
-            animate={{
-              y: [baseY, baseY - 200, baseY],
-              x: [baseX, baseX + offsetX, baseX],
-              opacity: [0, 0.5, 0],
-              scale: [0, 1, 0]
-            }}
-            transition={{
-              duration: 10 + (i % 5),
-              repeat: Infinity,
-              delay: i * 0.3,
-              ease: "easeInOut"
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
+// Componente de partículas flutuantes removido para melhor performance
 
 export default function LandingPage() {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
@@ -187,21 +81,7 @@ export default function LandingPage() {
     }
   };
 
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, []);
+  // Removido mouse tracking para melhor performance
 
   return (
     <>
@@ -210,19 +90,6 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden relative">
-        <FloatingParticles />
-      
-      {/* Cursor glow effect */}
-      {mounted && (
-        <motion.div
-          className="fixed w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none z-50"
-          animate={{
-            x: mousePosition.x - 192,
-            y: mousePosition.y - 192,
-          }}
-          transition={{ type: "spring", stiffness: 50, damping: 20 }}
-        />
-      )}
 
       {/* Banner com animação */}
       <motion.div 
@@ -249,38 +116,22 @@ export default function LandingPage() {
 
       {/* Navbar com animação */}
       <motion.nav 
-        className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between border-b border-white/5 relative z-40 backdrop-blur-sm bg-[#020617]/50"
+        className="max-w-7xl mx-auto px-6 py-0 flex items-center justify-between border-b border-white/5 relative z-40"
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, type: "spring" }}
       >
         <motion.div 
-          className="flex items-center gap-3"
+          className="flex items-center select-none p-0 m-0"
           whileHover={{ scale: 1.05 }}
         >
-          <motion.div 
-            className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-blue-600/20 shadow-lg"
-            animate={{ 
-              rotate: [0, 360],
-              boxShadow: [
-                '0 0 20px rgba(59, 130, 246, 0.3)',
-                '0 0 40px rgba(59, 130, 246, 0.5)',
-                '0 0 20px rgba(59, 130, 246, 0.3)'
-              ]
-            }}
-            transition={{ 
-              rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-              boxShadow: { duration: 2, repeat: Infinity }
-            }}
-          >
-            <Sparkles size={20} className="animate-pulse" />
-          </motion.div>
-          <motion.span 
-            className="text-2xl font-black tracking-tighter"
+          <motion.img
+            src="/images/logo/logo.png"
+            alt="Finly"
+            className="h-64 w-auto m-0 p-0 select-none pointer-events-none"
             whileHover={{ scale: 1.1 }}
-          >
-            Finly
-          </motion.span>
+            draggable="false"
+          />
         </motion.div>
         
         <div className="flex items-center gap-4 md:gap-8">
@@ -365,18 +216,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 pt-24 pb-32 text-center relative">
-        <motion.div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-blue-600/10 blur-[160px] -z-10 rounded-full"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3]
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-blue-600/10 blur-[160px] -z-10 rounded-full" />
         
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
@@ -393,19 +233,9 @@ export default function LandingPage() {
           className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl mx-auto relative"
         >
           {t.hero.title1}
-          <motion.span 
-            className="text-blue-500 italic block md:inline"
-            animate={{
-              textShadow: [
-                '0 0 20px rgba(59, 130, 246, 0.5)',
-                '0 0 40px rgba(59, 130, 246, 0.8)',
-                '0 0 20px rgba(59, 130, 246, 0.5)'
-              ]
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
+          <span className="text-blue-500 italic block md:inline">
             {' '}{t.hero.titleAccent}
-          </motion.span>
+          </span>
           {t.hero.title2}
         </motion.h1>
 
@@ -432,38 +262,10 @@ export default function LandingPage() {
           transition={{ delay: 0.2 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-6"
         >
-          <motion.div
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link href="/auth/register" className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-2xl flex items-center justify-center gap-3 relative overflow-hidden group">
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.5 }}
-              />
-              <motion.span
-                className="relative z-10 flex items-center gap-3"
-                animate={{
-                  textShadow: [
-                    '0 0 10px rgba(255, 255, 255, 0.5)',
-                    '0 0 20px rgba(255, 255, 255, 0.8)',
-                    '0 0 10px rgba(255, 255, 255, 0.5)'
-                  ]
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                {t.hero.cta} 
-                <motion.span
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
-                  <ArrowRight size={20} />
-                </motion.span>
-              </motion.span>
-            </Link>
-          </motion.div>
+          <Link href="/auth/register" className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-2xl flex items-center justify-center gap-3">
+            {t.hero.cta} 
+            <ArrowRight size={20} />
+          </Link>
           <motion.div
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -538,33 +340,15 @@ export default function LandingPage() {
             {t.steps.items.map((step: any, index: number) => (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, y: 50, rotateX: -90 }}
-                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.2, type: "spring", stiffness: 100 }}
-                whileHover={{ 
-                  y: -10, 
-                  scale: 1.02,
-                  boxShadow: '0 20px 40px rgba(59, 130, 246, 0.2)'
-                }}
-                className="bg-slate-900/50 border border-slate-800 p-12 rounded-[48px] hover:border-blue-500/30 transition-colors group relative overflow-hidden"
+                transition={{ delay: index * 0.1 }}
+                className="bg-slate-900/50 border border-slate-800 p-12 rounded-[48px] hover:border-blue-500/30 transition-colors group"
               >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/10 group-hover:to-indigo-500/10 transition-all duration-500"
-                />
-                <motion.div 
-                  className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-blue-500 mb-8 group-hover:scale-110 transition-transform relative z-10"
-                  animate={{
-                    boxShadow: [
-                      '0 0 20px rgba(59, 130, 246, 0.2)',
-                      '0 0 40px rgba(59, 130, 246, 0.4)',
-                      '0 0 20px rgba(59, 130, 246, 0.2)'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
+                <div className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-blue-500 mb-8">
                   {index === 0 ? <Phone size={32} /> : index === 1 ? <MessageSquare size={32} /> : <Zap size={32} />}
-                </motion.div>
+                </div>
                 <h3 className="text-xl font-black tracking-tight mb-4 uppercase relative z-10">{step.t}</h3>
                 <p className="text-slate-400 font-medium italic leading-relaxed relative z-10">{step.d}</p>
               </motion.div>
@@ -590,34 +374,15 @@ export default function LandingPage() {
             {t.resources.items.map((resource: any, index: number) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, scale: 0.8, rotateY: -90 }}
-                whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1, type: "spring" }}
-                whileHover={{ 
-                  scale: 1.05, 
-                  y: -5,
-                  rotateY: 5,
-                  boxShadow: '0 20px 40px rgba(59, 130, 246, 0.15)'
-                }}
+                transition={{ delay: index * 0.1 }}
                 className="p-8 rounded-[32px] bg-slate-900/30 border border-slate-800/50 hover:bg-slate-900/50 transition-all cursor-default relative overflow-hidden group"
               >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-500"
-                />
-                <motion.div 
-                  className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 mb-6 relative z-10"
-                  animate={{
-                    rotate: [0, 360],
-                  }}
-                  transition={{
-                    duration: 20,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }}
-                >
+                <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 mb-6">
                   {index === 0 ? <Phone size={24} /> : index === 1 ? <BarChart3 size={24} /> : index === 2 ? <Globe size={24} /> : index === 3 ? <ShieldCheck size={24} /> : index === 4 ? <Trophy size={24} /> : <Star size={24} />}
-                </motion.div>
+                </div>
                 <h4 className="text-sm font-black uppercase tracking-widest mb-3 relative z-10">{resource.t}</h4>
                 <p className="text-xs text-slate-500 font-medium leading-relaxed italic relative z-10">{resource.d}</p>
               </motion.div>
@@ -637,38 +402,15 @@ export default function LandingPage() {
           {t.testimonials.items.map((item: any, index: number) => (
             <motion.div 
               key={item.id}
-              initial={{ opacity: 0, y: 50, rotateY: -90 }}
-              whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.2, type: "spring", stiffness: 100 }}
-              whileHover={{ 
-                y: -15, 
-                scale: 1.02,
-                rotateY: 5,
-                boxShadow: '0 30px 60px rgba(59, 130, 246, 0.2)'
-              }}
-              className="relative p-12 bg-slate-950 border border-slate-800 rounded-[48px] overflow-hidden group"
+              transition={{ delay: index * 0.1 }}
+              className="relative p-12 bg-slate-950 border border-slate-800 rounded-[48px]"
             >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/10 group-hover:to-indigo-500/10 transition-all duration-500"
-              />
-              <motion.div 
-                className="absolute -top-6 left-12 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-black shadow-xl relative z-10"
-                animate={{
-                  rotate: [0, 360],
-                  boxShadow: [
-                    '0 0 20px rgba(59, 130, 246, 0.4)',
-                    '0 0 40px rgba(59, 130, 246, 0.6)',
-                    '0 0 20px rgba(59, 130, 246, 0.4)'
-                  ]
-                }}
-                transition={{
-                  rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-                  boxShadow: { duration: 2, repeat: Infinity }
-                }}
-              >
+              <div className="absolute -top-6 left-12 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
                 {item.initial}
-              </motion.div>
+              </div>
               <p className="text-lg font-medium italic text-slate-300 mb-8 leading-relaxed relative z-10">
                 "{item.text}"
               </p>
@@ -766,23 +508,9 @@ export default function LandingPage() {
             className="flex items-center gap-3 mb-8"
             whileHover={{ scale: 1.1 }}
           >
-            <motion.div 
-              className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white"
-              animate={{
-                rotate: [0, 360],
-                boxShadow: [
-                  '0 0 20px rgba(59, 130, 246, 0.4)',
-                  '0 0 40px rgba(59, 130, 246, 0.6)',
-                  '0 0 20px rgba(59, 130, 246, 0.4)'
-                ]
-              }}
-              transition={{
-                rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-                boxShadow: { duration: 2, repeat: Infinity }
-              }}
-            >
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white">
               <Sparkles size={16} />
-            </motion.div>
+            </div>
             <motion.span 
               className="text-xl font-black tracking-tighter uppercase"
               animate={{
@@ -809,39 +537,15 @@ export default function LandingPage() {
           </motion.p>
 
           <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-16">
-            <motion.div
-              whileHover={{ scale: 1.1, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link href="/terms" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors relative group">
-                Termos
-                <motion.span
-                  className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-300"
-                />
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link href="/privacy" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors relative group">
-                Privacidade
-                <motion.span
-                  className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-300"
-                />
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link href="#" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors relative group">
-                Cookies
-                <motion.span
-                  className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-300"
-                />
-              </Link>
-            </motion.div>
+            <Link href="/terms" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
+              Termos
+            </Link>
+            <Link href="/privacy" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
+              Privacidade
+            </Link>
+            <Link href="#" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
+              Cookies
+            </Link>
           </div>
 
           <motion.div 
@@ -851,18 +555,9 @@ export default function LandingPage() {
             }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <motion.div
-              animate={{
-                rotate: [0, 360],
-                scale: [1, 1.2, 1]
-              }}
-              transition={{
-                rotate: { duration: 10, repeat: Infinity, ease: "linear" },
-                scale: { duration: 2, repeat: Infinity }
-              }}
-            >
+            <div>
               <CheckCircle2 size={12} />
-            </motion.div>
+            </div>
             {t.footer.badge}
           </motion.div>
         </div>

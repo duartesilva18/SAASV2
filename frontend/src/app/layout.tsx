@@ -84,6 +84,10 @@ export const metadata: Metadata = {
     },
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: "/images/logo/icon.jpeg",
+    apple: "/images/logo/icon.jpeg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -107,6 +111,10 @@ export default function RootLayout({
     <html lang="pt-PT" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/images/logo/icon.jpeg" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <meta name="theme-color" content="#3b82f6" />
       </head>
       <body

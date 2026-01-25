@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, Sparkles } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
 
@@ -84,13 +84,13 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <header className="lg:hidden flex items-center justify-between p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
-              <Sparkles size={16} />
-            </div>
-            <span className="text-lg font-black tracking-tighter text-white">
-              Finly
-            </span>
+          <div className="flex items-center select-none">
+            <img
+              src="/images/logo/logo.png"
+              alt="Finly"
+              className="h-36 w-auto m-0 p-0 select-none pointer-events-none"
+              draggable="false"
+            />
           </div>
           <div className="flex items-center gap-2">
             <LanguageSelector />

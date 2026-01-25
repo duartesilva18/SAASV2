@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
-from typing import List
+from typing import List, Tuple
 from uuid import UUID
 from datetime import datetime, timedelta, date, timezone
 from collections import defaultdict
@@ -18,6 +18,120 @@ import stripe
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/affiliate', tags=['affiliate'])
+
+# Price IDs dos planos
+PLAN_BASIC_MONTHLY = 'price_1SrkUWLtWlVpaXrb8zFq6OvW'  # 1 mês
+PLAN_3_MONTHS = 'price_1Stb4lLtWlVpaXrbdoI7hHDx'  # 3 meses
+PLAN_YEARLY = 'price_1SrkUrLtWlVpaXrb8zFq6OvW'  # 1 ano
+
+def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[bool, str]:
+    """
+    Verifica se o utilizador tem direito a afiliados baseado no plano.
+    
+    Retorna: (has_access: bool, reason: str)
+    
+    Lógica:
+    - Plano 3 meses: Tem acesso
+    - Plano 1 ano: Tem acesso
+    - Plano básico (1 mês): Precisa de 3 meses consecutivos pagos
+    """
+    if not settings.STRIPE_API_KEY or not user.stripe_customer_id:
+        return (False, 'Sem subscrição ativa')
+    
+    try:
+        # Buscar subscrição ativa
+        if not user.stripe_subscription_id:
+            return (False, 'Sem subscrição ativa')
+        
+        subscription = stripe.Subscription.retrieve(user.stripe_subscription_id)
+        
+        if subscription.status not in ['active', 'trialing']:
+            return (False, 'Subscrição não está ativa')
+        
+        # Verificar qual o plano atual
+        if not subscription.items.data:
+            return (False, 'Subscrição sem itens')
+        
+        current_price_id = subscription.items.data[0].price.id
+        
+        # Planos que dão acesso direto a afiliados
+        if current_price_id in [PLAN_3_MONTHS, PLAN_YEARLY]:
+            return (True, 'Plano com acesso a afiliados')
+        
+        # Plano básico (1 mês) - verificar se tem 3 meses consecutivos pagos
+        if current_price_id == PLAN_BASIC_MONTHLY:
+            # Buscar todas as invoices pagas do customer
+            invoices = stripe.Invoice.list(
+                customer=user.stripe_customer_id,
+                status='paid',
+                limit=100
+            )
+            
+            # Filtrar apenas invoices do plano básico mensal
+            basic_invoices = []
+            for inv in invoices.data:
+                # Verificar se a invoice tem o price_id do plano básico
+                for line_item in inv.lines.data:
+                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == PLAN_BASIC_MONTHLY:
+                        basic_invoices.append(inv)
+                        break
+            
+            if len(basic_invoices) < 3:
+                months_paid = len(basic_invoices)
+                return (False, f'Plano básico: precisas de 3 meses consecutivos pagos. Tens {months_paid} mês(es) pago(s).')
+            
+            # Extrair os meses de cada invoice (usar period_start para determinar o mês)
+            invoice_months = set()
+            for inv in basic_invoices:
+                if hasattr(inv, 'period_start') and inv.period_start:
+                    inv_date = datetime.fromtimestamp(inv.period_start)
+                    invoice_months.add((inv_date.year, inv_date.month))
+                elif hasattr(inv, 'created') and inv.created:
+                    inv_date = datetime.fromtimestamp(inv.created)
+                    invoice_months.add((inv_date.year, inv_date.month))
+            
+            if len(invoice_months) < 3:
+                return (False, f'Plano básico: precisas de 3 meses consecutivos pagos. Tens {len(invoice_months)} mês(es) diferente(s) pago(s).')
+            
+            # Ordenar meses
+            sorted_months = sorted(list(invoice_months))
+            
+            # Verificar se há 3 meses consecutivos em qualquer lugar do histórico
+            consecutive_count = 1
+            max_consecutive = 1
+            
+            for i in range(len(sorted_months) - 1):
+                year1, month1 = sorted_months[i]
+                year2, month2 = sorted_months[i + 1]
+                
+                # Calcular próximo mês esperado
+                next_month = month1 + 1
+                next_year = year1
+                if next_month > 12:
+                    next_month = 1
+                    next_year += 1
+                
+                # Se o próximo mês é consecutivo, incrementar contador
+                if (year2, month2) == (next_year, next_month):
+                    consecutive_count += 1
+                    max_consecutive = max(max_consecutive, consecutive_count)
+                else:
+                    consecutive_count = 1
+            
+            if max_consecutive >= 3:
+                return (True, 'Plano básico com 3 meses consecutivos pagos')
+            else:
+                return (False, f'Plano básico: precisas de 3 meses consecutivos pagos. Tens {max_consecutive} mês(es) consecutivo(s) pago(s).')
+        
+        # Plano desconhecido
+        return (False, 'Plano não reconhecido')
+        
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro ao verificar acesso a afiliados: {str(e)}')
+        return (False, f'Erro ao verificar subscrição: {str(e)}')
+    except Exception as e:
+        logger.error(f'Erro inesperado ao verificar acesso a afiliados: {str(e)}', exc_info=True)
+        return (False, 'Erro ao verificar acesso')
 
 def check_stripe_connect_status(user: models.User, db: Session) -> bool:
     """Verifica o status do Stripe Connect em tempo real e atualiza os campos locais"""
@@ -74,25 +188,6 @@ async def get_affiliate_status(
     """Retorna o status do afiliado do utilizador atual"""
     logger.info(f"📊 GET /affiliate/status - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings
-    
-    # Verificar se o utilizador tem 5+ meses de criação
-    # Garantir que created_at seja timezone-aware
-    try:
-        created_at = current_user.created_at
-        if created_at is None:
-            # Se não houver created_at, assumir que é novo (0 meses)
-            months_since_creation = 0
-        else:
-            # Converter para timezone-aware se necessário
-            if created_at.tzinfo is None:
-                # Se for naive, assumir UTC
-                created_at = created_at.replace(tzinfo=timezone.utc)
-            now = datetime.now(timezone.utc)
-            months_since_creation = (now - created_at).days / 30
-    except (TypeError, AttributeError) as e:
-        # Em caso de erro, assumir 0 meses
-        logger.warning(f"Erro ao calcular meses desde criação: {e}")
-        months_since_creation = 0
     
     if not current_user.is_affiliate:
         logger.info(f"   → User não é afiliado")
@@ -159,7 +254,7 @@ async def request_affiliate_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Solicita para se tornar afiliado - aprova automaticamente se tiver 5+ meses"""
+    """Solicita para se tornar afiliado - aprova baseado no plano"""
     logger.info(f"📝 POST /affiliate/request - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings
     
@@ -201,27 +296,16 @@ async def request_affiliate_status(
             stripe_connect_account_id=current_user.stripe_connect_account_id
         )
     
-    # Verificar se tem 5+ meses
-    # Garantir que created_at seja timezone-aware
-    try:
-        created_at = current_user.created_at
-        if created_at is None:
-            months_since_creation = 0
-        else:
-            if created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=timezone.utc)
-            now = datetime.now(timezone.utc)
-            months_since_creation = (now - created_at).days / 30
-    except (TypeError, AttributeError) as e:
-        logger.warning(f"Erro ao calcular meses desde criação: {e}")
-        months_since_creation = 0
-    if months_since_creation < 5:
+    # Verificar se tem direito a afiliados baseado no plano
+    has_access, reason = check_user_has_affiliate_access(current_user, db)
+    
+    if not has_access:
         raise HTTPException(
             status_code=400,
-            detail=f'Precisas de ter uma conta com pelo menos 5 meses para te tornares afiliado. A tua conta tem {int(months_since_creation)} meses.'
+            detail=reason
         )
     
-    # Se tem 5+ meses, aprovar automaticamente
+    # Se tem acesso, aprovar automaticamente
     # Gerar código único
     if not current_user.affiliate_code:
         code = generate_affiliate_code()
@@ -240,7 +324,7 @@ async def request_affiliate_status(
         db,
         action='affiliate_approved',
         user_id=current_user.id,
-        details=f'Utilizador {current_user.email} aprovado automaticamente como afiliado (conta com {int(months_since_creation)} meses)',
+        details=f'Utilizador {current_user.email} aprovado automaticamente como afiliado ({reason})',
         request=request
     )
     

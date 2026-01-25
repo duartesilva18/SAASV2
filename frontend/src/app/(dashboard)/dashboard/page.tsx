@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import api, { fetcher } from '@/lib/api';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { useDashboardSnapshot } from '@/lib/hooks/useDashboard';
 // Lazy loading de charts para reduzir bundle inicial
 import { 
@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
 import confetti from 'canvas-confetti';
-import { Crown, Star, Check, Sparkles as SparklesIcon, Zap as ZapIcon, ArrowRightCircle, X, Loader2 } from 'lucide-react';
+import { Check, Sparkles as SparklesIcon, Zap as ZapIcon, ArrowRightCircle, X, Loader2 } from 'lucide-react';
 import { useUser } from '@/lib/UserContext';
 import { DashboardSkeleton } from '@/components/LoadingSkeleton';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const { refreshUser } = useUser();
   const searchParams = useSearchParams();
   const [isPro, setIsPro] = useState(false);
-  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
@@ -58,10 +57,32 @@ export default function DashboardPage() {
   });
   
   // Buscar user profile para subscription status
-  const { data: userData } = useSWR('/auth/me', fetcher, {
+  const { data: userData, mutate: mutateUserData } = useSWR('/auth/me', fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
   });
+  
+  // Verificar se voltou do pagamento e invalidar cache
+  useEffect(() => {
+    const sessionId = searchParams?.get('session_id');
+    const proActivated = sessionStorage.getItem('pro_activated_success');
+    
+    if (sessionId || proActivated === 'true') {
+      // Invalidar cache do SWR para forçar refresh
+      mutate('/auth/me');
+      mutate('/stripe/invoices');
+      mutateUserData();
+      refreshUser();
+      
+      // Limpar sessionStorage e URL
+      if (proActivated === 'true') {
+        sessionStorage.removeItem('pro_activated_success');
+      }
+      if (sessionId) {
+        window.history.replaceState({}, '', '/dashboard');
+      }
+    }
+  }, [searchParams, refreshUser, mutateUserData]);
   
   // Memoizar cálculos pesados
   const hasActiveSub = useMemo(() => {
@@ -244,7 +265,6 @@ export default function DashboardPage() {
             // Atualizar estado para remover modo demo e banners
             setIsPro(true);
             setShowPaywall(false); // Fechar paywall se estiver aberto
-            setShowUpgradeSuccess(true);
             setIsProcessingUpgrade(false);
             
             // Limpar a URL sem recarregar a página
@@ -779,71 +799,6 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Modal de Sucesso Pro */}
-      <AnimatePresence>
-        {showUpgradeSuccess && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-8">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUpgradeSuccess(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-2xl transition-all duration-300"
-              style={{ willChange: 'backdrop-filter' }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 40 }}
-              transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-2xl bg-[#020617] border border-amber-500/20 rounded-[64px] p-12 md:p-16 shadow-[0_0_150px_-20px_rgba(245,158,11,0.4)] overflow-hidden text-center z-10"
-            >
-              <button 
-                onClick={() => setShowUpgradeSuccess(false)}
-                className="absolute top-8 right-8 p-3 hover:bg-white/5 rounded-full text-slate-500 transition-colors cursor-pointer"
-              >
-                <X size={24} />
-              </button>
-
-              <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 blur-3xl rounded-full -z-10" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 blur-3xl rounded-full -z-10" />
-              
-              <motion.div 
-                animate={{ 
-                  rotate: [0, 5, -5, 0],
-                  scale: [1, 1.05, 1]
-                }}
-                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                className="w-32 h-32 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-[40px] flex items-center justify-center mx-auto mb-10 shadow-[0_20px_60px_-10px_rgba(245,158,11,0.6)] border border-amber-300/30"
-              >
-                <Crown size={64} className="text-black" />
-              </motion.div>
-
-              <h2 className="text-5xl font-black text-white tracking-tighter mb-6 uppercase">
-                {t.dashboard.page.welcomePro} <br />
-                <span className="text-amber-500 italic">{t.dashboard.page.eliteFinly}</span>
-              </h2>
-              
-              <div className="flex items-center justify-center gap-3 mb-10 text-amber-500/60 bg-amber-500/5 py-2 px-6 rounded-full w-fit mx-auto border border-amber-500/10">
-                <Star size={14} fill="currentColor" />
-                <span className="text-xs font-black uppercase tracking-[0.5em]">{t.dashboard.page.masterZenPro}</span>
-                <Star size={14} fill="currentColor" />
-              </div>
-
-              <p className="text-slate-400 font-medium italic text-xl leading-relaxed mb-12 max-w-md mx-auto">
-                {t.dashboard.page.congratulations}
-              </p>
-
-              <button
-                onClick={() => setShowUpgradeSuccess(false)}
-                className="w-full py-7 bg-amber-500 hover:bg-amber-400 text-black rounded-[32px] font-black uppercase tracking-[0.4em] text-sm transition-all shadow-[0_20px_40px_-10px_rgba(245,158,11,0.4)] active:scale-[0.98] cursor-pointer"
-              >
-                {t.dashboard.page.explorePro}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <PricingModal 
         isVisible={showPaywall} 

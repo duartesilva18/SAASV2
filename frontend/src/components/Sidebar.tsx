@@ -364,21 +364,17 @@ export default function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
-      <div className={`flex items-center gap-3 mb-10 px-6 py-8 ${isCollapsed ? 'lg:justify-center' : ''}`}>
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
-          <Sparkles size={20} className="animate-pulse" />
-        </div>
-        {(!isCollapsed || isMobileOpen) && (
-          <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tighter text-white">
-              Finly
-            </span>
-            {isPro && (
-              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full w-fit">
-                {t.dashboard.sidebar.masterPro}
-              </span>
-            )}
-          </div>
+      <div className={`flex items-center mb-0 px-4 py-2 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
+        <img
+          src="/images/logo/logo.png"
+          alt="Finly"
+          className={`${isCollapsed && !isMobileOpen ? 'h-36 w-36' : 'h-40 w-auto'} shrink-0 m-0 p-0 select-none pointer-events-none`}
+          draggable="false"
+        />
+        {(!isCollapsed || isMobileOpen) && isPro && (
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full w-fit">
+            {t.dashboard.sidebar.masterPro}
+          </span>
         )}
       </div>
 

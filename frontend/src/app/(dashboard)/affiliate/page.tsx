@@ -81,7 +81,7 @@ export default function AffiliatePage() {
   const [requesting, setRequesting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
-  const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number } | null>(null);
+  const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number; isPlanBased?: boolean } | null>(null);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
@@ -160,25 +160,25 @@ export default function AffiliatePage() {
     } catch (err: any) {
       const errorMessage = err?.response?.data?.detail || 'Erro ao solicitar afiliação';
       
-      // Extrair informações sobre meses se disponível
-      // Procura especificamente por "A tua conta tem X meses"
-      const monthsMatch = errorMessage.match(/A tua conta tem (\d+)\s*meses?/i);
+      // Extrair informações sobre meses se disponível (para plano básico)
+      // Procura por "Tens X mês(es) pago(s)" ou "Tens X mês(es) consecutivo(s) pago(s)"
+      const monthsMatch = errorMessage.match(/Tens (\d+)\s*mês(?:es)?(?:\s+(?:pago|consecutivo))?/i);
       if (monthsMatch) {
         const currentMonths = parseInt(monthsMatch[1]);
         setErrorInfo({
           months: currentMonths,
-          monthsNeeded: 5
+          monthsNeeded: 3,
+          isPlanBased: true
         });
       } else {
+        // Se não for erro de meses, apenas mostrar mensagem genérica
         setErrorInfo(null);
+        setToast({
+          isVisible: true,
+          message: errorMessage,
+          type: 'error'
+        });
       }
-      
-      // Não mostrar toast de erro - apenas o card visual
-      // setToast({
-      //   isVisible: true,
-      //   message: errorMessage,
-      //   type: 'error'
-      // });
     } finally {
       setRequesting(false);
     }
@@ -309,7 +309,7 @@ export default function AffiliatePage() {
             )}
             
             {/* Error Display - Clean & Simple */}
-            {errorInfo && (
+            {errorInfo && errorInfo.isPlanBased && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -320,11 +320,17 @@ export default function AffiliatePage() {
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-sm font-black text-amber-400 uppercase tracking-wider">
-                    Ainda não tens 5 meses de conta
+                    Ainda não tens acesso aos afiliados
                   </p>
                   <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                    A tua conta tem <span className="text-amber-400 font-black">{errorInfo.months}</span> {errorInfo.months === 1 ? 'mês' : 'meses'}. 
-                    Faltam <span className="text-amber-400 font-black">{errorInfo.monthsNeeded - errorInfo.months}</span> {errorInfo.monthsNeeded - errorInfo.months === 1 ? 'mês' : 'meses'} para te tornares afiliado.
+                    Tens <span className="text-amber-400 font-black">{errorInfo.months}</span> {errorInfo.months === 1 ? 'mês' : 'meses'} {errorInfo.months === 1 ? 'pago' : 'pagos'} no plano básico. 
+                    Precisas de <span className="text-amber-400 font-black">{errorInfo.monthsNeeded}</span> meses consecutivos pagos para teres acesso ao programa de afiliados.
+                    {errorInfo.monthsNeeded - errorInfo.months > 0 && (
+                      <> Faltam <span className="text-amber-400 font-black">{errorInfo.monthsNeeded - errorInfo.months}</span> {errorInfo.monthsNeeded - errorInfo.months === 1 ? 'mês' : 'meses'}.</>
+                    )}
+                  </p>
+                  <p className="text-xs text-amber-400/80 font-medium leading-relaxed mt-2">
+                    💡 Dica: Considera fazer upgrade para o plano de 3 meses ou anual para teres acesso imediato aos afiliados!
                   </p>
                 </div>
               </motion.div>
