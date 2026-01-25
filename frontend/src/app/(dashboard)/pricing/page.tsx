@@ -145,6 +145,22 @@ export default function PricingPage() {
     }
   ];
 
+  // Verificar se há parâmetro plan na URL e iniciar checkout automaticamente
+  useEffect(() => {
+    const planParam = searchParams?.get('plan');
+    if (planParam && !loading && !isProcessingPayment && !isPro) {
+      const selectedPlan = plans.find(p => p.id === planParam);
+      if (selectedPlan) {
+        // Pequeno delay para garantir que a página carregou completamente
+        const timer = setTimeout(() => {
+          handleSubscribe(selectedPlan.priceId);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isPro, loading, isProcessingPayment]);
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
       {/* Header */}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
@@ -15,10 +16,14 @@ import {
   Star,
   CheckCircle2,
   ChevronRight,
-  Phone
+  Phone,
+  Crown,
+  Check
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig } from '@/lib/languages';
+import { useUser } from '@/lib/UserContext';
+import api from '@/lib/api';
 
 // Componente simplificado para a palavra Telegram
 function AnimatedTelegram() {
@@ -33,6 +38,8 @@ function AnimatedTelegram() {
 
 export default function LandingPage() {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
+  const { user } = useUser();
+  const router = useRouter();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
   // Structured Data para SEO
@@ -266,19 +273,175 @@ export default function LandingPage() {
             {t.hero.cta} 
             <ArrowRight size={20} />
           </Link>
-          <motion.div
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link href="#steps" className="w-full sm:w-auto px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] border border-slate-800 hover:bg-white/5 transition-all relative overflow-hidden group">
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-slate-800/0 to-slate-700/0 group-hover:from-slate-800/50 group-hover:to-slate-700/50 transition-all duration-500"
-              />
-              <span className="relative z-10">{t.hero.seeHow}</span>
-            </Link>
-          </motion.div>
+          <Link href="#steps" className="w-full sm:w-auto px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] border border-slate-800 hover:bg-white/5 hover:rounded-3xl transition-all">
+            {t.hero.seeHow}
+          </Link>
         </motion.div>
       </section>
+
+      {/* Pricing Section */}
+      <motion.section 
+        className="max-w-7xl mx-auto px-6 py-32"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
+          >
+            <Sparkles size={14} />
+            Escolhe o teu plano
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-6xl font-black tracking-tighter mb-6"
+          >
+            Investe na tua <span className="text-blue-400">Liberdade Financeira</span>
+          </motion.h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              id: 'monthly',
+              name: 'Plano Básico',
+              price: 9.99,
+              description: 'Acesso ao dashboard',
+              features: [
+                'Dashboard completo',
+                'Registo de despesas',
+                'Gráficos básicos',
+                'Suporte por email'
+              ],
+              icon: Zap,
+            },
+            {
+              id: '3months',
+              name: 'Plano 3 Meses',
+              price: 24.99,
+              description: 'Acesso completo + Programa de Afiliados',
+              features: [
+                'Dashboard completo',
+                'Programa de Afiliados',
+                'Todas as funcionalidades Pro',
+                'Suporte prioritário'
+              ],
+              icon: Trophy,
+              popular: true,
+            },
+            {
+              id: 'yearly',
+              name: 'Plano Anual',
+              price: 89.90,
+              description: 'Acesso completo + Programa de Afiliados',
+              features: [
+                'Dashboard completo',
+                'Programa de Afiliados',
+                'Todas as funcionalidades Pro',
+                'Suporte prioritário',
+                'Economiza 25%'
+              ],
+              icon: Crown,
+            }
+          ].map((plan, index) => (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className={`relative bg-slate-900/40 backdrop-blur-xl border rounded-[32px] p-8 shadow-xl overflow-visible group transition-all ${
+                plan.popular 
+                  ? 'border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.1)]' 
+                  : 'border-white/5 hover:border-white/10'
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl flex items-center gap-2 z-30 whitespace-nowrap">
+                  <Trophy size={12} className="animate-pulse" />
+                  <span>Recomendado</span>
+                </div>
+              )}
+              
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-14 h-14 bg-gradient-to-br ${
+                    plan.popular 
+                      ? 'from-blue-500/30 to-indigo-500/30' 
+                      : 'from-slate-800/50 to-slate-900/50'
+                  } rounded-2xl flex items-center justify-center border ${
+                    plan.popular ? 'border-blue-500/40' : 'border-slate-700/50'
+                  }`}>
+                    <plan.icon size={28} style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">{plan.name}</p>
+                    <p className="text-4xl font-black text-white tracking-tighter">
+                      {plan.price.toFixed(2)}€
+                    </p>
+                    <p className="text-xs text-slate-500 font-black uppercase tracking-widest mt-1">
+                      / {plan.id === 'yearly' ? 'Ano' : plan.id === '3months' ? '3 Meses' : 'Mês'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-base text-slate-400 mb-4 italic">{plan.description}</p>
+
+                <div className="space-y-2 mb-6">
+                  {plan.features.map((feature: string, fIndex: number) => (
+                    <div key={fIndex} className="flex items-start gap-2">
+                      <Check size={18} className="text-blue-400 mt-0.5 shrink-0" />
+                      <p className="text-sm text-slate-300 font-medium">{feature}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (user) {
+                      // Se o utilizador está autenticado, criar sessão Stripe diretamente
+                      try {
+                        const priceIdMap: { [key: string]: string } = {
+                          'monthly': 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
+                          '3months': 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
+                          'yearly': 'price_1SrkUrLtWlVpaXrb8zFq6OvW'
+                        };
+                        const priceId = priceIdMap[plan.id];
+                        if (priceId) {
+                          const res = await api.post('/stripe/create-checkout-session', null, {
+                            params: { price_id: priceId }
+                          });
+                          window.location.href = res.data.url;
+                        }
+                      } catch (err: any) {
+                        console.error('Erro ao criar sessão Stripe:', err);
+                        // Se falhar, redirecionar para pricing como fallback
+                        router.push(`/pricing?plan=${plan.id}`);
+                      }
+                    } else {
+                      // Se não está autenticado, redirecionar para login com redirect para pricing
+                      router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
+                    }
+                  }}
+                  className={`w-full block text-center px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.3em] transition-all cursor-pointer ${
+                    plan.popular
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                  }`}
+                >
+                  Escolher Plano
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
 
       {/* Stats Section com animações */}
       <motion.section 

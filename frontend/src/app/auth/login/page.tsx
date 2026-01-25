@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,6 +66,8 @@ export default function LoginPage() {
   const [isShaking, setIsShaking] = useState(false);
   const { refreshUser } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams?.get('redirect') || '/dashboard';
 
   const motivationalQuotes = t.auth.login.motivationalQuotes;
 
@@ -221,7 +223,7 @@ export default function LoginPage() {
       // Iniciar prefetch mas não esperar - redirecionar imediatamente
       prefetchData();
       
-      router.push('/dashboard');
+      router.push(redirectUrl);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || t.auth.login.googleError);
@@ -258,8 +260,12 @@ export default function LoginPage() {
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[24px] lg:rounded-[28px] flex items-center justify-center text-white shadow-2xl mb-8 lg:mb-12 shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10">
-                  <Sparkles size={32} className="animate-pulse lg:size-[40px]" />
+                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-[24px] lg:rounded-[28px] flex items-center justify-center shadow-2xl mb-8 lg:mb-12 shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10 overflow-hidden">
+                  <img 
+                    src="/images/logo/logo-semfundo.png" 
+                    alt="Finly Logo" 
+                    className="w-[90%] h-[90%] object-contain"
+                  />
                 </div>
                 <h2 className="text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-6 lg:mb-8">
                   {motivationalQuotes[quoteIndex].title.split(' ').map((word, i) => (
