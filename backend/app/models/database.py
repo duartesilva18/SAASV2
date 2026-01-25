@@ -155,6 +155,17 @@ class RecurringTransaction(Base):
     workspace = relationship('Workspace', back_populates='recurring_transactions')
     category = relationship('Category')
 
+class EmailVerification(Base):
+    __tablename__ = 'email_verifications'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, nullable=False, index=True)
+    token = Column(String, nullable=False, unique=True, index=True)
+    password_hash = Column(String, nullable=True)  # Guarda o hash da password temporariamente
+    referral_code = Column(String(20), nullable=True)  # Código de referência se fornecido
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
 class PasswordReset(Base):
     __tablename__ = 'password_resets'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
