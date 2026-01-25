@@ -721,35 +721,38 @@ async def confirm_password_reset(request: Request, data: schemas.PasswordResetCo
 
 @router.post('/social-login', response_model=schemas.Token)
 async def social_login(request: Request, data: schemas.SocialLoginRequest, db: Session = Depends(get_db)):
-    email = None
-    social_id = None
-    
-    if data.provider == 'google':
-        try:
-            google_response = requests.get(
-                'https://www.googleapis.com/oauth2/v3/userinfo',
-                headers={'Authorization': f'Bearer {data.token}'}
-            )
-            if google_response.status_code != 200:
-                raise Exception('Falha ao validar token com a Google')
-            idinfo = google_response.json()
-            email = idinfo.get('email')
-            social_id = idinfo.get('sub')
-        except Exception as e:
-            raise HTTPException(status_code=400, detail='Token do Google inválido ou expirado')
-    
-    if not email:
-        raise HTTPException(status_code=400, detail='Não foi possível obter o email do provedor social')
-    
-    user = db.query(models.User).filter(models.User.email == email).first()
-    
-    # Se o usuário já existe, não criar referência (referências só para contas novas)
-    if user:
-        referral_code = getattr(data, 'referral_code', None)
-        if referral_code:
-            logger.warning(f'⚠️ Tentativa de criar referência para usuário existente bloqueada via social login: {user.email} (código: {referral_code}). Referências só são válidas para contas novas.')
-    
-    if not user:
+    try:
+        email = None
+        social_id = None
+        
+        if data.provider == 'google':
+            try:
+                google_response = requests.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f'Bearer {data.token}'}
+                )
+                if google_response.status_code != 200:
+                    logger.error(f'Erro ao validar token Google: {google_response.status_code} - {google_response.text}')
+                    raise Exception('Falha ao validar token com a Google')
+                idinfo = google_response.json()
+                email = idinfo.get('email')
+                social_id = idinfo.get('sub')
+            except Exception as e:
+                logger.error(f'Erro ao validar token Google: {str(e)}', exc_info=True)
+                raise HTTPException(status_code=400, detail='Token do Google inválido ou expirado')
+        
+        if not email:
+            raise HTTPException(status_code=400, detail='Não foi possível obter o email do provedor social')
+        
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        # Se o usuário já existe, não criar referência (referências só para contas novas)
+        if user:
+            referral_code = getattr(data, 'referral_code', None)
+            if referral_code:
+                logger.warning(f'⚠️ Tentativa de criar referência para usuário existente bloqueada via social login: {user.email} (código: {referral_code}). Referências só são válidas para contas novas.')
+        
+        if not user:
         # Get language from request data or default to 'pt'
         user_language = getattr(data, 'language', 'pt') or 'pt'
         if user_language not in ['pt', 'en']:
@@ -826,25 +829,33 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
         # Criar categorias padrão (Investimento e Fundo de Emergência)
         categories_map = create_default_categories(db, new_workspace.id)
         
-        # Criar transações de exemplo para ajudar o Telegram a categorizar
-        create_seed_transactions(db, new_workspace.id, categories_map)
-    else:
-        if data.provider == 'google' and not user.google_id:
-            user.google_id = social_id
-        user.login_count += 1
-        user.last_login = datetime.now(timezone.utc)
-        db.commit()
-    
-    await log_action(db, action='login_social', user_id=user.id, details=f'Login via {data.provider}: {user.email}', request=request)
-    
-    access_token = security.create_access_token(subject=user.email)
-    refresh_token = security.create_refresh_token(subject=user.email)
-    
-    logger.info(f"Login social bem-sucedido para {user.email}. Token gerado.")
-    
-    return {
-        'access_token': access_token,
-        'refresh_token': refresh_token,
-        'token_type': 'bearer'
-    }
+            # Criar transações de exemplo para ajudar o Telegram a categorizar
+            create_seed_transactions(db, new_workspace.id, categories_map)
+        else:
+            if data.provider == 'google' and not user.google_id:
+                user.google_id = social_id
+            user.login_count += 1
+            user.last_login = datetime.now(timezone.utc)
+            db.commit()
+        
+        try:
+            await log_action(db, action='login_social', user_id=user.id, details=f'Login via {data.provider}: {user.email}', request=request)
+        except Exception as e:
+            logger.warning(f'Erro ao logar ação (não crítico): {str(e)}')
+        
+        access_token = security.create_access_token(subject=user.email)
+        refresh_token = security.create_refresh_token(subject=user.email)
+        
+        logger.info(f"Login social bem-sucedido para {user.email}. Token gerado.")
+        
+        return {
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'token_type': 'bearer'
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f'Erro inesperado no social-login: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=500, detail=f'Erro interno do servidor: {str(e)}')
 
