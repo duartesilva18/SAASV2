@@ -160,7 +160,11 @@ allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') i
 environment = os.getenv('ENVIRONMENT', 'development')
 if environment == 'production' and ('*' in allowed_origins or not allowed_origins):
     logger.warning("CORS configurado de forma insegura para produção! Configurando origens padrão.")
-    allowed_origins = ['https://finanzen.pt']  # Ajustar para o domínio real
+    # Incluir domínios de produção padrão
+    allowed_origins = [
+        'https://finanzen-frontend.onrender.com',
+        'https://finanzen.pt'
+    ]
 
 app.add_middleware(
     CORSMiddleware,
