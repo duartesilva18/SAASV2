@@ -104,11 +104,15 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_referral_code ON affiliate_re
 CREATE TABLE IF NOT EXISTS affiliate_commissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     affiliate_id UUID NOT NULL,
-    referral_id UUID,
-    amount_cents INTEGER NOT NULL,
-    commission_percentage DECIMAL(5,2) NOT NULL,
+    month DATE NOT NULL,
+    total_revenue_cents INTEGER NOT NULL DEFAULT 0,
+    commission_percentage NUMERIC(5,2) NOT NULL,
+    commission_amount_cents INTEGER NOT NULL DEFAULT 0,
+    referrals_count INTEGER NOT NULL DEFAULT 0,
+    conversions_count INTEGER NOT NULL DEFAULT 0,
     is_paid BOOLEAN NOT NULL DEFAULT FALSE,
     paid_at TIMESTAMP WITH TIME ZONE,
+    payment_reference VARCHAR(100),
     stripe_transfer_id VARCHAR(255),
     transfer_status VARCHAR(50),
     payout_error_message TEXT,
@@ -116,12 +120,37 @@ CREATE TABLE IF NOT EXISTS affiliate_commissions (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- Adicionar coluna referral_id se a tabela já existir mas não tiver a coluna
+-- Adicionar colunas que podem estar faltando (idempotente)
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'affiliate_commissions') THEN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'referral_id') THEN
-            ALTER TABLE affiliate_commissions ADD COLUMN referral_id UUID;
+        -- Adicionar colunas se não existirem
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'month') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN month DATE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'total_revenue_cents') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN total_revenue_cents INTEGER NOT NULL DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'commission_amount_cents') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN commission_amount_cents INTEGER NOT NULL DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'referrals_count') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN referrals_count INTEGER NOT NULL DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'conversions_count') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN conversions_count INTEGER NOT NULL DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'payment_reference') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN payment_reference VARCHAR(100);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'stripe_transfer_id') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN stripe_transfer_id VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'transfer_status') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN transfer_status VARCHAR(50);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'affiliate_commissions' AND column_name = 'payout_error_message') THEN
+            ALTER TABLE affiliate_commissions ADD COLUMN payout_error_message TEXT;
         END IF;
     END IF;
 END $$;
@@ -137,20 +166,22 @@ BEGIN
         ADD CONSTRAINT affiliate_commissions_affiliate_id_fkey 
         FOREIGN KEY (affiliate_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
-    
+END $$;
+
+-- Adicionar constraint unique para affiliate_id + month
+DO $$
+BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'affiliate_commissions_referral_id_fkey' AND table_name = 'affiliate_commissions'
+        WHERE constraint_name = 'unique_affiliate_month' AND table_name = 'affiliate_commissions'
     ) THEN
         ALTER TABLE affiliate_commissions
-        ADD CONSTRAINT affiliate_commissions_referral_id_fkey 
-        FOREIGN KEY (referral_id) REFERENCES affiliate_referrals(id) ON DELETE CASCADE;
+        ADD CONSTRAINT unique_affiliate_month UNIQUE (affiliate_id, month);
     END IF;
 END $$;
 
 -- Criar índices para affiliate_commissions
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_affiliate_id ON affiliate_commissions(affiliate_id);
-CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_referral_id ON affiliate_commissions(referral_id);
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_is_paid ON affiliate_commissions(is_paid);
 CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_stripe_transfer_id ON affiliate_commissions(stripe_transfer_id) WHERE stripe_transfer_id IS NOT NULL;
 
