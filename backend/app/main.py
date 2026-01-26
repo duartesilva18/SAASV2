@@ -143,16 +143,7 @@ app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Handler para erros de validação (422)
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.error(f"Erro de validação em {request.url.path}: {exc.errors()}")
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors(), "body": str(exc.body) if hasattr(exc, 'body') else None}
-    )
-
-# Configuração de CORS
+# Configuração de CORS (DEVE estar ANTES dos exception handlers)
 allowed_origins_str = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
 
@@ -177,6 +168,9 @@ if environment == 'production':
                 allowed_origins.append(origin)
                 logger.info(f"Adicionada origem de produção ao CORS: {origin}")
 
+# Log das origens CORS configuradas
+logger.info(f"🌐 CORS configurado com {len(allowed_origins)} origens: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -185,6 +179,50 @@ app.add_middleware(
     allow_headers=['*'],
     expose_headers=['*']
 )
+
+# Handler para erros de validação (422) - DEPOIS do CORS
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Erro de validação em {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body) if hasattr(exc, 'body') else None}
+    )
+
+# Handler global para erros não tratados (garantir que CORS funciona mesmo com erros)
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    logger.error(f"Erro não tratado em {request.url.path}: {str(exc)}", exc_info=True)
+    logger.error(f"Traceback: {traceback.format_exc()}")
+    
+    # Obter origem da request para adicionar header CORS
+    origin = request.headers.get('origin')
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Erro interno do servidor. Por favor, tente novamente mais tarde."}
+    )
+    
+    # Adicionar headers CORS manualmente se necessário
+    # Verificar se a origem está nas origens permitidas
+    if origin:
+        # Origens de produção permitidas
+        production_origins_list = [
+            'https://finanzen-frontend.onrender.com',
+            'https://finanzen-frontend-kj08.onrender.com',
+            'https://finanzen.pt'
+        ]
+        # Verificar também se está nas origens configuradas via env
+        allowed_origins_env = os.getenv('ALLOWED_ORIGINS', '')
+        allowed_origins_list = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
+        
+        if origin in production_origins_list or origin in allowed_origins_list:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # Incluir rotas
 app.include_router(auth.router)

@@ -62,139 +62,157 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(s
 @router.post('/register', response_model=schemas.UserResponse)
 @limiter.limit('30/hour')
 async def register(request: Request, user_in: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Validação de email
-    if not validate_email(user_in.email):
-        raise HTTPException(status_code=400, detail='Formato de email inválido.')
-    
-    # Validação de senha forte
-    is_valid, error_msg = validate_password(user_in.password)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error_msg)
-    
-    db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
-    if db_user:
-        logger.warning(f'Tentativa de registo com email já existente: {user_in.email}')
-        raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
-    
-    # Remove any existing pending verification for this email
-    db.query(models.EmailVerification).filter(models.EmailVerification.email == user_in.email).delete()
-    
-    hashed_pw = security.get_password_hash(user_in.password)
-    # Usar secrets.token_urlsafe para token criptograficamente seguro
-    token = secrets.token_urlsafe(48)
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-    
-    # Validar código de referência se fornecido
-    referrer_id = None
-    referral_code = getattr(user_in, 'referral_code', None)
-    if referral_code:
-        logger.info(f'🔍 Processando código de referência no registo: {referral_code} para email: {user_in.email}')
-        referrer = db.query(models.User).filter(
-            and_(
-                models.User.affiliate_code == referral_code,
-                models.User.is_affiliate == True
-            )
-        ).first()
-        if referrer:
-            referrer_id = referrer.id
-            logger.info(f'✅ Código de referência válido no registo: {referral_code} -> afiliado {referrer.email} (ID: {referrer_id})')
-        else:
-            logger.warning(f'⚠️ Código de referência inválido no registo: {referral_code}')
-            # Não bloquear o registo, apenas ignorar o código inválido
-    else:
-        logger.info(f'ℹ️ Nenhum código de referência fornecido no registo para {user_in.email}')
-    
-    verification = models.EmailVerification(
-        email=user_in.email,
-        password_hash=hashed_pw,
-        token=token,
-        expires_at=expires_at
-    )
-    # Armazenar referrer_id temporariamente (precisamos adicionar este campo ao modelo)
-    # Por enquanto, vamos usar uma abordagem diferente - armazenar no token ou criar uma tabela temporária
-    # Vamos usar uma abordagem mais simples: armazenar o referral_code no token URL
-    db.add(verification)
-    db.commit()
-    
-    # Adicionar referral_code ao token se existir
-    verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={token}"
-    if referral_code and referrer_id:
-        verify_url += f"&ref={referral_code}"
-        logger.info(f'✅ URL de verificação criada com código de referência: {verify_url}')
-    else:
-        logger.info(f'ℹ️ URL de verificação criada sem código de referência (referral_code={referral_code}, referrer_id={referrer_id})')
-    # Get user language preference from user_in or default to 'pt'
-    user_lang = getattr(user_in, 'language', 'pt') or 'pt'
-    # Validate language (only 'pt' or 'en' supported)
-    if user_lang not in ['pt', 'en']:
-        user_lang = 'pt'
-    t = get_email_translation(user_lang, 'verify_email')
-    
-    html = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
-            .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
-            .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
-            .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
-            .logo span {{ color: #3b82f6; font-style: italic; }}
-            .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
-            .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
-            .btn {{ display: inline-block; padding: 20px 45px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 20px; font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin: 35px 0; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3); }}
-            .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
-            .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">Finly</div>
-            </div>
-            <div class="content">
-                <h2>{t['title']}</h2>
-                <p>{t['welcome']}</p>
-                <a href="{verify_url}" class="btn">{t['button']}</a>
-                <p class="security-notice">{t['security_notice']}</p>
-            </div>
-            <div class="footer">
-                {t['footer']}
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-    
-    message = MessageSchema(
-        subject=t['subject'],
-        recipients=[user_in.email],
-        body=html,
-        subtype=MessageType.html
-    )
-    
-    from ..core.dependencies import conf
-    fm = FastMail(conf)
     try:
-        await fm.send_message(message)
+        # Validação de email
+        if not validate_email(user_in.email):
+            raise HTTPException(status_code=400, detail='Formato de email inválido.')
+        
+        # Validação de senha forte
+        is_valid, error_msg = validate_password(user_in.password)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
+        if db_user:
+            logger.warning(f'Tentativa de registo com email já existente: {user_in.email}')
+            raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
+        
+        # Remove any existing pending verification for this email
+        try:
+            db.query(models.EmailVerification).filter(models.EmailVerification.email == user_in.email).delete()
+            db.commit()
+        except Exception as e:
+            logger.warning(f'Erro ao remover verificação pendente (não crítico): {str(e)}')
+            db.rollback()
+        
+        hashed_pw = security.get_password_hash(user_in.password)
+        # Usar secrets.token_urlsafe para token criptograficamente seguro
+        token = secrets.token_urlsafe(48)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+        
+        # Validar código de referência se fornecido
+        referrer_id = None
+        referral_code = getattr(user_in, 'referral_code', None)
+        if referral_code:
+            logger.info(f'🔍 Processando código de referência no registo: {referral_code} para email: {user_in.email}')
+            try:
+                referrer = db.query(models.User).filter(
+                    and_(
+                        models.User.affiliate_code == referral_code,
+                        models.User.is_affiliate == True
+                    )
+                ).first()
+                if referrer:
+                    referrer_id = referrer.id
+                    logger.info(f'✅ Código de referência válido no registo: {referral_code} -> afiliado {referrer.email} (ID: {referrer_id})')
+                else:
+                    logger.warning(f'⚠️ Código de referência inválido no registo: {referral_code}')
+                    # Não bloquear o registo, apenas ignorar o código inválido
+            except Exception as e:
+                logger.warning(f'Erro ao validar código de referência (não crítico): {str(e)}')
+        else:
+            logger.info(f'ℹ️ Nenhum código de referência fornecido no registo para {user_in.email}')
+        
+        verification = models.EmailVerification(
+            email=user_in.email,
+            password_hash=hashed_pw,
+            token=token,
+            expires_at=expires_at
+        )
+        db.add(verification)
+        db.commit()
+        
+        # Adicionar referral_code ao token se existir
+        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={token}"
+        if referral_code and referrer_id:
+            verify_url += f"&ref={referral_code}"
+            logger.info(f'✅ URL de verificação criada com código de referência: {verify_url}')
+        else:
+            logger.info(f'ℹ️ URL de verificação criada sem código de referência (referral_code={referral_code}, referrer_id={referrer_id})')
+        
+        # Get user language preference from user_in or default to 'pt'
+        user_lang = getattr(user_in, 'language', 'pt') or 'pt'
+        # Validate language (only 'pt' or 'en' supported)
+        if user_lang not in ['pt', 'en']:
+            user_lang = 'pt'
+        t = get_email_translation(user_lang, 'verify_email')
+        
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
+                .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
+                .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
+                .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
+                .logo span {{ color: #3b82f6; font-style: italic; }}
+                .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
+                .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
+                .btn {{ display: inline-block; padding: 20px 45px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 20px; font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin: 35px 0; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3); }}
+                .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
+                .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="logo">Finly</div>
+                </div>
+                <div class="content">
+                    <h2>{t['title']}</h2>
+                    <p>{t['welcome']}</p>
+                    <a href="{verify_url}" class="btn">{t['button']}</a>
+                    <p class="security-notice">{t['security_notice']}</p>
+                </div>
+                <div class="footer">
+                    {t['footer']}
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+        
+        message = MessageSchema(
+            subject=t['subject'],
+            recipients=[user_in.email],
+            body=html,
+            subtype=MessageType.html
+        )
+        
+        from ..core.dependencies import conf
+        fm = FastMail(conf)
+        try:
+            await fm.send_message(message)
+        except Exception as e:
+            logger.error(f'Erro ao enviar email de verificação: {str(e)}')
+            # Não bloquear o registo se o email falhar
+        
+        logger.info(f'Novo registo pendente (aguardando verificação): {user_in.email}')
+        
+        return {
+            'id': uuid.uuid4(),
+            'email': user_in.email,
+            'is_active': True,
+            'is_admin': False,
+            'is_email_verified': False,
+            'is_onboarded': False,
+            'marketing_opt_in': False,
+            'currency': 'EUR',
+            'language': user_lang,
+            'created_at': datetime.now(timezone.utc)
+        }
+    except HTTPException:
+        # Re-raise HTTPExceptions (400, 401, etc.) para manter o status code correto
+        raise
     except Exception as e:
-        logger.error(f'Erro ao enviar email de verificação: {str(e)}')
-    
-    logger.info(f'Novo registo pendente (aguardando verificação): {user_in.email}')
-    
-    return {
-        'id': uuid.uuid4(),
-        'email': user_in.email,
-        'is_active': True,
-        'is_admin': False,
-        'is_email_verified': False,
-        'is_onboarded': False,
-        'marketing_opt_in': False,
-        'currency': 'EUR',
-        'language': user_lang,
-        'created_at': datetime.now(timezone.utc)
-    }
+        logger.error(f'Erro ao processar registo para {user_in.email}: {str(e)}', exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f'Erro interno ao processar registo. Por favor, tente novamente mais tarde.'
+        )
 
 @router.get('/verification-status/{email}')
 async def check_verification_status(email: str, db: Session = Depends(get_db)):
