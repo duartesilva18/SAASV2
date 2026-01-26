@@ -373,20 +373,20 @@ export default function DashboardPage() {
       transition={{ duration: 0.5 }}
       className="text-white pb-20 -mt-4"
     >
-      <div className="flex items-center justify-between mb-12 -mt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-12 -mt-4 gap-4">
         <h1 className="text-4xl font-black tracking-tighter text-white">{t.dashboard.page.title}</h1>
         
         {!isPro && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl"
+            className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl w-fit"
           >
             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
             <Link 
               href="/pricing"
-              className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-colors"
+              className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 text-[9px] font-black uppercase transition-colors"
             >
               {t.dashboard.page.upgradePro}
             </Link>

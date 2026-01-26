@@ -710,17 +710,6 @@ export default function AnalyticsPage() {
             </motion.div>
           )}
           
-          <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl">
-          <div className="flex -space-x-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-950 bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">
-                AI
-              </div>
-            ))}
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 pr-2 border-r border-slate-800">Zen Engine v2.0</span>
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
-          </div>
         </div>
       </div>
 

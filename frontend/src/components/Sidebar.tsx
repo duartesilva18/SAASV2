@@ -364,7 +364,7 @@ export default function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
-      <div className={`flex items-center mb-0 px-4 py-1 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
+      <div className={`flex items-center mb-0 px-4 py-0 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
         <img
           src="/images/logo/logo.png"
           alt="Finly"
@@ -373,7 +373,7 @@ export default function Sidebar({
         />
       </div>
 
-      <nav className="flex-1 px-4 -mt-2 space-y-6 xl:space-y-8 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 px-4 -mt-4 space-y-6 xl:space-y-8 overflow-y-auto no-scrollbar">
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-3">
             {(!isCollapsed || isMobileOpen) && (
