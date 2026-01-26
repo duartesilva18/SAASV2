@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+import PageLoading from '@/components/PageLoading';
 import { 
   LineChart as ReLineChart, Line, XAxis, YAxis, 
   CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart 
@@ -175,12 +176,7 @@ export default function FIREPage() {
   }, [stats, simParams]);
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.fire.processing}</p>
-      </div>
-    );
+    return <PageLoading message={t.dashboard.fire.processing} />;
   }
 
   return (
@@ -229,7 +225,7 @@ export default function FIREPage() {
             {/* Controlos e Dados Reais */}
             <div className="space-y-8">
               {/* Card de Dados Reais - Agora mais visual */}
-              <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-10 rounded-[48px] relative overflow-hidden group">
+              <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-10 rounded-[32px] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Activity size={64} className="text-orange-500" />
                 </div>
@@ -265,7 +261,7 @@ export default function FIREPage() {
               </div>
 
               {/* Ajustes Finos */}
-              <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-10 rounded-[48px] space-y-10">
+              <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-10 rounded-[32px] space-y-10">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.fire.marketParams}</h3>
                 
                 <div className="space-y-10">
@@ -337,7 +333,7 @@ export default function FIREPage() {
               {/* Card de Resultado Principal */}
               <motion.div 
                 layout
-                className="bg-gradient-to-br from-orange-600 via-orange-600 to-red-600 p-12 rounded-[56px] shadow-2xl relative overflow-hidden group"
+                className="bg-gradient-to-br from-orange-600 via-orange-600 to-red-600 p-12 rounded-[32px] shadow-2xl relative overflow-hidden group"
               >
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
                 <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-black/10 blur-3xl rounded-full" />
@@ -370,7 +366,7 @@ export default function FIREPage() {
                   </div>
                   
                   <div className="flex flex-col gap-4 w-full md:w-auto">
-                    <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 text-center md:text-right min-w-[280px]">
+                    <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 text-center md:text-right min-w-[280px]">
                       <p className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-2">{t.dashboard.fire.fireNumber}</p>
                       <p className="text-4xl font-black text-white tracking-tighter leading-none">
                         {formatCurrency(fireResult?.target)}
@@ -385,7 +381,7 @@ export default function FIREPage() {
               </motion.div>
 
               {/* Gráfico de Evolução de Riqueza */}
-              <div className="bg-slate-900/40 backdrop-blur-sm p-12 rounded-[56px] border border-white/5 h-[550px] relative">
+              <div className="bg-slate-900/40 backdrop-blur-sm p-12 rounded-[32px] border border-white/5 h-[550px] relative">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
                   <div>
                     <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-500 mb-1">{t.dashboard.fire.accumulationCurve}</h3>
@@ -511,7 +507,7 @@ export default function FIREPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-slate-900/40 border border-white/5 p-10 rounded-[48px] space-y-6 hover:bg-slate-900/60 transition-all"
+                className="bg-slate-900/40 border border-white/5 p-10 rounded-[32px] space-y-6 hover:bg-slate-900/60 transition-all"
               >
                 <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center ${item.color}`}>
                   <item.icon size={28} />
@@ -527,7 +523,7 @@ export default function FIREPage() {
       {/* Footer Info Box */}
       <motion.div 
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="bg-orange-600/5 border border-orange-500/10 rounded-[40px] p-10 flex flex-col md:flex-row items-center gap-8"
+        className="bg-orange-600/5 border border-orange-500/10 rounded-[32px] p-10 flex flex-col md:flex-row items-center gap-8"
       >
         <div className="w-16 h-16 bg-orange-500/10 rounded-[24px] flex items-center justify-center text-orange-500 shrink-0">
           <Lightbulb size={32} />

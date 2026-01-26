@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
+import PageLoading from '@/components/PageLoading';
 
 export default function MarketingAdminPage() {
   const [subject, setSubject] = useState('');
@@ -98,11 +99,7 @@ export default function MarketingAdminPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (
@@ -112,7 +109,7 @@ export default function MarketingAdminPage() {
       className="space-y-10 pb-20"
     >
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[48px] bg-slate-900 border border-white/5 p-10 md:p-16">
+      <section className="relative overflow-hidden rounded-[32px] bg-slate-900 border border-white/5 p-10 md:p-16">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full -z-10 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-600/5 blur-[100px] rounded-full -z-10" />
         
@@ -169,7 +166,7 @@ export default function MarketingAdminPage() {
 
         {/* Broadcast Form */}
         <div className="lg:col-span-2">
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-[40px] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+          <section className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-[32px] p-8 md:p-12 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] -z-10" />
             
             <div className="flex items-center justify-between mb-10">
@@ -211,7 +208,7 @@ export default function MarketingAdminPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-6 p-6 bg-blue-600/5 border border-blue-500/10 rounded-3xl italic text-sm text-slate-400">
+              <div className="flex items-center gap-6 p-6 bg-blue-600/5 border border-blue-500/10 rounded-2xl italic text-sm text-slate-400">
                 <AlertCircle size={24} className="text-blue-500 shrink-0" />
                 <p>Esta mensagem será enviada individualmente para cada utilizador. Certifica-te que o conteúdo é relevante e não abusivo.</p>
               </div>
@@ -219,7 +216,7 @@ export default function MarketingAdminPage() {
               <button
                 type="submit"
                 disabled={sending || !subject || !message}
-                className="w-full py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:opacity-50 text-white rounded-[28px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+                className="w-full py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:opacity-50 text-white rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
               >
                 {sending ? <Loader2 size={24} className="animate-spin" /> : (
                   <>
@@ -321,7 +318,7 @@ export default function MarketingAdminPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[40px] p-8 md:p-10 shadow-3xl overflow-hidden"
+              className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[32px] p-8 md:p-10 shadow-3xl overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-[60px] rounded-full -z-10" />
               
@@ -372,12 +369,12 @@ export default function MarketingAdminPage() {
 
                       {/* Info Técnica em Grelha */}
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 flex flex-col items-center justify-center text-center">
+                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col items-center justify-center text-center">
                           <Users size={16} className="text-blue-400 mb-2 opacity-50" />
                           <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total de Alvos</p>
                           <p className="text-sm font-black text-white">{data.sent_count} <span className="text-[9px] text-slate-600">users</span></p>
                         </div>
-                        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 flex flex-col items-center justify-center text-center">
+                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col items-center justify-center text-center">
                           <Globe size={16} className="text-indigo-400 mb-2 opacity-50" />
                           <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">IP de Origem</p>
                           <p className="text-sm font-bold text-slate-300">{selectedCampaign.ip_address || '127.0.0.1'}</p>
@@ -415,7 +412,7 @@ export default function MarketingAdminPage() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl h-[85vh] flex flex-col bg-slate-900 border border-white/10 rounded-[40px] shadow-3xl overflow-hidden"
+              className="relative w-full max-w-4xl h-[85vh] flex flex-col bg-slate-900 border border-white/10 rounded-[32px] shadow-3xl overflow-hidden"
             >
               {/* Modal Header */}
               <div className="p-8 border-b border-white/5 flex items-center justify-between bg-slate-900/50 backdrop-blur-xl">
@@ -504,7 +501,7 @@ export default function MarketingAdminPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-[#020617] border border-white/[0.08] rounded-[48px] p-10 md:p-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
+              className="relative w-full max-w-lg bg-[#020617] border border-white/[0.08] rounded-[32px] p-10 md:p-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
             >
               {/* Background Accents */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
@@ -531,7 +528,7 @@ export default function MarketingAdminPage() {
                 </div>
 
                 {/* Campaign Preview Summary */}
-                <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 mb-10 space-y-4">
+                <div className="bg-white/[0.03] border border-white/[0.05] rounded-2xl p-6 mb-10 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-slate-500 border border-white/5">
                       <Layout size={14} />
@@ -555,7 +552,7 @@ export default function MarketingAdminPage() {
                 <div className="flex flex-col gap-4">
                   <button
                     onClick={handleBroadcast}
-                    className="group relative w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all active:scale-[0.98] overflow-hidden cursor-pointer"
+                    className="group relative w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-[0.3em] text-xs transition-all active:scale-[0.98] overflow-hidden cursor-pointer"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
                     <span className="relative z-10 flex items-center justify-center gap-3">
@@ -564,7 +561,7 @@ export default function MarketingAdminPage() {
                   </button>
                   <button
                     onClick={() => setShowConfirm(false)}
-                    className="w-full py-6 bg-transparent hover:bg-white/5 text-slate-500 hover:text-slate-300 rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] transition-all border border-transparent hover:border-white/5 cursor-pointer"
+                    className="w-full py-6 bg-transparent hover:bg-white/5 text-slate-500 hover:text-slate-300 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all border border-transparent hover:border-white/5 cursor-pointer"
                   >
                     Cancelar Operação
                   </button>
@@ -591,7 +588,7 @@ export default function MarketingAdminPage() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl h-[85vh] flex flex-col bg-slate-900 border border-white/10 rounded-[40px] shadow-3xl overflow-hidden"
+              className="relative w-full max-w-4xl h-[85vh] flex flex-col bg-slate-900 border border-white/10 rounded-[32px] shadow-3xl overflow-hidden"
             >
               {/* Modal Header */}
               <div className="p-8 border-b border-white/5 flex items-center justify-between bg-slate-900/50 backdrop-blur-xl">

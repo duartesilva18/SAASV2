@@ -10,6 +10,7 @@ import {
   ExternalLink, AlertCircle, ArrowRight, ShieldCheck
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import PageLoading from '@/components/PageLoading';
 
 interface StripeConnectStatus {
   connected: boolean;
@@ -98,11 +99,7 @@ export default function StripeConnectPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
-      </div>
-    );
+    return <PageLoading variant="minimal" size="sm" />;
   }
 
   const isActive = status?.status === 'active' && status?.payout_enabled;

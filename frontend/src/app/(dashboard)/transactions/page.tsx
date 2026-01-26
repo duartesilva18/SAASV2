@@ -13,7 +13,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
 import { TransactionSkeleton } from '@/components/LoadingSkeleton';
+import PageLoading from '@/components/PageLoading';
 
 interface Transaction {
   id: string;
@@ -45,7 +47,8 @@ function TransactionsPageContent() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null); // NEW: For confirm delete modal
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -331,6 +334,7 @@ function TransactionsPageContent() {
 
   const handleDelete = async () => {
     if (!transactionToDelete) return;
+    setIsDeleting(true);
     try {
       // Garantir que o ID está no formato correto
       const transactionId = String(transactionToDelete).trim();
@@ -348,6 +352,8 @@ function TransactionsPageContent() {
       console.error('Resposta do erro:', err.response?.data);
       const errorMessage = err.response?.data?.detail || err.message || t.dashboard.transactions.deleteError;
       setToastInfo({ message: errorMessage, type: 'error', isVisible: true });
+    } finally {
+      setIsDeleting(false);
       setTransactionToDelete(null);
     }
   };
@@ -365,14 +371,7 @@ function TransactionsPageContent() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-[1400px] mx-auto space-y-12 pb-20 px-2 md:px-0">
-        <div className="space-y-6">
-          <div className="h-32 bg-slate-900/40 rounded-2xl animate-pulse" />
-          <TransactionSkeleton />
-        </div>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (
@@ -431,9 +430,9 @@ function TransactionsPageContent() {
       </section>
 
       {/* Filters & Search */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
         <div className="flex flex-col lg:flex-row gap-8 items-center justify-between mb-6">
-          <div className="flex items-center gap-4 bg-slate-950/50 border border-slate-800 rounded-3xl p-1.5 w-full lg:w-auto">
+          <div className="flex items-center gap-4 bg-slate-950/50 border border-slate-800 rounded-2xl p-1.5 w-full lg:w-auto">
             {['all', 'income', 'expense'].map((tab) => (
               <button
                 key={tab}
@@ -457,7 +456,7 @@ function TransactionsPageContent() {
                 placeholder={t.dashboard.transactions.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl py-4 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium"
               />
             </div>
 
@@ -466,7 +465,7 @@ function TransactionsPageContent() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl py-4 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
               >
                 <option value="all">{t.dashboard.transactions.allCategories}</option>
                 {categories.map(c => (
@@ -487,7 +486,7 @@ function TransactionsPageContent() {
       </section>
 
       {/* Transactions List */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl">
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -543,7 +542,7 @@ function TransactionsPageContent() {
           
           {filteredTransactions.length === 0 && (
             <div className="py-32 flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center mb-8 border border-slate-800 shadow-2xl">
+              <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center mb-8 border border-slate-800 shadow-2xl">
                 <SearchX size={32} className="text-slate-700 animate-pulse" />
               </div>
               <h3 className="text-xl font-black text-white mb-2">Nenhuma transação encontrada</h3>
@@ -622,7 +621,7 @@ function TransactionsPageContent() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[48px] overflow-hidden shadow-2xl"
+              className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
               
@@ -776,7 +775,7 @@ function TransactionsPageContent() {
 
                   <button
                     type="submit"
-                    className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] cursor-pointer"
+                    className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] cursor-pointer"
                   >
                     {editingTransaction ? t.dashboard.transactions.saveChanges : t.dashboard.transactions.registerTransaction}
                   </button>
@@ -802,12 +801,12 @@ function TransactionsPageContent() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[40px] p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
               
               <div className="flex flex-col items-center text-center gap-6">
-                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                   categories.find(c => c.id === selectedTransaction.category_id)?.type === 'income' 
                   ? 'bg-emerald-500/10 text-emerald-500' 
                   : 'bg-blue-500/10 text-blue-500'
@@ -824,7 +823,7 @@ function TransactionsPageContent() {
                   </p>
                 </div>
 
-                <div className="w-full bg-white/5 border border-white/5 rounded-3xl p-6 space-y-4">
+                <div className="w-full bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.value}</span>
                     <span className={`text-xl font-black ${
@@ -880,51 +879,17 @@ function TransactionsPageContent() {
       </AnimatePresence>
 
       {/* Confirm Delete Modal */}
-      <AnimatePresence>
-        {transactionToDelete && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setTransactionToDelete(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[40px] p-8 shadow-2xl overflow-hidden text-center"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-[40px] rounded-full -z-10" />
-              
-              <div className="w-16 h-16 bg-red-500/10 rounded-3xl flex items-center justify-center text-red-500 mx-auto mb-6">
-                <Trash2 size={32} />
-              </div>
-              
-              <h3 className="text-2xl font-black text-white tracking-tighter mb-2">{t.dashboard.transactions.deleteConfirm}</h3>
-              <p className="text-slate-500 text-sm font-medium italic mb-8">
-                {t.dashboard.transactions.deleteConfirmText}
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setTransactionToDelete(null)}
-                  className="px-6 py-4 border border-slate-800 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all cursor-pointer"
-                >
-                  {t.dashboard.analytics.cancel}
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-6 py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-600/20 transition-all cursor-pointer"
-                >
-                  {t.dashboard.transactions.delete}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={!!transactionToDelete}
+        onClose={() => setTransactionToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.dashboard.transactions.deleteConfirm}
+        message={t.dashboard.transactions.deleteConfirmText}
+        confirmText={t.dashboard.transactions.delete}
+        cancelText={t.dashboard.analytics.cancel}
+        variant="danger"
+        isLoading={isDeleting}
+      />
 
       <Toast 
         message={toastInfo.message}

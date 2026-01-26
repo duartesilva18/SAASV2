@@ -11,6 +11,8 @@ import {
   X, Trash2
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import AlertModal from '@/components/AlertModal';
+import PageLoading from '@/components/PageLoading';
 
 interface Invoice {
   id: string;
@@ -40,6 +42,12 @@ export default function BillingPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,14 +81,14 @@ export default function BillingPage() {
 
   const handlePortal = async () => {
     if (isSimulated) {
-      alert(b.simulationMode);
+      setAlertModal({ isOpen: true, title: 'Modo Simulação', message: b.simulationMode, type: 'info' });
       return;
     }
     try {
       const res = await api.post('/stripe/portal');
       window.location.href = res.data.url;
     } catch (err) {
-      alert(b.portalError);
+      setAlertModal({ isOpen: true, title: 'Erro', message: b.portalError, type: 'error' });
     }
   };
 
@@ -135,12 +143,7 @@ export default function BillingPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{b.loadingHistory}</p>
-      </div>
-    );
+    return <PageLoading message={b.loadingHistory} />;
   }
 
   return (
@@ -173,7 +176,7 @@ export default function BillingPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[40px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[50px] rounded-full -mr-16 -mt-16" />
           <div className="relative z-10">
@@ -191,7 +194,7 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[40px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="relative z-10">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{b.status}</p>
@@ -220,7 +223,7 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[40px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="relative z-10">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{b.nextPayment}</p>
@@ -236,7 +239,7 @@ export default function BillingPage() {
       </section>
 
       {/* Invoices Table */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[48px] overflow-hidden shadow-2xl">
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
         <div className="p-8 md:p-12">
           <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-8 flex items-center gap-2">
             <FileText size={14} /> {b.stripeHistory}
@@ -330,7 +333,7 @@ export default function BillingPage() {
       )}
 
       {/* Info Banner */}
-      <section className="bg-blue-600/5 border border-blue-500/10 rounded-[40px] p-8 flex flex-col md:flex-row items-center gap-6">
+      <section className="bg-blue-600/5 border border-blue-500/10 rounded-[32px] p-8 flex flex-col md:flex-row items-center gap-6">
         <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
           <ShieldCheck size={24} />
         </div>
@@ -355,7 +358,7 @@ export default function BillingPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[48px] overflow-hidden shadow-2xl"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-[80px] rounded-full -z-10" />
               
@@ -422,9 +425,17 @@ export default function BillingPage() {
         )}
       </AnimatePresence>
 
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+
       <Toast 
         message={toast.message} 
-        type={toast.type} 
+        type={toast.type}
         isVisible={toast.isVisible} 
         onClose={() => setToast({ ...toast, isVisible: false })} 
       />

@@ -13,6 +13,8 @@ import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
+import PageLoading from '@/components/PageLoading';
 import { useRouter } from 'next/navigation';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -70,6 +72,7 @@ export default function AdminAffiliatesPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [promoting, setPromoting] = useState<string | null>(null);
+  const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const [referralsPage, setReferralsPage] = useState(1);
   const [referralsPerPage] = useState(10);
   const [commissionPercentage, setCommissionPercentage] = useState<number>(20.0);
@@ -192,18 +195,19 @@ export default function AdminAffiliatesPage() {
     }
   };
 
-  const handlePromoteToAffiliate = async (userId: string) => {
-    if (!confirm('Tem a certeza que deseja promover este utilizador a afiliado?')) return;
+  const handlePromoteToAffiliate = async () => {
+    if (!promoting) return;
     
-    setPromoting(userId);
     try {
-      await api.post('/admin/affiliates/promote', { user_id: userId });
+      await api.post('/admin/affiliates/promote', { user_id: promoting });
       setToast({
         isVisible: true,
         message: 'Utilizador promovido a afiliado com sucesso!',
         type: 'success'
       });
       setShowPromoteModal(false);
+      setShowPromoteConfirm(false);
+      setPromoting(null);
       fetchData();
       fetchUsersToPromote();
     } catch (err: any) {
@@ -212,9 +216,14 @@ export default function AdminAffiliatesPage() {
         message: err?.response?.data?.detail || 'Erro ao promover utilizador',
         type: 'error'
       });
-    } finally {
+      setShowPromoteConfirm(false);
       setPromoting(null);
     }
+  };
+
+  const handlePromoteClick = (userId: string) => {
+    setPromoting(userId);
+    setShowPromoteConfirm(true);
   };
 
   // Formatar sempre em EUR para esta página
@@ -246,12 +255,7 @@ export default function AdminAffiliatesPage() {
   const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 animate-pulse">Carregando afiliados...</p>
-      </div>
-    );
+    return <PageLoading message="Carregando afiliados..." />;
   }
 
   return (
@@ -776,7 +780,7 @@ export default function AdminAffiliatesPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-slate-800 border border-slate-700 rounded-[32px] p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-white flex items-center gap-2">
@@ -824,7 +828,7 @@ export default function AdminAffiliatesPage() {
                         <p className="text-sm text-slate-400">{u.email}</p>
                       </div>
                       <button
-                        onClick={() => handlePromoteToAffiliate(u.user_id)}
+                        onClick={() => handlePromoteClick(u.user_id)}
                         disabled={promoting === u.user_id}
                         className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-amber-600/20"
                       >
@@ -864,7 +868,7 @@ export default function AdminAffiliatesPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-slate-800 border border-slate-700 rounded-[32px] p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-white">Detalhes do Afiliado</h2>
@@ -1095,6 +1099,20 @@ export default function AdminAffiliatesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={showPromoteConfirm}
+        onClose={() => {
+          setShowPromoteConfirm(false);
+          setPromoting(null);
+        }}
+        onConfirm={handlePromoteToAffiliate}
+        title="Promover a Afiliado"
+        message="Tem a certeza que deseja promover este utilizador a afiliado?"
+        confirmText="Promover"
+        cancelText="Cancelar"
+        variant="info"
+      />
 
       <Toast {...toast} onClose={() => setToast({ ...toast, isVisible: false })} />
     </motion.div>

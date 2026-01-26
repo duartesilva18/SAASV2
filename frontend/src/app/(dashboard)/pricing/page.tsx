@@ -167,7 +167,7 @@ export default function PricingPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] sm:rounded-[40px] p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden"
+        className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full -z-10" />
@@ -336,7 +336,7 @@ export default function PricingPage() {
                 whileTap={{ scale: 0.98 }}
                 disabled={loading !== null || isPro}
                 onClick={() => handleSubscribe(plan.priceId)}
-                className={`w-full py-2.5 sm:py-3.5 rounded-[16px] sm:rounded-[18px] font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] transition-all flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden shrink-0 ${
+                className={`w-full py-2.5 sm:py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] transition-all flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden shrink-0 ${
                   plan.popular 
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:from-blue-500 hover:to-indigo-500' 
                     : 'bg-white/5 text-slate-300 border border-slate-800 hover:bg-white/10 hover:border-slate-700'

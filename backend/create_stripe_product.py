@@ -152,3 +152,4 @@ if __name__ == '__main__':
         print("\n\nCancelado pelo utilizador.")
         sys.exit(0)
 
+

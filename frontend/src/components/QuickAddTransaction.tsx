@@ -138,7 +138,7 @@ export default function QuickAddTransaction() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.9 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="mb-4 w-[90vw] max-w-md bg-slate-900 border border-white/5 rounded-[40px] shadow-2xl overflow-hidden relative"
+              className="mb-4 w-[90vw] max-w-md bg-slate-900 border border-white/5 rounded-[32px] shadow-2xl overflow-hidden relative"
             >
               <div className="p-10">
                 <div className="flex items-center justify-between mb-8">

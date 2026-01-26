@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Toast from '@/components/Toast';
+import PageLoading from '@/components/PageLoading';
 import { 
   Plus, Trash2, Calendar, CreditCard, 
   Sparkles, AlertCircle, CheckCircle2, Clock,
@@ -150,8 +151,10 @@ export default function RecurringPage() {
         type: activeTab 
       });
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const errorMessage = err.response?.data?.detail || 'Erro ao salvar ciclo.';
+      setToastInfo({ message: errorMessage, type: "error", isVisible: true });
     }
   };
 
@@ -161,8 +164,10 @@ export default function RecurringPage() {
       await api.delete(`/recurring/${id}`);
       setToastInfo({ message: "Ciclo removido.", type: "success", isVisible: true });
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const errorMessage = err.response?.data?.detail || 'Erro ao remover ciclo.';
+      setToastInfo({ message: errorMessage, type: "error", isVisible: true });
     }
   };
 
@@ -238,12 +243,7 @@ export default function RecurringPage() {
   })();
 
   if (loading) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-6">
-        <Clock size={64} className="text-blue-500 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Sincronizando Ciclos...</p>
-      </div>
-    );
+    return <PageLoading message="Sincronizando Ciclos..." />;
   }
 
   return (
@@ -337,7 +337,7 @@ export default function RecurringPage() {
 
         {/* Main Selection Tabs */}
         <div className="flex justify-center mt-12">
-          <div className="bg-slate-900/50 p-2 rounded-[28px] border border-slate-800 flex gap-2">
+          <div className="bg-slate-900/50 p-2 rounded-[24px] border border-slate-800 flex gap-2">
             <button
               onClick={() => setActiveTab('expense')}
               className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
@@ -364,7 +364,7 @@ export default function RecurringPage() {
         </div>
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-[48px] p-8 lg:p-12">
+      <section className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
         <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-8">Fluxo de Pressão</h2>
         <div className="h-[200px] mb-12">
           <ResponsiveContainer width="100%" height="100%">
@@ -389,7 +389,7 @@ export default function RecurringPage() {
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <AnimatePresence>
           {filteredRecurring.map((item) => (
-            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-[40px] p-8 cursor-pointer hover:border-blue-500/50 transition-all">
+            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 cursor-pointer hover:border-blue-500/50 transition-all">
               <div className="flex justify-between mb-8">
                 <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-blue-500">
                   {item.process_automatically ? <Zap size={24} /> : <Clock size={24} />}
@@ -410,7 +410,7 @@ export default function RecurringPage() {
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[48px] p-12">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] p-12">
               <div className="flex justify-between mb-10">
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{editingId ? 'Editar' : 'Nova'} Subscrição</h2>
                 <button onClick={() => setShowAddModal(false)} className="text-slate-500 cursor-pointer"><X size={24} /></button>
@@ -542,7 +542,7 @@ export default function RecurringPage() {
                   <div className={`w-6 h-6 rounded border ${formData.process_automatically ? 'bg-blue-600' : ''}`} />
                   <span className="text-xs font-black uppercase text-white">Processamento Automático</span>
                 </div>
-                <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all">Guardar</button>
+                <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all">Guardar</button>
               </form>
             </motion.div>
           </div>

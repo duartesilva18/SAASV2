@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+import AlertModal from '@/components/AlertModal';
 
 interface PricingModalProps {
   isVisible: boolean;
@@ -19,6 +20,12 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
   const { t, formatCurrency } = useTranslation();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState<string | null>(null);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
 
   // Prevenir scroll horizontal quando modal está aberto
   useEffect(() => {
@@ -44,7 +51,12 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
       window.location.href = res.data.url;
     } catch (err) {
       console.error(err);
-      alert(t.dashboard.pricing.monthlyPlan.error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Erro',
+        message: t.dashboard.pricing.monthlyPlan.error,
+        type: 'error'
+      });
     } finally {
       setLoading(null);
     }
@@ -93,7 +105,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-full lg:max-w-[1600px] min-h-[92vh] max-h-[95vh] my-4 bg-[#0f172a] border border-white/10 rounded-[32px] sm:rounded-[48px] lg:rounded-[64px] overflow-hidden shadow-[0_0_150px_-20px_rgba(59,130,246,0.3)] flex flex-col lg:flex-row z-10 min-w-0"
+            className="relative w-full max-w-full lg:max-w-[1600px] min-h-[92vh] max-h-[95vh] my-4 bg-[#0f172a] border border-white/10 rounded-[32px] overflow-hidden shadow-[0_0_150px_-20px_rgba(59,130,246,0.3)] flex flex-col lg:flex-row z-10 min-w-0"
           >
             {/* Left Side - Visual Marketing */}
             <div className="w-full lg:w-[35%] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 p-6 sm:p-12 md:p-16 lg:p-24 flex flex-col justify-between relative overflow-hidden shrink-0">
@@ -186,7 +198,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
                 {plans.map((plan) => (
                   <div 
                     key={plan.id}
-                    className={`relative group rounded-[24px] sm:rounded-[32px] lg:rounded-[48px] border transition-all duration-500 flex flex-col ${
+                    className={`relative group rounded-[24px] sm:rounded-[32px] border transition-all duration-500 flex flex-col ${
                       plan.popular 
                       ? 'bg-blue-600/5 border-blue-500/30 p-6 sm:p-8 lg:p-10 shadow-2xl md:scale-105 z-10' 
                       : 'bg-slate-950/50 border-slate-800 p-6 sm:p-8 lg:p-10'
@@ -244,6 +256,14 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
           </motion.div>
         </div>
       )}
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </AnimatePresence>
   );
 }

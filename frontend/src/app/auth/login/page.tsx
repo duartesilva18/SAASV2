@@ -39,7 +39,7 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-[28px] hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
+      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
     >
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
@@ -260,7 +260,7 @@ function LoginPageContent() {
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-[24px] lg:rounded-[28px] flex items-center justify-center shadow-2xl mb-8 lg:mb-12 shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10 overflow-hidden">
+                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-[24px] flex items-center justify-center shadow-2xl mb-8 lg:mb-12 shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10 overflow-hidden">
                   <img 
                     src="/images/logo/logo-semfundo.png" 
                     alt="Finly Logo" 
@@ -277,7 +277,7 @@ function LoginPageContent() {
                 <p className="text-xl lg:text-2xl text-slate-400 mb-8 lg:mb-12 max-w-lg leading-relaxed font-medium italic border-l-4 border-blue-500/30 pl-6 lg:pl-8">
                   "{motivationalQuotes[quoteIndex].quote}"
                 </p>
-                <div className="flex items-center gap-4 group cursor-default bg-slate-900/60 border border-slate-800 p-4 lg:p-6 rounded-2xl lg:rounded-3xl w-fit">
+                <div className="flex items-center gap-4 group cursor-default bg-slate-900/60 border border-slate-800 p-4 lg:p-6 rounded-2xl w-fit">
                   <div className="p-2 lg:p-3 rounded-xl lg:rounded-2xl bg-blue-500/10 text-blue-500 shadow-inner">
                     <Trophy size={20} className="lg:size-[24px]" />
                   </div>
@@ -330,7 +330,7 @@ function LoginPageContent() {
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[40px] lg:rounded-[56px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {error && (
@@ -458,7 +458,7 @@ function LoginPageContent() {
               </p>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-8 lg:px-12 py-4 lg:py-6 rounded-[28px] lg:rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+                className="inline-flex items-center gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-8 lg:px-12 py-4 lg:py-6 rounded-[24px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.login.registerCta}
                 <Sparkles size={18} className="text-blue-500 group-hover:rotate-12 transition-transform lg:size-[20px]" />

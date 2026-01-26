@@ -20,6 +20,8 @@ import { DEMO_TRANSACTIONS, DEMO_CATEGORIES, DEMO_INSIGHTS, DEMO_RECURRING } fro
 import Link from 'next/link';
 import { Lock, ArrowRight } from 'lucide-react';
 import { ChartSkeleton, DashboardSkeleton } from '@/components/LoadingSkeleton';
+import AlertModal from '@/components/AlertModal';
+import PageLoading from '@/components/PageLoading';
 
 export default function AnalyticsPage() {
   const { t, formatCurrency } = useTranslation();
@@ -40,6 +42,12 @@ export default function AnalyticsPage() {
   const [vaultAmount, setVaultAmount] = useState('');
   const [vaultLoading, setVaultLoading] = useState(false);
   const lastUpdateTimestampRef = useRef<number | null>(null);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
 
   const fetchAnalytics = async (force = false) => {
     try {
@@ -212,7 +220,12 @@ export default function AnalyticsPage() {
         
         if (amount_cents > currentBalance || balanceAfterWithdrawal < 0) {
           const available = (currentBalance / 100).toFixed(2);
-          alert(`❌ Saldo insuficiente!\n\nDisponível: ${formatCurrency(parseFloat(available))}\nTentativa: ${formatCurrency(parseFloat(vaultAmount))}\n\nNão é possível deixar o cofre com saldo negativo.`);
+          setAlertModal({
+            isOpen: true,
+            title: 'Saldo Insuficiente',
+            message: `Saldo insuficiente!\n\nDisponível: ${formatCurrency(parseFloat(available))}\nTentativa: ${formatCurrency(parseFloat(vaultAmount))}\n\nNão é possível deixar o cofre com saldo negativo.`,
+            type: 'error'
+          });
           setVaultLoading(false);
           return;
         }
@@ -233,7 +246,12 @@ export default function AnalyticsPage() {
     } catch (err: any) {
       console.error('Erro ao processar transação do cofre:', err);
       const errorMessage = err.response?.data?.detail || 'Erro ao processar transação.';
-      alert(errorMessage);
+      setAlertModal({
+        isOpen: true,
+        title: 'Erro',
+        message: errorMessage,
+        type: 'error'
+      });
     } finally {
       setVaultLoading(false);
     }
@@ -530,16 +548,7 @@ export default function AnalyticsPage() {
   const COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'];
 
   if (loading || !processedData) {
-    return (
-      <div className="space-y-6">
-        <div className="h-32 bg-slate-900/40 rounded-2xl animate-pulse" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartSkeleton />
-          <ChartSkeleton />
-        </div>
-        <ChartSkeleton />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (
@@ -661,7 +670,7 @@ export default function AnalyticsPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Main Flow Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -725,7 +734,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Distribution Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -795,7 +804,7 @@ export default function AnalyticsPage() {
       {/* New Row: Weekly Rhythm & Top Expenses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Weekly Rhythm Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -857,7 +866,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Top Expenses List/Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -920,7 +929,7 @@ export default function AnalyticsPage() {
       {/* Row: Evolução Financeira & Zen Vault (Investimentos) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Evolution Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8 relative overflow-hidden">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[60px] rounded-full" />
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
@@ -979,7 +988,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Zen Vault (Reservas e Investimentos) */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8 relative overflow-hidden group">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -1002,7 +1011,7 @@ export default function AnalyticsPage() {
                 <>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-4 rounded-3xl relative group"
+                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.emergencyFund}</p>
                     <p className="text-lg font-black text-white text-center mb-3">{formatCurrency(processedData.emergencyTotal)}</p>
@@ -1033,7 +1042,7 @@ export default function AnalyticsPage() {
                   </motion.div>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-4 rounded-3xl relative group"
+                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.zenInvestments}</p>
                     <p className="text-lg font-black text-emerald-400 text-center mb-3">{formatCurrency(processedData.investmentTotal)}</p>
@@ -1080,7 +1089,7 @@ export default function AnalyticsPage() {
       {/* Row: Próximos Vencimentos & Transações Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Payments */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center gap-3 mb-8">
             <Clock className="text-orange-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.upcoming}</h3>
@@ -1129,7 +1138,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Recent Transactions Feed */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center gap-3 mb-8">
             <History className="text-blue-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.recentActivity}</h3>
@@ -1178,7 +1187,7 @@ export default function AnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[40px] p-8 relative overflow-hidden"
+            className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
             <div className="relative z-10">
@@ -1450,12 +1459,12 @@ export default function AnalyticsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[40px] p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/10 blur-[80px] rounded-full -z-10" />
               
               <div className="flex flex-col items-center text-center gap-6">
-                <div className="w-16 h-16 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
                   <CreditCard size={32} />
                 </div>
                 
@@ -1498,6 +1507,14 @@ export default function AnalyticsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </motion.div>
   );
 }

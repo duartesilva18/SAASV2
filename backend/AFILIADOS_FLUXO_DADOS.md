@@ -250,3 +250,4 @@ Este SQL:
 - ✅ Cria foreign keys e índices necessários
 - ✅ É idempotente (pode ser executado múltiplas vezes)
 
+

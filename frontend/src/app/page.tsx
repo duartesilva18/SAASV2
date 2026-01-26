@@ -269,11 +269,11 @@ export default function LandingPage() {
           transition={{ delay: 0.2 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-6"
         >
-          <Link href="/auth/register" className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-2xl flex items-center justify-center gap-3">
+          <Link href="/auth/register" className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-[24px] text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-2xl flex items-center justify-center gap-3">
             {t.hero.cta} 
             <ArrowRight size={20} />
           </Link>
-          <Link href="#steps" className="w-full sm:w-auto px-12 py-6 rounded-3xl text-xs font-black uppercase tracking-[0.3em] border border-slate-800 hover:bg-white/5 hover:rounded-3xl transition-all">
+          <Link href="#steps" className="w-full sm:w-auto px-12 py-6 rounded-2xl text-xs font-black uppercase tracking-[0.3em] border border-slate-800 hover:bg-white/5 transition-all">
             {t.hero.seeHow}
           </Link>
         </motion.div>
@@ -507,7 +507,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-slate-900/50 border border-slate-800 p-12 rounded-[48px] hover:border-blue-500/30 transition-colors group"
+                className="bg-slate-900/50 border border-slate-800 p-12 rounded-[32px] hover:border-blue-500/30 transition-colors group"
               >
                 <div className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-blue-500 mb-8">
                   {index === 0 ? <Phone size={32} /> : index === 1 ? <MessageSquare size={32} /> : <Zap size={32} />}
@@ -569,7 +569,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="relative p-12 bg-slate-950 border border-slate-800 rounded-[48px]"
+              className="relative p-12 bg-slate-950 border border-slate-800 rounded-[32px]"
             >
               <div className="absolute -top-6 left-12 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
                 {item.initial}

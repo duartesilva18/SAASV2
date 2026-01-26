@@ -96,7 +96,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-2xl bg-[#020617] border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl"
+        className="relative w-full max-w-2xl bg-[#020617] border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
       >
         {/* Progress Bar */}
         <div className="absolute top-0 left-0 w-full h-1 bg-slate-900">

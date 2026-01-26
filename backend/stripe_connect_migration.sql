@@ -49,3 +49,4 @@ COMMENT ON COLUMN affiliate_commissions.payout_error_message IS 'Mensagem de err
 -- FIM DA MIGRATION
 -- =====================================================
 
+

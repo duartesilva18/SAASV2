@@ -11,6 +11,9 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
+import AlertModal from '@/components/AlertModal';
+import PageLoading from '@/components/PageLoading';
 
 export default function SettingsPage() {
   const { t, setCurrency, language, setLanguage, availableLanguages } = useTranslation();
@@ -32,6 +35,12 @@ export default function SettingsPage() {
     message: '',
     type: 'success',
     isVisible: false
+  });
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
   });
 
   const countries = [
@@ -121,7 +130,7 @@ export default function SettingsPage() {
 
   const handlePortal = async () => {
     if (isSimulated) {
-      alert(t.dashboard.settings.simulationMode);
+      setAlertModal({ isOpen: true, title: 'Modo Simulação', message: t.dashboard.settings.simulationMode, type: 'info' });
       return;
     }
     try {
@@ -134,7 +143,7 @@ export default function SettingsPage() {
     } catch (err: any) {
       console.error('Erro ao abrir portal Stripe:', err);
       const errorMsg = err.response?.data?.detail || err.message || 'Erro ao abrir portal de faturação.';
-      alert(errorMsg || t.dashboard.settings.portalError);
+      setAlertModal({ isOpen: true, title: 'Erro', message: errorMsg || t.dashboard.settings.portalError, type: 'error' });
     }
   };
 
@@ -153,7 +162,7 @@ export default function SettingsPage() {
       linkElement.click();
     } catch (err) {
       console.error(err);
-      alert(t.dashboard.settings.exportError);
+      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.exportError, type: 'error' });
     } finally {
       setExporting(false);
     }
@@ -168,18 +177,14 @@ export default function SettingsPage() {
       window.location.href = '/';
     } catch (err) {
       console.error(err);
-      alert(t.dashboard.settings.deleteError);
+      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.deleteError, type: 'error' });
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (
@@ -479,50 +484,26 @@ export default function SettingsPage() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowDeleteConfirm(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative bg-slate-900 border border-slate-800 p-8 md:p-10 rounded-[40px] max-w-md w-full shadow-2xl"
-            >
-              <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mx-auto mb-6">
-                <AlertCircle size={32} />
-              </div>
-              <h3 className="text-2xl font-black text-white text-center mb-4 tracking-tighter">
-                {t.dashboard.settings.dangerZone.confirmTitle}
-              </h3>
-              <p className="text-slate-400 text-center mb-8 font-medium italic">
-                {t.dashboard.settings.dangerZone.confirmText}
-              </p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-4 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer"
-                >
-                  {t.dashboard.settings.dangerZone.confirmCancel}
-                </button>
-                <button 
-                  onClick={handleDeleteAccount}
-                  disabled={deleting}
-                  className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer disabled:opacity-50"
-                >
-                  {deleting ? <Loader2 size={18} className="animate-spin mx-auto" /> : t.dashboard.settings.dangerZone.confirmDelete}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteAccount}
+        title={t.dashboard.settings.dangerZone.confirmTitle}
+        message={t.dashboard.settings.dangerZone.confirmText}
+        confirmText={t.dashboard.settings.dangerZone.confirmDelete}
+        cancelText={t.dashboard.settings.dangerZone.confirmCancel}
+        variant="danger"
+        isLoading={deleting}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
 
       {/* Global Toast */}
       <Toast 

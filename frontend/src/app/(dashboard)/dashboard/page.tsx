@@ -23,6 +23,7 @@ import { Check, Sparkles as SparklesIcon, Zap as ZapIcon, ArrowRightCircle, X, L
 import { useUser } from '@/lib/UserContext';
 import { DashboardSkeleton } from '@/components/LoadingSkeleton';
 import LoadingScreen from '@/components/LoadingScreen';
+import PageLoading from '@/components/PageLoading';
 
 export default function DashboardPage() {
   const { t, formatCurrency } = useTranslation();
@@ -492,7 +493,7 @@ export default function DashboardPage() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 p-10 rounded-[48px] border border-white/5 shadow-2xl relative overflow-hidden group"
+          className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 p-10 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full" />
           
@@ -538,7 +539,7 @@ export default function DashboardPage() {
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-slate-900/40 backdrop-blur-xl p-10 rounded-[48px] border border-white/5 shadow-2xl flex flex-col justify-between group"
+          className="bg-slate-900/40 backdrop-blur-xl p-10 rounded-[32px] border border-white/5 shadow-2xl flex flex-col justify-between group"
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 text-center">{t.dashboard.page.efficiency}</h3>
@@ -592,7 +593,7 @@ export default function DashboardPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-12 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 border border-blue-500/20 rounded-[40px] p-8 relative overflow-hidden group"
+        className="mb-12 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden group"
       >
         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
           <ArrowRightCircle size={80} className="text-blue-500 -rotate-45" />
@@ -672,7 +673,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      <div className="bg-slate-900/30 backdrop-blur-sm p-10 rounded-[48px] border border-white/5 shadow-2xl relative overflow-hidden group/chart">
+      <div className="bg-slate-900/30 backdrop-blur-sm p-10 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group/chart">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-4">

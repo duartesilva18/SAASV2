@@ -183,3 +183,4 @@ Após executar a migração com sucesso:
 3. ✅ Teste o sistema de afiliados
 4. ✅ Verifique se não há mais erros de "column does not exist"
 
+

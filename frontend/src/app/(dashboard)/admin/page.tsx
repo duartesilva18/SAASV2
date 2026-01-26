@@ -13,6 +13,8 @@ import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
+import PageLoading from '@/components/PageLoading';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function AdminDashboardPage() {
   const { t, formatCurrency } = useTranslation();
@@ -22,6 +24,8 @@ export default function AdminDashboardPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [supportPhone, setSupportPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
   
@@ -84,15 +88,24 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Tem a certeza que deseja eliminar este utilizador permanentemente?')) return;
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
     try {
-      await api.delete(`/admin/users/${userId}`);
+      await api.delete(`/admin/users/${userToDelete}`);
       setToast({ isVisible: true, message: 'Utilizador eliminado com sucesso.', type: 'success' });
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
       fetchData();
     } catch (err) {
       setToast({ isVisible: true, message: 'Erro ao eliminar utilizador.', type: 'error' });
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
     }
+  };
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+    setShowDeleteConfirm(true);
   };
 
   const handleUpdateSupportPhone = async () => {
@@ -113,12 +126,7 @@ export default function AdminDashboardPage() {
   );
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 animate-pulse">Acedendo ao Terminal de Comando...</p>
-      </div>
-    );
+    return <PageLoading message="Acedendo ao Terminal de Comando..." />;
   }
 
   return (
@@ -160,7 +168,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Telegram Support Config */}
-      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[48px] p-8 md:p-10 relative overflow-hidden">
+      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[32px] p-8 md:p-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[100px] rounded-full -z-10" />
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
@@ -189,7 +197,7 @@ export default function AdminDashboardPage() {
       </section>
 
       {/* User Management Section */}
-      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[48px] p-8 md:p-10 relative overflow-hidden">
+      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[32px] p-8 md:p-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full -z-10" />
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
@@ -269,7 +277,7 @@ export default function AdminDashboardPage() {
                         <Shield size={16} />
                       </button>
                       <button 
-                        onClick={() => handleDeleteUser(u.id)}
+                        onClick={() => handleDeleteClick(u.id)}
                         className="p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
                         title="Eliminar Utilizador"
                       >
@@ -285,7 +293,7 @@ export default function AdminDashboardPage() {
       </section>
 
       {/* Audit Logs Overview */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[40px] p-8">
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[32px] p-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
             <Activity className="text-blue-500" size={20} />
@@ -327,7 +335,7 @@ export default function AdminDashboardPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
                 key={i} 
-                className="flex items-center justify-between p-5 bg-white/[0.02] border border-white/[0.05] rounded-3xl hover:bg-white/[0.04] hover:border-blue-500/20 transition-all group/log"
+                className="flex items-center justify-between p-5 bg-white/[0.02] border border-white/[0.05] rounded-2xl hover:bg-white/[0.04] hover:border-blue-500/20 transition-all group/log"
               >
                 <div className="flex items-center gap-5">
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover/log:scale-110 ${
@@ -401,11 +409,25 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={handleDeleteUser}
+        title="Eliminar Utilizador"
+        message="Tem a certeza que deseja eliminar este utilizador permanentemente? Esta ação não pode ser desfeita."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+
       <Toast 
         message={toast.message} 
         type={toast.type} 
         isVisible={toast.isVisible} 
-        onClose={() => setToast({ ...toast, isVisible: false })} 
+        onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </motion.div>
   );

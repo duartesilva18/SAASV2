@@ -10,6 +10,8 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
+import PageLoading from '@/components/PageLoading';
 
 const ICONS = [
   { name: 'Target', icon: Target },
@@ -35,6 +37,8 @@ export default function GoalsPage() {
   const [showModal, setShowNotifications] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -78,15 +82,24 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t.dashboard.goals.deleteConfirm)) return;
+  const handleDelete = async () => {
+    if (!goalToDelete) return;
     try {
-      await api.delete(`/goals/${id}`);
+      await api.delete(`/goals/${goalToDelete}`);
       setToast({ show: true, message: t.dashboard.goals.deleteSuccess, type: 'success' });
+      setShowDeleteConfirm(false);
+      setGoalToDelete(null);
       fetchGoals();
     } catch (err) {
       setToast({ show: true, message: t.dashboard.goals.deleteError, type: 'error' });
+      setShowDeleteConfirm(false);
+      setGoalToDelete(null);
     }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setGoalToDelete(id);
+    setShowDeleteConfirm(true);
   };
 
   const openEdit = (goal: any) => {
@@ -103,12 +116,7 @@ export default function GoalsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.goals.loading}</p>
-      </div>
-    );
+    return <PageLoading message={t.dashboard.goals.loading} />;
   }
 
   return (
@@ -160,7 +168,7 @@ export default function GoalsPage() {
               key={goal.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group bg-slate-900/40 backdrop-blur-xl border border-white/5 p-8 rounded-[48px] relative overflow-hidden hover:border-blue-500/20 transition-all hover:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.5)]"
+              className="group bg-slate-900/40 backdrop-blur-xl border border-white/5 p-8 rounded-[32px] relative overflow-hidden hover:border-blue-500/20 transition-all hover:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.5)]"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors" />
               
@@ -176,7 +184,7 @@ export default function GoalsPage() {
                     <button onClick={() => openEdit(goal)} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all cursor-pointer">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => handleDelete(goal.id)} className="p-2 hover:bg-red-500/10 rounded-xl text-slate-500 hover:text-red-400 transition-all cursor-pointer">
+                    <button onClick={() => handleDeleteClick(goal.id)} className="p-2 hover:bg-red-500/10 rounded-xl text-slate-500 hover:text-red-400 transition-all cursor-pointer">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -246,7 +254,7 @@ export default function GoalsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-[48px] p-10 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-[32px] p-10 shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
               
@@ -343,6 +351,20 @@ export default function GoalsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setGoalToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title={t.dashboard.goals.deleteConfirm}
+        message={t.dashboard.goals.deleteConfirmText || 'Tens a certeza que desejas eliminar esta meta? Esta ação não pode ser desfeita.'}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
 
       <Toast 
         isVisible={toast.show}

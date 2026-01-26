@@ -491,7 +491,7 @@ export default function Sidebar({
 
       <div className="p-4 border-t border-white/5 space-y-4 bg-white/[0.01] relative">
         {user && (
-          <div className={`group flex items-center gap-4 transition-all duration-300 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : 'px-4 py-3 hover:bg-white/[0.03] rounded-3xl cursor-default border border-transparent hover:border-white/5'}`}>
+          <div className={`group flex items-center gap-4 transition-all duration-300 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : 'px-4 py-3 hover:bg-white/[0.03] rounded-2xl cursor-default border border-transparent hover:border-white/5'}`}>
             <div className="relative">
               <div className={`relative shrink-0 flex items-center justify-center font-black text-white rounded-2xl border shadow-2xl transition-all duration-500 group-hover:scale-110 ${
                 user.is_admin 
@@ -562,7 +562,7 @@ export default function Sidebar({
                   initial={{ opacity: 0, scale: 0.9, x: -20 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                  className="absolute bottom-0 left-full ml-4 w-[420px] bg-[#0a0f1d] border border-white/10 rounded-[40px] shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-8 notification-card"
+                  className="absolute bottom-0 left-full ml-4 w-[420px] bg-[#0a0f1d] border border-white/10 rounded-[32px] shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-8 notification-card"
                   style={{ pointerEvents: 'auto' }}
                 >
                   <div className="flex items-center justify-between mb-6">
@@ -600,7 +600,7 @@ export default function Sidebar({
                       notifications.map((notif) => (
                         <div 
                           key={notif.id}
-                          className={`flex gap-4 items-start p-5 rounded-[28px] border transition-all hover:scale-[1.02] group/notif ${
+                          className={`flex gap-4 items-start p-5 rounded-[24px] border transition-all hover:scale-[1.02] group/notif ${
                             notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_30px_-10px_#ef4444]' : 
                             notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
                             'bg-white/5 border-white/5'

@@ -13,6 +13,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { ChartSkeleton } from '@/components/LoadingSkeleton';
+import AlertModal from '@/components/AlertModal';
+import PageLoading from '@/components/PageLoading';
+import Toast from '@/components/Toast';
 
 export default function VaultPage() {
   const { t, formatCurrency } = useTranslation();
@@ -22,6 +25,18 @@ export default function VaultPage() {
   const [vaultModal, setVaultModal] = useState<{ open: boolean; category: any; action: 'add' | 'withdraw' } | null>(null);
   const [vaultAmount, setVaultAmount] = useState('');
   const [vaultLoading, setVaultLoading] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
+  const [selectedPeriod, setSelectedPeriod] = useState<'7D' | '30D' | '12M' | 'Tudo'>('Tudo');
 
   useEffect(() => {
     fetchData();
@@ -79,7 +94,12 @@ export default function VaultPage() {
         
         if (amount_cents > currentBalance || balanceAfterWithdrawal < 0) {
           const available = (currentBalance / 100).toFixed(2);
-          alert(`❌ ${t.dashboard.vault.insufficientBalance}\n\n${t.dashboard.vault.available} ${formatCurrency(parseFloat(available))}\n${t.dashboard.vault.attempt} ${formatCurrency(parseFloat(vaultAmount))}\n\n${t.dashboard.vault.cannotBeNegative}`);
+          setAlertModal({
+            isOpen: true,
+            title: 'Saldo Insuficiente',
+            message: `${t.dashboard.vault.insufficientBalance}\n\n${t.dashboard.vault.available} ${formatCurrency(parseFloat(available))}\n${t.dashboard.vault.attempt} ${formatCurrency(parseFloat(vaultAmount))}\n\n${t.dashboard.vault.cannotBeNegative}`,
+            type: 'error'
+          });
           setVaultLoading(false);
           return;
         }
@@ -94,16 +114,128 @@ export default function VaultPage() {
       };
 
       await api.post('/transactions/', payload);
+      const successMessage = vaultModal.action === 'add' 
+        ? `${t.dashboard.vault.depositIn} ${category.name} - ${formatCurrency(parseFloat(vaultAmount))}`
+        : `${t.dashboard.vault.withdrawalFrom} ${category.name} - ${formatCurrency(parseFloat(vaultAmount))}`;
+      setToast({ 
+        message: successMessage, 
+        type: 'success', 
+        isVisible: true 
+      });
       setVaultModal(null);
       setVaultAmount('');
       await fetchData();
     } catch (err: any) {
       console.error('Erro ao processar transação do cofre:', err);
       const errorMessage = err.response?.data?.detail || 'Erro ao processar transação.';
-      alert(errorMessage);
+      setToast({
+        message: errorMessage,
+        type: 'error',
+        isVisible: true
+      });
     } finally {
       setVaultLoading(false);
     }
+  };
+
+  // Função para agrupar dados por período
+  const groupByPeriod = (evolution: any[], period: '7D' | '30D' | '12M' | 'Tudo') => {
+    if (period === 'Tudo' || evolution.length === 0) return evolution;
+
+    const now = new Date();
+    let filterDate = new Date();
+    
+    if (period === '7D') filterDate.setDate(now.getDate() - 7);
+    else if (period === '30D') filterDate.setDate(now.getDate() - 30);
+    else if (period === '12M') filterDate.setFullYear(now.getFullYear() - 1);
+
+    // Filtrar transações dentro do período
+    const filtered = evolution.filter((item: any) => {
+      const itemDate = new Date(item.date);
+      return itemDate >= filterDate;
+    });
+
+    // Se não há dados no período, retornar array vazio
+    if (filtered.length === 0) return [];
+
+    // Para 7D: agrupar por dia (mostrar o valor final de cada dia)
+    if (period === '7D') {
+      const grouped: any = {};
+      filtered.forEach((item: any) => {
+        const date = new Date(item.date);
+        const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        if (!grouped[dayKey]) {
+          grouped[dayKey] = { date: item.date, value: item.value };
+        } else {
+          // Manter o valor mais recente (e maior) do dia
+          const currentDate = new Date(item.date);
+          const existingDate = new Date(grouped[dayKey].date);
+          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[dayKey].value)) {
+            grouped[dayKey] = { date: item.date, value: item.value };
+          }
+        }
+      });
+      
+      const result = Object.values(grouped).sort((a: any, b: any) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      
+      return result;
+    }
+
+    // Para 30D: agrupar por semana
+    if (period === '30D') {
+      const grouped: any = {};
+      filtered.forEach((item: any) => {
+        const date = new Date(item.date);
+        // Calcular início da semana (domingo)
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        const weekKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+        
+        if (!grouped[weekKey]) {
+          grouped[weekKey] = { date: item.date, value: item.value };
+        } else {
+          // Manter o valor mais recente (e maior) da semana
+          const currentDate = new Date(item.date);
+          const existingDate = new Date(grouped[weekKey].date);
+          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[weekKey].value)) {
+            grouped[weekKey] = { date: item.date, value: item.value };
+          }
+        }
+      });
+      
+      return Object.values(grouped).sort((a: any, b: any) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    }
+
+    // Para 12M: agrupar por mês
+    if (period === '12M') {
+      const grouped: any = {};
+      filtered.forEach((item: any) => {
+        const date = new Date(item.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+        if (!grouped[monthKey]) {
+          grouped[monthKey] = { date: item.date, value: item.value };
+        } else {
+          // Manter o valor mais recente (e maior) do mês
+          const currentDate = new Date(item.date);
+          const existingDate = new Date(grouped[monthKey].date);
+          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[monthKey].value)) {
+            grouped[monthKey] = { date: item.date, value: item.value };
+          }
+        }
+      });
+
+      return Object.values(grouped).sort((a: any, b: any) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    }
+
+    return filtered;
   };
 
   // Processar dados dos cofres
@@ -125,6 +257,31 @@ export default function VaultPage() {
 
     let emergencyRunning = 0;
     let investmentRunning = 0;
+
+    // Adicionar ponto inicial (0) se houver transações
+    const firstEmergencyDate = sortedTransactions.find((t: any) => {
+      const cat = categories.find((c: any) => c.id === t.category_id);
+      return cat?.vault_type === 'emergency';
+    })?.transaction_date;
+
+    const firstInvestmentDate = sortedTransactions.find((t: any) => {
+      const cat = categories.find((c: any) => c.id === t.category_id);
+      return cat?.vault_type === 'investment';
+    })?.transaction_date;
+
+    if (firstEmergencyDate) {
+      emergencyEvolution.push({
+        date: firstEmergencyDate,
+        value: 0
+      });
+    }
+
+    if (firstInvestmentDate) {
+      investmentEvolution.push({
+        date: firstInvestmentDate,
+        value: 0
+      });
+    }
 
     sortedTransactions.forEach((t: any) => {
       const cat = categories.find((c: any) => c.id === t.category_id);
@@ -203,15 +360,25 @@ export default function VaultPage() {
       investmentTransactions: investmentTransactions.sort((a: any, b: any) => 
         new Date(b.transaction_date || b.created_at).getTime() - new Date(a.transaction_date || a.created_at).getTime()
       ),
-      emergencyEvolution,
-      investmentEvolution,
+      emergencyEvolution: groupByPeriod(
+        emergencyEvolution.sort((a: any, b: any) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        ),
+        selectedPeriod
+      ),
+      investmentEvolution: groupByPeriod(
+        investmentEvolution.sort((a: any, b: any) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        ),
+        selectedPeriod
+      ),
       emergencyMonthly: Object.values(emergencyMonthly),
       investmentMonthly: Object.values(investmentMonthly)
     };
-  }, [transactions, categories]);
+  }, [transactions, categories, selectedPeriod]);
 
   if (loading) {
-    return <ChartSkeleton />;
+    return <PageLoading />;
   }
 
   return (
@@ -240,7 +407,7 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[40px] p-8 relative overflow-hidden"
+          className="bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
           <div className="relative z-10">
@@ -288,7 +455,7 @@ export default function VaultPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-[40px] p-8 relative overflow-hidden"
+          className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-[32px] p-8 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full" />
           <div className="relative z-10">
@@ -331,6 +498,35 @@ export default function VaultPage() {
         </motion.div>
       </div>
 
+      {/* Period Selector */}
+      <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 rounded-[24px] mb-6">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <Calendar size={14} className="text-blue-500" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Período</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {[
+            { key: '7D', label: '7 Dias' },
+            { key: '30D', label: '30 Dias' },
+            { key: '12M', label: '12 Meses' },
+            { key: 'Tudo', label: 'Tudo' }
+          ].map((period) => (
+            <button
+              key={period.key}
+              onClick={() => setSelectedPeriod(period.key as any)}
+              className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
+                selectedPeriod === period.key
+                  ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20'
+                  : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-700 hover:text-slate-300'
+              }`}
+            >
+              {period.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
         {/* Evolução Fundo de Emergência */}
@@ -345,7 +541,7 @@ export default function VaultPage() {
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionEmergency}</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={vaultData.emergencyEvolution}>
+            <AreaChart data={vaultData.emergencyEvolution.length > 0 ? vaultData.emergencyEvolution : [{ date: new Date().toISOString().split('T')[0], value: 0 }]}>
               <defs>
                 <linearGradient id="colorEmergency" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
@@ -357,21 +553,56 @@ export default function VaultPage() {
                 dataKey="date" 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  if (selectedPeriod === '7D') {
+                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  } else if (selectedPeriod === '30D') {
+                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  } else if (selectedPeriod === '12M') {
+                    return date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+                  }
+                  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                }}
               />
               <YAxis 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  if (value >= 1000) {
+                    return `${(value / 1000).toFixed(1)}k€`;
+                  }
+                  return `${value.toFixed(0)}€`;
+                }}
+                domain={[
+                  (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.9)),
+                  (dataMax: number) => Math.ceil(dataMax * 1.1)
+                ]}
               />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0f172a', 
                   border: '1px solid #334155',
                   borderRadius: '12px',
-                  color: '#fff'
+                  color: '#fff',
+                  padding: '12px'
                 }}
-                formatter={(value: any) => formatCurrency(value)}
+                content={({ active, payload }: any) => {
+                  if (active && payload && payload.length > 0) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="space-y-1">
+                        <p className="text-xs text-slate-400">
+                          {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                        <p className="text-sm font-bold text-white">
+                          {formatCurrency(data.value || 0)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
               <Area 
                 type="monotone" 
@@ -397,7 +628,7 @@ export default function VaultPage() {
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionInvestments}</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={vaultData.investmentEvolution}>
+            <AreaChart data={vaultData.investmentEvolution.length > 0 ? vaultData.investmentEvolution : [{ date: new Date().toISOString().split('T')[0], value: 0 }]}>
               <defs>
                 <linearGradient id="colorInvestment" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -409,21 +640,56 @@ export default function VaultPage() {
                 dataKey="date" 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  if (selectedPeriod === '7D') {
+                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  } else if (selectedPeriod === '30D') {
+                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  } else if (selectedPeriod === '12M') {
+                    return date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+                  }
+                  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                }}
               />
               <YAxis 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  if (value >= 1000) {
+                    return `${(value / 1000).toFixed(1)}k€`;
+                  }
+                  return `${value.toFixed(0)}€`;
+                }}
+                domain={[
+                  (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.9)),
+                  (dataMax: number) => Math.ceil(dataMax * 1.1)
+                ]}
               />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: '#0f172a', 
                   border: '1px solid #334155',
                   borderRadius: '12px',
-                  color: '#fff'
+                  color: '#fff',
+                  padding: '12px'
                 }}
-                formatter={(value: any) => formatCurrency(value)}
+                content={({ active, payload }: any) => {
+                  if (active && payload && payload.length > 0) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="space-y-1">
+                        <p className="text-xs text-slate-400">
+                          {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                        <p className="text-sm font-bold text-white">
+                          {formatCurrency(data.value || 0)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
               <Area 
                 type="monotone" 
@@ -813,6 +1079,21 @@ export default function VaultPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </motion.div>
   );
 }

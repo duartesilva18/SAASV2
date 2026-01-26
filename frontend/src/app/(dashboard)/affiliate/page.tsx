@@ -18,6 +18,7 @@ import {
   Tooltip, ResponsiveContainer, Cell, PieChart as RechartsPieChart, Pie, Legend
 } from 'recharts';
 import Toast from '@/components/Toast';
+import PageLoading from '@/components/PageLoading';
 
 interface AffiliateStatus {
   is_affiliate: boolean;
@@ -193,11 +194,7 @@ export default function AffiliatePage() {
   const formatPrice = (cents: number) => formatCurrency(cents / 100);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
+    return <PageLoading variant="minimal" size="sm" />;
   }
 
   if (!status && !loading) {
@@ -219,7 +216,7 @@ export default function AffiliatePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[48px] p-12 md:p-16 shadow-2xl overflow-hidden"
+          className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-12 md:p-16 shadow-2xl overflow-hidden"
         >
           {/* Background Glow */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
@@ -231,7 +228,7 @@ export default function AffiliatePage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-3xl flex items-center justify-center mx-auto border border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.3)]"
+              className="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto border border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.3)]"
             >
               <Sparkles className="w-12 h-12 text-blue-400" />
             </motion.div>

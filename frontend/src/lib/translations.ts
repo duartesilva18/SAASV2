@@ -238,7 +238,9 @@ export const translations = {
                 termsText: "Ao criar conta, concorda com os nossos",
                 termsLink: "Termos e Condições",
                 and: "e",
-                privacyLink: "Política de Privacidade"
+                privacyLink: "Política de Privacidade",
+                successTitle: "Conta criada com sucesso!",
+                successMessage: "Enviamos um email de verificação. Por favor, verifica a tua caixa de entrada para ativares a tua conta."
             },
             forgotPassword: {
                 title: "Recuperar ",
@@ -1200,7 +1202,9 @@ export const translations = {
                 termsText: "By creating an account, you agree to our",
                 termsLink: "Terms and Conditions",
                 and: "and",
-                privacyLink: "Privacy Policy"
+                privacyLink: "Privacy Policy",
+                successTitle: "Account created successfully!",
+                successMessage: "We've sent a verification email. Please check your inbox to activate your account."
             },
             forgotPassword: {
                 title: "Recover ",

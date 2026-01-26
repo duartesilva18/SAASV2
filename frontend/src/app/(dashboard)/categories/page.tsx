@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
 import { 
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, 
   Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid
@@ -247,7 +248,7 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-[40px] bg-slate-900 border border-slate-800 p-8 md:p-12">
+      <div className="relative overflow-hidden rounded-[32px] bg-slate-900 border border-slate-800 p-8 md:p-12">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[100px] -z-10" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div>
@@ -616,7 +617,7 @@ export default function CategoriesPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-xl bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[48px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
+              className="relative w-full max-w-xl bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
             >
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
@@ -673,7 +674,7 @@ export default function CategoriesPage() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-white/5 rounded-3xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium"
+                        className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium"
                         placeholder="Ex: Refeições, Lazer..."
                       />
                     </div>
@@ -725,7 +726,7 @@ export default function CategoriesPage() {
                           step="0.01"
                           value={formData.monthly_limit}
                           onChange={(e) => setFormData({ ...formData, monthly_limit: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-white/5 rounded-3xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-16 font-black text-xl tracking-tighter"
+                          className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-16 font-black text-xl tracking-tighter"
                           placeholder="0.00"
                         />
                         <span className="absolute left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-lg">
@@ -779,106 +780,40 @@ export default function CategoriesPage() {
       </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {categoryToDelete && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setCategoryToDelete(null)}
-              className="absolute inset-0 bg-[#020617]/90 backdrop-blur-md"
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[40px] p-8 md:p-10 shadow-3xl overflow-hidden text-center"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[60px] rounded-full -z-10" />
-              
-              <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-red-500/20">
-                <Trash2 size={40} className="animate-pulse" />
-              </div>
-
-              <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-4">{t.dashboard.categories.deleteConfirm}</h3>
-              <p className="text-slate-400 font-medium italic mb-8 leading-relaxed">
-                {t.dashboard.categories.deleteConfirmText} <span className="text-white font-black px-2 py-0.5 bg-white/5 rounded-lg">"{categoryToDelete.name}"</span>.<br />
-                <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
-              </p>
-
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full py-5 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Eliminação'}
-                </button>
-                <button
-                  onClick={() => setCategoryToDelete(null)}
-                  disabled={isDeleting}
-                  className="w-full py-5 bg-transparent hover:bg-white/5 text-slate-500 hover:text-slate-300 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.dashboard.categories.deleteConfirm}
+        message={
+          <>
+            {t.dashboard.categories.deleteConfirmText} <span className="text-white font-black px-2 py-0.5 bg-white/5 rounded-lg">"{categoryToDelete?.name}"</span>.<br />
+            <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
+          </>
+        }
+        confirmText="Confirmar Eliminação"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+      />
 
       {/* Bulk Delete Confirmation Modal */}
-      <AnimatePresence>
-        {showBulkDeleteConfirm && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowBulkDeleteConfirm(false)}
-              className="absolute inset-0 bg-[#020617]/90 backdrop-blur-md"
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[40px] p-8 md:p-10 shadow-3xl overflow-hidden text-center"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[60px] rounded-full -z-10" />
-              
-              <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-red-500/20">
-                <Trash2 size={40} className="animate-pulse" />
-              </div>
-
-              <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-4">{t.dashboard.categories.deleteMultiple}</h3>
-              <p className="text-slate-400 font-medium italic mb-8 leading-relaxed">
-                {t.dashboard.categories.deleteMultipleText} <span className="text-white font-black px-2 py-0.5 bg-white/5 rounded-lg">{selectedIds.length}</span> {t.dashboard.categories.deleteMultipleCategories}<br />
-                <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
-              </p>
-
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={isBulkDeleting}
-                  className="w-full py-5 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isBulkDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Eliminação em Massa'}
-                </button>
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(false)}
-                  disabled={isBulkDeleting}
-                  className="w-full py-5 bg-transparent hover:bg-white/5 text-slate-500 hover:text-slate-300 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title={t.dashboard.categories.deleteMultiple}
+        message={
+          <>
+            {t.dashboard.categories.deleteMultipleText} <span className="text-white font-black px-2 py-0.5 bg-white/5 rounded-lg">{selectedIds.length}</span> {t.dashboard.categories.deleteMultipleCategories}<br />
+            <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
+          </>
+        }
+        confirmText="Confirmar Eliminação em Massa"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isBulkDeleting}
+      />
 
       <Toast 
         message={toastMsg} 

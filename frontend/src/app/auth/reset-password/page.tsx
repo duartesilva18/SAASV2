@@ -89,7 +89,7 @@ function ResetPasswordContent() {
 
         <motion.div
           animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-          className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[40px] lg:rounded-[56px] relative overflow-hidden transition-colors duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+          className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[32px] relative overflow-hidden transition-colors duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
         >
           <AnimatePresence mode="wait">
             {error && (

@@ -227,3 +227,4 @@ def handle_account_updated(account: dict, db: Session):
         db.rollback()
         logger.error(f'Erro ao processar account.updated: {str(e)}', exc_info=True)
 
+

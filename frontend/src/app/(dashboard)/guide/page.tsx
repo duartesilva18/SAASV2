@@ -84,7 +84,7 @@ export default function GuidePage() {
       {/* Telegram Special Section */}
       <section className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-[60px] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative bg-slate-950 rounded-[56px] p-8 md:p-16 border border-white/5 flex flex-col xl:flex-row items-center gap-16 overflow-hidden">
+        <div className="relative bg-slate-950 rounded-[32px] p-8 md:p-16 border border-white/5 flex flex-col xl:flex-row items-center gap-16 overflow-hidden">
           
           <div className="flex-1 space-y-10 relative z-10">
             <div className="inline-flex items-center gap-3 bg-blue-500/10 border border-blue-500/20 px-5 py-2 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest">
@@ -159,7 +159,7 @@ export default function GuidePage() {
 
           {/* Telegram Chat Simulation */}
           <div className="w-full xl:w-[450px] shrink-0">
-            <div className="bg-[#212121] rounded-[40px] border border-white/10 shadow-2xl overflow-hidden aspect-[9/16] md:aspect-auto md:h-[600px] flex flex-col">
+            <div className="bg-[#212121] rounded-[32px] border border-white/10 shadow-2xl overflow-hidden aspect-[9/16] md:aspect-auto md:h-[600px] flex flex-col">
               {/* Telegram Header */}
               <div className="bg-[#2b2b2b] p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
@@ -240,7 +240,7 @@ export default function GuidePage() {
             const content = (
               <motion.div 
                 variants={itemAnim}
-                className="group h-full bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[40px] p-8 hover:border-blue-500/30 transition-all shadow-xl cursor-pointer active:scale-[0.98]"
+                className="group h-full bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 hover:border-blue-500/30 transition-all shadow-xl cursor-pointer active:scale-[0.98]"
               >
                 <div className="w-14 h-14 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform duration-500">
                   {icons[idx + 1]}
@@ -289,9 +289,9 @@ export default function GuidePage() {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-blue-600/20 to-indigo-700/20 rounded-[56px] border border-white/5 p-10 md:p-16 flex flex-col md:flex-row items-center gap-12 text-center md:text-left shadow-2xl backdrop-blur-sm"
+          className="bg-gradient-to-br from-blue-600/20 to-indigo-700/20 rounded-[32px] border border-white/5 p-10 md:p-16 flex flex-col md:flex-row items-center gap-12 text-center md:text-left shadow-2xl backdrop-blur-sm"
         >
-          <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+          <div className="w-20 h-20 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
             <ShieldCheck size={40} />
           </div>
           

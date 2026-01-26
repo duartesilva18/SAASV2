@@ -10,6 +10,7 @@ import { Sparkles, ArrowRight, Mail, Lock, AlertCircle, ChevronLeft, CheckCircle
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
+import InlineMessage from '@/components/InlineMessage';
 
 // Reusable Simplified Button Component
 const MagneticButton = ({ children, className, onClick, disabled, type = "button" }: any) => {
@@ -40,7 +41,7 @@ function GoogleRegisterButton({ onLoginSuccess, referralCode }: { onLoginSuccess
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-[28px] hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
+      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
     >
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
@@ -64,6 +65,7 @@ function RegisterPageContent() {
   const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [benefitIndex, setBenefitIndex] = useState(0);
@@ -143,6 +145,7 @@ function RegisterPageContent() {
       return;
     }
     setLoading(true);
+    setError('');
     try {
       await api.post('/auth/register', {
         email,
@@ -151,6 +154,7 @@ function RegisterPageContent() {
         referral_code: referralCode || undefined
       });
       
+      setSuccess(true);
       confetti({
         particleCount: 150,
         spread: 70,
@@ -160,7 +164,7 @@ function RegisterPageContent() {
 
       setTimeout(() => {
         router.push(`/auth/check-email?email=${encodeURIComponent(email)}`);
-      }, 2000);
+      }, 3000);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || t.auth.register.error);
@@ -197,7 +201,7 @@ function RegisterPageContent() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-[24px] lg:rounded-[28px] flex items-center justify-center text-white mb-8 lg:mb-12 -rotate-3 ring-1 ring-emerald-500/20">
+              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-[24px] flex items-center justify-center text-white mb-8 lg:mb-12 -rotate-3 ring-1 ring-emerald-500/20">
                 <Sparkles size={32} className="lg:size-[40px]" />
               </div>
               <h2 className="text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-6 lg:mb-8">
@@ -271,10 +275,30 @@ function RegisterPageContent() {
 
           <motion.div
             animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-            className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[40px] lg:rounded-[56px] relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+            className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[32px] relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
           >
             <AnimatePresence mode="wait">
-              {error && (
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mb-8 p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-start gap-4 text-emerald-400 shadow-lg shadow-emerald-500/10"
+                >
+                  <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={20} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-black uppercase tracking-widest mb-1 text-emerald-400">
+                      {t.auth.register.successTitle || 'Conta criada com sucesso!'}
+                    </p>
+                    <p className="text-xs font-medium opacity-90 leading-relaxed">
+                      {t.auth.register.successMessage || `Enviamos um email de verificação para ${email}. Por favor, verifica a tua caixa de entrada.`}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+              {error && !success && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -289,7 +313,7 @@ function RegisterPageContent() {
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} noValidate className="space-y-6 lg:space-y-8">
+            <form onSubmit={handleSubmit} noValidate className={`space-y-6 lg:space-y-8 ${success ? 'pointer-events-none opacity-50' : ''}`}>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-3 ml-2">
                   {t.auth.register.emailLabel}
@@ -326,7 +350,7 @@ function RegisterPageContent() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                    className={`w-full bg-slate-950/50 border rounded-[28px] py-6 pl-16 pr-14 text-sm lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
+                    className={`w-full bg-slate-950/50 border rounded-[24px] py-6 pl-16 pr-14 text-sm lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
                     placeholder="••••••••••••"
                     required
                   />
@@ -435,7 +459,7 @@ function RegisterPageContent() {
             </p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-8 lg:px-12 py-4 lg:py-6 rounded-[28px] lg:rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+              className="inline-flex items-center gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-8 lg:px-12 py-4 lg:py-6 rounded-[24px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
             >
               {t.auth.register.loginCta}
               <ArrowRight size={18} className="text-emerald-500 group-hover:translate-x-1 transition-transform lg:size-[20px]" />

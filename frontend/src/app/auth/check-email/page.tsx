@@ -107,7 +107,7 @@ function CheckEmailContent() {
                 <span className="text-white font-black not-italic ml-1">{email}</span>
               </p>
 
-              <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[40px] space-y-6">
+              <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[32px] space-y-6">
                 <div className="flex items-center justify-center gap-4 text-slate-500">
                   <Loader2 size={20} className="animate-spin text-blue-500" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">A aguardar ativação...</span>
