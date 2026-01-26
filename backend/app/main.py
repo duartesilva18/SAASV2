@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
@@ -252,6 +252,20 @@ except Exception as e:
 async def get_public_settings(db: Session = Depends(get_db)):
     phone = db.query(SystemSetting).filter(SystemSetting.key == 'support_phone').first()
     return {"support_phone": phone.value if phone else "351925989577"}
+
+@app.options('/{full_path:path}')
+async def options_handler(request: Request, full_path: str):
+    """Handler explícito para OPTIONS requests (preflight CORS)"""
+    origin = request.headers.get('origin')
+    if origin and origin in allowed_origins:
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Max-Age"] = "3600"
+        return response
+    return Response(status_code=200)
 
 @app.get('/')
 @app.head('/')
