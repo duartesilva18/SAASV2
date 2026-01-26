@@ -131,6 +131,33 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Handler para ChunkLoadError - recarrega automaticamente
+              window.addEventListener('error', (event) => {
+                if (event.message && event.message.includes('ChunkLoadError')) {
+                  console.warn('ChunkLoadError detectado, a recarregar página...');
+                  // Limpar cache e recarregar
+                  if ('caches' in window) {
+                    caches.keys().then(names => {
+                      names.forEach(name => caches.delete(name));
+                    });
+                  }
+                  window.location.reload();
+                }
+              });
+              
+              // Handler para erros de importação de módulos
+              window.addEventListener('unhandledrejection', (event) => {
+                if (event.reason && event.reason.message && event.reason.message.includes('Failed to fetch dynamically imported module')) {
+                  console.warn('Erro de importação dinâmica detectado, a recarregar página...');
+                  if ('caches' in window) {
+                    caches.keys().then(names => {
+                      names.forEach(name => caches.delete(name));
+                    });
+                  }
+                  window.location.reload();
+                }
+              });
+              
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                   navigator.serviceWorker.register('/sw.js')

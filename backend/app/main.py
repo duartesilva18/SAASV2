@@ -205,9 +205,17 @@ async def get_public_settings(db: Session = Depends(get_db)):
     return {"support_phone": phone.value if phone else "351925989577"}
 
 @app.get('/')
+@app.head('/')
 @limiter.limit('5/minute')
 async def root(request: Request):
     return {'message': 'Bem-vindo à API de Gestão Financeira'}
+
+# Health check endpoint para o Render (sem rate limiting)
+@app.get('/health')
+@app.head('/health')
+async def health_check():
+    """Health check endpoint para o Render verificar se o serviço está ativo"""
+    return {'status': 'ok', 'service': 'finanzen-backend'}
 
 if __name__ == '__main__':
     import uvicorn
