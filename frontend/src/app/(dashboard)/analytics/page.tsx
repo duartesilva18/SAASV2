@@ -12,7 +12,7 @@ import {
   Activity, PieChart as PieChartIcon, Calendar,
   ArrowUpRight, ArrowDownRight, Sparkles, Brain, Info,
   ShieldCheck, Clock, History, Landmark, CheckCircle2, CreditCard,
-  Plus, Minus, Wallet, X
+  Plus, Minus, Wallet, X, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -42,6 +42,8 @@ export default function AnalyticsPage() {
   const [vaultAmount, setVaultAmount] = useState('');
   const [vaultLoading, setVaultLoading] = useState(false);
   const lastUpdateTimestampRef = useRef<number | null>(null);
+  const [isVaultOpen, setIsVaultOpen] = useState(true);
+  const [isRecurringOpen, setIsRecurringOpen] = useState(false);
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
     isOpen: false,
     title: '',
@@ -57,9 +59,23 @@ export default function AnalyticsPage() {
           const { data, timestamp } = JSON.parse(cached);
           const isFresh = Date.now() - timestamp < 30000; // 30 segundos de cache "fresca"
           
-          setRawData(data);
-          // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
-          setIsPro(['active', 'trialing', 'cancel_at_period_end'].includes(data.subscription_status));
+          const isProUser = ['active', 'trialing', 'cancel_at_period_end'].includes(data.subscription_status);
+          setIsPro(isProUser);
+          
+          // Se não for Pro, garantir que tem dados mock
+          if (!isProUser) {
+            const dataWithMock = {
+              ...data,
+              transactions: DEMO_TRANSACTIONS,
+              categories: DEMO_CATEGORIES,
+              insights: DEMO_INSIGHTS,
+              recurring: DEMO_RECURRING
+            };
+            setRawData(dataWithMock);
+          } else {
+            setRawData(data);
+          }
+          
           if (isFresh) {
             setLoading(false);
             return;
@@ -93,8 +109,8 @@ export default function AnalyticsPage() {
         subscription_status: user.subscription_status // Guardar o status nos dados
       };
 
-      // Se não for Pro e não tiver dados reais, injetar Mock Data
-      if (!hasActiveSub && compositeData.transactions.length === 0) {
+      // Se não for Pro, sempre usar Mock Data para visualização completa
+      if (!hasActiveSub) {
         compositeData = {
           ...compositeData,
           transactions: DEMO_TRANSACTIONS,
@@ -113,6 +129,24 @@ export default function AnalyticsPage() {
       }));
     } catch (err) {
       console.error('Erro ao carregar análise:', err);
+      // Em caso de erro, se não for Pro, usar dados mock como fallback
+      try {
+        const profileRes = await api.get('/auth/me');
+        const user = profileRes.data;
+        const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
+        setIsPro(hasActiveSub);
+        
+        if (!hasActiveSub) {
+          setRawData({
+            transactions: DEMO_TRANSACTIONS,
+            categories: DEMO_CATEGORIES,
+            insights: DEMO_INSIGHTS,
+            recurring: DEMO_RECURRING
+          });
+        }
+      } catch (fallbackErr) {
+        console.error('Erro no fallback:', fallbackErr);
+      }
     } finally {
       setLoading(false);
     }
@@ -258,8 +292,12 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    // Processar mesmo que não haja transações se for Pro (para mostrar zeros)
-    if (!rawData.transactions.length && !isPro) return;
+    // Processar sempre, mesmo com dados mock (para visualização completa)
+    // Se não houver dados e for Pro sem transações, não processar
+    if (!rawData.transactions || rawData.transactions.length === 0) {
+      if (isPro) return; // Pro sem transações: não processar
+      // Free: continuar com dados mock
+    }
 
     const now = new Date();
     let filterDate = new Date();
@@ -298,6 +336,52 @@ export default function AnalyticsPage() {
       6: weekDays.sat 
     };
     
+    const computeTotals = (txs: any[]) => {
+      let income = 0;
+      let expenses = 0;
+      txs.forEach((t: any) => {
+        const cat = rawData.categories.find((c: any) => c.id === t.category_id);
+        const amount = t.amount_cents / 100;
+        if (cat && cat.vault_type !== 'none') return;
+        if (cat?.type === 'income') {
+          income += amount;
+        } else if (cat?.type === 'expense') {
+          expenses += -amount;
+        } else {
+          const expenseAmount = amount < 0 ? -amount : amount;
+          expenses += expenseAmount;
+        }
+      });
+      return { income, expenses };
+    };
+
+    const computeSavingRate = (income: number, expenses: number) => {
+      const MIN_INCOME_THRESHOLD = 100;
+      if (income < MIN_INCOME_THRESHOLD) return 0;
+      const calculated = ((income - expenses) / income) * 100;
+      return Math.max(-100, Math.min(100, calculated));
+    };
+
+    const computeHealthScore = (income: number, expenses: number, savingRate: number) => {
+      let score = 70;
+      if (income > 0) {
+        if (expenses > income) {
+          score = Math.max(10, 30 - Math.min(20, Math.abs(savingRate) / 5));
+        } else if (savingRate > 20) {
+          score = 90;
+        } else if (savingRate > 10) {
+          score = 75;
+        } else if (savingRate > 0) {
+          score = 60;
+        } else {
+          score = 50;
+        }
+      } else if (income === 0 && expenses > 0) {
+        score = 20;
+      }
+      return score;
+    };
+
     let periodIncome = 0;
     let periodExpenses = 0;
     let cumulativeBalance = 0;
@@ -495,37 +579,24 @@ export default function AnalyticsPage() {
       }
     });
 
-    // Calcular Saving Rate para o período selecionado
-    // Clamp entre -100% e 100% para evitar valores extremos
-    // Threshold mínimo para considerar representativo
-    const MIN_INCOME_THRESHOLD = 100; // 1€ mínimo
-    let savingRate = 0;
-    if (periodIncome >= MIN_INCOME_THRESHOLD) {
-      const calculated = ((periodIncome - periodExpenses) / periodIncome) * 100;
-      savingRate = Math.max(-100, Math.min(100, calculated)); // Clamp entre -100% e 100%
-    }
-    // Se periodIncome < threshold, savingRate = 0 (não representativo)
+    const savingRate = computeSavingRate(periodIncome, periodExpenses);
+    const dynamicScore = computeHealthScore(periodIncome, periodExpenses, savingRate);
 
-    // Calcular um Health Score dinâmico simplificado para o período
-    // Validações melhoradas para evitar scores inválidos
-    let dynamicScore = 70; // Base neutra
-    if (periodIncome > 0) {
-      if (periodExpenses > periodIncome) {
-        // Défice: score baixo
-        dynamicScore = Math.max(10, 30 - Math.min(20, Math.abs(savingRate) / 5)); // Penaliza défices grandes
-      } else if (savingRate > 20) {
-        dynamicScore = 90; // Excelente poupança
-      } else if (savingRate > 10) {
-        dynamicScore = 75; // Boa poupança
-      } else if (savingRate > 0) {
-        dynamicScore = 60; // Poupança positiva mas baixa
-      } else {
-        // savingRate <= 0 mas expenses <= income (pode acontecer com clamp)
-        dynamicScore = 50;
-      }
-    } else if (periodIncome === 0 && periodExpenses > 0) {
-      // Sem receitas mas há despesas
-      dynamicScore = 20;
+    let prevSavingRate: number | null = null;
+    let prevHealthScore: number | null = null;
+    if (selectedPeriod !== 'Tudo') {
+      const periodStart = filterDate;
+      const periodEnd = now;
+      const deltaMs = periodEnd.getTime() - periodStart.getTime();
+      const prevStart = new Date(periodStart.getTime() - deltaMs);
+      const prevEnd = periodStart;
+      const prevTransactions = rawData.transactions.filter((t: any) => {
+        const transDate = new Date(t.transaction_date);
+        return transDate >= prevStart && transDate < prevEnd;
+      });
+      const prevTotals = computeTotals(prevTransactions);
+      prevSavingRate = computeSavingRate(prevTotals.income, prevTotals.expenses);
+      prevHealthScore = computeHealthScore(prevTotals.income, prevTotals.expenses, prevSavingRate);
     }
 
     setProcessedData({
@@ -538,6 +609,11 @@ export default function AnalyticsPage() {
       topExpenses,
       healthScore: dynamicScore,
       savingRate: savingRate.toFixed(1),
+      prevSavingRate,
+      prevHealthScore,
+      periodIncome,
+      periodExpenses,
+      netResult: periodIncome - periodExpenses,
       summary: rawData.insights?.summary || t.dashboard.analytics.subtitle,
       insights: rawData.insights?.insights || [],
       investmentTotal,
@@ -550,6 +626,54 @@ export default function AnalyticsPage() {
   if (loading || !processedData) {
     return <PageLoading />;
   }
+
+  // Verificar se é Pro e tem menos de 10 transações reais (não mock)
+  // IDs mock começam com 'd' ou 'demo', ou são UUIDs que não existem na lista de mock
+  const mockIds = new Set(DEMO_TRANSACTIONS.map(t => t.id));
+  const realTransactions = isPro 
+    ? rawData.transactions.filter((t: any) => !mockIds.has(t.id))
+    : [];
+  // Mostrar dados se: não for Pro (usa mock) OU tiver pelo menos 1 transação real
+  const hasEnoughData = !isPro || realTransactions.length > 0;
+  // Baixa confiança: Pro com 1-9 transações
+  const hasLowConfidence = isPro && realTransactions.length > 0 && realTransactions.length < 10;
+  // Sem dados: Pro com 0 transações
+  const hasNoData = isPro && realTransactions.length === 0;
+
+  const savingRateValue = Number(processedData.savingRate) || 0;
+  const savingRateBand =
+    savingRateValue < 0
+      ? { label: 'Critico', color: 'text-red-400', range: '< 0%' }
+      : savingRateValue < 10
+        ? { label: 'Fraco', color: 'text-amber-400', range: '0-10%' }
+        : savingRateValue < 25
+          ? { label: 'Saudavel', color: 'text-emerald-400', range: '10-25%' }
+          : { label: 'Excelente', color: 'text-blue-400', range: '> 25%' };
+
+  const healthScoreValue = Number(processedData.healthScore) || 0;
+  const healthBand =
+    healthScoreValue >= 80
+      ? { label: 'Excelente', color: 'text-emerald-400', badge: 'bg-emerald-500/10 border-emerald-500/20' }
+      : healthScoreValue >= 60
+        ? { label: 'Saudavel', color: 'text-blue-400', badge: 'bg-blue-500/10 border-blue-500/20' }
+        : healthScoreValue >= 40
+          ? { label: 'Atenção', color: 'text-amber-400', badge: 'bg-amber-500/10 border-amber-500/20' }
+          : { label: 'Critico', color: 'text-red-400', badge: 'bg-red-500/10 border-red-500/20' };
+
+  const healthDelta =
+    typeof processedData.prevHealthScore === 'number'
+      ? processedData.healthScore - processedData.prevHealthScore
+      : null;
+  const savingRateDelta =
+    typeof processedData.prevSavingRate === 'number'
+      ? savingRateValue - processedData.prevSavingRate
+      : null;
+
+  const maxWeekly = processedData.weekly.reduce(
+    (acc: any, cur: any) => (cur.value > acc.value ? cur : acc),
+    { name: 'N/A', value: 0 }
+  );
+  const topExpense = processedData.topExpenses[0]?.name;
 
   return (
     <motion.div
@@ -600,41 +724,184 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Hero Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] group hover:border-blue-500/30 transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <Activity className="text-blue-500" size={20} />
-            <div className="px-2 py-1 bg-blue-500/10 rounded-lg text-[9px] font-black text-blue-400 uppercase">{t.dashboard.analytics.health}</div>
+      {/* Mensagem se não tiver nenhuma transação (Pro) */}
+      {hasNoData && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-slate-900/40 backdrop-blur-xl border border-amber-500/20 rounded-[32px] p-12 text-center"
+        >
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center">
+              <Info size={32} className="text-amber-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white">
+                {t.dashboard.analytics.noTransactionsYet}
+              </h3>
+              <p className="text-sm text-slate-400 font-medium italic max-w-md">
+                {t.dashboard.analytics.addFirstTransaction}
+              </p>
+            </div>
+            <Link
+              href="/transactions"
+              className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer"
+            >
+              {t.dashboard.analytics.addTransactions}
+            </Link>
           </div>
-          <p className="text-3xl font-black text-white mb-1">{processedData.healthScore}%</p>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.financialScore}</p>
+        </motion.div>
+      )}
+
+      {/* Aviso de baixa confiança estatística */}
+      {hasLowConfidence && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/10 backdrop-blur-xl border border-amber-500/30 rounded-[24px] p-6"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Info size={20} className="text-amber-400" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="text-sm font-black text-white">
+                  {t.dashboard.analytics.lowConfidenceTitle}
+                </h3>
+                <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest text-amber-400">
+                  {t.dashboard.analytics.lowConfidenceBadge}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-medium italic">
+                {t.dashboard.analytics.lowConfidenceDescription}
+                <br />
+                Tens atualmente <span className="text-amber-400 font-black">{realTransactions.length} transações</span>. Recomendamos pelo menos <span className="text-white font-black">10 transações</span> para análises mais fiáveis.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Metricas ancora */}
+      {hasEnoughData && (
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.anchorMetricTitle}</h2>
+            <p className="text-xs text-slate-500 italic">{t.dashboard.analytics.anchorMetricSubtitle}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Activity className="text-blue-500" size={22} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.health}</span>
+                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border rounded-lg ${healthBand.badge} ${healthBand.color}`}>
+                  {healthBand.label}
+                </span>
+                {hasLowConfidence && (
+                  <div className="group relative">
+                    <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
+                      {t.dashboard.analytics.lowConfidenceBadgeShort}
+                    </span>
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                      {t.dashboard.analytics.lowConfidenceTooltip}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-end gap-6">
+                <div>
+                  <p className="text-4xl font-black text-white">{processedData.healthScore}%</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.financialScore}</p>
+                  {healthDelta !== null && (
+                    <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)} {t.dashboard.analytics.vsPreviousPeriod}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-xs text-slate-400 italic">
+                    Resultado liquido do periodo: <span className="text-white font-black">{formatCurrency(processedData.netResult || 0)}</span>
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Este score resume a saude financeira do periodo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] group hover:border-emerald-500/30 transition-all">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <Target className="text-emerald-500" size={20} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${savingRateBand.color} bg-white/5`}>
+                  {savingRateBand.label}
+                </div>
+                {hasLowConfidence && (
+                  <div className="group relative">
+                    <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
+                      Baixa confiança
+                    </span>
+                    <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                      Ainda estamos a aprender com os teus dados. Com mais transações, esta taxa ficará mais precisa.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <p className="text-3xl font-black text-white mb-1">{processedData.savingRate}%</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.savingsRate}</p>
+            {savingRateDelta !== null && (
+              <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)} {t.dashboard.analytics.vsPreviousPeriod}
+              </p>
+            )}
+            <div className="mt-4 space-y-1 text-[9px] uppercase tracking-widest text-slate-500">
+              <div className="flex justify-between"><span>&lt; 0%</span><span>Critico</span></div>
+              <div className="flex justify-between"><span>0-10%</span><span>Fraco</span></div>
+              <div className="flex justify-between"><span>10-25%</span><span>Saudavel</span></div>
+              <div className="flex justify-between"><span>&gt; 25%</span><span>Excelente</span></div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] group hover:border-emerald-500/30 transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <Target className="text-emerald-500" size={20} />
-            <div className="px-2 py-1 bg-emerald-500/10 rounded-lg text-[9px] font-black text-emerald-400 uppercase">{t.dashboard.analytics.target}</div>
-          </div>
-          <p className="text-3xl font-black text-white mb-1">{processedData.savingRate}%</p>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.savingsRate}</p>
-        </div>
-
-        <div className="md:col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20">
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[40px] rounded-full" />
-          <div className="relative z-10 flex flex-col justify-between h-full">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="relative z-10 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
               <Sparkles size={18} className="text-white animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Zen Insight</span>
             </div>
-            <p className="text-xl font-bold text-white leading-tight italic">
-              "{processedData.summary}"
-            </p>
+            {hasLowConfidence || !processedData?.summary || (processedData.summary && processedData.summary.trim() === '') || maxWeekly.name === 'N/A' ? (
+              <>
+                <p className="text-lg font-bold text-white leading-tight italic">
+                  "{t.dashboard?.analytics?.zenInsightGeneric || "Ainda estamos a aprender com os teus dados. À medida que adicionas mais transações, os insights vão ficar mais precisos e personalizados."}"
+                </p>
+                <p className="text-xs text-white/70 italic">
+                  "{t.dashboard?.analytics?.zenInsightGenericSubtitle || "Recomendamos pelo menos 10 transações para análises mais fiáveis. Continua a registar as tuas despesas e receitas para começares a ver padrões claros nos teus hábitos financeiros."}"
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-bold text-white leading-tight italic">
+                  "O teu saving rate esta em {processedData.savingRate}%, e os maiores gastos concentram-se em {maxWeekly.name}{topExpense ? `, com destaque para ${topExpense}` : ''}."
+                </p>
+                <p className="text-xs text-white/70 italic">"{processedData.summary || ''}"</p>
+              </>
+            )}
           </div>
         </div>
-      </div>
+      </section>
+      )}
 
-      {/* Analytics Filters */}
+      {/* Analytics Filters e Gráficos */}
+      {hasEnoughData && (
+      <>
       <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 rounded-[24px]">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
           <Calendar size={14} className="text-blue-500" />
@@ -667,8 +934,9 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* O que esta a puxar o teu saldo */}
+      <section className="space-y-4">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whatPullsBalance}</h2>
         {/* Main Flow Chart */}
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
@@ -732,9 +1000,14 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </section>
+      </section>
 
-        {/* Distribution Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+      {/* Onde o dinheiro esta a fugir */}
+      <section className="space-y-4">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whereMoneyFlees}</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Distribution Chart */}
+          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -799,10 +1072,6 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </section>
-      </div>
-
-      {/* New Row: Weekly Rhythm & Top Expenses */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Weekly Rhythm Chart */}
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
@@ -864,8 +1133,12 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </section>
+      </div>
+      </section>
 
-        {/* Top Expenses List/Chart */}
+      {/* Culpados principais */}
+      <section className="space-y-4">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.mainCulprits}</h2>
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
@@ -924,10 +1197,11 @@ export default function AnalyticsPage() {
             )}
           </div>
         </section>
-      </div>
+      </section>
 
-      {/* Row: Evolução Financeira & Zen Vault (Investimentos) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Impacto acumulado no tempo */}
+      <section className="space-y-4">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.accumulatedImpact}</h2>
         {/* Evolution Chart */}
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[60px] rounded-full" />
@@ -960,6 +1234,12 @@ export default function AnalyticsPage() {
             </div>
             <TrendingUp size={20} className="text-emerald-500/30" />
           </div>
+          <p className="text-[10px] text-slate-500 italic mb-4">
+            Mostra apenas dinheiro de uso diario.{' '}
+            <Link href="/vault" className="text-blue-400 hover:text-blue-300">
+              Ver patrimonio total (inclui vault)
+            </Link>
+          </p>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={processedData.evolution}>
@@ -986,8 +1266,19 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </div>
         </section>
+      </section>
 
+      {/* Dimensao Cofres */}
+      <section className="space-y-4">
+        <button
+          onClick={() => setIsVaultOpen(!isVaultOpen)}
+          className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-[0.4em] text-slate-500"
+        >
+          <span>{t.dashboard.analytics.vaultDimension}</span>
+          {isVaultOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
         {/* Zen Vault (Reservas e Investimentos) */}
+        {isVaultOpen && (
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
           <div className="flex items-center justify-between mb-8">
@@ -1084,9 +1375,19 @@ export default function AnalyticsPage() {
             <span className="text-sm font-black text-blue-400">{(parseFloat(processedData.savingRate) * 1.2).toFixed(1)}%</span>
           </div>
         </section>
-      </div>
+        )}
+      </section>
 
-      {/* Row: Próximos Vencimentos & Transações Recentes */}
+      {/* Compromissos futuros */}
+      <section className="space-y-4">
+      <button
+        onClick={() => setIsRecurringOpen(!isRecurringOpen)}
+        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-[0.4em] text-slate-500"
+      >
+        <span>{t.dashboard.analytics.futureCommitments}</span>
+        {isRecurringOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {isRecurringOpen && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Payments */}
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
@@ -1172,8 +1473,13 @@ export default function AnalyticsPage() {
           </div>
         </section>
       </div>
+      )}
+      </section>
+      </>
+      )}
 
       {/* AI Deep Dive Cards */}
+      {hasEnoughData && (
       <section className="space-y-6">
         <div className="flex items-center gap-3">
           <Brain className="text-blue-500 fill-blue-500/20" size={24} />
@@ -1332,6 +1638,7 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Vault Transaction Modal */}
       <AnimatePresence>

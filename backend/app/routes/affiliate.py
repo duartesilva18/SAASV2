@@ -48,11 +48,32 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
         if subscription.status not in ['active', 'trialing']:
             return (False, 'Subscrição não está ativa')
         
-        # Verificar qual o plano atual
-        if not subscription.items.data:
+        # Verificar qual o plano atual (compatível com StripeObject e dict)
+        items = getattr(subscription, 'items', None)
+        if callable(items):
+            if hasattr(subscription, 'get'):
+                items = subscription.get('items')
+            else:
+                items = None
+        if items and hasattr(items, 'data'):
+            items_data = items.data
+        elif isinstance(items, dict):
+            items_data = items.get('data')
+        else:
+            items_data = None
+        
+        if not items_data:
             return (False, 'Subscrição sem itens')
         
-        current_price_id = subscription.items.data[0].price.id
+        first_item = items_data[0]
+        price = getattr(first_item, 'price', None)
+        if isinstance(first_item, dict):
+            price = first_item.get('price')
+        current_price_id = getattr(price, 'id', None) if price else None
+        if isinstance(price, dict):
+            current_price_id = price.get('id')
+        if not current_price_id:
+            return (False, 'Plano inválido')
         
         # Planos que dão acesso direto a afiliados
         if current_price_id in [PLAN_3_MONTHS, PLAN_YEARLY]:

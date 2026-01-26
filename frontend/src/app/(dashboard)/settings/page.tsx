@@ -42,6 +42,7 @@ export default function SettingsPage() {
     message: '',
     type: 'info'
   });
+  const [showEnglishAlert, setShowEnglishAlert] = useState(false);
 
   const countries = [
     { code: '+351', flag: '🇵🇹', name: 'Portugal' },
@@ -328,12 +329,24 @@ export default function SettingsPage() {
                       <Globe size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-indigo-500 transition-colors pointer-events-none z-10" />
                       <select 
                         value={language}
-                        onChange={e => setLanguage(e.target.value as any)}
+                        onChange={e => {
+                          if (e.target.value === 'en') {
+                            setShowEnglishAlert(true);
+                            return;
+                          }
+                          setLanguage(e.target.value as any);
+                        }}
                         className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-10 text-sm focus:outline-none focus:border-indigo-500 transition-all text-white font-medium appearance-none cursor-pointer"
                       >
                         {Object.values(availableLanguages).map((lang) => (
-                          <option key={lang.code} value={lang.code} className="bg-slate-900">
-                            {lang.flag} {lang.nativeName} ({lang.locale})
+                          <option 
+                            key={lang.code} 
+                            value={lang.code} 
+                            className="bg-slate-900"
+                            disabled={lang.code === 'en'}
+                            style={lang.code === 'en' ? { opacity: 0.5 } : {}}
+                          >
+                            {lang.flag} {lang.nativeName} {lang.code === 'en' ? '(Under Development)' : `(${lang.locale})`}
                           </option>
                         ))}
                       </select>
@@ -503,6 +516,15 @@ export default function SettingsPage() {
         title={alertModal.title}
         message={alertModal.message}
         type={alertModal.type}
+      />
+
+      {/* English Language Alert */}
+      <AlertModal
+        isOpen={showEnglishAlert}
+        onClose={() => setShowEnglishAlert(false)}
+        title="Under Development"
+        message="English language support is currently under development. Please use Portuguese for now."
+        type="info"
       />
 
       {/* Global Toast */}

@@ -10,7 +10,7 @@ import {
   Users, TrendingUp, Copy, CheckCircle2, 
   ExternalLink, DollarSign, Calendar, AlertCircle,
   Sparkles, ArrowRight, Loader2, Clock, LineChart as LineChartIcon,
-  CreditCard
+  CreditCard, Info, X, Share2, Gift, Target
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -83,6 +83,7 @@ export default function AffiliatePage() {
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number; isPlanBased?: boolean } | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
@@ -666,17 +667,26 @@ export default function AffiliatePage() {
             </motion.div>
           )}
 
-          {/* Referrals List */}
-          {stats && stats.referrals.length > 0 && (
+          {/* Referrals List ou Tutorial */}
+          {stats && stats.referrals.length > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
             >
-              <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-                <Users className="w-5 h-5 text-amber-400" />
-                Referências ({stats.referrals.length})
-              </h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-amber-400" />
+                  {t.dashboard?.affiliate?.referrals || "Referências"} ({stats.referrals.length})
+                </h3>
+                <button
+                  onClick={() => setShowTutorialModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl text-xs font-black uppercase tracking-wider text-blue-400 transition-all cursor-pointer"
+                >
+                  <Info className="w-4 h-4" />
+                  {t.dashboard?.affiliate?.howItWorks || "Como Funciona"}
+                </button>
+              </div>
               <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {stats.referrals.map((ref) => (
                   <motion.div
@@ -697,32 +707,128 @@ export default function AffiliatePage() {
                       </div>
                       {ref.has_subscribed ? (
                         <span className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs font-black uppercase tracking-wider border border-green-500/30 shrink-0">
-                          Convertido
+                          {t.dashboard?.affiliate?.converted || "Convertido"}
                         </span>
                       ) : (
                         <span className="px-3 py-1.5 bg-slate-700/50 text-slate-400 rounded-lg text-xs font-black uppercase tracking-wider border border-slate-600/30 shrink-0">
-                          Pendente
+                          {t.dashboard?.affiliate?.pending || "Pendente"}
                         </span>
                       )}
                     </div>
                     {ref.payment_info && (
                       <div className="flex items-center gap-4 pt-3 border-t border-white/5">
                         <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor Pago</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{t.dashboard?.affiliate?.amountPaid || "Valor Pago"}</p>
                           <p className="text-sm font-black text-white">{formatPrice(ref.payment_info.amount_paid_cents)}</p>
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Comissão</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{t.dashboard?.affiliate?.commission || "Comissão"}</p>
                           <p className="text-sm font-black text-amber-400">{formatPrice(ref.payment_info.commission_cents)}</p>
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Percentagem</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{t.dashboard?.affiliate?.percentage || "Percentagem"}</p>
                           <p className="text-sm font-black text-blue-400">{ref.payment_info.commission_percentage}%</p>
                         </div>
                       </div>
                     )}
                   </motion.div>
                 ))}
+              </div>
+            </motion.div>
+          ) : status?.is_affiliate && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-br from-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-8 shadow-xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-6">
+                <div className="w-20 h-20 bg-amber-500/10 rounded-2xl flex items-center justify-center">
+                  <Share2 className="w-10 h-10 text-amber-400" />
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-black text-white">
+                    {t.dashboard?.affiliate?.howItWorksTitle || "Como Funciona o Programa de Afiliados"}
+                  </h3>
+                  <p className="text-sm text-slate-400 font-medium italic max-w-md">
+                    {t.dashboard?.affiliate?.howItWorksDescription || "Partilha o teu link único e ganha comissões quando alguém subscrever Pro através dele."}
+                  </p>
+                </div>
+
+                <div className="w-full space-y-4 max-w-lg">
+                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
+                    <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Share2 className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step1Title || "1. Partilha o Teu Link"}</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t.dashboard?.affiliate?.step1Description || "Usa o teu link único de afiliado para partilhar a plataforma. Podes partilhá-lo em redes sociais, blog, email, etc."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Users className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step2Title || "2. Alguém se Regista"}</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t.dashboard?.affiliate?.step2Description || "Quando alguém se regista através do teu link, fica associado à tua conta de afiliado."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
+                    <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Gift className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step3Title || "3. Recebe Comissões"}</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t.dashboard?.affiliate?.step3Description || "Quando o utilizador referido subscrever o plano Pro, recebes uma comissão automaticamente na tua conta Stripe."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
+                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Target className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step4Title || "4. Acompanha os Resultados"}</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {t.dashboard?.affiliate?.step4Description || "Vê quantas pessoas referiste, quantas converteram e quanto ganhaste em comissões."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {status.affiliate_link && (
+                  <div className="w-full max-w-lg space-y-3">
+                    <div className="bg-slate-800/60 backdrop-blur-sm border border-white/5 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">{t.dashboard?.affiliate?.yourAffiliateLink || "O Teu Link de Afiliado"}</p>
+                      <code className="text-xs text-slate-300 break-all font-mono block">{status.affiliate_link}</code>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(status.affiliate_link!)}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+                    >
+                      {copied ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          {t.dashboard?.affiliate?.linkCopied || "Link Copiado!"}
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          {t.dashboard?.affiliate?.copyLink || "Copiar Link"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -739,7 +845,7 @@ export default function AffiliatePage() {
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-lg font-black text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-amber-400" />
-                Pagamentos Automáticos
+                {t.dashboard?.affiliate?.automaticPayments || "Pagamentos Automáticos"}
               </h3>
               {/* Status Badge */}
               {status && (
@@ -751,12 +857,12 @@ export default function AffiliatePage() {
                   {status.stripe_connect_configured ? (
                     <>
                       <CheckCircle2 className="w-3 h-3" />
-                      Configurado
+                      {t.dashboard?.affiliate?.configured || "Configurado"}
                     </>
                   ) : (
                     <>
                       <Clock className="w-3 h-3" />
-                      Não Configurado
+                      {t.dashboard?.affiliate?.notConfigured || "Não Configurado"}
                     </>
                   )}
                 </div>
@@ -764,8 +870,8 @@ export default function AffiliatePage() {
             </div>
             <p className="text-xs text-slate-400 font-medium mb-4 leading-relaxed">
               {status?.stripe_connect_configured
-                ? 'A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.'
-                : 'Conecta a tua conta Stripe para receberes comissões automaticamente.'}
+                ? (t.dashboard?.affiliate?.stripeConnected || "A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.")
+                : (t.dashboard?.affiliate?.stripeNotConnected || "Conecta a tua conta Stripe para receberes comissões automaticamente.")}
             </p>
             <button
               onClick={async () => {
@@ -800,12 +906,12 @@ export default function AffiliatePage() {
               {status?.stripe_connect_configured ? (
                 <>
                   <ExternalLink className="w-4 h-4" />
-                  Abrir Dashboard Stripe
+                  {t.dashboard?.affiliate?.openStripeDashboard || "Abrir Dashboard Stripe"}
                 </>
               ) : (
                 <>
                   <ExternalLink className="w-4 h-4" />
-                  Configurar Stripe Connect
+                  {t.dashboard?.affiliate?.configureStripeConnect || "Configurar Stripe Connect"}
                 </>
               )}
             </button>
@@ -820,7 +926,7 @@ export default function AffiliatePage() {
             >
               <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
                 <ExternalLink className="w-5 h-5 text-amber-400" />
-                Link de Afiliado
+                {t.dashboard?.affiliate?.affiliateLink || "Link de Afiliado"}
               </h3>
               <div className="space-y-3">
                 <div className="bg-slate-800/60 backdrop-blur-sm border border-white/5 rounded-xl p-4">
@@ -833,12 +939,12 @@ export default function AffiliatePage() {
                   {copied ? (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      Copiado!
+                      {t.dashboard?.affiliate?.copied || "Copiado!"}
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4" />
-                      Copiar Link
+                      {t.dashboard?.affiliate?.copyLink || "Copiar Link"}
                     </>
                   )}
                 </button>
@@ -855,7 +961,7 @@ export default function AffiliatePage() {
             >
               <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-amber-400" />
-                Comissões Mensais
+                {t.dashboard?.affiliate?.monthlyCommissions || "Comissões Mensais"}
               </h3>
               <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {stats.monthly_commissions.map((comm, idx) => (
@@ -870,17 +976,17 @@ export default function AffiliatePage() {
                       <p className="font-black text-white text-sm">{new Date(comm.month + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
                       {comm.is_paid ? (
                         <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-[10px] font-black uppercase border border-green-500/30">
-                          Pago
+                          {t.dashboard?.affiliate?.paid || "Pago"}
                         </span>
                       ) : (
                         <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-black uppercase border border-amber-500/30">
-                          Pendente
+                          {t.dashboard?.affiliate?.pending || "Pendente"}
                         </span>
                       )}
                     </div>
                     <p className="text-lg font-black text-amber-400 mb-1">{formatPrice(comm.commission_cents)}</p>
                     <p className="text-xs text-slate-400">
-                      {comm.conversions} conversões • {formatPrice(comm.revenue_cents)} receita
+                      {comm.conversions} {t.dashboard?.affiliate?.conversions || "conversões"} • {formatPrice(comm.revenue_cents)} {t.dashboard?.affiliate?.revenue || "receita"}
                     </p>
                   </motion.div>
                 ))}
@@ -890,6 +996,116 @@ export default function AffiliatePage() {
         </div>
       </div>
 
+
+      {/* Modal Tutorial */}
+      {showTutorialModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                <Info className="w-6 h-6 text-amber-400" />
+                {t.dashboard?.affiliate?.howItWorksTitle || "Como Funciona o Programa de Afiliados"}
+              </h2>
+              <button
+                onClick={() => setShowTutorialModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 rounded-xl border border-blue-500/20">
+                <p className="text-sm text-slate-300 font-medium italic leading-relaxed">
+                  {t.dashboard?.affiliate?.modalDescription || "Partilha o teu link único e ganha comissões quando alguém subscrever Pro através dele."}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-xl border border-white/5">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Share2 className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-black text-white mb-2">{t.dashboard?.affiliate?.modalStep1Title || "1. Partilha o Teu Link"}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                      {t.dashboard?.affiliate?.modalStep1Description || "Usa o teu link único de afiliado para partilhar a plataforma. Podes partilhá-lo em redes sociais, blog, email, ou qualquer outro canal."}
+                    </p>
+                    {status?.affiliate_link && (
+                      <div className="mt-3 p-3 bg-slate-900/60 rounded-lg border border-white/5">
+                        <code className="text-xs text-slate-300 break-all font-mono">{status.affiliate_link}</code>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-xl border border-white/5">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-black text-white mb-2">{t.dashboard?.affiliate?.modalStep2Title || "2. Alguém se Regista"}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                      {t.dashboard?.affiliate?.modalStep2Description || "Quando alguém se regista através do teu link, fica automaticamente associado à tua conta de afiliado. Podes ver todas as referências na secção \"Referências\"."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-xl border border-white/5">
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Gift className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-black text-white mb-2">{t.dashboard?.affiliate?.modalStep3Title || "3. Recebe Comissões"}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                      {t.dashboard?.affiliate?.modalStep3Description || "Quando o utilizador referido subscrever o plano Pro, recebes uma comissão automaticamente na tua conta Stripe Connect (se configurada). A comissão é calculada como uma percentagem do valor pago."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-5 bg-slate-800/40 rounded-xl border border-white/5">
+                  <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Target className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-black text-white mb-2">{t.dashboard?.affiliate?.modalStep4Title || "4. Acompanha os Resultados"}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                      {t.dashboard?.affiliate?.modalStep4Description || "Na página de afiliados podes ver:"}
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-400 list-disc list-inside">
+                      <li>{t.dashboard?.affiliate?.modalStep4List1 || "Total de referências e conversões"}</li>
+                      <li>{t.dashboard?.affiliate?.modalStep4List2 || "Ganhos totais e pendentes"}</li>
+                      <li>{t.dashboard?.affiliate?.modalStep4List3 || "Gráficos de evolução"}</li>
+                      <li>{t.dashboard?.affiliate?.modalStep4List4 || "Lista detalhada de cada referência"}</li>
+                      <li>{t.dashboard?.affiliate?.modalStep4List5 || "Comissões mensais"}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                <p className="text-xs text-amber-400 font-medium">
+                  {t.dashboard?.affiliate?.modalTip || "💡 Dica: Configura o Stripe Connect para receberes as comissões automaticamente na tua conta bancária."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowTutorialModal(false)}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer"
+              >
+                {t.dashboard?.affiliate?.modalUnderstand || "Entendi"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <Toast {...toast} onClose={() => setToast({ ...toast, isVisible: false })} />
     </div>
