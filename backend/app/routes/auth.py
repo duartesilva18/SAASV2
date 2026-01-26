@@ -187,10 +187,12 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         'id': uuid.uuid4(),
         'email': user_in.email,
         'is_active': True,
+        'is_admin': False,
         'is_email_verified': False,
         'is_onboarded': False,
         'marketing_opt_in': False,
         'currency': 'EUR',
+        'language': user_lang,
         'created_at': datetime.now(timezone.utc)
     }
 
