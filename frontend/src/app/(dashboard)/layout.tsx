@@ -25,7 +25,7 @@ export default function DashboardLayout({
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const pathname = usePathname();
   const { setCurrency, setLanguage } = useTranslation();
-  const { user, loading } = useUser();
+  const { user, loading, refreshUser } = useUser();
   const router = useRouter();
 
   const isAdminPage = pathname?.startsWith('/admin');
@@ -69,7 +69,11 @@ export default function DashboardLayout({
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
 
       {showOnboarding && (
-        <OnboardingModal onComplete={() => setShowOnboarding(false)} />
+        <OnboardingModal onComplete={async () => {
+          setShowOnboarding(false);
+          // Atualizar dados do utilizador após completar onboarding
+          await refreshUser();
+        }} />
       )}
 
       {showTermsAcceptance && (
