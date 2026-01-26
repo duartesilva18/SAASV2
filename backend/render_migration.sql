@@ -197,6 +197,16 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
+-- Adicionar coluna referral_code se a tabela já existir mas não tiver a coluna
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'email_verifications') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'email_verifications' AND column_name = 'referral_code') THEN
+            ALTER TABLE email_verifications ADD COLUMN referral_code VARCHAR(20);
+        END IF;
+    END IF;
+END $$;
+
 -- Criar índices para email_verifications
 CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON email_verifications(email);
 CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token);
