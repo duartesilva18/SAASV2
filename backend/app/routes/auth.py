@@ -29,6 +29,8 @@ def validate_email(email: str) -> bool:
 
 def validate_password(password: str) -> tuple[bool, str]:
     """Valida força da senha"""
+    if len(password.encode('utf-8')) > 72:
+        return False, "A senha não pode ter mais de 72 caracteres"
     if len(password) < 8:
         return False, "A senha deve ter pelo menos 8 caracteres"
     if not re.search(r'[A-Z]', password):

@@ -93,6 +93,9 @@ function RegisterPageContent() {
   };
 
   const validatePassword = (password: string): { valid: boolean; error: string } => {
+    if (password.length > 72) {
+      return { valid: false, error: "A senha não pode ter mais de 72 caracteres" };
+    }
     if (password.length < 8) {
       return { valid: false, error: "A senha deve ter pelo menos 8 caracteres" };
     }

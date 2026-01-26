@@ -7,7 +7,7 @@ class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8, max_length=72)
     language: Optional[str] = 'pt'
     referral_code: Optional[str] = None  # Código de afiliado (opcional)
 
