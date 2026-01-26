@@ -364,25 +364,20 @@ export default function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
-      <div className={`flex items-center mb-0 px-4 py-2 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
+      <div className={`flex items-center mb-0 px-4 py-1 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
         <img
           src="/images/logo/logo.png"
           alt="Finly"
           className={`${isCollapsed && !isMobileOpen ? 'h-36 w-36' : 'h-40 w-auto'} shrink-0 m-0 p-0 select-none pointer-events-none`}
           draggable="false"
         />
-        {(!isCollapsed || isMobileOpen) && isPro && (
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full w-fit">
-            {t.dashboard.sidebar.masterPro}
-          </span>
-        )}
       </div>
 
-      <nav className="flex-1 px-4 space-y-8 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 px-4 -mt-2 space-y-6 xl:space-y-8 overflow-y-auto no-scrollbar">
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-3">
             {(!isCollapsed || isMobileOpen) && (
-              <h3 className={`px-4 text-[10px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
+              <h3 className={`px-4 text-[7px] max-[1300px]:text-[8px] xl:text-[10px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
                 {section.title}
               </h3>
             )}
@@ -402,17 +397,17 @@ export default function Sidebar({
                       <div
                         key={item.href}
                         onClick={() => router.push('/pricing')}
-                        className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                        className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                       >
-                        <div className="relative">
-                          <Icon size={20} className="text-slate-600" />
-                          <Lock size={12} className="absolute -top-1 -right-1 text-amber-400" />
-                        </div>
-                        {(!isCollapsed || isMobileOpen) && (
-                          <span className="text-xs font-black uppercase tracking-widest text-slate-600">
-                            {item.name}
-                          </span>
-                        )}
+                    <div className="relative">
+                      <Icon size={16} className="xl:w-5 xl:h-5 text-slate-600" />
+                      <Lock size={10} className="xl:w-3 xl:h-3 absolute -top-1 -right-1 text-amber-400" />
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-slate-600">
+                        {item.name}
+                      </span>
+                    )}
                       </div>
                     );
                   }
@@ -423,11 +418,11 @@ export default function Sidebar({
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                      className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                     >
-                      <Icon size={20} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                      <Icon size={16} className="xl:w-5 xl:h-5 text-blue-400 group-hover:scale-110 transition-transform" />
                       {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-xs font-black uppercase tracking-widest text-inherit">
+                        <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-inherit">
                           {item.name}
                         </span>
                       )}
@@ -444,14 +439,14 @@ export default function Sidebar({
                     <div
                       key={item.href}
                       onClick={() => router.push('/pricing')}
-                      className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                      className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                     >
                       <div className="relative">
-                        <Icon size={20} className="text-slate-600" />
-                        <Lock size={12} className="absolute -top-1 -right-1 text-amber-400" />
+                        <Icon size={16} className="xl:w-5 xl:h-5 text-slate-600" />
+                        <Lock size={10} className="xl:w-3 xl:h-3 absolute -top-1 -right-1 text-amber-400" />
                       </div>
                       {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-600">
+                        <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-slate-600">
                           {item.name}
                         </span>
                       )}
@@ -463,18 +458,18 @@ export default function Sidebar({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-4 p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
+                    className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
                   >
                     <div className="relative">
-                      <Icon size={20} className={isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')} />
+                      <Icon size={16} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
                       {isAffiliateItem && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-6 h-6 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
+                          <div className={`w-5 h-5 xl:w-6 xl:h-6 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
                         </div>
                       )}
                     </div>
                     {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-xs font-black uppercase tracking-widest text-inherit">
+                      <span className="text-[9px] xl:text-xs font-black uppercase tracking-widest text-inherit">
                         {item.name}
                       </span>
                     )}
@@ -491,7 +486,7 @@ export default function Sidebar({
 
       <div className="p-4 border-t border-white/5 space-y-4 bg-white/[0.01] relative">
         {user && (
-          <div className={`group flex items-center gap-4 transition-all duration-300 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : 'px-4 py-3 hover:bg-white/[0.03] rounded-2xl cursor-default border border-transparent hover:border-white/5'}`}>
+          <div className={`group flex items-center gap-3 xl:gap-4 transition-all duration-300 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : 'px-3 xl:px-4 py-2.5 xl:py-3 hover:bg-white/[0.03] rounded-2xl cursor-default border border-transparent hover:border-white/5'}`}>
             <div className="relative">
               <div className={`relative shrink-0 flex items-center justify-center font-black text-white rounded-2xl border shadow-2xl transition-all duration-500 group-hover:scale-110 ${
                 user.is_admin 
@@ -499,7 +494,7 @@ export default function Sidebar({
                   : isPro 
                     ? 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-300/30' 
                     : 'bg-gradient-to-br from-slate-600 to-slate-800 border-slate-500/30'
-              } w-11 h-11 text-xs`}>
+              } w-9 h-9 xl:w-11 xl:h-11 text-[8px] max-[1300px]:text-[9px] xl:text-xs`}>
                 {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : user.email[0].toUpperCase()}
                 
                 {(user.is_admin || isPro) && (
@@ -527,7 +522,7 @@ export default function Sidebar({
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col gap-1 flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-black text-white truncate tracking-tighter">
+                  <p className="text-[9px] max-[1300px]:text-[10px] xl:text-sm font-black text-white truncate tracking-tighter">
                     {user.full_name || user.email.split('@')[0]}
                   </p>
                   <button 
@@ -535,14 +530,14 @@ export default function Sidebar({
                       e.stopPropagation();
                       setShowNotifications(!showNotifications);
                     }}
-                    className={`p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer shrink-0 ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
+                    className={`p-1.5 xl:p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer shrink-0 ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
                   >
-                    <Bell size={25} />
-                    <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
+                    <Bell size={18} className="xl:w-6 xl:h-6" />
+                    <div className={`absolute top-1.5 right-1.5 xl:top-2 xl:right-2 w-2 h-2 xl:w-2.5 xl:h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border tracking-widest ${
+                  <span className={`text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest ${
                     user.is_admin 
                       ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
                       : isPro 
@@ -650,12 +645,12 @@ export default function Sidebar({
 
         <button
           onClick={logout}
-          className={`w-full flex items-center gap-4 p-4 rounded-2xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 xl:gap-4 p-3 xl:p-4 rounded-2xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
         >
-          <div className="w-5 h-5 flex items-center justify-center group-hover:-translate-x-1 transition-transform">
-            <LogOut size={18} />
+          <div className="w-4 h-4 xl:w-5 xl:h-5 flex items-center justify-center group-hover:-translate-x-1 transition-transform">
+            <LogOut size={14} className="xl:w-[18px] xl:h-[18px]" />
           </div>
-          {(!isCollapsed || isMobileOpen) && <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t.dashboard.sidebar.logout}</span>}
+          {(!isCollapsed || isMobileOpen) && <span className="text-[7px] max-[1300px]:text-[8px] xl:text-[10px] font-black uppercase tracking-[0.2em]">{t.dashboard.sidebar.logout}</span>}
         </button>
       </div>
     </div>

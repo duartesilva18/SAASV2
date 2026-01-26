@@ -371,9 +371,9 @@ export default function DashboardPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="text-white pb-20"
+      className="text-white pb-20 -mt-4"
     >
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex items-center justify-between mb-12 -mt-4">
         <h1 className="text-4xl font-black tracking-tighter text-white">{t.dashboard.page.title}</h1>
         
         {!isPro && (
@@ -398,18 +398,20 @@ export default function DashboardPage() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Hoje</h2>
-          <Link
-            href="/analytics"
-            className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Ver análise completa
-          </Link>
+          {isPro && (
+            <Link
+              href="/analytics"
+              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Ver análise completa
+            </Link>
+          )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 p-10 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden"
+            className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full" />
             <div className="relative z-10 flex items-start gap-4">
@@ -423,7 +425,7 @@ export default function DashboardPage() {
                 <p className={`text-4xl font-black tracking-tighter ${stats.dailyAllowance > 20 ? 'text-emerald-400' : 'text-amber-400'}`}>
                   {formatCurrency(stats.dailyAllowance || 0)}
                 </p>
-                <p className="text-xs text-slate-500 font-medium italic mt-2">
+                <p className="text-sm text-slate-500 font-medium italic mt-2">
                   {t.dashboard.page.dailyAllowanceDesc}
                 </p>
                 <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-3">
@@ -436,7 +438,7 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl flex flex-col justify-between"
+            className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-xl flex flex-col justify-between"
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-800/60 text-slate-300 rounded-2xl flex items-center justify-center">
@@ -451,7 +453,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <p className="text-xs text-slate-500 font-medium italic mt-4">
+            <p className="text-sm text-slate-500 font-medium italic mt-4">
               Orçamento disponível até ao final do mês
             </p>
           </motion.div>
@@ -521,7 +523,7 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-1">Resumo do mês</p>
-              <p className="text-xs text-slate-400 font-medium italic">Consumo do orçamento atual</p>
+              <p className="text-sm text-slate-400 font-medium italic">Consumo do orçamento atual</p>
             </div>
             <div className="text-sm font-black text-white">
               {formatCurrency(stats.expenses)} / {formatCurrency(stats.totalBudget || 0)}
@@ -543,12 +545,14 @@ export default function DashboardPage() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Futuro</h2>
-          <Link
-            href="/vault"
-            className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Ver cofres
-          </Link>
+          {isPro && (
+            <Link
+              href="/vault"
+              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Ver cofres
+            </Link>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
@@ -564,7 +568,7 @@ export default function DashboardPage() {
                 <p className="text-3xl font-black text-white tracking-tighter">
                   {formatCurrency(stats.vaultEmergency)}
                 </p>
-                <p className="text-xs text-slate-500 font-medium italic mt-2">
+                <p className="text-sm text-slate-500 font-medium italic mt-2">
                   Reserva de segurança para imprevistos
                 </p>
               </div>
@@ -585,7 +589,7 @@ export default function DashboardPage() {
                   {formatCurrency(stats.vaultInvestment)}
                   <span className="text-blue-400 ml-2 text-2xl">💎</span>
                 </p>
-                <p className="text-xs text-slate-500 font-medium italic mt-2">
+                <p className="text-sm text-slate-500 font-medium italic mt-2">
                   Dinheiro guardado (não usado no dia a dia)
                 </p>
               </div>
@@ -597,18 +601,20 @@ export default function DashboardPage() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Insights rápidos</h2>
-          <Link
-            href="/analytics"
-            className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Ver detalhes
-          </Link>
+          {isPro && (
+            <Link
+              href="/analytics"
+              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Ver detalhes
+            </Link>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 backdrop-blur-sm p-5 rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-xs text-slate-200 font-medium italic flex items-center gap-3"
+              className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 backdrop-blur-sm p-5 rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-sm text-slate-200 font-medium italic flex items-center gap-3"
             >
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles size={14} />
@@ -656,7 +662,7 @@ export default function DashboardPage() {
                     }`}>
                       {alert.title}
                     </h4>
-                    <p className="text-xs text-slate-400 font-medium italic truncate">
+                    <p className="text-sm text-slate-400 font-medium italic truncate">
                       {alert.message}
                     </p>
                   </div>
@@ -702,7 +708,7 @@ export default function DashboardPage() {
               <h2 className="text-xl font-black text-white uppercase tracking-[0.3em] animate-pulse">
                 {t.dashboard.loading.processingUpgrade} <span className="text-blue-500">{t.dashboard.page.upgradePro}</span>...
               </h2>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest italic">
+              <p className="text-slate-500 text-sm font-black uppercase tracking-widest italic">
                 {t.dashboard.loading.preparingEcosystem}
               </p>
             </div>
