@@ -773,7 +773,7 @@ export default function AnalyticsPage() {
                   {t.dashboard.analytics.lowConfidenceBadge}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium italic">
+              <p className="text-sm text-slate-400 font-medium italic">
                 {t.dashboard.analytics.lowConfidenceDescription}
                 <br />
                 Tens atualmente <span className="text-amber-400 font-black">{realTransactions.length} transações</span>. Recomendamos pelo menos <span className="text-white font-black">10 transações</span> para análises mais fiáveis.
@@ -789,22 +789,22 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.anchorMetricTitle}</h2>
-            <p className="text-xs text-slate-500 italic">{t.dashboard.analytics.anchorMetricSubtitle}</p>
+            <p className="text-sm text-slate-500 italic">{t.dashboard.analytics.anchorMetricSubtitle}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] relative overflow-hidden">
+          <div className={`lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] relative overflow-hidden ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
             <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
             <div className="relative z-10 flex flex-col gap-4">
               <div className="flex items-center gap-3 flex-wrap">
                 <Activity className="text-blue-500" size={22} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.health}</span>
-                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border rounded-lg ${healthBand.badge} ${healthBand.color}`}>
+                <span className="text-xs font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.health}</span>
+                <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest border rounded-lg ${healthBand.badge} ${healthBand.color}`}>
                   {healthBand.label}
                 </span>
                 {hasLowConfidence && (
                   <div className="group relative">
-                    <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
+                    <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
                       {t.dashboard.analytics.lowConfidenceBadgeShort}
                     </span>
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
@@ -816,18 +816,18 @@ export default function AnalyticsPage() {
               <div className="flex flex-wrap items-end gap-6">
                 <div>
                   <p className="text-4xl font-black text-white">{processedData.healthScore}%</p>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.financialScore}</p>
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.financialScore}</p>
                   {healthDelta !== null && (
-                    <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className={`text-xs font-black uppercase tracking-widest mt-2 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)} {t.dashboard.analytics.vsPreviousPeriod}
                     </p>
                   )}
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                  <p className="text-xs text-slate-400 italic">
+                  <p className="text-sm text-slate-400 italic">
                     Resultado liquido do periodo: <span className="text-white font-black">{formatCurrency(processedData.netResult || 0)}</span>
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     Este score resume a saude financeira do periodo.
                   </p>
                 </div>
@@ -835,16 +835,16 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] group hover:border-emerald-500/30 transition-all">
+          <div className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] group hover:border-emerald-500/30 transition-all ${selectedPeriod !== 'Tudo' ? 'p-4' : 'p-6'}`}>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <Target className="text-emerald-500" size={20} />
               <div className="flex items-center gap-2 flex-wrap">
-                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${savingRateBand.color} bg-white/5`}>
+                <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${savingRateBand.color} bg-white/5`}>
                   {savingRateBand.label}
                 </div>
                 {hasLowConfidence && (
                   <div className="group relative">
-                    <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
+                    <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
                       Baixa confiança
                     </span>
                     <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
@@ -855,13 +855,13 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <p className="text-3xl font-black text-white mb-1">{processedData.savingRate}%</p>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.savingsRate}</p>
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.savingsRate}</p>
             {savingRateDelta !== null && (
-              <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <p className={`text-xs font-black uppercase tracking-widest mt-2 ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)} {t.dashboard.analytics.vsPreviousPeriod}
               </p>
             )}
-            <div className="mt-4 space-y-1 text-[9px] uppercase tracking-widest text-slate-500">
+            <div className="mt-4 space-y-1 text-[10px] uppercase tracking-widest text-slate-500">
               <div className="flex justify-between"><span>&lt; 0%</span><span>Critico</span></div>
               <div className="flex justify-between"><span>0-10%</span><span>Fraco</span></div>
               <div className="flex justify-between"><span>10-25%</span><span>Saudavel</span></div>
@@ -870,7 +870,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20">
+        <div className={`bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20 ${selectedPeriod !== 'Tudo' ? 'p-4' : 'p-6'}`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[40px] rounded-full" />
           <div className="relative z-10 flex flex-col gap-3">
             <div className="flex items-center gap-2">
@@ -882,7 +882,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg font-bold text-white leading-tight italic">
                   "{t.dashboard?.analytics?.zenInsightGeneric || "Ainda estamos a aprender com os teus dados. À medida que adicionas mais transações, os insights vão ficar mais precisos e personalizados."}"
                 </p>
-                <p className="text-xs text-white/70 italic">
+                <p className="text-sm text-white/70 italic">
                   "{t.dashboard?.analytics?.zenInsightGenericSubtitle || "Recomendamos pelo menos 10 transações para análises mais fiáveis. Continua a registar as tuas despesas e receitas para começares a ver padrões claros nos teus hábitos financeiros."}"
                 </p>
               </>
@@ -891,7 +891,7 @@ export default function AnalyticsPage() {
                 <p className="text-lg font-bold text-white leading-tight italic">
                   "O teu saving rate esta em {processedData.savingRate}%, e os maiores gastos concentram-se em {maxWeekly.name}{topExpense ? `, com destaque para ${topExpense}` : ''}."
                 </p>
-                <p className="text-xs text-white/70 italic">"{processedData.summary || ''}"</p>
+                <p className="text-sm text-white/70 italic">"{processedData.summary || ''}"</p>
               </>
             )}
           </div>
@@ -938,12 +938,12 @@ export default function AnalyticsPage() {
       <section className="space-y-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whatPullsBalance}</h2>
         {/* Main Flow Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.spendingOverTime}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.cashFlowHistory}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.cashFlowHistory}</p>
               </div>
               
               <div 
@@ -1007,12 +1007,12 @@ export default function AnalyticsPage() {
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whereMoneyFlees}</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Distribution Chart */}
-          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+          <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.categoryDistribution}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.categoryEnergy}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.categoryEnergy}</p>
               </div>
 
               <div 
@@ -1073,12 +1073,12 @@ export default function AnalyticsPage() {
           </div>
         </section>
         {/* Weekly Rhythm Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.weeklyRhythm}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.weeklyRhythmSubtitle}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.weeklyRhythmSubtitle}</p>
               </div>
 
               <div 
@@ -1139,12 +1139,12 @@ export default function AnalyticsPage() {
       {/* Culpados principais */}
       <section className="space-y-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.mainCulprits}</h2>
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.topExpenses}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.topExpensesSubtitle}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.topExpensesSubtitle}</p>
               </div>
 
               <div 
@@ -1209,7 +1209,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-3">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.evolution}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.evolutionSubtitle}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.evolutionSubtitle}</p>
               </div>
               <div 
                 className="relative"
@@ -1288,7 +1288,7 @@ export default function AnalyticsPage() {
               </div>
               <div>
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.vaultTitle}</h3>
-                <p className="text-xs text-slate-500 font-medium italic">{t.dashboard.analytics.vaultSubtitle}</p>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.vaultSubtitle}</p>
               </div>
             </div>
           </div>
@@ -1390,7 +1390,7 @@ export default function AnalyticsPage() {
       {isRecurringOpen && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Payments */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center gap-3 mb-8">
             <Clock className="text-orange-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.upcoming}</h3>
@@ -1439,7 +1439,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Recent Transactions Feed */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
           <div className="flex items-center gap-3 mb-8">
             <History className="text-blue-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.recentActivity}</h3>
