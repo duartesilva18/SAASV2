@@ -38,11 +38,13 @@ export default function DashboardLayout({
       }
       
       // Verificar se precisa aceitar termos (após onboarding)
-      if (user.is_onboarded && !user.terms_accepted) {
+      // Verificar se is_onboarded existe e é false (não undefined/null)
+      if (user.is_onboarded === true && !user.terms_accepted) {
         setShowTermsAcceptance(true);
-      } else if (!user.is_onboarded) {
+      } else if (user.is_onboarded === false) {
         setShowOnboarding(true);
       }
+      // Se is_onboarded for undefined/null, não mostrar nada (pode ser um problema de carregamento)
       
       if (user.currency && (user.currency === 'EUR' || user.currency === 'USD' || user.currency === 'BRL')) {
         setCurrency(user.currency as 'EUR' | 'USD' | 'BRL');
