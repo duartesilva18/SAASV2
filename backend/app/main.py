@@ -156,15 +156,26 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 allowed_origins_str = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
 
-# Em produção, nunca permitir '*' com allow_credentials=True
+# Em produção, garantir que sempre inclui as origens corretas
 environment = os.getenv('ENVIRONMENT', 'development')
-if environment == 'production' and ('*' in allowed_origins or not allowed_origins):
-    logger.warning("CORS configurado de forma insegura para produção! Configurando origens padrão.")
-    # Incluir domínios de produção padrão
-    allowed_origins = [
+if environment == 'production':
+    # Origens de produção padrão
+    production_origins = [
         'https://finanzen-frontend.onrender.com',
+        'https://finanzen-frontend-kj08.onrender.com',  # Incluir também o serviço duplicado temporário
         'https://finanzen.pt'
     ]
+    
+    # Se ALLOWED_ORIGINS está vazio ou contém '*', usar apenas origens de produção
+    if '*' in allowed_origins or not allowed_origins:
+        logger.warning("CORS configurado de forma insegura para produção! Configurando origens padrão.")
+        allowed_origins = production_origins
+    else:
+        # Combinar origens configuradas com origens de produção (sem duplicados)
+        for origin in production_origins:
+            if origin not in allowed_origins:
+                allowed_origins.append(origin)
+                logger.info(f"Adicionada origem de produção ao CORS: {origin}")
 
 app.add_middleware(
     CORSMiddleware,
