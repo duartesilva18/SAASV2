@@ -33,6 +33,12 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!loading) {
       if (!user) {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        console.info('[auth] layout no user. token present:', !!token);
+        if (token) {
+          refreshUser();
+          return;
+        }
         router.push('/auth/login');
         return;
       }
@@ -63,7 +69,7 @@ export default function DashboardLayout({
         setLanguage(user.language as 'pt' | 'en');
       }
     }
-  }, [user, loading, router, setCurrency, setLanguage]);
+  }, [user, loading, router, setCurrency, setLanguage, refreshUser]);
 
 
   if (loading) {

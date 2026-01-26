@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, ChevronLeft, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
+import { Mail, ChevronLeft, Sparkles, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import api from '@/lib/api';
 
@@ -15,56 +15,16 @@ function CheckEmailContent() {
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    if (!email) return;
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+      router.replace('/dashboard');
+      return;
+    }
+    router.replace('/auth/login');
+  }, [email, router]);
 
-    // 1. Listen for same-browser events (BroadcastChannel)
-    const channel = new BroadcastChannel('email-verification');
-    channel.onmessage = (event) => {
-      if (event.data?.status === 'verified') {
-        if (event.data.access_token) {
-          localStorage.setItem('token', event.data.access_token);
-        }
-        if (event.data.refresh_token) {
-          localStorage.setItem('refresh_token', event.data.refresh_token);
-        }
-        handleSuccess(true);
-      }
-    };
-
-    // 2. Polling for cross-device support (Phone -> PC)
-    const interval = setInterval(async () => {
-      try {
-        const response = await api.get(`/auth/verification-status/${encodeURIComponent(email)}`);
-        if (response.data.is_verified) {
-          handleSuccess(false);
-        }
-      } catch (err) {
-        console.error('Error checking verification:', err);
-      }
-    }, 3000);
-
-    return () => {
-      channel.close();
-      clearInterval(interval);
-    };
-  }, [email]);
-
-  const handleSuccess = (hasTokens: boolean) => {
+  const handleSuccess = () => {
     setIsVerified(true);
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#3b82f6', '#10b981', '#ffffff']
-    });
-
-    setTimeout(() => {
-      if (hasTokens) {
-        router.push('/dashboard');
-      } else {
-        router.push('/auth/login');
-      }
-    }, 3000);
   };
 
   return (
@@ -125,18 +85,6 @@ function CheckEmailContent() {
               animate={{ opacity: 1, scale: 1 }}
               className="space-y-8"
             >
-              <div className="w-24 h-24 bg-emerald-500/10 rounded-[32px] flex items-center justify-center text-emerald-500 mx-auto mb-8 shadow-2xl shadow-emerald-500/20 rotate-3 ring-4 ring-emerald-500/10">
-                <CheckCircle2 size={40} />
-              </div>
-              
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white mb-4">
-                Acesso <span className="text-emerald-500 italic">Confirmado</span>
-              </h1>
-              
-              <p className="text-slate-400 text-lg lg:text-xl font-medium leading-relaxed italic">
-                Bem-vindo ao topo. Estamos a preparar o seu <br /> cockpit financeiro...
-              </p>
-
               <div className="flex items-center justify-center gap-4 text-emerald-500">
                 <Loader2 size={20} className="animate-spin" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">A redirecionar...</span>

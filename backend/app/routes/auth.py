@@ -41,27 +41,37 @@ def validate_password(password: str) -> tuple[bool, str]:
         return False, "A senha deve conter pelo menos um número"
     return True, ""
 
-async def get_current_user(db: Session = Depends(get_db), token: str = Depends(security.oauth2_scheme)):
+async def get_current_user(request: Request, db: Session = Depends(get_db), token: str = Depends(security.oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',
         headers={'WWW-Authenticate': 'Bearer'}
     )
     try:
+        auth_header = request.headers.get("authorization")
+        token_preview = token[:10] + "..." if token else "none"
+        logger.info(
+            f'🔐 Auth header received: {bool(auth_header)} '
+            f'(token_len={len(token) if token else 0}, token_preview={token_preview}) '
+            f'from {request.client.host if request.client else "unknown"}'
+        )
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get('sub')
         if email is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        logger.warning(f'❌ JWTError ao validar token: {str(e)}')
         raise credentials_exception
     
     # Corrigido: usar email diretamente em vez de token_data não definido
     user = db.query(models.User).filter(models.User.email == email).first()
     if user is None:
+        logger.warning(f'❌ Token válido mas utilizador não encontrado: {email}')
         raise credentials_exception
+    logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
-@router.post('/register', response_model=schemas.UserResponse)
+@router.post('/register', response_model=schemas.Token)
 @limiter.limit('30/hour')
 async def register(request: Request, user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     try:
@@ -88,10 +98,6 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
             db.rollback()
         
         hashed_pw = security.get_password_hash(user_in.password)
-        # Usar secrets.token_urlsafe para token criptograficamente seguro
-        token = secrets.token_urlsafe(48)
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
-        
         # Validar código de referência se fornecido
         referrer_id = None
         referral_code = getattr(user_in, 'referral_code', None)
@@ -115,95 +121,71 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         else:
             logger.info(f'ℹ️ Nenhum código de referência fornecido no registo para {user_in.email}')
         
-        verification = models.EmailVerification(
-            email=user_in.email,
-            password_hash=hashed_pw,
-            token=token,
-            expires_at=expires_at
-        )
-        db.add(verification)
-        db.commit()
-        
-        # Adicionar referral_code ao token se existir
-        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={token}"
-        if referral_code and referrer_id:
-            verify_url += f"&ref={referral_code}"
-            logger.info(f'✅ URL de verificação criada com código de referência: {verify_url}')
-        else:
-            logger.info(f'ℹ️ URL de verificação criada sem código de referência (referral_code={referral_code}, referrer_id={referrer_id})')
-        
         # Get user language preference from user_in or default to 'pt'
         user_lang = getattr(user_in, 'language', 'pt') or 'pt'
         # Validate language (only 'pt' or 'en' supported)
         if user_lang not in ['pt', 'en']:
             user_lang = 'pt'
-        t = get_email_translation(user_lang, 'verify_email')
-        
-        html = f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
-                .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
-                .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
-                .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
-                .logo span {{ color: #3b82f6; font-style: italic; }}
-                .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
-                .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
-                .btn {{ display: inline-block; padding: 20px 45px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 20px; font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 2px; margin: 35px 0; transition: all 0.3s ease; box-shadow: 0 15px 30px rgba(59, 130, 246, 0.3); }}
-                .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
-                .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="logo">Finly</div>
-                </div>
-                <div class="content">
-                    <h2>{t['title']}</h2>
-                    <p>{t['welcome']}</p>
-                    <a href="{verify_url}" class="btn">{t['button']}</a>
-                    <p class="security-notice">{t['security_notice']}</p>
-                </div>
-                <div class="footer">
-                    {t['footer']}
-                </div>
-            </div>
-        </body>
-        </html>
-        '''
-        
-        message = MessageSchema(
-            subject=t['subject'],
-            recipients=[user_in.email],
-            body=html,
-            subtype=MessageType.html
+
+        user = models.User(
+            email=user_in.email,
+            password_hash=hashed_pw,
+            is_email_verified=True,
+            language=user_lang,
+            referrer_id=referrer_id
         )
-        
-        from ..core.dependencies import conf
-        fm = FastMail(conf)
-        try:
-            await fm.send_message(message)
-        except Exception as e:
-            logger.error(f'Erro ao enviar email de verificação: {str(e)}')
-            # Não bloquear o registo se o email falhar
-        
-        logger.info(f'Novo registo pendente (aguardando verificação): {user_in.email}')
-        
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        # Criar referência de afiliado se aplicável
+        if referrer_id and referral_code:
+            existing_referral = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == user.id
+            ).first()
+
+            if not existing_referral:
+                ip_address = request.client.host if request.client else None
+                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+
+                referral = models.AffiliateReferral(
+                    referrer_id=referrer_id,
+                    referred_user_id=user.id,
+                    referral_code=referral_code,
+                    has_subscribed=False,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.add(referral)
+                db.commit()
+                logger.info(f'✅ Referência criada: {referral_code} -> utilizador {user.email}')
+            else:
+                logger.warning(f'⚠️ Referência já existe para {user.email}, não criando duplicado')
+        else:
+            logger.info(f'ℹ️ Nenhuma referência criada para {user.email} (referral_code={referral_code}, referrer_id={referrer_id})')
+
+        new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
+        db.add(new_workspace)
+        db.commit()
+        db.refresh(new_workspace)
+
+        # Criar categorias padrão (Investimento e Fundo de Emergência)
+        categories_map = create_default_categories(db, new_workspace.id)
+
+        # Criar transações de exemplo para ajudar o Telegram a categorizar
+        create_seed_transactions(db, new_workspace.id, categories_map)
+
+        logger.info(f'Utilizador criado e verificado: {user.email}')
+        await log_action(db, action='register_success', user_id=user.id, details=f'Novo utilizador registado: {user.email}', request=request)
+
+        access_token = security.create_access_token(subject=user.email)
+        refresh_token = security.create_refresh_token(subject=user.email)
+        logger.info(f'🔑 Tokens gerados para {user.email} (access_len={len(access_token)}, refresh_len={len(refresh_token)})')
+
         return {
-            'id': uuid.uuid4(),
-            'email': user_in.email,
-            'is_active': True,
-            'is_admin': False,
-            'is_email_verified': False,
-            'is_onboarded': False,
-            'marketing_opt_in': False,
-            'currency': 'EUR',
-            'language': user_lang,
-            'created_at': datetime.now(timezone.utc)
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'token_type': 'bearer'
         }
     except HTTPException:
         # Re-raise HTTPExceptions (400, 401, etc.) para manter o status code correto
@@ -425,6 +407,7 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
     
     access_token = security.create_access_token(subject=user.email)
     refresh_token = security.create_refresh_token(subject=user.email)
+    logger.info(f'🔑 Tokens gerados para {user.email} (access_len={len(access_token)}, refresh_len={len(refresh_token)})')
     
     return {
         'message': 'Email verificado com sucesso!',

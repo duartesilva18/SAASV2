@@ -167,14 +167,54 @@ function RegisterPageContent() {
     setLoading(true);
     setError('');
     try {
-      await api.post('/auth/register', {
+      const response = await api.post('/auth/register', {
         email,
         password,
         language,
         referral_code: referralCode || undefined
       });
-      
+
       setSuccess(true);
+
+      let accessToken = response.data?.access_token;
+      let refreshToken = response.data?.refresh_token;
+      console.info('[auth] register response tokens', {
+        accessToken: !!accessToken,
+        refreshToken: !!refreshToken
+      });
+
+      // Fallback: if register doesn't return tokens, do login
+      if (!accessToken) {
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+        const loginResponse = await api.post('/auth/login', formData, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        accessToken = loginResponse.data?.access_token;
+        refreshToken = loginResponse.data?.refresh_token;
+        console.info('[auth] login fallback tokens', {
+          accessToken: !!accessToken,
+          refreshToken: !!refreshToken
+        });
+      }
+
+      if (!accessToken) {
+        throw new Error('Não foi possível iniciar sessão automaticamente.');
+      }
+
+      const storage = localStorage;
+      storage.setItem('token', accessToken);
+      if (refreshToken) {
+        storage.setItem('refresh_token', refreshToken);
+      }
+
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      await refreshUser();
+
       confetti({
         particleCount: 150,
         spread: 70,
@@ -182,12 +222,15 @@ function RegisterPageContent() {
         colors: ['#10b981', '#3b82f6', '#ffffff']
       });
 
+      router.replace('/dashboard');
       setTimeout(() => {
-        router.push(`/auth/check-email?email=${encodeURIComponent(email)}`);
-      }, 3000);
+        if (window.location.pathname.startsWith('/auth/')) {
+          window.location.href = '/dashboard';
+        }
+      }, 1200);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
-      setError(detail || t.auth.register.error);
+      setError(detail || err.message || t.auth.register.error);
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
     } finally {

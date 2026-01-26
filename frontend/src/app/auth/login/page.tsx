@@ -99,15 +99,18 @@ function LoginPageContent() {
     }
     setLoading(true);
     try {
-      const formData = new FormData();
+      const formData = new URLSearchParams();
       formData.append('username', email);
       formData.append('password', password);
-      const response = await api.post('/auth/login', formData);
+      const response = await api.post('/auth/login', formData, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem('token', response.data.access_token);
       if (response.data.refresh_token) {
         storage.setItem('refresh_token', response.data.refresh_token);
       }
+      api.defaults.headers.common.Authorization = `Bearer ${response.data.access_token}`;
       await refreshUser();
       
       // Prefetch dos dados principais em background para otimizar carregamento

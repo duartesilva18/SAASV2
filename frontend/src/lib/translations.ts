@@ -240,7 +240,7 @@ export const translations = {
                 and: "e",
                 privacyLink: "Política de Privacidade",
                 successTitle: "Conta criada com sucesso!",
-                successMessage: "Enviamos um email de verificação. Por favor, verifica a tua caixa de entrada para ativares a tua conta."
+                successMessage: "Conta criada com sucesso! A iniciar sessão automaticamente."
             },
             forgotPassword: {
                 title: "Recuperar ",
@@ -1278,7 +1278,7 @@ export const translations = {
                 and: "and",
                 privacyLink: "Privacy Policy",
                 successTitle: "Account created successfully!",
-                successMessage: "We've sent a verification email. Please check your inbox to activate your account."
+                successMessage: "Account created successfully! Logging you in automatically."
             },
             forgotPassword: {
                 title: "Recover ",

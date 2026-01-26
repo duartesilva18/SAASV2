@@ -6,41 +6,69 @@ import { motion } from 'framer-motion';
 import { Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import confetti from 'canvas-confetti';
+import { useUser } from '@/lib/UserContext';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { refreshUser } = useUser();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('A validar o seu acesso...');
 
   useEffect(() => {
     const verify = async () => {
+      const existingToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (existingToken) {
+        router.replace('/dashboard');
+        return;
+      }
+
       if (!token) {
-        setStatus('error');
-        setMessage('Token de verificação não encontrado.');
+        router.replace('/auth/login');
         return;
       }
 
       try {
         const response = await api.get(`/auth/verify-email?token=${token}`);
         
-        // Guardar tokens se vierem na resposta
-        if (response.data.access_token) {
-          localStorage.setItem('token', response.data.access_token);
+        const accessToken = response.data.access_token;
+        const refreshToken = response.data.refresh_token;
+
+        if (!accessToken) {
+          setStatus('error');
+          setMessage('Erro ao iniciar sessão após a verificação. Tenta novamente.');
+          return;
         }
-        if (response.data.refresh_token) {
-          localStorage.setItem('refresh_token', response.data.refresh_token);
+
+        // Guardar tokens se vierem na resposta
+        localStorage.setItem('token', accessToken);
+        if (refreshToken) {
+          localStorage.setItem('refresh_token', refreshToken);
         }
 
         // Notificar outras abas (como a check-email)
         const channel = new BroadcastChannel('email-verification');
         channel.postMessage({ 
           status: 'verified', 
-          access_token: response.data.access_token,
-          refresh_token: response.data.refresh_token
+          access_token: accessToken,
+          refresh_token: refreshToken
         });
         channel.close();
+
+        // Atualizar o contexto do utilizador antes de redirecionar
+        api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        try {
+          await api.get('/auth/me', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+        } catch (err: any) {
+          setStatus('error');
+          setMessage(err.response?.data?.detail || 'Erro ao validar a sessão após a verificação.');
+          return;
+        }
+
+        await refreshUser();
 
         setStatus('success');
         setMessage('Email verificado com sucesso!');
@@ -52,9 +80,10 @@ function VerifyEmailContent() {
           colors: ['#3b82f6', '#10b981', '#ffffff']
         });
 
+        // Redirecionar após um pequeno delay para garantir que tudo está atualizado
         setTimeout(() => {
-          router.push('/dashboard');
-        }, 3000);
+          router.replace('/dashboard');
+        }, 1500);
       } catch (err: any) {
         setStatus('error');
         setMessage(err.response?.data?.detail || 'Erro ao verificar o email.');
