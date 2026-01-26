@@ -39,12 +39,22 @@ export default function DashboardLayout({
       
       // Verificar se precisa aceitar termos (após onboarding)
       // Verificar se is_onboarded existe e é false (não undefined/null)
-      if (user.is_onboarded === true && !user.terms_accepted) {
-        setShowTermsAcceptance(true);
+      if (user.is_onboarded === true) {
+        // Se já completou onboarding, garantir que o modal não aparece
+        setShowOnboarding(false);
+        if (!user.terms_accepted) {
+          setShowTermsAcceptance(true);
+        } else {
+          setShowTermsAcceptance(false);
+        }
       } else if (user.is_onboarded === false) {
         setShowOnboarding(true);
+        setShowTermsAcceptance(false);
+      } else {
+        // Se is_onboarded for undefined/null, não mostrar nada (pode ser um problema de carregamento)
+        setShowOnboarding(false);
+        setShowTermsAcceptance(false);
       }
-      // Se is_onboarded for undefined/null, não mostrar nada (pode ser um problema de carregamento)
       
       if (user.currency && (user.currency === 'EUR' || user.currency === 'USD' || user.currency === 'BRL')) {
         setCurrency(user.currency as 'EUR' | 'USD' | 'BRL');
