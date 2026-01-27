@@ -117,18 +117,12 @@ class Transaction(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
-    __table_args__ = (
-        CheckConstraint('amount_cents <> 0'),
-    )
-    
     workspace = relationship('Workspace', back_populates='transactions')
     category = relationship('Category', back_populates='transactions')
     installment_group = relationship('InstallmentGroup', back_populates='transactions')
     
     __table_args__ = (
         CheckConstraint('amount_cents <> 0'),
-        # Índices compostos para queries frequentes
-        # Nota: SQLAlchemy cria índices automaticamente para ForeignKeys, mas adicionamos índices compostos
     )
 
 class SystemSetting(Base):

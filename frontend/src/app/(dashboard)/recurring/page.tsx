@@ -32,8 +32,7 @@ interface RecurringTransaction {
 }
 
 export default function RecurringPage() {
-  const { t: tRaw, formatCurrency, currency } = useTranslation();
-  const t = tRaw as any;
+  const { t, formatCurrency, currency } = useTranslation();
   const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -118,9 +117,9 @@ export default function RecurringPage() {
       day_of_month: item.day_of_month,
       category_id: item.category_id || '',
       process_automatically: item.process_automatically,
-      type: type as any
+      type: type as 'income' | 'expense'
     });
-    setActiveTab(type as any);
+    setActiveTab(type as 'income' | 'expense');
     setShowAddModal(true);
   };
 

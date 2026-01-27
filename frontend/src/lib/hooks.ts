@@ -1,9 +1,20 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import api, { fetcher } from './api';
 import { useUser } from './UserContext';
 import { DEMO_CATEGORIES } from './mockData';
+
+/** Debounce valor para reduzir cálculos em pesquisas/filtros (ex.: 300ms) */
+export function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 /**
  * Filtra transações de seed (1 cêntimo) que são apenas para treinar o Telegram

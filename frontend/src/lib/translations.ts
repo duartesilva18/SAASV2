@@ -618,6 +618,11 @@ export const translations = {
                 fixedIncome: "Receitas Fixas",
                 fixedExpenses: "Despesas Fixas",
                 fixedIncomes: "Receitas Fixas",
+                netZenBalance: "Saldo Zen Líquido",
+                zenEquilibrium: "Equilíbrio Zen",
+                criticalAttention: "Atenção Crítica",
+                descriptionPlaceholder: "Insira a descrição",
+                selectCategory: "Selecionar Categoria",
                 validation: {
                     nameRequired: "O nome é obrigatório",
                     positiveAmount: "O valor deve ser maior que zero",
@@ -896,7 +901,18 @@ export const translations = {
                 withdrawalFrom: "Resgate de",
                 activityRecord: "Registo de",
                 activity: "Atividade",
-                yourAbundanceDiary: "Teu Diário de Abundância"
+                yourAbundanceDiary: "Teu Diário de Abundância",
+                noResultsTitle: "Nenhuma transação encontrada",
+                noResultsHint: "Tenta ajustar os teus filtros ou pesquisa por algo diferente.",
+                noDataChart: "Sem dados",
+                paginationShowing: "Mostrando",
+                paginationTo: "a",
+                paginationOf: "de",
+                closeDetails: "Fechar Detalhes",
+                descriptionPlaceholder: "Insira o nome",
+                investmentsAndSavings: "Investimentos e Poupança",
+                typeLabel: "Tipo:",
+                deleteSuccess: "Transação eliminada."
             },
             vault: {
                 title: "Cofre de Reservas",
@@ -1795,7 +1811,18 @@ export const translations = {
                 withdrawalFrom: "Withdrawal from",
                 activityRecord: "Activity",
                 activity: "Record",
-                yourAbundanceDiary: "Your Abundance Diary"
+                yourAbundanceDiary: "Your Abundance Diary",
+                noResultsTitle: "No transactions found",
+                noResultsHint: "Try adjusting your filters or search for something different.",
+                noDataChart: "No data",
+                paginationShowing: "Showing",
+                paginationTo: "to",
+                paginationOf: "of",
+                closeDetails: "Close details",
+                descriptionPlaceholder: "Enter name",
+                investmentsAndSavings: "Investments & Savings",
+                typeLabel: "Type:",
+                deleteSuccess: "Transaction deleted."
             },
             recurring: {
                 title: "Monthly Subscriptions",
@@ -2284,4 +2311,11 @@ export const translations = {
     //     // ... resto das traduções
     // },
 };
+
+/** Tipo de um locale de tradução (ex.: pt ou en). Usar em vez de `as any` ao aceder a t. */
+export type TranslationLocale = typeof translations.pt;
+/** Tipo das chaves da secção dashboard.transactions. */
+export type DashboardTransactionsT = TranslationLocale['dashboard']['transactions'];
+/** Tipo das chaves da secção dashboard.guide. */
+export type DashboardGuideT = TranslationLocale['dashboard']['guide'];
 

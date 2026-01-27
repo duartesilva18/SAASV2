@@ -16,7 +16,19 @@ import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { TransactionSkeleton } from '@/components/LoadingSkeleton';
 import PageLoading from '@/components/PageLoading';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { useTransactions, useCategories, useDebouncedValue } from '@/lib/hooks';
+import dynamic from 'next/dynamic';
+import { List } from 'react-window';
+import { ChartSkeleton } from '@/components/LoadingSkeleton';
+
+const TransactionChartsPanel = dynamic(
+  () => import('@/components/TransactionChartsPanel'),
+  { ssr: false, loading: () => <div className="space-y-6 lg:space-y-8"><ChartSkeleton /><ChartSkeleton /></div> }
+);
+
+const VIRTUALIZE_THRESHOLD = 30;
+const ROW_HEIGHT = 72;
+const VIRTUAL_LIST_HEIGHT = 400;
 
 interface Transaction {
   id: string;
@@ -36,13 +48,16 @@ interface Category {
 }
 
 function TransactionsPageContent() {
-  const { t: tRaw, formatCurrency, currency } = useTranslation();
-  const t = tRaw as any;
+  const { t, formatCurrency, currency } = useTranslation();
   const searchParams = useSearchParams();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { transactions: transactionsFromHook, isLoading: transactionsLoading, mutate: mutateTransactions } = useTransactions();
+  const { categories: categoriesFromHook, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories();
+  const transactions = (transactionsFromHook as Transaction[] | undefined) ?? [];
+  const categories = (categoriesFromHook as Category[] | undefined) ?? [];
+  const loading = transactionsLoading || categoriesLoading;
+
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [activeTab, setActiveTab] = useState<'all' | 'income' | 'expense'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -67,37 +82,20 @@ function TransactionsPageContent() {
     transaction_date: new Date().toISOString().split('T')[0]
   });
 
-  const fetchData = async () => {
-    try {
-      const [transRes, catRes] = await Promise.all([
-        api.get('/transactions/'),
-        api.get('/categories/')
-      ]);
-      // Filtrar transações de seed (1 cêntimo) - não devem aparecer nem ser contabilizadas
-      setTransactions(transRes.data.filter((t: any) => Math.abs(t.amount_cents) !== 1));
-      setCategories(catRes.data);
-    } catch (err: any) {
-      console.error('Erro ao carregar dados:', err);
-      
-      // Se for erro de rede, mostrar mensagem mais útil
-      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-        console.error('Erro de rede: O servidor backend pode não estar a correr. Verifica se o servidor está ativo em', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refetchData = useMemo(() => () => {
+    mutateTransactions();
+    mutateCategories();
+  }, [mutateTransactions, mutateCategories]);
 
+  // Atualizar dados a cada 60s apenas quando o separador está visível
   useEffect(() => {
-    fetchData();
-    
-    // Atualizar dados automaticamente a cada 60 segundos (reduzido de 30s para melhor performance)
     const interval = setInterval(() => {
-      fetchData();
-    }, 60000); // 60 segundos
-    
+      if (typeof document !== 'undefined' && !document.hidden) {
+        refetchData();
+      }
+    }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refetchData]);
 
   // Verificar parâmetros de URL para abrir modal de cofre
   useEffect(() => {
@@ -122,24 +120,19 @@ function TransactionsPageContent() {
 
   const filteredTransactions = useMemo(() => {
     return [...transactions]
-      .filter(t => {
-        const cat = categories.find(c => c.id === t.category_id);
-        const matchesSearch = t.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      .filter(tx => {
+        const cat = categories.find(c => c.id === tx.category_id);
+        const matchesSearch = tx.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
         
-        // Determinar tipo da transação: se não houver categoria, usar sinal do amount_cents
         let transactionType: 'income' | 'expense' | null = null;
-        if (cat) {
-          transactionType = cat.type;
-        } else {
-          // Sem categoria: usar sinal do amount_cents
-          transactionType = t.amount_cents > 0 ? 'income' : 'expense';
-        }
+        if (cat) transactionType = cat.type;
+        else transactionType = tx.amount_cents > 0 ? 'income' : 'expense';
         
         const matchesTab = activeTab === 'all' || transactionType === activeTab;
-        const matchesCategory = selectedCategory === 'all' || t.category_id === selectedCategory;
+        const matchesCategory = selectedCategory === 'all' || tx.category_id === selectedCategory;
         return matchesSearch && matchesTab && matchesCategory;
       });
-  }, [transactions, categories, searchTerm, activeTab, selectedCategory]);
+  }, [transactions, categories, debouncedSearchTerm, activeTab, selectedCategory]);
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const paginatedTransactions = useMemo(() => {
@@ -149,7 +142,7 @@ function TransactionsPageContent() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeTab, selectedCategory]);
+  }, [debouncedSearchTerm, activeTab, selectedCategory]);
 
   const stats = useMemo(() => {
     // Backend garante sinais corretos: income > 0, expense < 0
@@ -320,7 +313,7 @@ function TransactionsPageContent() {
         transaction_date: new Date().toISOString().split('T')[0]
       });
       // Atualizar dados imediatamente após criar/editar
-      await fetchData();
+      refetchData();
     } catch (err: any) {
       console.error('Erro ao processar transação:', err);
       console.error('Resposta do erro:', err.response?.data);
@@ -364,11 +357,11 @@ function TransactionsPageContent() {
       console.log('Eliminando transação com ID:', transactionId);
       
       await api.delete(`/transactions/${transactionId}`);
-      setToastInfo({ message: "Transação eliminada.", type: 'success', isVisible: true });
+      setToastInfo({ message: t.dashboard.transactions.deleteSuccess, type: 'success', isVisible: true });
       setTransactionToDelete(null);
       setSelectedTransaction(null);
       // Atualizar dados imediatamente após eliminar
-      await fetchData();
+      refetchData();
     } catch (err: any) {
       console.error('Erro ao eliminar transação:', err);
       console.error('ID da transação:', transactionToDelete);
@@ -456,10 +449,10 @@ function TransactionsPageContent() {
       <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8">
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex items-center gap-2 sm:gap-4 bg-slate-950/50 border border-slate-800 rounded-2xl p-1.5 w-full">
-            {['all', 'income', 'expense'].map((tab) => (
+            {(['all', 'income', 'expense'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab as any)}
+                onClick={() => setActiveTab(tab)}
                 className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                   activeTab === tab 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
@@ -514,6 +507,64 @@ function TransactionsPageContent() {
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+            {filteredTransactions.length > VIRTUALIZE_THRESHOLD ? (
+              <>
+                <div className="grid grid-cols-[minmax(80px,1fr)_2fr_minmax(100px,1fr)_minmax(80px,1fr)] min-w-[600px] px-4 sm:px-6 md:px-8 py-4 border-b border-slate-800/50 bg-slate-900/20 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+                  <span>{t.dashboard.transactions.table.date}</span>
+                  <span>{t.dashboard.transactions.table.description}</span>
+                  <span className="hidden sm:inline">{t.dashboard.transactions.table.category}</span>
+                  <span className="text-right">{t.dashboard.transactions.table.amount}</span>
+                </div>
+                <List
+                  rowCount={filteredTransactions.length}
+                  rowHeight={ROW_HEIGHT}
+                  rowProps={{
+                    transactions: filteredTransactions,
+                    categories,
+                    formatCurrency,
+                    setSelectedTransaction,
+                    noCategory: t.dashboard.transactions.noCategory,
+                  }}
+                  rowComponent={({ index, style, transactions: txList, categories: catList, formatCurrency: fmt, setSelectedTransaction: setSel, noCategory: noCat }) => {
+                    const transaction = txList[index];
+                    const cat = catList.find(c => c.id === transaction.category_id);
+                    const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
+                    return (
+                      <div
+                        role="row"
+                        style={style as React.CSSProperties}
+                        onClick={() => setSel(transaction)}
+                        className="grid grid-cols-[minmax(80px,1fr)_2fr_minmax(100px,1fr)_minmax(80px,1fr)] min-w-[600px] px-4 sm:px-6 md:px-8 py-4 border-b border-slate-800/30 cursor-pointer hover:bg-white/[0.02] transition-colors items-center gap-2"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
+                          <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
+                            {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <p className="text-sm font-black text-white truncate">{transaction.description}</p>
+                          <div className="flex items-center gap-2 sm:hidden">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{cat?.name || noCat}</span>
+                          </div>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">{cat?.name || noCat}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
+                            {isIncome ? '+' : '-'}{fmt(Math.abs(transaction.amount_cents) / 100)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                  style={{ height: VIRTUAL_LIST_HEIGHT }}
+                />
+              </>
+            ) : (
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-800/50">
@@ -523,80 +574,80 @@ function TransactionsPageContent() {
                   <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 text-right">{t.dashboard.transactions.table.amount}</th>
                 </tr>
               </thead>
-            <tbody className="divide-y divide-slate-800/30">
-              <AnimatePresence mode="popLayout">
-                {paginatedTransactions.map((transaction, index) => {
-                  const cat = categories.find(c => c.id === transaction.category_id);
-                  return (
-                    <motion.tr 
-                      key={transaction.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => setSelectedTransaction(transaction)}
-                      className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
-                          <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
-                            {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
-                          <div className="flex items-center gap-2 sm:hidden">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{cat?.name || t.dashboard.transactions.noCategory}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 hidden sm:table-cell">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
-                        {(() => {
-                          // Determinar tipo: usar categoria se existir, senão usar sinal do amount_cents
-                          const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
-                          return (
-                            <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
-                              {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+              <tbody className="divide-y divide-slate-800/30">
+                <AnimatePresence mode="popLayout">
+                  {paginatedTransactions.map((transaction, index) => {
+                    const cat = categories.find(c => c.id === transaction.category_id);
+                    return (
+                      <motion.tr 
+                        key={transaction.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => setSelectedTransaction(transaction)}
+                        className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      >
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
+                            <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
+                              {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
                             </span>
-                          );
-                        })()}
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
-            </tbody>
-          </table>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
+                            <div className="flex items-center gap-2 sm:hidden">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 hidden sm:table-cell">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
+                          {(() => {
+                            const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
+                            return (
+                              <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
+                                {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
+            )}
           
           {filteredTransactions.length === 0 && (
             <div className="py-32 flex flex-col items-center justify-center text-center">
               <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center mb-8 border border-slate-800 shadow-2xl">
                 <SearchX size={32} className="text-slate-700 animate-pulse" />
               </div>
-              <h3 className="text-xl font-black text-white mb-2">Nenhuma transação encontrada</h3>
+              <h3 className="text-xl font-black text-white mb-2">{t.dashboard.transactions.noResultsTitle}</h3>
               <p className="text-slate-500 text-sm font-medium italic max-w-xs mx-auto">
-                Tenta ajustar os teus filtros ou pesquisa por algo diferente.
+                {t.dashboard.transactions.noResultsHint}
               </p>
             </div>
           )}
           </div>
         </div>
 
-        {/* Pagination Controls */}
-        {filteredTransactions.length > itemsPerPage && (
+        {/* Pagination Controls — apenas quando não virtualizado e há mais de uma página */}
+        {filteredTransactions.length <= VIRTUALIZE_THRESHOLD && filteredTransactions.length > itemsPerPage && (
           <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
-              Mostrando <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> de <span className="text-white">{filteredTransactions.length}</span>
+              {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>
             </p>
             
             <div className="flex items-center gap-2">
@@ -645,210 +696,18 @@ function TransactionsPageContent() {
         )}
         </section>
 
-        {/* Right: Charts */}
-        <div className="space-y-6 lg:space-y-8">
-          {/* Chart 1: Top Categories Bar Chart */}
-          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8 shadow-2xl">
-            <div className="mb-4 sm:mb-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Top</p>
-              <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">Categorias</h3>
-            </div>
-            {(() => {
-              // Calcular top categorias por valor gasto
-              const categoryData = transactions.reduce((acc: any, t) => {
-                const cat = categories.find(c => c.id === t.category_id);
-                if (!cat || cat.vault_type !== 'none' || cat.type !== 'expense') return acc;
-                
-                const key = cat.id;
-                if (!acc[key]) {
-                  acc[key] = {
-                    name: cat.name,
-                    value: 0,
-                    color: cat.color_hex
-                  };
-                }
-                acc[key].value += Math.abs(t.amount_cents) / 100;
-                return acc;
-              }, {});
-              
-              const chartData = Object.values(categoryData)
-                .sort((a: any, b: any) => b.value - a.value)
-                .slice(0, 5)
-                .reverse(); // Inverter para mostrar maior em cima
-              
-              return chartData.length > 0 ? (
-                <div className="h-48 sm:h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis 
-                        type="number"
-                        tick={{ fill: '#94a3b8', fontSize: 9 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(value) => formatCurrency(value)}
-                      />
-                      <YAxis 
-                        type="category"
-                        dataKey="name"
-                        tick={{ fill: '#94a3b8', fontSize: 9 }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={60}
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                        itemStyle={{ color: '#f1f5f9', fontWeight: 'bold' }}
-                        labelStyle={{ color: '#94a3b8' }}
-                        cursor={{ fill: 'transparent' }}
-                        formatter={(value: any) => [formatCurrency(value), t.dashboard.transactions.value]}
-                      />
-                      <Bar dataKey="value" name={t.dashboard.transactions.value} radius={[0, 6, 6, 0]} activeBar={{ fill: '#475569', opacity: 0.85 }}>
-                        {chartData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center text-slate-600">
-                  <p className="text-xs font-black uppercase">Sem dados</p>
-                </div>
-              );
-            })()}
-          </section>
-
-          {/* Chart 2: Weekly/Daily Evolution */}
-          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8 shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Evolução</p>
-                <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
-                  {evolutionPeriod === 'weekly' ? 'Semanal' : 'Diária'}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-950/50 border border-slate-800 rounded-xl p-1 w-full sm:w-auto">
-                <button
-                  onClick={() => setEvolutionPeriod('weekly')}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                    evolutionPeriod === 'weekly'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  Semanal
-                </button>
-                <button
-                  onClick={() => setEvolutionPeriod('daily')}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                    evolutionPeriod === 'daily'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  Diária
-                </button>
-              </div>
-            </div>
-            {(() => {
-              // Agrupar transações por semana ou dia
-              const periodData = transactions.reduce((acc: any, t) => {
-                const date = new Date(t.transaction_date);
-                let periodKey: string;
-                
-                if (evolutionPeriod === 'weekly') {
-                  // Calcular semana (ano-semana)
-                  const year = date.getFullYear();
-                  const startOfYear = new Date(year, 0, 1);
-                  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-                  const week = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-                  periodKey = `${year}-W${String(week).padStart(2, '0')}`;
-                } else {
-                  // Diário
-                  periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                }
-                
-                if (!acc[periodKey]) {
-                  acc[periodKey] = { period: periodKey, income: 0, expenses: 0 };
-                }
-                
-                const cat = categories.find(c => c.id === t.category_id);
-                const isIncome = cat ? cat.type === 'income' : t.amount_cents > 0;
-                
-                if (isIncome && (!cat || cat.vault_type === 'none')) {
-                  acc[periodKey].income += Math.abs(t.amount_cents) / 100;
-                } else if (!isIncome && (!cat || cat.vault_type === 'none')) {
-                  acc[periodKey].expenses += Math.abs(t.amount_cents) / 100;
-                }
-                
-                return acc;
-              }, {});
-              
-              const chartData = Object.values(periodData)
-                .sort((a: any, b: any) => a.period.localeCompare(b.period))
-                .slice(-(evolutionPeriod === 'weekly' ? 8 : 14)) // Últimas 8 semanas ou 14 dias
-                .map((item: any) => {
-                  if (evolutionPeriod === 'weekly') {
-                    const [year, week] = item.period.split('-W');
-                    const weekNum = parseInt(week);
-                    return {
-                      ...item,
-                      label: `Sem ${weekNum}`
-                    };
-                  } else {
-                    const date = new Date(item.period);
-                    return {
-                      ...item,
-                      label: date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
-                    };
-                  }
-                });
-              
-              return chartData.length > 0 ? (
-                <div className="h-48 sm:h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis 
-                        dataKey="label" 
-                        tick={{ fill: '#94a3b8', fontSize: 9 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fill: '#94a3b8', fontSize: 9 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(value) => formatCurrency(value)}
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                        formatter={(value: any) => formatCurrency(value)}
-                      />
-                      <Area type="monotone" dataKey="income" name={t.dashboard.analytics.income} stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" />
-                      <Area type="monotone" dataKey="expenses" name={t.dashboard.analytics.expenses} stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center text-slate-600">
-                  <p className="text-xs font-black uppercase">Sem dados</p>
-                </div>
-              );
-            })()}
-          </section>
-        </div>
+        {/* Right: Charts — lazy-loaded para reduzir bundle inicial */}
+        <TransactionChartsPanel
+          transactions={transactions}
+          categories={categories}
+          evolutionPeriod={evolutionPeriod}
+          setEvolutionPeriod={setEvolutionPeriod}
+          formatCurrency={formatCurrency}
+          noDataChart={t.dashboard.transactions.noDataChart}
+          valueLabel={t.dashboard.transactions.value}
+          incomeLabel={t.dashboard.analytics.income}
+          expensesLabel={t.dashboard.analytics.expenses}
+        />
       </div>
 
       {/* Add/Edit Modal */}
@@ -893,7 +752,7 @@ function TransactionsPageContent() {
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Insira o nome"
+                        placeholder={t.dashboard.transactions.descriptionPlaceholder}
                         className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
                       />
                     </div>
@@ -959,7 +818,7 @@ function TransactionsPageContent() {
                             <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
                           ))}
                         </optgroup>
-                        <optgroup label="Investimentos e Poupança" className="bg-slate-900">
+                        <optgroup label={t.dashboard.transactions.investmentsAndSavings} className="bg-slate-900">
                           {categories.filter(c => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
                             <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
                           ))}
@@ -974,16 +833,15 @@ function TransactionsPageContent() {
                           {(() => {
                             const selectedCat = categories.find(c => c.id === formData.category_id);
                             if (selectedCat) {
-                              const isVaultInReceitas = selectedCat.vault_type !== 'none' && 
-                                document.querySelector('optgroup[label="Receitas"]')?.querySelector(`option[value="${formData.category_id}"]`);
+                              const isIncomeOrResgate = selectedCat.type === 'income' || selectedCat.vault_type !== 'none';
                               
                               return (
                                 <>
-                                  <span className="text-slate-500">Tipo:</span>
+                                  <span className="text-slate-500">{t.dashboard.transactions.typeLabel}</span>
                                   <span className={`font-black uppercase tracking-widest ${
-                                    selectedCat.type === 'income' || isVaultInReceitas ? 'text-emerald-400' : 'text-red-400'
+                                    isIncomeOrResgate ? 'text-emerald-400' : 'text-red-400'
                                   }`}>
-                                    {selectedCat.type === 'income' || isVaultInReceitas ? t.dashboard.categories.income : t.dashboard.categories.expense}
+                                    {isIncomeOrResgate ? t.dashboard.categories.income : t.dashboard.categories.expense}
                                   </span>
                                   {selectedCat.vault_type !== 'none' && (
                                     <>
@@ -1002,10 +860,6 @@ function TransactionsPageContent() {
                         {(() => {
                           const selectedCat = categories.find(c => c.id === formData.category_id);
                           if (selectedCat && selectedCat.vault_type === 'emergency') {
-                            // Verificar se está no grupo "Receitas" (resgate)
-                            const selectElement = document.querySelector('select[value="' + formData.category_id + '"]') as HTMLSelectElement;
-                            const isInReceitasGroup = selectElement?.querySelector('optgroup[label="Receitas"] option[value="' + formData.category_id + '"]');
-                            
                             return (
                               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-blue-400 text-[10px] font-medium">
                                 💡 <strong>{t.dashboard.transactions.vaultTip}</strong> {t.dashboard.transactions.vaultTipText}
@@ -1123,7 +977,7 @@ function TransactionsPageContent() {
                   onClick={() => setSelectedTransaction(null)}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-white transition-colors"
                 >
-                  Fechar Detalhes
+                  {t.dashboard.transactions.closeDetails}
                 </button>
               </div>
             </motion.div>

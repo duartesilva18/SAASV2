@@ -42,131 +42,21 @@ if sys.platform == 'win32':
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
-# Migração: Atualizar tabela category_mapping_cache se necessário
-def migrate_category_mapping_cache():
-    """Migra a tabela category_mapping_cache para o novo schema"""
-    from sqlalchemy import text, inspect
-    from .core.dependencies import engine
-    
-    inspector = inspect(engine)
-    columns = {col['name']: col for col in inspector.get_columns('category_mapping_cache')} if 'category_mapping_cache' in inspector.get_table_names() else {}
-    
-    with engine.begin() as conn:  # Usar begin() para transações automáticas
-        # Verificar se a coluna category_name existe
-        if 'category_name' not in columns:
-            logger.info("Adicionando coluna category_name à tabela category_mapping_cache...")
-            try:
-                conn.execute(text("""
-                    ALTER TABLE category_mapping_cache 
-                    ADD COLUMN category_name VARCHAR(100) NOT NULL DEFAULT 'Outros'
-                """))
-                logger.info("Coluna category_name adicionada com sucesso")
-            except Exception as e:
-                logger.warning(f"Erro ao adicionar category_name (pode já existir): {e}")
-        
-        # Verificar se a coluna is_global existe
-        if 'is_global' not in columns:
-            logger.info("Adicionando coluna is_global à tabela category_mapping_cache...")
-            try:
-                conn.execute(text("""
-                    ALTER TABLE category_mapping_cache 
-                    ADD COLUMN is_global BOOLEAN NOT NULL DEFAULT FALSE
-                """))
-                logger.info("Coluna is_global adicionada com sucesso")
-            except Exception as e:
-                logger.warning(f"Erro ao adicionar is_global (pode já existir): {e}")
-        
-        # Tornar workspace_id nullable se ainda não for
-        if 'workspace_id' in columns and not columns['workspace_id']['nullable']:
-            logger.info("Tornando workspace_id nullable na tabela category_mapping_cache...")
-            try:
-                # Primeiro, remover o constraint único antigo se existir
-                try:
-                    conn.execute(text("ALTER TABLE category_mapping_cache DROP CONSTRAINT IF EXISTS unique_mapping"))
-                except:
-                    pass
-                
-                # Tornar nullable
-                conn.execute(text("""
-                    ALTER TABLE category_mapping_cache 
-                    ALTER COLUMN workspace_id DROP NOT NULL
-                """))
-                
-                # Adicionar novo constraint único (permite NULL)
-                # Nota: PostgreSQL trata NULL como valores distintos, então múltiplos NULLs são permitidos
-                try:
-                    conn.execute(text("""
-                        ALTER TABLE category_mapping_cache 
-                        ADD CONSTRAINT unique_workspace_mapping 
-                        UNIQUE (workspace_id, description_normalized, transaction_type)
-                    """))
-                except Exception as constraint_error:
-                    # Constraint pode já existir
-                    logger.info(f"Constraint unique_workspace_mapping pode já existir: {constraint_error}")
-                logger.info("workspace_id agora é nullable")
-            except Exception as e:
-                logger.warning(f"Erro ao tornar workspace_id nullable: {e}")
-        
-        # Tornar category_id nullable se ainda não for
-        if 'category_id' in columns and not columns['category_id']['nullable']:
-            logger.info("Tornando category_id nullable na tabela category_mapping_cache...")
-            try:
-                conn.execute(text("""
-                    ALTER TABLE category_mapping_cache 
-                    ALTER COLUMN category_id DROP NOT NULL
-                """))
-                logger.info("category_id agora é nullable")
-            except Exception as e:
-                logger.warning(f"Erro ao tornar category_id nullable: {e}")
-        
-        # Atualizar category_name para registos existentes que não têm nome
-        try:
-            conn.execute(text("""
-                UPDATE category_mapping_cache 
-                SET category_name = (
-                    SELECT c.name 
-                    FROM categories c 
-                    WHERE c.id = category_mapping_cache.category_id
-                )
-                WHERE category_name = 'Outros' AND category_id IS NOT NULL
-            """))
-        except Exception as e:
-            logger.warning(f"Erro ao atualizar category_name: {e}")
-
-# Executar migração
-try:
-    migrate_category_mapping_cache()
-except Exception as e:
-    logger.error(f"Erro na migração da tabela category_mapping_cache: {e}")
-
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Configuração de CORS (DEVE estar ANTES dos exception handlers)
+# Configuração de CORS - apenas variáveis de ambiente (sem listas fixas no código)
 allowed_origins_str = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
 
-# Em produção, garantir que sempre inclui as origens corretas
 environment = os.getenv('ENVIRONMENT', 'development')
-if environment == 'production':
-    # Origens de produção padrão
-    production_origins = [
-        'https://finanzen-frontend.onrender.com',
-        'https://finanzen-frontend-kj08.onrender.com',  # Incluir também o serviço duplicado temporário
-        'https://finanzen.pt'
-    ]
-    
-    # Se ALLOWED_ORIGINS está vazio ou contém '*', usar apenas origens de produção
-    if '*' in allowed_origins or not allowed_origins:
-        logger.warning("CORS configurado de forma insegura para produção! Configurando origens padrão.")
-        allowed_origins = production_origins
-    else:
-        # Combinar origens configuradas com origens de produção (sem duplicados)
-        for origin in production_origins:
-            if origin not in allowed_origins:
-                allowed_origins.append(origin)
-                logger.info(f"Adicionada origem de produção ao CORS: {origin}")
+if environment == 'production' and ('*' in allowed_origins or not allowed_origins):
+    logger.warning(
+        "CORS em produção sem ALLOWED_ORIGINS válido. "
+        "Defina ALLOWED_ORIGINS no ambiente (ex: https://finanzen.pt,https://app.finanzen.pt)."
+    )
+    allowed_origins = []  # sem fallback; quem faz deploy define as origens no env
 
 # Log das origens CORS configuradas
 logger.info(f"🌐 CORS configurado com {len(allowed_origins)} origens: {allowed_origins}")
@@ -184,10 +74,7 @@ app.add_middleware(
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.error(f"Erro de validação em {request.url.path}: {exc.errors()}")
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors(), "body": str(exc.body) if hasattr(exc, 'body') else None}
-    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 # Handler global para erros não tratados (garantir que CORS funciona mesmo com erros)
 @app.exception_handler(Exception)
@@ -203,24 +90,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Erro interno do servidor. Por favor, tente novamente mais tarde."}
     )
     
-    # Adicionar headers CORS manualmente se necessário
-    # Verificar se a origem está nas origens permitidas
-    if origin:
-        # Origens de produção permitidas
-        production_origins_list = [
-            'https://finanzen-frontend.onrender.com',
-            'https://finanzen-frontend-kj08.onrender.com',
-            'https://finanzen.pt'
-        ]
-        # Verificar também se está nas origens configuradas via env
-        allowed_origins_env = os.getenv('ALLOWED_ORIGINS', '')
-        allowed_origins_list = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
-        
-        if origin in production_origins_list or origin in allowed_origins_list:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "*"
+    # CORS em erros: usar a mesma lista de origens do middleware (só env)
+    if origin and origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
     
     return response
 

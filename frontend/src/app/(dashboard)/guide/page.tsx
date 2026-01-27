@@ -12,7 +12,7 @@ import {
 
 export default function GuidePage() {
   const { t } = useTranslation();
-  const guide = t.dashboard.guide as any;
+  const guide = t.dashboard.guide;
 
   const sectionRoutes = [
     'https://t.me/FinanZenApp_bot', // Telegram bot
@@ -173,7 +173,7 @@ export default function GuidePage() {
 
               {/* Chat Content */}
               <div className="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar bg-gradient-to-b from-[#0e1621] to-[#1a2332]">
-                {guide.sections[0].howTo.map((msg: any, idx: number) => (
+                {(guide.sections?.[0]?.howTo ?? []).map((msg: { user: string; bot: string }, idx: number) => (
                   <div key={idx} className="space-y-4">
                     <motion.div 
                       initial={{ opacity: 0, x: 20 }}

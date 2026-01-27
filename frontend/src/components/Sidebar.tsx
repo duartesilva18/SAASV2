@@ -480,6 +480,7 @@ export default function Sidebar({
                   <Link
                     key={item.href}
                     href={item.href}
+                    onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
                     className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
                   >
                     <div className="relative">
