@@ -279,138 +279,160 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
+      {/* Linha separadora acima da secção de preços */}
+      <div className="max-w-7xl mx-auto px-6" aria-hidden="true">
+        <hr className="border-t border-white/10" />
+      </div>
+
       {/* Pricing Section */}
       <motion.section 
-        className="max-w-7xl mx-auto px-6 py-32"
+        className="max-w-7xl mx-auto px-6 py-20 md:py-28"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
-          >
-            <Sparkles size={14} />
-            Escolhe o teu plano
-          </motion.div>
+        <div className="text-center mb-20 md:mb-28 lg:mb-32">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black tracking-tighter mb-6"
+            className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase"
           >
-            Investe na tua <span className="text-blue-400">Liberdade Financeira</span>
+            Quanto vale ter{' '}
+            <span className="text-blue-500 italic block md:inline">controlo total do teu dinheiro</span>?
           </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-lg md:text-xl lg:text-2xl text-slate-400 mb-6 md:mb-8 max-w-2xl mx-auto"
+          >
+            A maioria das pessoas não sabe para onde o dinheiro vai.
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-lg md:text-xl lg:text-2xl text-white font-semibold mb-8 md:mb-10 max-w-2xl mx-auto"
+          >
+            Quem usa a FinLy sabe. E alguns ainda ganham com isso.
+          </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           {[
             {
-              id: 'monthly',
-              name: 'Plano Básico',
-              price: 9.99,
-              description: 'Acesso ao dashboard',
-              features: [
-                'Dashboard completo',
-                'Registo de despesas',
-                'Gráficos básicos',
-                'Suporte por email'
-              ],
+              id: 'basic',
+              name: 'FinLy Basic',
+              tagline: 'Começa hoje. Sem complicações.',
+              price: '9,99€',
+              priceSuffix: '/ mês',
+              priceSecondary: null,
+              quote: 'Quero organizar o meu dinheiro antes de pensar em ganhar com isso.',
+              features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
+              limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
+              buttonText: 'Começar agora',
               icon: Zap,
+              popular: false,
             },
             {
-              id: '3months',
-              name: 'Plano 3 Meses',
-              price: 24.99,
-              description: 'Acesso completo + Programa de Afiliados',
-              features: [
-                'Dashboard completo',
-                'Programa de Afiliados',
-                'Todas as funcionalidades Pro',
-                'Suporte prioritário'
-              ],
+              id: 'plus',
+              name: 'FinLy Plus',
+              tagline: 'O plano de quem pensa mais à frente',
+              price: '49,99€',
+              priceSuffix: '/ 6 meses',
+              priceSecondary: '≈ 8,33€ / mês',
+              quote: 'Já uso a FinLy e quero que ela comece a trabalhar para mim.',
+              features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
+              limitation: null,
+              buttonText: 'Quero começar a ganhar com a FinLy',
               icon: Trophy,
               popular: true,
+              popularLabel: '🔥 MAIS ESCOLHIDO',
             },
             {
-              id: 'yearly',
-              name: 'Plano Anual',
-              price: 89.90,
-              description: 'Acesso completo + Programa de Afiliados',
-              features: [
-                'Dashboard completo',
-                'Programa de Afiliados',
-                'Todas as funcionalidades Pro',
-                'Suporte prioritário',
-                'Economiza 25%'
-              ],
+              id: 'pro',
+              name: 'FinLy Pro',
+              tagline: 'Para quem quer pagar menos, ganhar mais e ficar à frente',
+              price: '89,99€',
+              priceSuffix: '/ ano',
+              priceSecondary: '≈ 7,49€ / mês',
+              quote: 'Quero tudo. O menor preço e o maior retorno.',
+              features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
+              limitation: null,
+              buttonText: 'Quero o plano mais completo',
               icon: Crown,
+              popular: false,
             }
-          ].map((plan, index) => (
+          ].map((plan: any, index: number) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className={`relative bg-slate-900/40 backdrop-blur-xl border rounded-[32px] p-8 shadow-xl overflow-visible group transition-all ${
+              className={`relative rounded-3xl p-8 md:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
                 plan.popular 
-                  ? 'border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.1)]' 
-                  : 'border-white/5 hover:border-white/10'
-              }`}
+                  ? 'bg-slate-800/95 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] hover:border-blue-500/70' 
+                  : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'
+              } backdrop-blur-sm`}
             >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl flex items-center gap-2 z-30 whitespace-nowrap">
-                  <Trophy size={12} className="animate-pulse" />
-                  <span>Recomendado</span>
+              {plan.popular && plan.popularLabel && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-6 py-2.5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2 z-30 whitespace-nowrap">
+                  <Trophy size={16} className="animate-pulse" />
+                  <span>{plan.popularLabel}</span>
                 </div>
               )}
               
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-14 h-14 bg-gradient-to-br ${
+              <div className="relative z-10 flex flex-col flex-1 min-h-0">
+                <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-5">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                     plan.popular 
-                      ? 'from-blue-500/30 to-indigo-500/30' 
-                      : 'from-slate-800/50 to-slate-900/50'
-                  } rounded-2xl flex items-center justify-center border ${
-                    plan.popular ? 'border-blue-500/40' : 'border-slate-700/50'
+                      ? 'bg-blue-500/20 border-2 border-blue-500/40' 
+                      : 'bg-slate-700/80 border border-slate-600/50'
                   }`}>
-                    <plan.icon size={28} style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
+                    <plan.icon size={32} style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">{plan.name}</p>
-                    <p className="text-4xl font-black text-white tracking-tighter">
-                      {plan.price.toFixed(2)}€
+                    <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-1">{plan.name}</p>
+                    <p className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                      {plan.price}
                     </p>
-                    <p className="text-xs text-slate-500 font-black uppercase tracking-widest mt-1">
-                      / {plan.id === 'yearly' ? 'Ano' : plan.id === '3months' ? '3 Meses' : 'Mês'}
+                    <p className="text-sm text-slate-400 font-semibold mt-0.5">
+                      {plan.priceSuffix}
                     </p>
+                    {plan.priceSecondary && (
+                      <p className="text-base text-emerald-400 font-semibold mt-1.5">{plan.priceSecondary}</p>
+                    )}
                   </div>
                 </div>
 
-                <p className="text-base text-slate-400 mb-4 italic">{plan.description}</p>
+                <p className="text-base md:text-lg text-slate-400 mb-2 font-medium">{plan.tagline}</p>
+                <p className="text-base text-slate-500 mb-6 italic">&quot;{plan.quote}&quot;</p>
 
-                <div className="space-y-2 mb-6">
+                <div className="space-y-3 mb-6">
                   {plan.features.map((feature: string, fIndex: number) => (
-                    <div key={fIndex} className="flex items-start gap-2">
-                      <Check size={18} className="text-blue-400 mt-0.5 shrink-0" />
-                      <p className="text-sm text-slate-300 font-medium">{feature}</p>
+                    <div key={fIndex} className="flex items-start gap-3">
+                      <Check size={22} className="text-emerald-400 mt-0.5 shrink-0" />
+                      <p className="text-base md:text-lg text-slate-200 font-medium">{feature}</p>
                     </div>
                   ))}
+                </div>
+
+                {plan.limitation && (
+                  <p className="text-base text-amber-400/90 mb-6 font-medium">🚫 {plan.limitation}</p>
+                )}
                 </div>
 
                 <button
                   onClick={async () => {
                     if (user) {
-                      // Se o utilizador está autenticado, criar sessão Stripe diretamente
                       try {
                         const priceIdMap: { [key: string]: string } = {
-                          'monthly': 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
-                          '3months': 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
-                          'yearly': 'price_1SrkUrLtWlVpaXrb8zFq6OvW'
+                          basic: 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
+                          plus: 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
+                          pro: 'price_1SrkUrLtWlVpaXrb8zFq6OvW'
                         };
                         const priceId = priceIdMap[plan.id];
                         if (priceId) {
@@ -421,26 +443,87 @@ export default function LandingPage() {
                         }
                       } catch (err: any) {
                         console.error('Erro ao criar sessão Stripe:', err);
-                        // Se falhar, redirecionar para pricing como fallback
                         router.push(`/pricing?plan=${plan.id}`);
                       }
                     } else {
-                      // Se não está autenticado, redirecionar para login com redirect para pricing
                       router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
                     }
                   }}
-                  className={`w-full block text-center px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.3em] transition-all cursor-pointer ${
+                  className={`mt-auto w-full block text-center px-6 py-4 rounded-2xl text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
                     plan.popular
-                      ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                      : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
+                      : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                   }`}
                 >
-                  Escolher Plano
+                  {plan.buttonText}
                 </button>
               </div>
             </motion.div>
           ))}
         </div>
+
+        {/* Linha separadora antes do Programa de Afiliados */}
+        <div className="mt-28 mb-16 max-w-3xl mx-auto" aria-hidden="true">
+          <hr className="border-t border-white/10" />
+        </div>
+
+        {/* Programa de Afiliados FinLy */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto text-center"
+        >
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-base font-black uppercase tracking-[0.2em] mb-8">
+            💸 Programa de Afiliados FinLy
+          </div>
+          <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
+            Usa. Indica. Ganha.
+          </h3>
+          <p className="text-slate-400 text-lg md:text-xl mb-10">
+            Sempre que alguém entra na FinLy pelo teu link:
+          </p>
+          <ul className="flex flex-col items-center text-slate-200 text-lg md:text-xl space-y-4 mb-12 font-medium">
+            <li className="flex items-center justify-center gap-3">🔁 Recebes comissão todos os meses</li>
+            <li className="flex items-center justify-center gap-3">💰 20% (Plus) ou 25% (Pro)</li>
+            <li className="flex items-center justify-center gap-3">📊 Tudo transparente no dashboard</li>
+            <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
+          </ul>
+          <div className="bg-slate-800/90 border border-slate-600/60 rounded-3xl p-6 md:p-8 shadow-xl">
+            <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">📌 Exemplo simples:</p>
+            <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
+            <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">50 pessoas → ~100€ por mês</p>
+            <p className="text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
+          </div>
+        </motion.div>
+
+        {/* Sem risco, sem letras pequenas */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 pt-16 border-t border-white/5"
+        >
+          <div className="text-center mb-8">
+            <span className="inline-flex items-center gap-2 text-slate-500 text-sm font-black uppercase tracking-[0.2em]">
+              🔒 Sem risco, sem letras pequenas
+            </span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
+            <div className="flex items-center gap-3 text-slate-400 text-base">
+              <Check size={20} className="text-emerald-400 shrink-0" />
+              Pagamento seguro
+            </div>
+            <div className="flex items-center gap-3 text-slate-400 text-base">
+              <Check size={20} className="text-emerald-400 shrink-0" />
+              Cancela quando quiseres
+            </div>
+            <div className="flex items-center gap-3 text-slate-400 text-base">
+              <Check size={20} className="text-emerald-400 shrink-0" />
+              Sem fidelização forçada
+            </div>
+          </div>
+        </motion.div>
       </motion.section>
 
       {/* Stats Section com animações */}

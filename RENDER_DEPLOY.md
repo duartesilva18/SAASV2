@@ -106,6 +106,7 @@ MAIL_PORT=587
 
 # Google OAuth
 GOOGLE_CLIENT_ID=seu_google_client_id
+# Se aparecer "Error 400: redirect_uri_mismatch", vê GOOGLE_OAUTH_REDIRECT_URI.md
 
 # WhatsApp (opcional)
 WHATSAPP_TOKEN=seu_token

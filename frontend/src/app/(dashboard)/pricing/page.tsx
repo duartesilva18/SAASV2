@@ -4,17 +4,14 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { mutate } from 'swr';
 import { motion } from 'framer-motion';
-import { 
-  Check, Zap, Crown, ShieldCheck, 
-  ArrowRight, Sparkles, Trophy, CreditCard, Lock
-} from 'lucide-react';
+import { Check, Zap, Crown, Trophy } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 
 export default function PricingPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t } = useTranslation();
   const { isPro, refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -110,37 +107,50 @@ export default function PricingPage() {
 
   const plans = [
     {
-      id: 'monthly',
-      name: t.dashboard.pricing.monthlyPlan.name,
-      price: 9.99,
+      id: 'basic',
+      name: 'FinLy Basic',
+      tagline: 'Começa hoje. Sem complicações.',
+      price: '9,99€',
+      priceSuffix: '/ mês',
+      priceSecondary: null,
+      quote: 'Quero organizar o meu dinheiro antes de pensar em ganhar com isso.',
+      features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
+      limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
+      buttonText: 'Começar agora',
       priceId: 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
-      description: t.dashboard.pricing.monthlyPlan.description,
-      features: t.dashboard.pricing.monthlyPlan.features,
       icon: Zap,
+      popular: false,
     },
     {
-      id: '3months',
-      name: 'Plano 3 Meses',
-      price: 24.99,
+      id: 'plus',
+      name: 'FinLy Plus',
+      tagline: 'O plano de quem pensa mais à frente',
+      price: '49,99€',
+      priceSuffix: '/ 6 meses',
+      priceSecondary: '≈ 8,33€ / mês',
+      quote: 'Já uso a FinLy e quero que ela comece a trabalhar para mim.',
+      features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
+      limitation: null,
+      buttonText: 'Quero começar a ganhar com a FinLy',
       priceId: 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
-      description: 'Acesso completo + Programa de Afiliados',
-      features: [
-        'Dashboard completo',
-        'Programa de Afiliados',
-        'Todas as funcionalidades Pro',
-        'Suporte prioritário'
-      ],
       icon: Trophy,
       popular: true,
+      popularLabel: '🔥 MAIS ESCOLHIDO',
     },
     {
-      id: 'yearly',
-      name: t.dashboard.pricing.yearlyPlan.name,
-      price: 89.90,
+      id: 'pro',
+      name: 'FinLy Pro',
+      tagline: 'Para quem quer pagar menos, ganhar mais e ficar à frente',
+      price: '89,99€',
+      priceSuffix: '/ ano',
+      priceSecondary: '≈ 7,49€ / mês',
+      quote: 'Quero tudo. O menor preço e o maior retorno.',
+      features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
+      limitation: null,
+      buttonText: 'Quero o plano mais completo',
       priceId: 'price_1SrkUrLtWlVpaXrb8zFq6OvW',
-      description: t.dashboard.pricing.yearlyPlan.description,
-      features: t.dashboard.pricing.yearlyPlan.features,
       icon: Crown,
+      popular: false,
     }
   ];
 
@@ -161,231 +171,182 @@ export default function PricingPage() {
   }, [searchParams, isPro, loading, isProcessingPayment]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-4 sm:p-6 lg:p-8 shadow-2xl overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full -z-10" />
-        
-        <div className="relative z-10 text-center space-y-4 sm:space-y-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg"
-          >
-            <Sparkles size={14} className="animate-pulse" />
-            Escolhe o teu plano
-          </motion.div>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tighter leading-tight"
-          >
-            Investe na tua <span className="text-blue-400 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Liberdade Financeira</span>
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-slate-400 text-xs font-medium max-w-xl mx-auto leading-relaxed"
-          >
-            A tua liberdade financeira começa com um clique. Desbloqueia ferramentas de elite que os bancos não querem que uses.
-          </motion.p>
+    <div className="space-y-20 pb-20 px-4 md:px-8 pt-10 max-w-7xl mx-auto">
+      {/* Header Section — igual à plans */}
+      <section className="text-center mb-20 md:mb-28 lg:mb-32">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase"
+        >
+          Quanto vale ter{' '}
+          <span className="text-blue-500 italic block md:inline">controlo total do teu dinheiro</span>?
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-lg md:text-xl lg:text-2xl text-slate-400 mb-6 md:mb-8 max-w-2xl mx-auto"
+        >
+          A maioria das pessoas não sabe para onde o dinheiro vai.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="text-lg md:text-xl lg:text-2xl text-white font-semibold mb-8 md:mb-10 max-w-2xl mx-auto"
+        >
+          Quem usa a FinLy sabe. E alguns ainda ganham com isso.
+        </motion.p>
+      </section>
 
-        </div>
-      </motion.div>
-
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {plans.map((plan, index) => (
-          <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ y: -5, scale: 1.01 }}
-            className={`relative bg-slate-900/40 backdrop-blur-xl border rounded-[24px] sm:rounded-[32px] p-4 sm:p-5 lg:p-6 shadow-xl overflow-visible group transition-all duration-500 flex flex-col ${
-              plan.popular 
-                ? 'border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.1)]' 
-                : 'border-white/5 hover:border-white/10'
-            }`}
-          >
-            <div className={`absolute top-0 right-0 w-64 h-64 ${
-              plan.popular ? 'bg-blue-600/10' : 'bg-slate-800/20'
-            } blur-[100px] rounded-full transition-opacity duration-500 group-hover:opacity-80`} />
-            <div className={`absolute bottom-0 left-0 w-48 h-48 ${
-              plan.popular ? 'bg-indigo-600/5' : 'bg-transparent'
-            } blur-[80px] rounded-full`} />
-            
-            {plan.popular && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] shadow-xl flex items-center gap-1.5 sm:gap-2 z-30 whitespace-nowrap"
-              >
-                <Trophy size={10} className="sm:w-3 sm:h-3 animate-pulse shrink-0" />
-                <span>Recomendado</span>
-              </motion.div>
-            )}
-            
-            <div className="relative z-10 flex flex-col overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-3 sm:mb-4 shrink-0">
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${
-                    plan.popular 
-                      ? 'from-blue-500/30 to-indigo-500/30' 
-                      : 'from-slate-800/50 to-slate-900/50'
-                  } rounded-xl sm:rounded-2xl flex items-center justify-center border ${
-                    plan.popular ? 'border-blue-500/40' : 'border-slate-700/50'
-                  } shadow-lg transition-all duration-300 shrink-0`}
-                >
-                  <plan.icon size={20} className="sm:w-6 sm:h-6" style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
-                </motion.div>
-                <div className="text-right min-w-0 flex-shrink ml-2">
-                  <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5 truncate">{plan.name}</p>
-                  <p className="text-2xl sm:text-3xl font-black text-white tracking-tighter leading-none">
-                    {formatCurrency(plan.price)}
-                  </p>
-                  <p className="text-[9px] sm:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
-                    {plan.id === 'monthly' ? '/ Mês' : plan.id === '3months' ? '/ 3 Meses' : '/ Ano'}
-                  </p>
-                  {/* Mostrar economia para 3 meses e anual */}
-                  {(plan.id === '3months' || plan.id === 'yearly') && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1"
-                    >
-                      <p className="text-emerald-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">
-                        {plan.id === '3months' 
-                          ? `Economiza ${formatCurrency((9.99 * 3) - plan.price)}`
-                          : `Economiza ${formatCurrency((9.99 * 12) - plan.price)}`}
-                      </p>
-                    </motion.div>
-                  )}
+      {/* Plans Grid — cards iguais à plans */}
+      <section>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+          {plans.map((plan: any, index: number) => (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`relative rounded-3xl p-8 md:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
+                plan.popular
+                  ? 'bg-slate-800/95 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] hover:border-blue-500/70'
+                  : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'
+              } backdrop-blur-sm`}
+            >
+              {plan.popular && plan.popularLabel && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-6 py-2.5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2 z-30 whitespace-nowrap">
+                  <Trophy size={16} className="animate-pulse" />
+                  <span>{plan.popularLabel}</span>
                 </div>
-              </div>
-
-              {plan.id === 'yearly' && (
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-1.5 sm:p-2 mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2 shrink-0"
-                >
-                  <ShieldCheck size={11} className="sm:w-3 sm:h-3 text-emerald-400 shrink-0" />
-                  <p className="text-emerald-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
-                    Equivale a {formatCurrency(plan.price / 12)}/mês
-                  </p>
-                </motion.div>
               )}
 
-              {/* Features */}
-              <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
-                {plan.features.map((feature: string, fIndex: number) => (
-                  <motion.div
-                    key={fIndex}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 + fIndex * 0.05 }}
-                    className="flex items-start gap-2 group/feature"
-                  >
-                    <div className={`mt-0.5 p-0.5 rounded-full shrink-0 transition-all duration-300 ${
-                      plan.popular 
-                        ? 'bg-blue-500/20 text-blue-400 group-hover/feature:bg-blue-500/30' 
-                        : 'bg-slate-800 text-slate-500 group-hover/feature:bg-slate-700'
+              <div className="relative z-10 flex flex-col flex-1 min-h-0">
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                      plan.popular
+                        ? 'bg-blue-500/20 border-2 border-blue-500/40'
+                        : 'bg-slate-700/80 border border-slate-600/50'
                     }`}>
-                      <Check size={8} className="sm:w-3 sm:h-3" strokeWidth={4} />
+                      <plan.icon size={32} style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
                     </div>
-                    <span className="text-slate-300 text-[10px] sm:text-xs font-medium group-hover/feature:text-white transition-colors duration-300 leading-snug">
-                      {feature}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-1">{plan.name}</p>
+                      <p className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                        {plan.price}
+                      </p>
+                      <p className="text-sm text-slate-400 font-semibold mt-0.5">{plan.priceSuffix}</p>
+                      {plan.priceSecondary && (
+                        <p className="text-base text-emerald-400 font-semibold mt-1.5">{plan.priceSecondary}</p>
+                      )}
+                    </div>
+                  </div>
 
-              {/* CTA Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={loading !== null || isPro}
-                onClick={() => handleSubscribe(plan.priceId)}
-                className={`w-full py-2.5 sm:py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] transition-all flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden shrink-0 ${
-                  plan.popular 
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:from-blue-500 hover:to-indigo-500' 
-                    : 'bg-white/5 text-slate-300 border border-slate-800 hover:bg-white/10 hover:border-slate-700'
-                } ${isPro ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {plan.popular && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                )}
-                {loading === plan.priceId ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : isPro ? (
-                  <>
-                    <Check size={16} />
-                    Já és Pro
-                  </>
-                ) : (
-                  <>
-                    Ativar Agora
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </motion.div>
-        ))}
+                  <p className="text-base md:text-lg text-slate-400 mb-2 font-medium">{plan.tagline}</p>
+                  <p className="text-base text-slate-500 mb-6 italic">&quot;{plan.quote}&quot;</p>
+
+                  <div className="space-y-3 mb-6">
+                    {plan.features.map((feature: string, fIndex: number) => (
+                      <div key={fIndex} className="flex items-start gap-3">
+                        <Check size={22} className="text-emerald-400 mt-0.5 shrink-0" />
+                        <p className="text-base md:text-lg text-slate-200 font-medium">{feature}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {plan.limitation && (
+                    <p className="text-base text-amber-400/90 mb-6 font-medium">🚫 {plan.limitation}</p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSubscribe(plan.priceId)}
+                  disabled={loading !== null || isPro}
+                  className={`mt-auto w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
+                    isPro
+                      ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 cursor-not-allowed'
+                      : plan.popular
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
+                      : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
+                  }`}
+                >
+                  {loading === plan.priceId ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : isPro ? (
+                    'Já és Pro'
+                  ) : (
+                    plan.buttonText
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Linha separadora */}
+      <div className="max-w-3xl mx-auto" aria-hidden="true">
+        <hr className="border-t border-white/10" />
       </div>
 
-      {/* Trust Badges */}
-      <motion.div
+      {/* Programa de Afiliados FinLy */}
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12"
+        className="max-w-3xl mx-auto text-center mt-16 mb-16"
       >
-        {[
-          { icon: ShieldCheck, title: 'Segurança Bancária', desc: 'Dados encriptados com tecnologia militar.', color: 'blue' },
-          { icon: CreditCard, title: 'Cancelamento Fácil', desc: 'Cancela quando quiseres, sem perguntas.', color: 'emerald' },
-          { icon: Trophy, title: 'Garantia Zen', desc: 'Satisfeito ou o teu dinheiro de volta em 7 dias.', color: 'amber' }
-        ].map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 + i * 0.1 }}
-            whileHover={{ y: -3 }}
-            className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 text-center hover:border-white/10 transition-all duration-300 group"
-          >
-            <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${
-              item.color === 'blue' ? 'from-blue-500/20 to-indigo-500/20' :
-              item.color === 'emerald' ? 'from-emerald-500/20 to-green-500/20' :
-              'from-amber-500/20 to-orange-500/20'
-            } rounded-xl sm:rounded-2xl flex items-center justify-center ${
-              item.color === 'blue' ? 'text-blue-400' :
-              item.color === 'emerald' ? 'text-emerald-400' :
-              'text-amber-400'
-            } mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 border ${
-              item.color === 'blue' ? 'border-blue-500/30' :
-              item.color === 'emerald' ? 'border-emerald-500/30' :
-              'border-amber-500/30'
-            }`}>
-              <item.icon size={24} className="sm:w-7 sm:h-7" />
-            </div>
-            <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest mb-1 sm:mb-2">{item.title}</h4>
-            <p className="text-slate-400 text-[10px] sm:text-xs font-medium leading-relaxed">{item.desc}</p>
-          </motion.div>
-        ))}
-      </motion.div>
+        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-base font-black uppercase tracking-[0.2em] mb-8">
+          💸 Programa de Afiliados FinLy
+        </div>
+        <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
+          Usa. Indica. Ganha.
+        </h3>
+        <p className="text-slate-400 text-lg md:text-xl mb-10">
+          Sempre que alguém entra na FinLy pelo teu link:
+        </p>
+        <ul className="flex flex-col items-center text-slate-200 text-lg md:text-xl space-y-4 mb-12 font-medium">
+          <li className="flex items-center justify-center gap-3">🔁 Recebes comissão todos os meses</li>
+          <li className="flex items-center justify-center gap-3">💰 20% (Plus) ou 25% (Pro)</li>
+          <li className="flex items-center justify-center gap-3">📊 Tudo transparente no dashboard</li>
+          <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
+        </ul>
+        <div className="bg-slate-800/90 border border-slate-600/60 rounded-3xl p-6 md:p-8 shadow-xl">
+          <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">📌 Exemplo simples:</p>
+          <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
+          <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">50 pessoas → ~100€ por mês</p>
+          <p className="text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
+        </div>
+      </motion.section>
+
+      {/* Sem risco, sem letras pequenas */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="pt-16 border-t border-white/5"
+      >
+        <div className="text-center mb-8">
+          <span className="inline-flex items-center gap-2 text-slate-500 text-sm font-black uppercase tracking-[0.2em]">
+            🔒 Sem risco, sem letras pequenas
+          </span>
+        </div>
+        <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
+          <div className="flex items-center gap-3 text-slate-400 text-base">
+            <Check size={20} className="text-emerald-400 shrink-0" />
+            Pagamento seguro
+          </div>
+          <div className="flex items-center gap-3 text-slate-400 text-base">
+            <Check size={20} className="text-emerald-400 shrink-0" />
+            Cancela quando quiseres
+          </div>
+          <div className="flex items-center gap-3 text-slate-400 text-base">
+            <Check size={20} className="text-emerald-400 shrink-0" />
+            Sem fidelização forçada
+          </div>
+        </div>
+      </motion.section>
 
       {isProcessingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
