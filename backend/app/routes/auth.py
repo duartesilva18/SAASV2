@@ -24,8 +24,23 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 VERIFICATION_EXPIRY_MINUTES = 30
 
 
+def _frontend_base_url() -> str:
+    """Um único URL base para links em emails (evita lista separada por vírgulas)."""
+    url = (getattr(settings, 'FRONTEND_URL', None) or '').strip()
+    return (url.split(',')[0].strip().rstrip('/') or 'http://localhost:3000')
+
+
 async def _send_verification_email_background(to_email: str, subject: str, body_html: str) -> None:
     """Envia email de verificação em background (não bloqueia a resposta do registo)."""
+    if not (to_email and str(to_email).strip()):
+        logger.warning('Email de verificação ignorado: destinatário vazio.')
+        return
+    if not (subject and str(subject).strip()):
+        logger.warning(f'Email de verificação ignorado: assunto vazio (para {to_email}).')
+        return
+    if not (body_html and str(body_html).strip()):
+        logger.warning(f'Email de verificação ignorado: corpo vazio (para {to_email}).')
+        return
     conf = ConnectionConfig(
         MAIL_USERNAME=settings.MAIL_USERNAME.strip(),
         MAIL_PASSWORD=settings.MAIL_PASSWORD.strip(),
@@ -38,7 +53,7 @@ async def _send_verification_email_background(to_email: str, subject: str, body_
         VALIDATE_CERTS=True,
         MAIL_FROM_NAME='Finly Portugal'
     )
-    msg = MessageSchema(subject=subject, recipients=[to_email], body=body_html, subtype=MessageType.html)
+    msg = MessageSchema(subject=subject.strip(), recipients=[to_email.strip()], body=body_html, subtype=MessageType.html)
     fm = FastMail(conf)
     try:
         await fm.send_message(msg)
@@ -117,8 +132,11 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
     try:
         purge_expired_unverified_users(db)
 
+        # Normalizar email (lowercase, sem espaços) para evitar duplicados por maiúsculas
+        email_normalized = user_in.email.strip().lower()
+
         # Validação de email
-        if not validate_email(user_in.email):
+        if not validate_email(email_normalized):
             raise HTTPException(status_code=400, detail='Formato de email inválido.')
         
         # Validação de senha forte
@@ -126,14 +144,17 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_msg)
         
-        db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
+        db_user = db.query(models.User).filter(models.User.email == email_normalized).first()
         if db_user:
             if db_user.is_email_verified:
-                logger.warning(f'Tentativa de registo com email já existente: {user_in.email}')
+                logger.warning(f'Tentativa de registo com email já existente: {email_normalized}')
                 raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
-            db.query(models.EmailVerification).filter(models.EmailVerification.email == user_in.email).delete(synchronize_session=False)
-            db.delete(db_user)
-            db.commit()
+            # Já existe registo pendente: não apagar nem criar outro; pedir para verificar email ou usar reenvio
+            logger.info(f'Registo pendente já existe para {email_normalized}, a rejeitar novo registo.')
+            raise HTTPException(
+                status_code=400,
+                detail='Este email já tem um registo pendente. Verifica a tua caixa de correio (e spam). Se não recebeste o link, usa "Reenviar link" na página de login.'
+            )
         
         hashed_pw = security.get_password_hash(user_in.password)
         # Validar código de referência se fornecido
@@ -166,7 +187,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
             user_lang = 'pt'
 
         user = models.User(
-            email=user_in.email,
+            email=email_normalized,
             password_hash=hashed_pw,
             is_email_verified=False,
             language=user_lang,
@@ -210,7 +231,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         verification_token = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
         ev = models.EmailVerification(
-            email=user_in.email,
+            email=email_normalized,
             token=verification_token,
             password_hash=hashed_pw,
             referral_code=referral_code,
@@ -223,20 +244,22 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         await log_action(db, action='register_pending', user_id=user.id, details=f'Registo pendente verificação: {user.email}', request=request)
 
         t = get_email_translation(user_lang, 'verify_email')
-        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
+        base = _frontend_base_url()
+        verify_url = f"{base}/auth/verify-email?token={verification_token}"
         if referral_code:
             verify_url += f"&ref={referral_code}"
-        html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.btn{{display:inline-block;margin:30px auto;background:#3b82f6;color:#fff!important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><a class="btn" href="{verify_url}">{t["button"]}</a><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
+        btn_style = 'display:inline-block;margin:30px auto;background:#3b82f6;color:#ffffff !important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px;'
+        html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><p><a href="{verify_url}" style="{btn_style}">{t["button"]}</a></p><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
 
         # Resposta imediata; email enviado em background (não bloqueia o utilizador)
-        background_tasks.add_task(_send_verification_email_background, user_in.email, t['subject'], html)
+        background_tasks.add_task(_send_verification_email_background, email_normalized, t['subject'], html)
 
         logger.info(f'Utilizador criado, verificação pendente: {user.email}')
         access_token = security.create_access_token(subject=user.email)
         refresh_token = security.create_refresh_token(subject=user.email)
         return {
             'message': 'Email de verificação enviado. Tens 30 minutos para confirmar.',
-            'email': user_in.email,
+            'email': email_normalized,
             'verification_expires_at': expires_at,
             'access_token': access_token,
             'refresh_token': refresh_token,
@@ -252,6 +275,60 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
             status_code=500,
             detail=f'Erro interno ao processar registo. Por favor, tente novamente mais tarde.'
         )
+
+
+@router.post('/resend-verification')
+@limiter.limit('3/hour')
+async def resend_verification(
+    request: Request,
+    data: schemas.ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Reenvia o link de verificação de email para um registo pendente."""
+    purge_expired_unverified_users(db)
+    email_lower = (data.email or '').strip().lower()
+    if not email_lower or not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email_lower):
+        raise HTTPException(status_code=400, detail='Formato de email inválido.')
+
+    user = db.query(models.User).filter(models.User.email == email_lower).first()
+    if not user or user.is_email_verified:
+        raise HTTPException(
+            status_code=400,
+            detail='Não existe registo pendente para este email. Regista-te primeiro ou faz login.'
+        )
+
+    ev = db.query(models.EmailVerification).filter(
+        models.EmailVerification.email == email_lower,
+        models.EmailVerification.is_used == False,
+    ).first()
+    if not ev:
+        raise HTTPException(
+            status_code=400,
+            detail='Não existe pedido de verificação pendente. Regista-te primeiro.'
+        )
+
+    new_token = secrets.token_urlsafe(32)
+    new_expires = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
+    ev.token = new_token
+    ev.expires_at = new_expires
+    db.commit()
+
+    user_lang = getattr(user, 'language', 'pt') or 'pt'
+    if user_lang not in ('pt', 'en'):
+        user_lang = 'pt'
+    t = get_email_translation(user_lang, 'verify_email')
+    base = _frontend_base_url()
+    verify_url = f"{base}/auth/verify-email?token={new_token}"
+    if getattr(ev, 'referral_code', None):
+        verify_url += f"&ref={ev.referral_code}"
+    btn_style = 'display:inline-block;margin:30px auto;background:#3b82f6;color:#ffffff !important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px;'
+    html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><p><a href="{verify_url}" style="{btn_style}">{t["button"]}</a></p><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
+
+    background_tasks.add_task(_send_verification_email_background, email_lower, t['subject'], html)
+    logger.info(f'Link de verificação reenviado para {email_lower}')
+    return {'message': 'Link de verificação reenviado. Verifica o teu email (e a pasta de spam).'}
+
 
 @router.get('/verification-status/{email}')
 async def check_verification_status(email: str, db: Session = Depends(get_db)):
@@ -643,7 +720,8 @@ async def purge_user_data(request: Request, current_user: models.User = Depends(
 @router.post('/login', response_model=schemas.Token)
 @limiter.limit('5/minute')
 async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    email_lower = (form_data.username or '').strip().lower()
+    user = db.query(models.User).filter(models.User.email == email_lower).first()
     if not user or not security.verify_password(form_data.password, user.password_hash):
         logger.warning(f'Falha de login para: {form_data.username} de {request.client.host}')
         raise HTTPException(
