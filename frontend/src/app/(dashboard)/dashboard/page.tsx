@@ -61,25 +61,24 @@ export default function DashboardPage() {
     mutate('/stripe/invoices');
   }, [mutateSnapshot, mutateUserData]);
 
-  // Verificar se voltou do pagamento e invalidar cache
+  // Verificar se voltou do pagamento: aguardar refresh de user/snapshot antes de limpar, para o modo Pro aparecer sem F5
   useEffect(() => {
     const sessionId = searchParams?.get('session_id');
     const proActivated = sessionStorage.getItem('pro_activated_success');
     
-    if (sessionId || proActivated === 'true') {
-      mutate('/auth/me');
-      mutate('/stripe/invoices');
-      mutateUserData();
-      refreshUser();
-      
-      if (proActivated === 'true') {
+    if (proActivated === 'true') {
+      (async () => {
+        await refreshUser();
+        await mutateUserData();
+        await mutate('/stripe/invoices');
+        await mutateSnapshot();
         sessionStorage.removeItem('pro_activated_success');
-      }
-      if (sessionId) {
-        window.history.replaceState({}, '', '/dashboard');
-      }
+      })();
     }
-  }, [searchParams, refreshUser, mutateUserData]);
+    if (sessionId) {
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams, refreshUser, mutateUserData, mutateSnapshot]);
   
   // Memoizar cálculos pesados
   const hasActiveSub = useMemo(() => {
@@ -231,29 +230,22 @@ export default function DashboardPage() {
           const verifyRes = await api.get(`/stripe/verify-session/${sessionId}`);
           
           if (verifyRes.data.success && verifyRes.data.is_active) {
-            // Subscrição ativa! Recarregar dados do utilizador
+            // Subscrição ativa! Recarregar user e caches SWR para o modo demo desaparecer sem F5
             await refreshUser();
-            const profileRes = await api.get('/auth/me');
-            const user = profileRes.data;
+            await mutateUserData();
+            await mutate('/stripe/invoices');
+            await mutateSnapshot();
             
-            // Atualizar estado para remover modo demo e banners
             setIsPro(true);
-            setShowPaywall(false); // Fechar paywall se estiver aberto
+            setShowPaywall(false);
             setIsProcessingUpgrade(false);
-            
-            // Limpar a URL sem recarregar a página
             window.history.replaceState({}, '', '/dashboard');
-            
-            // Confetti de celebração
             confetti({
               particleCount: 200,
               spread: 100,
               origin: { y: 0.6 },
               colors: ['#3b82f6', '#fbbf24', '#ffffff']
             });
-            
-            // Invalidar cache SWR para recarregar dados
-            mutateSnapshot();
           } else if (retryCount < 5) {
             // Ainda não está completo, tentar novamente
             setTimeout(() => verifyAndActivate(retryCount + 1), 1500);
@@ -288,7 +280,7 @@ export default function DashboardPage() {
       // Começar verificação após pequeno delay para dar tempo ao webhook
       setTimeout(() => verifyAndActivate(), 2000);
     }
-  }, [searchParams, refreshUser, mutateSnapshot]);
+  }, [searchParams, refreshUser, mutateUserData, mutateSnapshot]);
 
   // Carregar dados quando snapshot estiver pronto
   useEffect(() => {
