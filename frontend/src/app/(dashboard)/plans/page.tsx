@@ -130,10 +130,10 @@ export default function PlansPage() {
     }
   ];
 
-  const isCurrentPlan = (planPriceId: string) => {
-    return currentPlanPriceId === planPriceId && 
-           user?.subscription_status && 
-           ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
+  const isCurrentPlan = (planPriceId: string): boolean => {
+    return !!(currentPlanPriceId === planPriceId &&
+      user?.subscription_status &&
+      ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status));
   };
 
   const handlePlanSelect = async (planPriceId: string) => {
