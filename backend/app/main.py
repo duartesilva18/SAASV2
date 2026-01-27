@@ -5,10 +5,9 @@ from fastapi.responses import JSONResponse, Response
 from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
-from .models.database import Base, SystemSetting, User, Workspace
-from .core.dependencies import engine, get_db, SessionLocal
+from .models.database import Base, SystemSetting
+from .core.dependencies import engine, get_db
 from .core.limiter import limiter
-from .core import security
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from sqlalchemy.orm import Session
@@ -43,45 +42,7 @@ if sys.platform == 'win32':
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
-
-def _ensure_default_admin():
-    """Se não existir nenhum admin na BD, cria admin@admin.pt com password adminadmin."""
-    db = SessionLocal()
-    try:
-        if db.query(User).filter(User.is_admin == True).first():
-            return
-        if db.query(User).filter(User.email == 'admin@admin.pt').first():
-            return
-        from .routes.auth import create_default_categories, create_seed_transactions
-        user = User(
-            email='admin@admin.pt',
-            password_hash=security.get_password_hash('adminadmin'),
-            is_admin=True,
-            is_email_verified=True,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        workspace = Workspace(owner_id=user.id, name='Meu Workspace')
-        db.add(workspace)
-        db.commit()
-        db.refresh(workspace)
-        categories_map = create_default_categories(db, workspace.id)
-        create_seed_transactions(db, workspace.id, categories_map)
-        logger.info('Admin por defeito criado: admin@admin.pt')
-    except Exception as e:
-        logger.warning(f'Não foi possível criar admin por defeito: {e}')
-        db.rollback()
-    finally:
-        db.close()
-
-
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
-
-
-@app.on_event('startup')
-def on_startup():
-    _ensure_default_admin()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
