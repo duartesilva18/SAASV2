@@ -138,101 +138,63 @@ export default function VaultPage() {
     }
   };
 
-  // Função para agrupar dados por período
+  // Função para agrupar dados por período (um ponto por dia/semana/mês = saldo no fim do período)
   const groupByPeriod = (evolution: any[], period: '7D' | '30D' | '12M' | 'Tudo') => {
-    if (period === 'Tudo' || evolution.length === 0) return evolution;
+    if (evolution.length === 0) return evolution;
 
     const now = new Date();
     let filterDate = new Date();
-    
-    if (period === '7D') filterDate.setDate(now.getDate() - 7);
-    else if (period === '30D') filterDate.setDate(now.getDate() - 30);
-    else if (period === '12M') filterDate.setFullYear(now.getFullYear() - 1);
+    let filtered = evolution;
 
-    // Filtrar transações dentro do período
-    const filtered = evolution.filter((item: any) => {
-      const itemDate = new Date(item.date);
-      return itemDate >= filterDate;
-    });
+    if (period !== 'Tudo') {
+      if (period === '7D') filterDate.setDate(now.getDate() - 7);
+      else if (period === '30D') filterDate.setDate(now.getDate() - 30);
+      else if (period === '12M') filterDate.setFullYear(now.getFullYear() - 1);
+      filtered = evolution.filter((item: any) => new Date(item.date) >= filterDate);
+    }
 
-    // Se não há dados no período, retornar array vazio
-    if (filtered.length === 0) return [];
+    if (filtered.length === 0) return evolution.length > 0 ? [evolution[evolution.length - 1]] : [];
 
-    // Para 7D: agrupar por dia (mostrar o valor final de cada dia)
-    if (period === '7D') {
-      const grouped: any = {};
+    // Manter sempre o último valor do período (saldo após a última transação do dia/semana/mês)
+    const keepLastInGroup = (grouped: Record<string, { date: string; value: number }>) => {
+      return Object.values(grouped).sort((a: any, b: any) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    };
+
+    // Por dia (7D ou Tudo com muitos dias)
+    if (period === '7D' || period === 'Tudo') {
+      const grouped: Record<string, { date: string; value: number }> = {};
       filtered.forEach((item: any) => {
         const date = new Date(item.date);
         const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        
-        if (!grouped[dayKey]) {
-          grouped[dayKey] = { date: item.date, value: item.value };
-        } else {
-          // Manter o valor mais recente (e maior) do dia
-          const currentDate = new Date(item.date);
-          const existingDate = new Date(grouped[dayKey].date);
-          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[dayKey].value)) {
-            grouped[dayKey] = { date: item.date, value: item.value };
-          }
-        }
+        grouped[dayKey] = { date: item.date, value: item.value };
       });
-      
-      const result = Object.values(grouped).sort((a: any, b: any) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
-      
-      return result;
+      return keepLastInGroup(grouped);
     }
 
-    // Para 30D: agrupar por semana
+    // Por semana (30D)
     if (period === '30D') {
-      const grouped: any = {};
+      const grouped: Record<string, { date: string; value: number }> = {};
       filtered.forEach((item: any) => {
         const date = new Date(item.date);
-        // Calcular início da semana (domingo)
         const weekStart = new Date(date);
         weekStart.setDate(date.getDate() - date.getDay());
         const weekKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
-        
-        if (!grouped[weekKey]) {
-          grouped[weekKey] = { date: item.date, value: item.value };
-        } else {
-          // Manter o valor mais recente (e maior) da semana
-          const currentDate = new Date(item.date);
-          const existingDate = new Date(grouped[weekKey].date);
-          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[weekKey].value)) {
-            grouped[weekKey] = { date: item.date, value: item.value };
-          }
-        }
+        grouped[weekKey] = { date: item.date, value: item.value };
       });
-      
-      return Object.values(grouped).sort((a: any, b: any) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      return keepLastInGroup(grouped);
     }
 
-    // Para 12M: agrupar por mês
+    // Por mês (12M)
     if (period === '12M') {
-      const grouped: any = {};
+      const grouped: Record<string, { date: string; value: number }> = {};
       filtered.forEach((item: any) => {
         const date = new Date(item.date);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-
-        if (!grouped[monthKey]) {
-          grouped[monthKey] = { date: item.date, value: item.value };
-        } else {
-          // Manter o valor mais recente (e maior) do mês
-          const currentDate = new Date(item.date);
-          const existingDate = new Date(grouped[monthKey].date);
-          if (currentDate > existingDate || (currentDate.getTime() === existingDate.getTime() && item.value > grouped[monthKey].value)) {
-            grouped[monthKey] = { date: item.date, value: item.value };
-          }
-        }
+        grouped[monthKey] = { date: item.date, value: item.value };
       });
-
-      return Object.values(grouped).sort((a: any, b: any) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      return keepLastInGroup(grouped);
     }
 
     return filtered;
@@ -554,29 +516,24 @@ export default function VaultPage() {
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
                 tickFormatter={(value) => {
-                  const date = new Date(value);
-                  if (selectedPeriod === '7D') {
-                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
-                  } else if (selectedPeriod === '30D') {
-                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
-                  } else if (selectedPeriod === '12M') {
-                    return date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+                  const d = new Date(value);
+                  if (selectedPeriod === '12M') {
+                    return d.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
                   }
-                  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
                 }}
               />
               <YAxis 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
                 tickFormatter={(value) => {
-                  if (value >= 1000) {
-                    return `${(value / 1000).toFixed(1)}k€`;
-                  }
+                  if (value >= 1000) return `${(value / 1000).toFixed(1)}k€`;
+                  if (value <= -1000) return `-${(Math.abs(value) / 1000).toFixed(1)}k€`;
                   return `${value.toFixed(0)}€`;
                 }}
                 domain={[
-                  (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.9)),
-                  (dataMax: number) => Math.ceil(dataMax * 1.1)
+                  (dataMin: number) => Math.floor(Math.min(0, dataMin) * 1.05),
+                  (dataMax: number) => Math.ceil(Math.max(0, dataMax) * 1.05)
                 ]}
               />
               <Tooltip 
@@ -590,13 +547,14 @@ export default function VaultPage() {
                 content={({ active, payload }: any) => {
                   if (active && payload && payload.length > 0) {
                     const data = payload[0].payload;
+                    const val = typeof data.value === 'number' ? data.value : 0;
                     return (
                       <div className="space-y-1">
                         <p className="text-xs text-slate-400">
                           {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </p>
-                        <p className="text-sm font-bold text-white">
-                          {formatCurrency(data.value || 0)}
+                        <p className={`text-sm font-bold ${val >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatCurrency(val)}
                         </p>
                       </div>
                     );
@@ -611,6 +569,7 @@ export default function VaultPage() {
                 fillOpacity={1} 
                 fill="url(#colorEmergency)"
                 strokeWidth={2}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -641,29 +600,24 @@ export default function VaultPage() {
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
                 tickFormatter={(value) => {
-                  const date = new Date(value);
-                  if (selectedPeriod === '7D') {
-                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
-                  } else if (selectedPeriod === '30D') {
-                    return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
-                  } else if (selectedPeriod === '12M') {
-                    return date.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+                  const d = new Date(value);
+                  if (selectedPeriod === '12M') {
+                    return d.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
                   }
-                  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+                  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
                 }}
               />
               <YAxis 
                 stroke="#64748b"
                 tick={{ fill: '#64748b', fontSize: 10 }}
                 tickFormatter={(value) => {
-                  if (value >= 1000) {
-                    return `${(value / 1000).toFixed(1)}k€`;
-                  }
+                  if (value >= 1000) return `${(value / 1000).toFixed(1)}k€`;
+                  if (value <= -1000) return `-${(Math.abs(value) / 1000).toFixed(1)}k€`;
                   return `${value.toFixed(0)}€`;
                 }}
                 domain={[
-                  (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.9)),
-                  (dataMax: number) => Math.ceil(dataMax * 1.1)
+                  (dataMin: number) => Math.floor(Math.min(0, dataMin) * 1.05),
+                  (dataMax: number) => Math.ceil(Math.max(0, dataMax) * 1.05)
                 ]}
               />
               <Tooltip 
@@ -677,13 +631,14 @@ export default function VaultPage() {
                 content={({ active, payload }: any) => {
                   if (active && payload && payload.length > 0) {
                     const data = payload[0].payload;
+                    const val = typeof data.value === 'number' ? data.value : 0;
                     return (
                       <div className="space-y-1">
                         <p className="text-xs text-slate-400">
                           {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </p>
-                        <p className="text-sm font-bold text-white">
-                          {formatCurrency(data.value || 0)}
+                        <p className={`text-sm font-bold ${val >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatCurrency(val)}
                         </p>
                       </div>
                     );
@@ -698,6 +653,7 @@ export default function VaultPage() {
                 fillOpacity={1} 
                 fill="url(#colorInvestment)"
                 strokeWidth={2}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>

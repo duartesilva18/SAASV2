@@ -528,7 +528,9 @@ function TransactionsPageContent() {
                   rowComponent={({ index, style, transactions: txList, categories: catList, formatCurrency: fmt, setSelectedTransaction: setSel, noCategory: noCat }) => {
                     const transaction = txList[index];
                     const cat = catList.find(c => c.id === transaction.category_id);
-                    const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
+                    const isIncome = cat && cat.vault_type !== 'none'
+                      ? transaction.amount_cents > 0
+                      : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
                     return (
                       <div
                         role="row"
@@ -613,7 +615,9 @@ function TransactionsPageContent() {
                         </td>
                         <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
                           {(() => {
-                            const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
+                            const isIncome = cat && cat.vault_type !== 'none'
+                              ? transaction.amount_cents > 0
+                              : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
                             return (
                               <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
                                 {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
@@ -907,7 +911,9 @@ function TransactionsPageContent() {
               <div className="flex flex-col items-center text-center gap-6">
                 {(() => {
                   const cat = categories.find(c => c.id === selectedTransaction.category_id);
-                  const isIncome = cat ? cat.type === 'income' : selectedTransaction.amount_cents > 0;
+                  const isIncome = cat && cat.vault_type !== 'none'
+                    ? selectedTransaction.amount_cents > 0
+                    : (cat ? cat.type === 'income' : selectedTransaction.amount_cents > 0);
                   return (
                     <>
                       <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
@@ -935,7 +941,7 @@ function TransactionsPageContent() {
                             ? 'text-emerald-400' 
                             : 'text-white'
                           }`}>
-                            {formatCurrency(Math.abs(selectedTransaction.amount_cents) / 100)}
+                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(selectedTransaction.amount_cents) / 100)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
