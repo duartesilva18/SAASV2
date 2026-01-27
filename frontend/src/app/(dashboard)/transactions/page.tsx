@@ -123,7 +123,17 @@ function TransactionsPageContent() {
       .filter(t => {
         const cat = categories.find(c => c.id === t.category_id);
         const matchesSearch = t.description?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesTab = activeTab === 'all' || cat?.type === activeTab;
+        
+        // Determinar tipo da transação: se não houver categoria, usar sinal do amount_cents
+        let transactionType: 'income' | 'expense' | null = null;
+        if (cat) {
+          transactionType = cat.type;
+        } else {
+          // Sem categoria: usar sinal do amount_cents
+          transactionType = t.amount_cents > 0 ? 'income' : 'expense';
+        }
+        
+        const matchesTab = activeTab === 'all' || transactionType === activeTab;
         const matchesCategory = selectedCategory === 'all' || t.category_id === selectedCategory;
         return matchesSearch && matchesTab && matchesCategory;
       });
@@ -141,21 +151,31 @@ function TransactionsPageContent() {
 
   const stats = useMemo(() => {
     // Backend garante sinais corretos: income > 0, expense < 0
-    // Frontend confia nos sinais (sem Math.abs() nos cálculos)
+    // Se não houver categoria, usar sinal do amount_cents
     const income = transactions
       .filter(t => {
         const cat = categories.find(c => c.id === t.category_id);
-        return cat?.type === 'income' && cat?.vault_type === 'none'; // Excluir vault
+        if (cat) {
+          return cat.type === 'income' && cat.vault_type === 'none'; // Excluir vault
+        } else {
+          // Sem categoria: usar sinal do amount_cents
+          return t.amount_cents > 0;
+        }
       })
-      .reduce((acc: number, curr: any) => acc + curr.amount_cents, 0) / 100; // Já é positivo
+      .reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0) / 100; // Usar valor absoluto para segurança
     
     // Despesas são negativas, converter para positivo
     const expenses = transactions
       .filter(t => {
         const cat = categories.find(c => c.id === t.category_id);
-        return cat?.type === 'expense' && cat?.vault_type === 'none'; // Excluir vault
+        if (cat) {
+          return cat.type === 'expense' && cat.vault_type === 'none'; // Excluir vault
+        } else {
+          // Sem categoria: usar sinal do amount_cents
+          return t.amount_cents < 0;
+        }
       })
-      .reduce((acc: number, curr: any) => acc + curr.amount_cents, 0) / -100; // Converte negativo para positivo
+      .reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0) / 100; // Usar valor absoluto
     
     return { income, expenses, balance: income - expenses };
   }, [transactions, categories]);
@@ -529,9 +549,15 @@ function TransactionsPageContent() {
                         </div>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <span className={`text-sm font-black ${cat?.type === 'income' ? 'text-emerald-400' : 'text-white'}`}>
-                          {cat?.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
-                        </span>
+                        {(() => {
+                          // Determinar tipo: usar categoria se existir, senão usar sinal do amount_cents
+                          const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
+                          return (
+                            <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
+                              {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </motion.tr>
                   );
@@ -648,8 +674,8 @@ function TransactionsPageContent() {
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Onde fluiu o dinheiro?"
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium"
+                        placeholder="Insira o nome"
+                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
                       />
                     </div>
                   </div>
@@ -666,7 +692,7 @@ function TransactionsPageContent() {
                           value={formData.amount}
                           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                           placeholder="0.00"
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white focus:border-blue-500/50 transition-all outline-none font-medium"
+                          className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
                         />
                       </div>
                     </div>
@@ -806,50 +832,58 @@ function TransactionsPageContent() {
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
               
               <div className="flex flex-col items-center text-center gap-6">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                  categories.find(c => c.id === selectedTransaction.category_id)?.type === 'income' 
-                  ? 'bg-emerald-500/10 text-emerald-500' 
-                  : 'bg-blue-500/10 text-blue-500'
-                }`}>
-                  <CreditCard size={32} />
-                </div>
-                
-                <div>
-                  <h2 className="text-2xl font-black text-white tracking-tighter mb-1">
-                    {selectedTransaction.description}
-                  </h2>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                    {t.dashboard.transactions.table.description}
-                  </p>
-                </div>
+                {(() => {
+                  const cat = categories.find(c => c.id === selectedTransaction.category_id);
+                  const isIncome = cat ? cat.type === 'income' : selectedTransaction.amount_cents > 0;
+                  return (
+                    <>
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                        isIncome 
+                        ? 'bg-emerald-500/10 text-emerald-500' 
+                        : 'bg-blue-500/10 text-blue-500'
+                      }`}>
+                        <CreditCard size={32} />
+                      </div>
+                      
+                      <div>
+                        <h2 className="text-2xl font-black text-white tracking-tighter mb-1">
+                          {selectedTransaction.description}
+                        </h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                          {t.dashboard.transactions.table.description}
+                        </p>
+                      </div>
 
-                <div className="w-full bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.value}</span>
-                    <span className={`text-xl font-black ${
-                      categories.find(c => c.id === selectedTransaction.category_id)?.type === 'income' 
-                      ? 'text-emerald-400' 
-                      : 'text-white'
-                    }`}>
-                      {formatCurrency(Math.abs(selectedTransaction.amount_cents) / 100)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.date}</span>
-                    <span className="text-sm font-bold text-white">
-                      {new Date(selectedTransaction.transaction_date).toLocaleDateString('pt-PT')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.category}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categories.find(c => c.id === selectedTransaction.category_id)?.color_hex || '#3b82f6' }} />
-                      <span className="text-sm font-bold text-white">
-                        {categories.find(c => c.id === selectedTransaction.category_id)?.name || t.dashboard.transactions.noCategory}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                      <div className="w-full bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.value}</span>
+                          <span className={`text-xl font-black ${
+                            isIncome 
+                            ? 'text-emerald-400' 
+                            : 'text-white'
+                          }`}>
+                            {formatCurrency(Math.abs(selectedTransaction.amount_cents) / 100)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.date}</span>
+                          <span className="text-sm font-bold text-white">
+                            {new Date(selectedTransaction.transaction_date).toLocaleDateString('pt-PT')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.category}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categories.find(c => c.id === selectedTransaction.category_id)?.color_hex || '#3b82f6' }} />
+                            <span className="text-sm font-bold text-white">
+                              {categories.find(c => c.id === selectedTransaction.category_id)?.name || t.dashboard.transactions.noCategory}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="w-full grid grid-cols-2 gap-3">
                   <button

@@ -147,7 +147,7 @@ async def get_zen_insights(
                 ),
                 icon='activity'
             ))
-        else:
+        elif saving_rate < -1:  # Apenas mostrar défice crítico se for menor que -1%
             health_score -= 45 # Penalização severa para défice
             insights.append(schemas.InsightItem(
                 type='danger',
@@ -158,6 +158,7 @@ async def get_zen_insights(
                 ),
                 icon='alert-circle'
             ))
+        # Se saving_rate está entre -1% e 0%, não mostrar alerta de défice crítico (equilíbrio)
     elif this_expenses > 0:
         health_score -= 40
         insights.append(schemas.InsightItem(

@@ -18,7 +18,6 @@ export default function PricingPage() {
   const { isPro, refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState<string | null>(null);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -200,35 +199,6 @@ export default function PricingPage() {
             A tua liberdade financeira começa com um clique. Desbloqueia ferramentas de elite que os bancos não querem que uses.
           </motion.p>
 
-          {/* Billing Toggle */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-6"
-          >
-            <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors duration-300 ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>
-              Mensal
-            </span>
-            <button 
-              onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-              className="w-16 sm:w-20 h-8 sm:h-10 bg-slate-800/80 rounded-full relative p-1 transition-all hover:bg-slate-700/80 border border-slate-700/50 cursor-pointer"
-            >
-              <motion.div 
-                animate={{ x: billingCycle === 'monthly' ? 0 : 32 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.6)]"
-              />
-            </button>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className={`text-xs sm:text-sm font-black uppercase tracking-widest transition-colors duration-300 ${billingCycle === 'yearly' ? 'text-white' : 'text-slate-500'}`}>
-                Anual
-              </span>
-              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg">
-                -25% OFF
-              </span>
-            </div>
-          </motion.div>
         </div>
       </motion.div>
 
@@ -283,17 +253,29 @@ export default function PricingPage() {
                 <div className="text-right min-w-0 flex-shrink ml-2">
                   <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5 truncate">{plan.name}</p>
                   <p className="text-2xl sm:text-3xl font-black text-white tracking-tighter leading-none">
-                    {billingCycle === 'yearly' && plan.id === 'yearly' 
-                      ? formatCurrency(plan.price) 
-                      : formatCurrency(plan.id === 'yearly' ? 9.99 : plan.price)}
+                    {formatCurrency(plan.price)}
                   </p>
                   <p className="text-[9px] sm:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
-                    / {billingCycle === 'monthly' ? 'Mês' : 'Ano'}
+                    {plan.id === 'monthly' ? '/ Mês' : plan.id === '3months' ? '/ 3 Meses' : '/ Ano'}
                   </p>
+                  {/* Mostrar economia para 3 meses e anual */}
+                  {(plan.id === '3months' || plan.id === 'yearly') && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1"
+                    >
+                      <p className="text-emerald-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">
+                        {plan.id === '3months' 
+                          ? `Economiza ${formatCurrency((9.99 * 3) - plan.price)}`
+                          : `Economiza ${formatCurrency((9.99 * 12) - plan.price)}`}
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
-              {billingCycle === 'yearly' && plan.id === 'yearly' && (
+              {plan.id === 'yearly' && (
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}

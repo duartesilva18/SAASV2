@@ -31,6 +31,25 @@ body {
   * {
     @apply border-white/5 dark:border-white/5 border-slate-200;
   }
+  
+  /* Required fields styling */
+  input:required,
+  select:required,
+  textarea:required {
+    @apply border-slate-800;
+  }
+  
+  input:required:invalid:not(:placeholder-shown),
+  select:required:invalid,
+  textarea:required:invalid:not(:placeholder-shown) {
+    @apply border-red-500/50;
+  }
+  
+  input:required:focus:invalid,
+  select:required:focus:invalid,
+  textarea:required:focus:invalid {
+    @apply border-red-500/70;
+  }
 }
 
 /* Custom Scrollbar */

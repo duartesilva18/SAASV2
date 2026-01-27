@@ -92,6 +92,12 @@ export default function CategoriesPage() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
+  // Filtrar stats para remover fundos de emergência e investimentos
+  const filteredStats = stats.filter((stat) => {
+    const category = categories.find(c => c.id === stat.category_id);
+    return category && category.vault_type === 'none';
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -318,73 +324,77 @@ export default function CategoriesPage() {
               </div>
             </div>
 
-            {stats.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPie>
-                      <Pie
-                        data={stats as any}
-                        dataKey="total_spent_cents"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        stroke="none"
-                      >
-                        {stats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                        formatter={(value: number | undefined) => {
-                          if (value === undefined) return '';
-                          return formatCurrency(value / 100);
-                        }}
-                      />
-                    </RechartsPie>
-                  </ResponsiveContainer>
-                </div>
+            {filteredStats.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPie>
+                        <Pie
+                          data={filteredStats.map(stat => ({
+                            ...stat,
+                            total_spent_cents: Math.abs(stat.total_spent_cents),
+                            percentage: Math.abs(stat.percentage)
+                          })) as any}
+                          dataKey="total_spent_cents"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          stroke="none"
+                        >
+                          {filteredStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                          itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                          formatter={(value: number | undefined) => {
+                            if (value === undefined) return '';
+                            return formatCurrency(Math.abs(value) / 100);
+                          }}
+                        />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                  </div>
 
-                <div className="space-y-4">
-                  {stats.slice(0, 5).map((stat) => (
-                    <div key={stat.category_id} className="group">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: stat.color }}
-                          />
-                          <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">
-                            {stat.name}
+                  <div className="space-y-4">
+                    {filteredStats.slice(0, 5).map((stat) => (
+                      <div key={stat.category_id} className="group">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: stat.color }}
+                            />
+                            <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">
+                              {stat.name}
+                            </span>
+                          </div>
+                          <span className="text-xs font-black text-white">
+                            {Math.abs(stat.percentage).toFixed(1)}%
                           </span>
                         </div>
-                        <span className="text-xs font-black text-white">
-                          {stat.percentage}%
-                        </span>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.abs(stat.percentage)}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: stat.color }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${stat.percentage}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: stat.color }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="h-[300px] flex flex-col items-center justify-center text-slate-600">
-                <Filter size={48} className="mb-4 opacity-20" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Sem dados este mês</p>
-              </div>
+              ) : (
+                <div className="h-[300px] flex flex-col items-center justify-center text-slate-600">
+                  <Filter size={48} className="mb-4 opacity-20" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Sem dados este mês</p>
+                </div>
             )}
           </div>
 
@@ -578,7 +588,10 @@ export default function CategoriesPage() {
               Alvos este Mês
             </h4>
             <div className="space-y-6">
-              {stats.slice(0, 3).map((s) => (
+              {stats.filter((s) => {
+                const category = categories.find(c => c.id === s.category_id);
+                return category && category.vault_type === 'none';
+              }).slice(0, 3).map((s) => (
                 <div key={s.category_id} className="flex items-center gap-4">
                   <div 
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+// Force HMR update - recharts removed
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -70,9 +71,11 @@ export default function RecurringPage() {
     return Object.keys(newErrors).length === 0;
   }
 
-  const fetchData = async () => {
+  const fetchData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const res = await api.get('/insights/composite');
       const data = res.data;
       setRecurring(data.recurring || []);
@@ -82,7 +85,9 @@ export default function RecurringPage() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -124,20 +129,31 @@ export default function RecurringPage() {
     if (!validate()) return;
     
     try {
+      // Para despesas, amount_cents deve ser negativo; para receitas, positivo
+      const baseAmount = Math.round(parseFloat(formData.amount) * 100);
+      const amount_cents = formData.type === 'expense' ? -Math.abs(baseAmount) : Math.abs(baseAmount);
+      
       const payload = {
         description: formData.description,
-        amount_cents: Math.round(parseFloat(formData.amount) * 100),
+        amount_cents: amount_cents,
         day_of_month: formData.day_of_month,
         category_id: formData.category_id || null,
         process_automatically: formData.process_automatically
       };
 
+      let response;
       if (editingId) {
-        await api.patch(`/recurring/${editingId}`, payload);
+        response = await api.patch(`/recurring/${editingId}`, payload);
         setToastInfo({ message: "Ciclo atualizado!", type: "success", isVisible: true });
+        
+        // Atualizar item existente no estado sem reload
+        setRecurring(prev => prev.map(item => item.id === editingId ? response.data : item));
       } else {
-        await api.post('/recurring/', payload);
+        response = await api.post('/recurring/', payload);
         setToastInfo({ message: "Registo concluído!", type: "success", isVisible: true });
+        
+        // Adicionar novo item ao estado sem reload
+        setRecurring(prev => [...prev, response.data]);
       }
 
       setShowAddModal(false);
@@ -150,7 +166,9 @@ export default function RecurringPage() {
         process_automatically: false,
         type: activeTab 
       });
-      fetchData();
+      
+      // Atualizar dados em background sem mostrar loading
+      fetchData(false).catch(err => console.error('Erro ao atualizar dados em background:', err));
     } catch (err: any) {
       console.error(err);
       const errorMessage = err.response?.data?.detail || 'Erro ao salvar ciclo.';
@@ -172,15 +190,24 @@ export default function RecurringPage() {
   };
 
   // IMPORTANTE: Filtrar por vault_type === 'none' para excluir vault transactions
+  // Se não houver categoria, assumir baseado no sinal do amount_cents
   const recurringIncomes = recurring.filter(r => {
     const cat = allCategories.find(c => c.id === r.category_id);
-    return cat && cat.type === 'income' && cat.vault_type === 'none';
+    if (!cat) {
+      // Se não tem categoria, assumir receita se amount_cents > 0
+      return r.amount_cents > 0;
+    }
+    return cat.type === 'income' && cat.vault_type === 'none';
   });
   
   const recurringExpenses = recurring.filter(r => {
     const cat = allCategories.find(c => c.id === r.category_id);
+    if (!cat) {
+      // Se não tem categoria, assumir despesa se amount_cents < 0
+      return r.amount_cents < 0;
+    }
     // Apenas despesas regulares (não vault)
-    return cat && cat.type === 'expense' && cat.vault_type === 'none';
+    return cat.type === 'expense' && cat.vault_type === 'none';
   });
 
   // Receitas: amount_cents deve ser positivo, usar valor absoluto para segurança
@@ -207,11 +234,32 @@ export default function RecurringPage() {
   });
 
   const weeklyPressure = [
-    { name: 'Sem 1', value: currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 2', value: currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 3', value: currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
-    { name: 'Sem 4', value: currentList.filter(r => r.day_of_month > 21).reduce((acc: number, curr: any) => acc + curr.amount_cents / 100, 0) },
+    { name: 'Sem 1', value: Math.abs(currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: 'Sem 2', value: Math.abs(currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: 'Sem 3', value: Math.abs(currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: 'Sem 4', value: Math.abs(currentList.filter(r => r.day_of_month > 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
   ];
+
+  // Dados para gráfico de pizza - Proporção Receitas vs Despesas
+  const pieData = [
+    { name: 'Receitas', value: totalIncomes / 100, color: '#10b981' },
+    { name: 'Despesas', value: totalExpenses / 100, color: '#ef4444' }
+  ].filter(item => item.value > 0);
+
+  // Dados para gráfico de barras - Distribuição por categoria
+  const categoryData: any = {};
+  [...recurringIncomes, ...recurringExpenses].forEach((item) => {
+    const cat = allCategories.find(c => c.id === item.category_id);
+    const categoryName = cat?.name || 'Sem categoria';
+    if (!categoryData[categoryName]) {
+      categoryData[categoryName] = 0;
+    }
+    categoryData[categoryName] += Math.abs(item.amount_cents) / 100;
+  });
+  const barData = Object.entries(categoryData)
+    .map(([name, value]) => ({ name, value: value as number }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8); // Top 8 categorias
 
   const filteredRecurring = currentList.filter(item => {
     if (activeFilter === 'all') return true;
@@ -339,17 +387,6 @@ export default function RecurringPage() {
         <div className="flex justify-center mt-12">
           <div className="bg-slate-900/50 p-2 rounded-[24px] border border-slate-800 flex gap-2">
             <button
-              onClick={() => setActiveTab('expense')}
-              className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
-                activeTab === 'expense' 
-                  ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' 
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-              }`}
-            >
-              <ArrowDownCircle size={18} />
-              {t.dashboard.recurring.fixedExpenses}
-            </button>
-            <button
               onClick={() => setActiveTab('income')}
               className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
                 activeTab === 'income' 
@@ -360,29 +397,189 @@ export default function RecurringPage() {
               <ArrowUpCircle size={18} />
               {t.dashboard.recurring.fixedIncomes}
             </button>
+            <button
+              onClick={() => setActiveTab('expense')}
+              className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
+                activeTab === 'expense' 
+                  ? 'bg-red-600 text-white shadow-xl shadow-red-600/20' 
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+              }`}
+            >
+              <ArrowDownCircle size={18} />
+              {t.dashboard.recurring.fixedExpenses}
+            </button>
           </div>
         </div>
       </section>
 
       <section className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
-        <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-8">Fluxo de Pressão</h2>
-        <div className="h-[200px] mb-12">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklyPressure as any}>
-              <Bar dataKey="value" fill="#3b82f6" radius={[10, 10, 10, 10]} barSize={60} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569', fontSize:10}} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+              <PieChartIcon size={16} />
+            </div>
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Fluxo de Pressão</h2>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            {activeTab === 'expense' ? t.dashboard.recurring.fixedExpenses : t.dashboard.recurring.fixedIncomes}
+          </span>
         </div>
-        
-        <div className="flex overflow-x-auto gap-5 pb-4 no-scrollbar">
-          {sortedByDay.map((item) => (
-            <div key={item.id} onClick={() => handleEditClick(item)} className="min-w-[180px] p-6 bg-slate-950/50 border border-slate-800 rounded-[32px] cursor-pointer hover:border-blue-500/50 transition-all">
-              <span className="text-[10px] font-black text-slate-500 block mb-4">Dia {item.day_of_month}</span>
-              <p className="text-xs font-black text-white uppercase truncate mb-1">{item.description}</p>
-              <p className="text-xl font-black text-blue-400">{formatCurrency(item.amount_cents / 100)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {weeklyPressure.map((week, index) => (
+            <div key={index} className="bg-slate-950/50 border border-slate-800 rounded-[24px] p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{week.name}</span>
+                <span className={`text-lg font-black ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {formatCurrency(Math.abs(week.value))}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {currentList
+                  .filter(r => {
+                    if (index === 0) return r.day_of_month <= 7;
+                    if (index === 1) return r.day_of_month > 7 && r.day_of_month <= 14;
+                    if (index === 2) return r.day_of_month > 14 && r.day_of_month <= 21;
+                    return r.day_of_month > 21;
+                  })
+                  .map((item) => {
+                    const alreadyPaid = transactions.some(t => 
+                      t.description === item.description && 
+                      Math.abs(t.amount_cents) === Math.abs(item.amount_cents) &&
+                      new Date(t.transaction_date) >= currentMonthStart
+                    );
+                    return (
+                      <div 
+                        key={item.id} 
+                        onClick={() => handleEditClick(item)}
+                        className={`p-3 bg-white/5 border-2 rounded-xl cursor-pointer transition-all ${
+                          activeTab === 'expense'
+                            ? alreadyPaid
+                              ? 'border-red-500/40 bg-red-500/5 hover:border-red-500/60'
+                              : 'border-red-500 bg-red-500/10 hover:border-red-500/90'
+                            : alreadyPaid
+                              ? 'border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500/70'
+                              : 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-black text-slate-400">Dia {item.day_of_month}</span>
+                          {alreadyPaid && (
+                            <CheckCircle2 size={12} className="text-emerald-400" />
+                          )}
+                        </div>
+                        <p className="text-xs font-black text-white uppercase truncate mb-1">{item.description}</p>
+                        <p className={`text-sm font-black ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {formatCurrency(Math.abs(item.amount_cents) / 100)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                {currentList.filter(r => {
+                  if (index === 0) return r.day_of_month <= 7;
+                  if (index === 1) return r.day_of_month > 7 && r.day_of_month <= 14;
+                  if (index === 2) return r.day_of_month > 14 && r.day_of_month <= 21;
+                  return r.day_of_month > 21;
+                }).length === 0 && (
+                  <p className="text-[10px] text-slate-600 font-medium italic text-center py-4">Sem subscrições</p>
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Gráficos de Análise */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráfico 1: Proporção Receitas vs Despesas */}
+        <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+              <PieChartIcon size={16} />
+            </div>
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Proporção Mensal</h2>
+          </div>
+          <div className="h-[300px] w-full">
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                    formatter={(value: number | undefined) => {
+                      if (value === undefined) return '';
+                      return formatCurrency(value);
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-600">
+                <p className="text-xs font-black uppercase tracking-widest">Sem dados</p>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-6">
+            {pieData.map((item, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{item.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Gráfico 2: Distribuição por Categoria */}
+        <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+              <TrendingUp size={16} />
+            </div>
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Por Categoria</h2>
+          </div>
+          <div className="h-[300px] w-full">
+            {barData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#1e293b" />
+                  <XAxis type="number" stroke="#475569" fontSize={10} fontWeight="900" tickFormatter={(value) => formatCurrency(value)} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    stroke="#475569" 
+                    fontSize={9} 
+                    fontWeight="900"
+                    width={100}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                    formatter={(value: number | undefined) => {
+                      if (value === undefined) return '';
+                      return formatCurrency(value);
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-600">
+                <p className="text-xs font-black uppercase tracking-widest">Sem dados</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -399,7 +596,7 @@ export default function RecurringPage() {
                 </button>
               </div>
               <h3 className="text-lg font-black text-white uppercase truncate mb-1">{item.description}</h3>
-              <p className="text-2xl font-black text-white mb-4">{formatCurrency(item.amount_cents / 100)}</p>
+              <p className={`text-2xl font-black mb-4 ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>{formatCurrency(Math.abs(item.amount_cents) / 100)}</p>
               <span className="text-[10px] font-black uppercase text-slate-600">Dia {item.day_of_month} • {item.process_automatically ? 'Auto' : 'Manual'}</span>
             </motion.div>
           ))}
@@ -438,7 +635,8 @@ export default function RecurringPage() {
                   </button>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">NOME DE SUBSCRIÇÃO</label>
                   <motion.div
                     animate={errors.description ? { x: [-2, 2, -2, 2, 0] } : {}}
                     transition={{ duration: 0.4 }}
@@ -452,7 +650,7 @@ export default function RecurringPage() {
                         if (errors.description) setErrors({...errors, description: ''});
                       }} 
                       placeholder={t.dashboard.recurring.descriptionPlaceholder} 
-                      className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all ${
+                      className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
                         errors.description ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                       }`} 
                     />
@@ -465,7 +663,8 @@ export default function RecurringPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">VALOR</label>
                     <motion.div
                       animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -480,7 +679,7 @@ export default function RecurringPage() {
                           if (errors.amount) setErrors({...errors, amount: ''});
                         }} 
                         placeholder="0.00" 
-                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all ${
+                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
                           errors.amount ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                         }`} 
                       />
@@ -492,7 +691,8 @@ export default function RecurringPage() {
                     )}
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">DIA</label>
                     <motion.div
                       animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -508,7 +708,7 @@ export default function RecurringPage() {
                           setFormData({...formData, day_of_month: val});
                           if (errors.day_of_month) setErrors({...errors, day_of_month: ''});
                         }} 
-                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all ${
+                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
                           errors.day_of_month ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                         }`} 
                       />
@@ -521,10 +721,11 @@ export default function RecurringPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Categoria</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA</label>
                   <div className="relative group">
                     <Tag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                     <select
+                      required
                       value={formData.category_id}
                       onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                       className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
@@ -538,11 +739,22 @@ export default function RecurringPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl cursor-pointer" onClick={() => setFormData({...formData, process_automatically: !formData.process_automatically})}>
-                  <div className={`w-6 h-6 rounded border ${formData.process_automatically ? 'bg-blue-600' : ''}`} />
-                  <span className="text-xs font-black uppercase text-white">Processamento Automático</span>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">PROCESSAMENTO AUTOMÁTICO</label>
+                  <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl cursor-pointer" onClick={() => setFormData({...formData, process_automatically: !formData.process_automatically})}>
+                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                      formData.process_automatically 
+                        ? 'bg-blue-600 border-blue-600' 
+                        : 'bg-transparent border-slate-700'
+                    }`}>
+                      {formData.process_automatically && (
+                        <Check size={16} className="text-white" />
+                      )}
+                    </div>
+                    <span className="text-xs font-black uppercase text-white">Processamento Automático</span>
+                  </div>
                 </div>
-                <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all">Guardar</button>
+                <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all cursor-pointer">Guardar</button>
               </form>
             </motion.div>
           </div>

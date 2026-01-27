@@ -300,17 +300,34 @@ export default function AnalyticsPage() {
     }
 
     const now = new Date();
+    // Resetar horas para início do dia para comparações corretas
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     let filterDate = new Date();
 
-    if (selectedPeriod === '7D') filterDate.setDate(now.getDate() - 7);
-    else if (selectedPeriod === '30D') filterDate.setDate(now.getDate() - 30);
-    else if (selectedPeriod === '90D') filterDate.setDate(now.getDate() - 90);
-    else if (selectedPeriod === '12M') filterDate.setFullYear(now.getFullYear() - 1);
-    else filterDate = new Date(0); // All/Tudo
+    if (selectedPeriod === '7D') {
+      filterDate = new Date(todayStart);
+      filterDate.setDate(filterDate.getDate() - 7);
+    } else if (selectedPeriod === '30D') {
+      filterDate = new Date(todayStart);
+      filterDate.setDate(filterDate.getDate() - 30);
+    } else if (selectedPeriod === '90D') {
+      filterDate = new Date(todayStart);
+      filterDate.setDate(filterDate.getDate() - 90);
+    } else if (selectedPeriod === '12M') {
+      filterDate = new Date(todayStart);
+      filterDate.setFullYear(filterDate.getFullYear() - 1);
+    } else {
+      filterDate = new Date(0); // All/Tudo
+    }
 
     const filteredTransactions = rawData.transactions.filter((t: any) => {
       const transDate = new Date(t.transaction_date);
-      return transDate >= filterDate;
+      // Para "Tudo", incluir todas as transações até hoje
+      if (selectedPeriod === 'Tudo') {
+        return transDate <= todayStart;
+      }
+      // Para outros períodos, incluir apenas transações no intervalo [filterDate, todayStart]
+      return transDate >= filterDate && transDate <= todayStart;
     });
 
     // Process data for charts
@@ -559,23 +576,31 @@ export default function AnalyticsPage() {
           // Receitas são positivas (backend garante)
           monthlyData[monthYear].income += amount; // Já é positivo
           periodIncome += amount;
+          // NÃO adicionar ao weeklyRhythm - apenas despesas
         } else if (cat.type === 'expense' && cat.vault_type === 'none') {
           // Despesas são negativas (backend garante), converter para positivo
           const expenseAmount = -amount; // Converte negativo para positivo
           monthlyData[monthYear].expenses += expenseAmount;
           periodExpenses += expenseAmount;
           catDistribution[cat.name] = (catDistribution[cat.name] || 0) + expenseAmount;
-          weeklyRhythm[dayName] += expenseAmount;
+          weeklyRhythm[dayName] += expenseAmount; // Apenas despesas no ritmo semanal
         }
         // Vault transactions já foram excluídas acima (return)
       } else {
-        // Categoria não encontrada - tratar como despesa
-        // Assumir que é negativa (despesa) e converter para positivo
-        const expenseAmount = amount < 0 ? -amount : amount; // Se negativo, converter; se positivo, manter
-        monthlyData[monthYear].expenses += expenseAmount;
-        periodExpenses += expenseAmount;
-        catDistribution[t.dashboard.analytics.others] = (catDistribution[t.dashboard.analytics.others] || 0) + expenseAmount;
-        weeklyRhythm[dayName] += expenseAmount;
+        // Categoria não encontrada - tratar como despesa APENAS se for negativa
+        // Se for positiva (receita), não adicionar ao weeklyRhythm
+        if (amount < 0) {
+          const expenseAmount = -amount; // Converte negativo para positivo
+          monthlyData[monthYear].expenses += expenseAmount;
+          periodExpenses += expenseAmount;
+          catDistribution[t.dashboard.analytics.others] = (catDistribution[t.dashboard.analytics.others] || 0) + expenseAmount;
+          weeklyRhythm[dayName] += expenseAmount; // Apenas despesas no ritmo semanal
+        } else {
+          // Se for positiva, tratar como receita
+          monthlyData[monthYear].income += amount;
+          periodIncome += amount;
+          // NÃO adicionar ao weeklyRhythm
+        }
       }
     });
 
@@ -586,17 +611,22 @@ export default function AnalyticsPage() {
     let prevHealthScore: number | null = null;
     if (selectedPeriod !== 'Tudo') {
       const periodStart = filterDate;
-      const periodEnd = now;
+      const periodEnd = todayStart;
       const deltaMs = periodEnd.getTime() - periodStart.getTime();
       const prevStart = new Date(periodStart.getTime() - deltaMs);
       const prevEnd = periodStart;
       const prevTransactions = rawData.transactions.filter((t: any) => {
         const transDate = new Date(t.transaction_date);
+        // Incluir transações do período anterior [prevStart, prevEnd)
         return transDate >= prevStart && transDate < prevEnd;
       });
-      const prevTotals = computeTotals(prevTransactions);
-      prevSavingRate = computeSavingRate(prevTotals.income, prevTotals.expenses);
-      prevHealthScore = computeHealthScore(prevTotals.income, prevTotals.expenses, prevSavingRate);
+      
+      // Só calcular se houver transações no período anterior
+      if (prevTransactions.length > 0) {
+        const prevTotals = computeTotals(prevTransactions);
+        prevSavingRate = computeSavingRate(prevTotals.income, prevTotals.expenses);
+        prevHealthScore = computeHealthScore(prevTotals.income, prevTotals.expenses, prevSavingRate);
+      }
     }
 
     setProcessedData({
@@ -782,7 +812,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className={`lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] relative overflow-hidden ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+          <div className={`lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] relative overflow-hidden p-6`}>
             <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
             <div className="relative z-10 flex flex-col gap-4">
               <div className="flex items-center gap-3 flex-wrap">
@@ -824,7 +854,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] group hover:border-emerald-500/30 transition-all ${selectedPeriod !== 'Tudo' ? 'p-4' : 'p-6'}`}>
+          <div className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] group hover:border-emerald-500/30 transition-all p-6`}>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <Target className="text-emerald-500" size={20} />
               <div className="flex items-center gap-2 flex-wrap">
@@ -859,12 +889,12 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className={`bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20 ${selectedPeriod !== 'Tudo' ? 'p-4' : 'p-6'}`}>
+        <div className={`bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20 p-6`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[40px] rounded-full" />
           <div className="relative z-10 flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Sparkles size={18} className="text-white animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Zen Insight</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Insight</span>
             </div>
             {hasLowConfidence || !processedData?.summary || (processedData.summary && processedData.summary.trim() === '') || maxWeekly.name === 'N/A' ? (
               <>
@@ -927,7 +957,7 @@ export default function AnalyticsPage() {
       <section className="space-y-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whatPullsBalance}</h2>
         {/* Main Flow Chart */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -977,8 +1007,15 @@ export default function AnalyticsPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} font-weight="900" />
-                <YAxis hide />
+                <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="900" />
+                <YAxis 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  fontWeight="900"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  width={80}
+                  domain={['auto', 'auto']}
+                />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
@@ -996,7 +1033,7 @@ export default function AnalyticsPage() {
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whereMoneyFlees}</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Distribution Chart */}
-          <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+          <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -1062,7 +1099,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
         {/* Weekly Rhythm Chart */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -1102,8 +1139,15 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={processedData.weekly}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} font-weight="900" />
-                <YAxis hide />
+                <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="900" />
+                <YAxis 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  fontWeight="900"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  width={80}
+                  domain={['auto', 'auto']}
+                />
                 <Tooltip 
                   cursor={{ fill: 'rgba(59, 130, 246, 0.03)' }}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
@@ -1128,7 +1172,7 @@ export default function AnalyticsPage() {
       {/* Culpados principais */}
       <section className="space-y-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.mainCulprits}</h2>
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div>
@@ -1233,8 +1277,15 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={processedData.evolution}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="date" hide />
-                <YAxis hide domain={['auto', 'auto']} />
+                <XAxis dataKey="date" stroke="#475569" fontSize={10} fontWeight="900" />
+                <YAxis 
+                  stroke="#475569" 
+                  fontSize={10} 
+                  fontWeight="900"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  width={80}
+                  domain={['auto', 'auto']}
+                />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
@@ -1266,7 +1317,7 @@ export default function AnalyticsPage() {
           <span>{t.dashboard.analytics.vaultDimension}</span>
           {isVaultOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
-        {/* Zen Vault (Reservas e Investimentos) */}
+        {/* Vault (Reservas e Investimentos) */}
         {isVaultOpen && (
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
@@ -1324,7 +1375,7 @@ export default function AnalyticsPage() {
                     whileHover={{ scale: 1.02 }}
                     className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
                   >
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.zenInvestments}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">Investimentos</p>
                     <p className="text-lg font-black text-emerald-400 text-center mb-3">{formatCurrency(processedData.investmentTotal)}</p>
                     <div className="w-full h-1 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
                       <div 
@@ -1361,7 +1412,19 @@ export default function AnalyticsPage() {
               <ShieldCheck size={18} className="text-blue-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-white">{t.dashboard.analytics.freedomRate}</span>
             </div>
-            <span className="text-sm font-black text-blue-400">{(parseFloat(processedData.savingRate) * 1.2).toFixed(1)}%</span>
+            <span className="text-sm font-black text-blue-400">
+              {(() => {
+                // Taxa de Liberdade = (Investimentos / Patrimônio Total) * 100
+                // Se não houver patrimônio, usa receitas líquidas como base
+                const netWorth = processedData.evolution?.slice(-1)[0]?.balance || processedData.netResult || 0;
+                const baseValue = netWorth > 0 ? netWorth : (processedData.periodIncome - processedData.periodExpenses);
+                
+                if (baseValue > 0 && processedData.investmentTotal > 0) {
+                  return ((processedData.investmentTotal / baseValue) * 100).toFixed(1);
+                }
+                return '0.0';
+              })()}%
+            </span>
           </div>
         </section>
         )}
@@ -1379,7 +1442,7 @@ export default function AnalyticsPage() {
       {isRecurringOpen && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Payments */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center gap-3 mb-8">
             <Clock className="text-orange-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.upcoming}</h3>
@@ -1428,7 +1491,7 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Recent Transactions Feed */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] ${selectedPeriod !== 'Tudo' ? 'p-6' : 'p-8'}`}>
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
           <div className="flex items-center gap-3 mb-8">
             <History className="text-blue-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.recentActivity}</h3>

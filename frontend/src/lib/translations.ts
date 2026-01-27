@@ -601,6 +601,7 @@ export const translations = {
                 monthlyCycle: "Mensal",
                 activateCycle: "Ativar Subscrição",
                 addNew: "Nova Subscrição",
+                newIncome: "Nova Receita",
                 description: "Descrição",
                 amount: "Valor",
                 dayOfMonth: "Dia do Mês",
@@ -611,7 +612,14 @@ export const translations = {
                 noData: "Ainda não tens pagamentos mensais definidos. Adiciona a tua primeira despesa fixa!",
                 success: "Regra mensal criada!",
                 deleteConfirm: "Eliminar regra?",
-                fixedIncomes: "Receitas Fixas"
+                fixedIncome: "Receitas Fixas",
+                fixedExpenses: "Despesas Fixas",
+                fixedIncomes: "Receitas Fixas",
+                validation: {
+                    nameRequired: "O nome é obrigatório",
+                    positiveAmount: "O valor deve ser maior que zero",
+                    validDay: "O dia deve estar entre 1 e 31"
+                }
             },
             onboarding: {
                 title: "Bem-vindo ao ",
