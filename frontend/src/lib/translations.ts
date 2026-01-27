@@ -180,6 +180,9 @@ export const translations = {
                 back: "Voltar",
                 googleLogin: "Entrar com Google",
                 googleError: "Ocorreu um erro no login com Google.",
+                resendVerificationPrompt: "Não recebeste o email?",
+                resendVerificationLink: "Reenviar link de verificação",
+                resendVerificationSuccess: "Link reenviado. Verifica o email e a pasta de spam.",
                 sslSecured: "256-Bit SSL Seguro",
                 motivationalQuotes: [
                     {
@@ -1313,6 +1316,9 @@ export const translations = {
                 back: "Back",
                 googleLogin: "Sign in with Google",
                 googleError: "An error occurred with Google login.",
+                resendVerificationPrompt: "Didn't receive the email?",
+                resendVerificationLink: "Resend verification link",
+                resendVerificationSuccess: "Link sent. Check your email and spam folder.",
                 sslSecured: "256-Bit SSL Secured",
                 motivationalQuotes: [
                     {

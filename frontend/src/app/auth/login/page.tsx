@@ -64,6 +64,10 @@ function LoginPageContent() {
   const [rememberMe, setRememberMe] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
+  const [resendError, setResendError] = useState('');
   const { refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,6 +84,27 @@ function LoginPageContent() {
 
   const validateEmail = (email: string) => {
     return String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
+  };
+
+  const handleResendVerification = async () => {
+    const emailNorm = email.trim().toLowerCase();
+    if (!emailNorm || !validateEmail(emailNorm)) {
+      setResendError(t.auth.login.invalidEmail);
+      return;
+    }
+    setResendError('');
+    setResendSuccess('');
+    setResendLoading(true);
+    try {
+      await api.post('/auth/resend-verification', { email: emailNorm });
+      setResendSuccess(t.auth.login.resendVerificationSuccess);
+    } catch (err: any) {
+      const d = err.response?.data?.detail;
+      const msg = typeof d === 'string' ? d : (Array.isArray(d) ? d[0]?.msg : null) ?? t.auth.login.error;
+      setResendError(msg);
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,8 +183,14 @@ function LoginPageContent() {
       
       router.push('/dashboard');
     } catch (err: any) {
+      const status = err.response?.status;
       const detail = err.response?.data?.detail;
-      setError(detail || t.auth.login.error);
+      const msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail[0]?.msg : null) ?? t.auth.login.error;
+      setError(msg);
+      const isEmailNotConfirmed = status === 403 && String(msg).toLowerCase().includes('confirme');
+      setShowResendVerification(!!isEmailNotConfirmed);
+      setResendSuccess('');
+      setResendError('');
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
     } finally {
@@ -341,12 +372,36 @@ function LoginPageContent() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-xs font-black tracking-tight leading-tight"
+                    className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs font-black tracking-tight leading-tight"
                   >
-                    <div className="w-8 h-8 bg-red-500/20 rounded-xl flex items-center justify-center shrink-0">
-                      <AlertCircle size={16} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-red-500/20 rounded-xl flex items-center justify-center shrink-0">
+                        <AlertCircle size={16} />
+                      </div>
+                      <span>{error}</span>
                     </div>
-                    {error}
+                    {showResendVerification && (
+                      <div className="mt-4 pt-4 border-t border-red-500/20 flex flex-col gap-2">
+                        <p className="text-slate-400 text-[10px] font-medium">{t.auth.login.resendVerificationPrompt}</p>
+                        <button
+                          type="button"
+                          onClick={handleResendVerification}
+                          disabled={resendLoading}
+                          className="text-blue-400 hover:text-blue-300 text-[10px] font-black uppercase tracking-widest underline decoration-blue-500/30 underline-offset-2 w-fit cursor-pointer disabled:opacity-50 transition-colors"
+                        >
+                          {resendLoading ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="w-3 h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                              {t.auth.login.resendVerificationLink}
+                            </span>
+                          ) : (
+                            t.auth.login.resendVerificationLink
+                          )}
+                        </button>
+                        {resendSuccess && <p className="text-emerald-400 text-[10px] font-medium">{resendSuccess}</p>}
+                        {resendError && <p className="text-red-400/90 text-[10px] font-medium">{resendError}</p>}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -363,7 +418,7 @@ function LoginPageContent() {
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                      onChange={(e) => { setEmail(e.target.value); if (error) { setError(''); setShowResendVerification(false); setResendSuccess(''); setResendError(''); } }}
                       className={`w-full bg-slate-950/50 border rounded-[24px] py-5 lg:py-6 pl-14 pr-5 text-sm lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
                       placeholder="o-teu-email@exemplo.com"
                       required

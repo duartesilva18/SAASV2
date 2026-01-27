@@ -442,14 +442,31 @@ def create_seed_transactions(db: Session, workspace_id: uuid.UUID, categories_ma
 
 @router.get('/verify-email')
 async def verify_email(request: Request, token: str, ref: str = None, db: Session = Depends(get_db)):
+    token_clean = (token or '').strip()
+    if not token_clean:
+        raise HTTPException(status_code=400, detail='Link inválido: falta o token de verificação.')
+
     verification = db.query(models.EmailVerification).filter(
-        models.EmailVerification.token == token,
+        models.EmailVerification.token == token_clean,
         models.EmailVerification.is_used == False,
         models.EmailVerification.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if not verification:
-        raise HTTPException(status_code=400, detail='Token de verificação inválido ou expirado.')
+        # Distinguir "já usado" de "expirado/inválido" para mensagem mais clara
+        used = db.query(models.EmailVerification).filter(
+            models.EmailVerification.token == token_clean,
+            models.EmailVerification.is_used == True
+        ).first()
+        if used:
+            raise HTTPException(
+                status_code=400,
+                detail='Este link de verificação já foi utilizado. O teu email já está ativo — faz login na aplicação.'
+            )
+        raise HTTPException(
+            status_code=400,
+            detail='Link expirado ou inválido. Os links expiram em 30 minutos. Pede um novo link na página de login (Reenviar link).'
+        )
     
     user = db.query(models.User).filter(models.User.email == verification.email).first()
     

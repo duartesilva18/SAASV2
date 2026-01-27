@@ -13,6 +13,7 @@ function VerifyEmailContent() {
   const router = useRouter();
   const { refreshUser } = useUser();
   const token = searchParams.get('token');
+  const ref = searchParams.get('ref');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('A validar o seu acesso...');
 
@@ -30,7 +31,9 @@ function VerifyEmailContent() {
       }
 
       try {
-        const response = await api.get(`/auth/verify-email?token=${token}`);
+        const params = new URLSearchParams({ token });
+        if (ref) params.set('ref', ref);
+        const response = await api.get(`/auth/verify-email?${params.toString()}`);
         
         const accessToken = response.data.access_token;
         const refreshToken = response.data.refresh_token;
@@ -87,7 +90,9 @@ function VerifyEmailContent() {
         }, 1500);
       } catch (err: any) {
         setStatus('error');
-        setMessage(err.response?.data?.detail || 'Erro ao verificar o email.');
+        const d = err.response?.data?.detail;
+        const msg = typeof d === 'string' ? d : Array.isArray(d) ? (d[0]?.msg || String(d)) : 'Erro ao verificar o email.';
+        setMessage(msg);
       }
     };
 
