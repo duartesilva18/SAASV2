@@ -47,6 +47,7 @@ const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => 
     case 'target': return <Target size={size} />;
     case 'credit-card': return <CreditCard size={size} />;
     case 'send': return <Send size={size} />;
+    case 'trophy': return <Trophy size={size} />;
     default: return <Bell size={size} />;
   }
 };
@@ -226,10 +227,11 @@ export default function Sidebar({
       }
       
       try {
-        const [insightsRes, recurringRes, invoicesRes] = await Promise.all([
+        const [insightsRes, recurringRes, invoicesRes, goalsRes] = await Promise.all([
           api.get('/insights/'),
           api.get('/recurring/'),
-          api.get('/stripe/invoices')
+          api.get('/stripe/invoices'),
+          api.get('/goals/').catch(() => ({ data: [] })) // Se falhar, usar array vazio
         ]);
 
         const newNotifications: any[] = [];
@@ -282,6 +284,21 @@ export default function Sidebar({
             date: t.dashboard.sidebar.urgent
           });
         }
+
+        // 4. Metas Concluídas
+        const completedGoals = goalsRes.data?.filter((goal: any) => 
+          goal.current_amount_cents >= goal.target_amount_cents && goal.target_amount_cents > 0
+        ) || [];
+        completedGoals.forEach((goal: any) => {
+          newNotifications.push({
+            id: `goal-completed-${goal.id}`,
+            title: '🎯 Meta Concluída!',
+            message: `Parabéns! Atingiste a meta "${goal.name}" de ${formatPrice(goal.target_amount_cents / 100)}`,
+            type: 'success',
+            icon: 'trophy',
+            date: t.dashboard.sidebar.now
+          });
+        });
 
         // Se não houver nada, adicionar boas-vindas
         if (newNotifications.length === 0) {
@@ -598,12 +615,14 @@ export default function Sidebar({
                           className={`flex gap-4 items-start p-5 rounded-[24px] border transition-all hover:scale-[1.02] group/notif ${
                             notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_30px_-10px_#ef4444]' : 
                             notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
+                            notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_30px_-10px_#10b981]' : 
                             'bg-white/5 border-white/5'
                           }`}
                         >
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                             notif.type === 'danger' ? 'bg-red-500/20 text-red-400' :
                             notif.type === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                            notif.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
                             'bg-blue-500/20 text-blue-400'
                           }`}>
                             <IconComponent name={notif.icon} size={22} />
@@ -612,7 +631,9 @@ export default function Sidebar({
                             <div className="flex justify-between items-start mb-2">
                               <p className={`text-xs font-black uppercase tracking-tight leading-tight ${
                                 notif.type === 'danger' ? 'text-red-400' : 
-                                notif.type === 'warning' ? 'text-amber-400' : 'text-white'
+                                notif.type === 'warning' ? 'text-amber-400' : 
+                                notif.type === 'success' ? 'text-emerald-400' : 
+                                'text-white'
                               }`}>{notif.title}</p>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
                                 <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{notif.date}</span>

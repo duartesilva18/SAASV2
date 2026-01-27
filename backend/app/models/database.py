@@ -191,6 +191,7 @@ class SavingsGoal(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(100), nullable=False)
+    goal_type = Column(String(20), nullable=False, server_default='expense')
     target_amount_cents = Column(Integer, nullable=False)
     current_amount_cents = Column(Integer, nullable=False, default=0)
     target_date = Column(Date, nullable=False)

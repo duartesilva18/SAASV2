@@ -299,6 +299,7 @@ class BroadcastRequest(BaseModel):
 # Metas de Poupança
 class SavingsGoalBase(BaseModel):
     name: str
+    goal_type: str = 'expense'
     target_amount_cents: int
     current_amount_cents: int = 0
     target_date: date
@@ -310,6 +311,7 @@ class SavingsGoalCreate(SavingsGoalBase):
 
 class SavingsGoalUpdate(BaseModel):
     name: Optional[str] = None
+    goal_type: Optional[str] = None
     target_amount_cents: Optional[int] = None
     current_amount_cents: Optional[int] = None
     target_date: Optional[date] = None

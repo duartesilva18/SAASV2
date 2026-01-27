@@ -52,6 +52,30 @@ body {
   }
 }
 
+/* Custom select dropdown colors */
+.goal-type-select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* Required labels */
+.required-label::after {
+  content: " *";
+  color: #ef4444;
+}
+
+@layer components {
+  .field-error {
+    @apply border-red-500/60 bg-red-500/5;
+  }
+  .field-error:focus {
+    @apply border-red-500/80 bg-red-500/10;
+  }
+  .field-error-message {
+    @apply mt-2 text-[10px] font-black uppercase tracking-widest text-red-400 ml-2;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

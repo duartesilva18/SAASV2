@@ -338,6 +338,7 @@ CREATE TABLE IF NOT EXISTS savings_goals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id UUID NOT NULL,
     name VARCHAR(100) NOT NULL,
+    goal_type VARCHAR(20) NOT NULL DEFAULT 'expense',
     target_amount_cents INTEGER NOT NULL,
     current_amount_cents INTEGER NOT NULL DEFAULT 0,
     target_date DATE NOT NULL,
