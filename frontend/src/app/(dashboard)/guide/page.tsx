@@ -60,7 +60,7 @@ export default function GuidePage() {
           animate={{ opacity: 1, scale: 1 }}
           className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest"
         >
-          <HelpCircle size={14} /> {guide.title || 'Learning Center'}
+          <HelpCircle size={14} /> {(guide.title || 'Guia do ')}{guide.titleAccent || 'Mestre'}
         </motion.div>
         
         <motion.h1 
@@ -68,7 +68,7 @@ export default function GuidePage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-5xl md:text-8xl font-black tracking-tighter text-white leading-tight uppercase"
         >
-          {guide.title}<span className="text-blue-500 italic">{guide.titleAccent}</span>
+          {guide.title}<span className="text-blue-500 italic">{guide.titleAccent || 'Mestre'}</span>
         </motion.h1>
         
         <motion.p 
