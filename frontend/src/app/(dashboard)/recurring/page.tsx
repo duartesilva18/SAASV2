@@ -141,7 +141,7 @@ export default function RecurringPage() {
         process_automatically: formData.process_automatically
       };
 
-      let response;
+      let response: { data: any };
       if (editingId) {
         response = await api.patch(`/recurring/${editingId}`, payload);
         setToastInfo({ message: "Ciclo atualizado!", type: "success", isVisible: true });

@@ -97,6 +97,9 @@ export default function CategoriesPage() {
     const category = categories.find(c => c.id === stat.category_id);
     return category && category.vault_type === 'none';
   });
+  const sortedStats = [...filteredStats].sort(
+    (a, b) => Math.abs(b.percentage) - Math.abs(a.percentage)
+  );
 
   useEffect(() => {
     fetchData();
@@ -254,7 +257,7 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-[32px] bg-slate-900 border border-slate-800 p-8 md:p-12">
+      <div className="relative overflow-hidden rounded-[28px] bg-slate-900 border border-slate-800 p-6 md:p-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[100px] -z-10" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div>
@@ -330,7 +333,7 @@ export default function CategoriesPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPie>
                         <Pie
-                          data={filteredStats.map(stat => ({
+                          data={sortedStats.map(stat => ({
                             ...stat,
                             total_spent_cents: Math.abs(stat.total_spent_cents),
                             percentage: Math.abs(stat.percentage)
@@ -344,7 +347,7 @@ export default function CategoriesPage() {
                           paddingAngle={5}
                           stroke="none"
                         >
-                          {filteredStats.map((entry, index) => (
+                          {sortedStats.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -361,7 +364,7 @@ export default function CategoriesPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {filteredStats.slice(0, 5).map((stat) => (
+                    {sortedStats.slice(0, 5).map((stat) => (
                       <div key={stat.category_id} className="group">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">

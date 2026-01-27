@@ -22,6 +22,8 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [isSimulated, setIsSimulated] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -181,6 +183,25 @@ export default function SettingsPage() {
       setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.deleteError, type: 'error' });
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handlePurgeData = async () => {
+    setPurging(true);
+    try {
+      await api.post('/auth/purge-data');
+      setToast({
+        message: t.dashboard.settings.dangerZone.purgeSuccess,
+        type: 'success',
+        isVisible: true
+      });
+      setShowPurgeConfirm(false);
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error(err);
+      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.dangerZone.purgeError, type: 'error' });
+      setPurging(false);
+      setShowPurgeConfirm(false);
     }
   };
 
@@ -479,6 +500,12 @@ export default function SettingsPage() {
                 {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> {t.dashboard.settings.dangerZone.export}</>}
               </button>
               <button 
+                onClick={() => setShowPurgeConfirm(true)}
+                className="w-full py-4 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trash2 size={14} /> {t.dashboard.settings.dangerZone.purge}
+              </button>
+              <button 
                 onClick={() => setShowDeleteConfirm(true)}
                 className="w-full py-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -507,6 +534,17 @@ export default function SettingsPage() {
         cancelText={t.dashboard.settings.dangerZone.confirmCancel}
         variant="danger"
         isLoading={deleting}
+      />
+      <ConfirmModal
+        isOpen={showPurgeConfirm}
+        onClose={() => setShowPurgeConfirm(false)}
+        onConfirm={handlePurgeData}
+        title={t.dashboard.settings.dangerZone.purgeConfirmTitle}
+        message={t.dashboard.settings.dangerZone.purgeConfirmText}
+        confirmText={t.dashboard.settings.dangerZone.purgeConfirm}
+        cancelText={t.dashboard.settings.dangerZone.confirmCancel}
+        variant="warning"
+        isLoading={purging}
       />
 
       {/* Alert Modal */}

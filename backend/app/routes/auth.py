@@ -549,6 +549,34 @@ async def delete_user_account(request: Request, current_user: models.User = Depe
         logger.error(f'Erro ao eliminar conta {current_user.email}: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao eliminar a conta.')
 
+@router.post('/purge-data')
+async def purge_user_data(request: Request, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    try:
+        user_email = current_user.email
+        user_id = current_user.id
+
+        workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == user_id).all()
+        for ws in workspaces:
+            db.delete(ws)
+        db.commit()
+
+        # Recriar workspace limpo com categorias padrão e seed
+        new_workspace = models.Workspace(owner_id=user_id, name='Meu Workspace')
+        db.add(new_workspace)
+        db.commit()
+        db.refresh(new_workspace)
+
+        categories_map = create_default_categories(db, new_workspace.id)
+        create_seed_transactions(db, new_workspace.id, categories_map)
+
+        await log_action(db, action='data_purge', user_id=user_id, details=f'Dados apagados pelo utilizador: {user_email}', request=request)
+        logger.info(f'Dados apagados e workspace recriado para: {user_email}')
+        return {'message': 'Data purged successfully'}
+    except Exception as e:
+        db.rollback()
+        logger.error(f'Erro ao apagar dados de {current_user.email}: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao apagar dados da conta.')
+
 @router.post('/login', response_model=schemas.Token)
 @limiter.limit('5/minute')
 async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
