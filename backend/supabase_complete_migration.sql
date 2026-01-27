@@ -348,6 +348,28 @@ CREATE TABLE IF NOT EXISTS savings_goals (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
+-- Adicionar coluna goal_type se não existir (migração para tabelas existentes)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'savings_goals' 
+        AND column_name = 'goal_type'
+    ) THEN
+        ALTER TABLE savings_goals 
+        ADD COLUMN goal_type VARCHAR(20) NOT NULL DEFAULT 'expense';
+        
+        -- Add check constraint se não existir
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'chk_goal_type' AND table_name = 'savings_goals'
+        ) THEN
+            ALTER TABLE savings_goals
+            ADD CONSTRAINT chk_goal_type CHECK (goal_type IN ('expense', 'income'));
+        END IF;
+    END IF;
+END $$;
+
 -- Foreign key para workspace_id
 DO $$
 BEGIN

@@ -232,6 +232,53 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
         logger.error(f'Erro inesperado ao verificar sessão: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao verificar sessão')
 
+@router.get('/subscription-details')
+async def get_subscription_details(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Retorna os detalhes da subscrição atual, incluindo o price_id"""
+    try:
+        if not current_user.stripe_subscription_id:
+            return {
+                'has_subscription': False,
+                'price_id': None,
+                'subscription_status': current_user.subscription_status
+            }
+        
+        # Verificar se é subscrição de simulação/teste
+        if current_user.stripe_customer_id and (current_user.stripe_customer_id.startswith('sim_') or current_user.stripe_customer_id.startswith('test_')):
+            return {
+                'has_subscription': True,
+                'price_id': None,  # Simulação não tem price_id real
+                'subscription_status': current_user.subscription_status
+            }
+        
+        # Buscar subscrição do Stripe
+        try:
+            subscription = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+            price_id = None
+            
+            # Obter price_id da subscrição (Stripe retorna items como dict-like)
+            items = subscription.get('items', {})
+            items_data = items.get('data', []) if isinstance(items, dict) else []
+            if items_data:
+                price_id = items_data[0].get('price', {}).get('id')
+            
+            return {
+                'has_subscription': True,
+                'price_id': price_id,
+                'subscription_status': subscription.status,
+                'cancel_at_period_end': subscription.cancel_at_period_end
+            }
+        except stripe.error.InvalidRequestError as e:
+            logger.warning(f'Subscrição não encontrada no Stripe: {str(e)}')
+            return {
+                'has_subscription': False,
+                'price_id': None,
+                'subscription_status': current_user.subscription_status
+            }
+    except Exception as e:
+        logger.error(f'Erro ao buscar detalhes da subscrição: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao buscar detalhes da subscrição')
+
 @router.post('/cancel-subscription')
 async def cancel_subscription(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Cancela a subscrição do utilizador (no final do período atual)"""

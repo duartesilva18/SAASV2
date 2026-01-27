@@ -126,6 +126,11 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.guide,
         href: '/guide',
         icon: HelpCircle,
+      },
+      {
+        name: t.dashboard.sidebar.plans || "Planos",
+        href: '/plans',
+        icon: Trophy,
       }
     ]
   },
@@ -367,7 +372,7 @@ export default function Sidebar({
     items: section.items.map((item: any) => {
       // Se já tiver isBlocked definido, manter. Caso contrário, marcar como bloqueado se for free user e não for dashboard/analytics
       if (!isPro && !item.adminOnly && !section.isAffiliateSection && !item.affiliateOnly && item.isBlocked === undefined) {
-        const isAllowed = item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/affiliate';
+        const isAllowed = item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/affiliate' || item.href === '/plans';
         return { ...item, isBlocked: !isAllowed };
       }
       return item;
