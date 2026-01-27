@@ -54,19 +54,24 @@ export default function DashboardPage() {
     dedupingInterval: 60000,
   });
   
+  // Ao carregar o dashboard, forçar recarga de dados (snapshot, user, invoices)
+  useEffect(() => {
+    mutateSnapshot();
+    mutateUserData();
+    mutate('/stripe/invoices');
+  }, [mutateSnapshot, mutateUserData]);
+
   // Verificar se voltou do pagamento e invalidar cache
   useEffect(() => {
     const sessionId = searchParams?.get('session_id');
     const proActivated = sessionStorage.getItem('pro_activated_success');
     
     if (sessionId || proActivated === 'true') {
-      // Invalidar cache do SWR para forçar refresh
       mutate('/auth/me');
       mutate('/stripe/invoices');
       mutateUserData();
       refreshUser();
       
-      // Limpar sessionStorage e URL
       if (proActivated === 'true') {
         sessionStorage.removeItem('pro_activated_success');
       }

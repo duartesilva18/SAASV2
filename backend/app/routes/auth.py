@@ -146,15 +146,8 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         
         db_user = db.query(models.User).filter(models.User.email == email_normalized).first()
         if db_user:
-            if db_user.is_email_verified:
-                logger.warning(f'Tentativa de registo com email já existente: {email_normalized}')
-                raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
-            # Já existe registo pendente: não apagar nem criar outro; pedir para verificar email ou usar reenvio
-            logger.info(f'Registo pendente já existe para {email_normalized}, a rejeitar novo registo.')
-            raise HTTPException(
-                status_code=400,
-                detail='Este email já tem um registo pendente. Verifica a tua caixa de correio (e spam). Se não recebeste o link, usa "Reenviar link" na página de login.'
-            )
+            logger.warning(f'Tentativa de registo com email já existente: {email_normalized}')
+            raise HTTPException(status_code=400, detail='Este email já está registado. Inicia sessão na página de login.')
         
         hashed_pw = security.get_password_hash(user_in.password)
         # Validar código de referência se fornecido
@@ -189,7 +182,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         user = models.User(
             email=email_normalized,
             password_hash=hashed_pw,
-            is_email_verified=False,
+            is_email_verified=True,
             language=user_lang,
             referrer_id=referrer_id
         )
@@ -228,39 +221,14 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         categories_map = create_default_categories(db, new_workspace.id)
         create_seed_transactions(db, new_workspace.id, categories_map)
 
-        verification_token = secrets.token_urlsafe(32)
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
-        ev = models.EmailVerification(
-            email=email_normalized,
-            token=verification_token,
-            password_hash=hashed_pw,
-            referral_code=referral_code,
-            expires_at=expires_at,
-            is_used=False
-        )
-        db.add(ev)
-        db.commit()
+        await log_action(db, action='register', user_id=user.id, details=f'Registo concluído: {user.email}', request=request)
 
-        await log_action(db, action='register_pending', user_id=user.id, details=f'Registo pendente verificação: {user.email}', request=request)
-
-        t = get_email_translation(user_lang, 'verify_email')
-        base = _frontend_base_url()
-        verify_url = f"{base}/auth/verify-email?token={verification_token}"
-        if referral_code:
-            verify_url += f"&ref={referral_code}"
-        btn_style = 'display:inline-block;margin:30px auto;background:#3b82f6;color:#ffffff !important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px;'
-        html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><p><a href="{verify_url}" style="{btn_style}">{t["button"]}</a></p><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
-
-        # Resposta imediata; email enviado em background (não bloqueia o utilizador)
-        background_tasks.add_task(_send_verification_email_background, email_normalized, t['subject'], html)
-
-        logger.info(f'Utilizador criado, verificação pendente: {user.email}')
+        logger.info(f'Utilizador criado: {user.email}')
         access_token = security.create_access_token(subject=user.email)
         refresh_token = security.create_refresh_token(subject=user.email)
         return {
-            'message': 'Email de verificação enviado. Tens 30 minutos para confirmar.',
+            'message': 'Conta criada com sucesso.',
             'email': email_normalized,
-            'verification_expires_at': expires_at,
             'access_token': access_token,
             'refresh_token': refresh_token,
             'token_type': 'bearer'
@@ -745,12 +713,6 @@ async def login(request: Request, db: Session = Depends(get_db), form_data: OAut
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Incorrect email or password',
             headers={'WWW-Authenticate': 'Bearer'}
-        )
-    
-    if not user.is_email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Por favor, confirme o seu email antes de fazer login.'
         )
     
     user.login_count += 1

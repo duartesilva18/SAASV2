@@ -49,7 +49,6 @@ class Token(BaseModel):
 class RegisterResponse(BaseModel):
     message: str
     email: EmailStr
-    verification_expires_at: datetime
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str

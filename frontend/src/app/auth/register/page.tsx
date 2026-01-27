@@ -178,12 +178,6 @@ function RegisterPageContent() {
 
       const accessToken = response.data?.access_token;
       const refreshToken = response.data?.refresh_token;
-      const verificationExpiresAt = response.data?.verification_expires_at;
-      console.info('[auth] register RegisterResponse', {
-        accessToken: !!accessToken,
-        refreshToken: !!refreshToken,
-        verificationExpiresAt: !!verificationExpiresAt
-      });
 
       if (!accessToken) {
         throw new Error('Não foi possível iniciar sessão automaticamente.');
@@ -194,9 +188,7 @@ function RegisterPageContent() {
       if (refreshToken) {
         storage.setItem('refresh_token', refreshToken);
       }
-      if (verificationExpiresAt) {
-        storage.setItem('pending_verification_expires_at', verificationExpiresAt);
-      }
+      localStorage.removeItem('pending_verification_expires_at');
 
       api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
       // Não esperar refreshUser — o layout do dashboard carrega o user ao montar
