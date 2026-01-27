@@ -386,7 +386,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
             <Link 
               href="/pricing"
-              className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 text-[9px] font-black uppercase transition-colors"
+              className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer"
             >
               {t.dashboard.page.upgradePro}
             </Link>

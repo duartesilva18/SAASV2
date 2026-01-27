@@ -699,6 +699,13 @@ export const translations = {
                     title: "Sessão Expirada",
                     message: "A tua sessão expirou por segurança. Por favor, inicia sessão novamente.",
                     button: "Entendido"
+                },
+                verificationBanner: {
+                    timeLeft: "Verifica o email em",
+                    verifyButton: "Já verifiquei",
+                    expired: "Tempo de verificação expirou. Cria a conta novamente.",
+                    toastSuccess: "Email verificado com sucesso!",
+                    toastError: "Ainda não verificaste o email. Clica no link que enviamos."
                 }
             },
             affiliate: {
@@ -1902,6 +1909,13 @@ export const translations = {
                     title: "Session Expired",
                     message: "Your session has expired for security reasons. Please log in again.",
                     button: "Got it"
+                },
+                verificationBanner: {
+                    timeLeft: "Verify your email in",
+                    verifyButton: "I've verified",
+                    expired: "Verification time expired. Please create your account again.",
+                    toastSuccess: "Email verified successfully!",
+                    toastError: "You haven't verified your email yet. Click the link we sent you."
                 }
             },
             support: {

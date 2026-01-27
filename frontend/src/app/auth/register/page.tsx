@@ -176,28 +176,14 @@ function RegisterPageContent() {
 
       setSuccess(true);
 
-      let accessToken = response.data?.access_token;
-      let refreshToken = response.data?.refresh_token;
-      console.info('[auth] register response tokens', {
+      const accessToken = response.data?.access_token;
+      const refreshToken = response.data?.refresh_token;
+      const verificationExpiresAt = response.data?.verification_expires_at;
+      console.info('[auth] register RegisterResponse', {
         accessToken: !!accessToken,
-        refreshToken: !!refreshToken
+        refreshToken: !!refreshToken,
+        verificationExpiresAt: !!verificationExpiresAt
       });
-
-      // Fallback: if register doesn't return tokens, do login
-      if (!accessToken) {
-        const formData = new URLSearchParams();
-        formData.append('username', email);
-        formData.append('password', password);
-        const loginResponse = await api.post('/auth/login', formData, {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        accessToken = loginResponse.data?.access_token;
-        refreshToken = loginResponse.data?.refresh_token;
-        console.info('[auth] login fallback tokens', {
-          accessToken: !!accessToken,
-          refreshToken: !!refreshToken
-        });
-      }
 
       if (!accessToken) {
         throw new Error('Não foi possível iniciar sessão automaticamente.');
@@ -208,12 +194,12 @@ function RegisterPageContent() {
       if (refreshToken) {
         storage.setItem('refresh_token', refreshToken);
       }
+      if (verificationExpiresAt) {
+        storage.setItem('pending_verification_expires_at', verificationExpiresAt);
+      }
 
       api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-      await api.get('/auth/me', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      await refreshUser();
+      // Não esperar refreshUser — o layout do dashboard carrega o user ao montar
 
       confetti({
         particleCount: 150,
@@ -227,7 +213,7 @@ function RegisterPageContent() {
         if (window.location.pathname.startsWith('/auth/')) {
           window.location.href = '/dashboard';
         }
-      }, 1200);
+      }, 600);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || err.message || t.auth.register.error);

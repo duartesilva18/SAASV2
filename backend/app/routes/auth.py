@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -21,6 +21,45 @@ from ..core.email_translations import get_email_translation
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/auth', tags=['auth'])
+VERIFICATION_EXPIRY_MINUTES = 30
+
+
+async def _send_verification_email_background(to_email: str, subject: str, body_html: str) -> None:
+    """Envia email de verificação em background (não bloqueia a resposta do registo)."""
+    conf = ConnectionConfig(
+        MAIL_USERNAME=settings.MAIL_USERNAME.strip(),
+        MAIL_PASSWORD=settings.MAIL_PASSWORD.strip(),
+        MAIL_FROM=settings.MAIL_FROM.strip(),
+        MAIL_PORT=settings.MAIL_PORT,
+        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_STARTTLS=True,
+        MAIL_SSL_TLS=False,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True,
+        MAIL_FROM_NAME='Finly Portugal'
+    )
+    msg = MessageSchema(subject=subject, recipients=[to_email], body=body_html, subtype=MessageType.html)
+    fm = FastMail(conf)
+    try:
+        await fm.send_message(msg)
+        logger.info(f'Email de verificação enviado para {to_email}')
+    except Exception as e:
+        logger.error(f'Erro ao enviar email de verificação para {to_email}: {e}')
+
+
+def purge_expired_unverified_users(db: Session):
+    """Remove contas não verificadas expiradas (30 min)."""
+    from datetime import datetime, timedelta, timezone
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
+    expired = db.query(models.User).filter(
+        models.User.is_email_verified == False,
+        models.User.created_at < cutoff
+    ).all()
+    for u in expired:
+        db.query(models.EmailVerification).filter(models.EmailVerification.email == u.email).delete(synchronize_session=False)
+        db.delete(u)
+    if expired:
+        db.commit()
 
 def validate_email(email: str) -> bool:
     """Valida formato de email usando regex robusto"""
@@ -42,6 +81,7 @@ def validate_password(password: str) -> tuple[bool, str]:
     return True, ""
 
 async def get_current_user(request: Request, db: Session = Depends(get_db), token: str = Depends(security.oauth2_scheme)):
+    purge_expired_unverified_users(db)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',
@@ -71,10 +111,12 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
-@router.post('/register', response_model=schemas.Token)
+@router.post('/register', response_model=schemas.RegisterResponse)
 @limiter.limit('30/hour')
-async def register(request: Request, user_in: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(request: Request, user_in: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
+        purge_expired_unverified_users(db)
+
         # Validação de email
         if not validate_email(user_in.email):
             raise HTTPException(status_code=400, detail='Formato de email inválido.')
@@ -86,16 +128,12 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         
         db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
         if db_user:
-            logger.warning(f'Tentativa de registo com email já existente: {user_in.email}')
-            raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
-        
-        # Remove any existing pending verification for this email
-        try:
-            db.query(models.EmailVerification).filter(models.EmailVerification.email == user_in.email).delete()
+            if db_user.is_email_verified:
+                logger.warning(f'Tentativa de registo com email já existente: {user_in.email}')
+                raise HTTPException(status_code=400, detail='Este email já está registado e verificado.')
+            db.query(models.EmailVerification).filter(models.EmailVerification.email == user_in.email).delete(synchronize_session=False)
+            db.delete(db_user)
             db.commit()
-        except Exception as e:
-            logger.warning(f'Erro ao remover verificação pendente (não crítico): {str(e)}')
-            db.rollback()
         
         hashed_pw = security.get_password_hash(user_in.password)
         # Validar código de referência se fornecido
@@ -130,7 +168,7 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         user = models.User(
             email=user_in.email,
             password_hash=hashed_pw,
-            is_email_verified=True,
+            is_email_verified=False,
             language=user_lang,
             referrer_id=referrer_id
         )
@@ -143,11 +181,9 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
             existing_referral = db.query(models.AffiliateReferral).filter(
                 models.AffiliateReferral.referred_user_id == user.id
             ).first()
-
             if not existing_referral:
                 ip_address = request.client.host if request.client else None
                 user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
-
                 referral = models.AffiliateReferral(
                     referrer_id=referrer_id,
                     referred_user_id=user.id,
@@ -168,21 +204,40 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
         db.add(new_workspace)
         db.commit()
         db.refresh(new_workspace)
-
-        # Criar categorias padrão (Investimento e Fundo de Emergência)
         categories_map = create_default_categories(db, new_workspace.id)
-
-        # Criar transações de exemplo para ajudar o Telegram a categorizar
         create_seed_transactions(db, new_workspace.id, categories_map)
 
-        logger.info(f'Utilizador criado e verificado: {user.email}')
-        await log_action(db, action='register_success', user_id=user.id, details=f'Novo utilizador registado: {user.email}', request=request)
+        verification_token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
+        ev = models.EmailVerification(
+            email=user_in.email,
+            token=verification_token,
+            password_hash=hashed_pw,
+            referral_code=referral_code,
+            expires_at=expires_at,
+            is_used=False
+        )
+        db.add(ev)
+        db.commit()
 
+        await log_action(db, action='register_pending', user_id=user.id, details=f'Registo pendente verificação: {user.email}', request=request)
+
+        t = get_email_translation(user_lang, 'verify_email')
+        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
+        if referral_code:
+            verify_url += f"&ref={referral_code}"
+        html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.btn{{display:inline-block;margin:30px auto;background:#3b82f6;color:#fff!important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><a class="btn" href="{verify_url}">{t["button"]}</a><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
+
+        # Resposta imediata; email enviado em background (não bloqueia o utilizador)
+        background_tasks.add_task(_send_verification_email_background, user_in.email, t['subject'], html)
+
+        logger.info(f'Utilizador criado, verificação pendente: {user.email}')
         access_token = security.create_access_token(subject=user.email)
         refresh_token = security.create_refresh_token(subject=user.email)
-        logger.info(f'🔑 Tokens gerados para {user.email} (access_len={len(access_token)}, refresh_len={len(refresh_token)})')
-
         return {
+            'message': 'Email de verificação enviado. Tens 30 minutos para confirmar.',
+            'email': user_in.email,
+            'verification_expires_at': expires_at,
             'access_token': access_token,
             'refresh_token': refresh_token,
             'token_type': 'bearer'
@@ -200,8 +255,16 @@ async def register(request: Request, user_in: schemas.UserCreate, db: Session = 
 
 @router.get('/verification-status/{email}')
 async def check_verification_status(email: str, db: Session = Depends(get_db)):
+    purge_expired_unverified_users(db)
     user = db.query(models.User).filter(models.User.email == email).first()
-    return {'is_verified': user.is_email_verified if user else False}
+    ev = db.query(models.EmailVerification).filter(
+        models.EmailVerification.email == email,
+        models.EmailVerification.is_used == False
+    ).first()
+    return {
+        'is_verified': user.is_email_verified if user else False,
+        'verification_expires_at': ev.expires_at if ev else None
+    }
 
 def create_default_categories(db: Session, workspace_id: uuid.UUID):
     default_cats = [

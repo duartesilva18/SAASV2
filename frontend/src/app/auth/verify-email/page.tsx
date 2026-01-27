@@ -46,6 +46,7 @@ function VerifyEmailContent() {
         if (refreshToken) {
           localStorage.setItem('refresh_token', refreshToken);
         }
+        localStorage.removeItem('pending_verification_expires_at');
 
         // Notificar outras abas (como a check-email)
         const channel = new BroadcastChannel('email-verification');

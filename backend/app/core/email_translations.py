@@ -8,7 +8,7 @@ EMAIL_TRANSLATIONS = {
             'title': 'O seu futuro começa agora.',
             'welcome': 'Bem-vindo à elite financeira. Falta apenas validar o seu acesso para desbloquear o controlo total sobre o seu património.',
             'button': 'Ativar Conta Premium',
-            'security_notice': 'Este link é pessoal, intransmissível e expira em 24 horas.',
+            'security_notice': 'Este link é pessoal, intransmissível e expira em 30 minutos. Se não verificares a tempo, a conta será apagada.',
             'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
         },
         'password_reset': {
@@ -27,7 +27,7 @@ EMAIL_TRANSLATIONS = {
             'title': 'Your future starts now.',
             'welcome': 'Welcome to the financial elite. You just need to validate your access to unlock total control over your assets.',
             'button': 'Activate Premium Account',
-            'security_notice': 'This link is personal, non-transferable and expires in 24 hours.',
+            'security_notice': 'This link is personal, non-transferable and expires in 30 minutes. If you do not verify in time, the account will be deleted.',
             'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
         },
         'password_reset': {

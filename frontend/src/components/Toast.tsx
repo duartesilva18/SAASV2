@@ -66,7 +66,7 @@ export default function Toast({ message, type, isVisible, onClose, duration = 60
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+              className="p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
