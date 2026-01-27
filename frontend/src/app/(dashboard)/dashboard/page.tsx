@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import api, { fetcher } from '@/lib/api';
 import useSWR, { mutate } from 'swr';
 import { useDashboardSnapshot } from '@/lib/hooks/useDashboard';
-import { ArrowUpCircle, ArrowDownCircle, Wallet, ChevronRight, AlertCircle, Zap, Target, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, Wallet, ChevronRight, AlertCircle, Zap, Target, Loader2, ShieldCheck, Sparkles, TrendingUp, TrendingDown, Plus, Calendar, ChevronLeft, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
 import PricingModal from '@/components/PricingModal';
 import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
@@ -38,7 +39,11 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasLowData, setHasLowData] = useState(false);
-  
+  const [viewMonth, setViewMonth] = useState<{ year: number; month: number }>(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+
   // Usar SWR para cache inteligente e deduplicação
   const { snapshot, collections, isLoading: snapshotLoading, mutate: mutateSnapshot } = useDashboardSnapshot();
   
@@ -50,6 +55,15 @@ export default function DashboardPage() {
   
   // Buscar user profile para subscription status
   const { data: userData, mutate: mutateUserData } = useSWR('/auth/me', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000,
+  });
+
+  // Dados para gráficos (Evolução 6 meses + Despesas por categoria) e "vs. mês anterior"
+  const hasActiveSub = useMemo(() => {
+    return userData ? ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status) : false;
+  }, [userData]);
+  const { data: compositeData } = useSWR(hasActiveSub ? '/insights/composite' : null, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
   });
@@ -80,10 +94,7 @@ export default function DashboardPage() {
     }
   }, [searchParams, refreshUser, mutateUserData, mutateSnapshot]);
   
-  // Memoizar cálculos pesados
-  const hasActiveSub = useMemo(() => {
-    return userData ? ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status) : false;
-  }, [userData]);
+  // Memoizar cálculos pesados (hasActiveSub já definido acima para composite)
   
   // Paywall removido - não mostrar automaticamente para contas free
   // const shouldShowPaywall = useMemo(() => {
@@ -338,6 +349,88 @@ export default function DashboardPage() {
     }
   }, [loading, isPro]);
 
+  // Dados para gráficos e "vs. mês anterior" (flow últimos 6 meses + distribution)
+  const chartProcessed = useMemo(() => {
+    const raw = hasActiveSub && compositeData
+      ? { transactions: compositeData.transactions || [], categories: compositeData.categories || [] }
+      : { transactions: DEMO_TRANSACTIONS, categories: DEMO_CATEGORIES };
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0, 0);
+    const monthlyData: Record<string, { name: string; income: number; expenses: number }> = {};
+    const catDistribution: Record<string, number> = {};
+    const monthOrder = (s: string) => {
+      const [m, y] = s.split(' ');
+      const months: Record<string, number> = { jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12 };
+      return new Date(parseInt(y, 10), ((months[m?.toLowerCase() ?? ''] ?? 1) - 1), 1).getTime();
+    };
+
+    raw.transactions
+      .filter((t: any) => Math.abs((t.amount_cents || 0)) !== 1)
+      .forEach((t: any) => {
+        const date = new Date(t.transaction_date);
+        if (date < sixMonthsAgo || date > todayStart) return;
+        const monthYear = `${date.toLocaleString('pt-PT', { month: 'short' })} ${date.getFullYear()}`;
+        const cat = raw.categories.find((c: any) => c.id === t.category_id);
+        if (cat?.vault_type && cat.vault_type !== 'none') return;
+        if (!monthlyData[monthYear]) monthlyData[monthYear] = { name: monthYear, income: 0, expenses: 0 };
+        const amount = (t.amount_cents || 0) / 100;
+        if (cat?.type === 'income') {
+          monthlyData[monthYear].income += amount;
+        } else {
+          const exp = amount < 0 ? -amount : amount;
+          monthlyData[monthYear].expenses += exp;
+          const catName = cat?.name || 'Outros';
+          catDistribution[catName] = (catDistribution[catName] || 0) + exp;
+        }
+      });
+
+    const flow6 = Object.values(monthlyData).sort((a, b) => monthOrder(a.name) - monthOrder(b.name)).slice(-6);
+    const distribution = Object.entries(catDistribution).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+    // Fundos por mês (Emergência + Investimentos) – saldo acumulado por mês para gráfico de linhas
+    const vaultMonthlyMap: Record<string, { name: string; emergency: number; investment: number }> = {};
+    const vaultTxs = raw.transactions
+      .filter((t: any) => Math.abs((t.amount_cents || 0)) !== 1)
+      .map((t: any) => ({ ...t, cat: raw.categories.find((c: any) => c.id === t.category_id) }))
+      .filter((t: any) => t.cat && (t.cat.vault_type === 'emergency' || t.cat.vault_type === 'investment'))
+      .sort((a: any, b: any) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
+    vaultTxs.forEach((t: any) => {
+      const date = new Date(t.transaction_date);
+      if (date < sixMonthsAgo || date > todayStart) return;
+      const monthYear = `${date.toLocaleString('pt-PT', { month: 'short' })} ${date.getFullYear()}`;
+      if (!vaultMonthlyMap[monthYear]) vaultMonthlyMap[monthYear] = { name: monthYear, emergency: 0, investment: 0 };
+      const amt = (t.amount_cents || 0) / 100;
+      if (t.cat.vault_type === 'emergency') vaultMonthlyMap[monthYear].emergency += amt;
+      else vaultMonthlyMap[monthYear].investment += amt;
+    });
+    // Acumular por ordem de mês
+    const vaultMonthlySorted = Object.values(vaultMonthlyMap).sort((a, b) => monthOrder(a.name) - monthOrder(b.name)).slice(-6);
+    let cumE = 0, cumI = 0;
+    const vaultByMonth = vaultMonthlySorted.map((m) => {
+      cumE += m.emergency;
+      cumI += m.investment;
+      return { name: m.name, Emergência: cumE, Investimentos: cumI };
+    });
+
+    const prev = flow6.length >= 2 ? flow6[flow6.length - 2] : null;
+    const vsIncome = prev != null && prev.income !== 0
+      ? { pct: ((stats.income - prev.income) / prev.income) * 100, label: (stats.income - prev.income) / prev.income >= 0 ? '+' + (((stats.income - prev.income) / prev.income) * 100).toFixed(1) + '%' : (((stats.income - prev.income) / prev.income) * 100).toFixed(1) + '%' }
+      : { pct: null, label: '—' };
+    const vsExpenses = prev != null && prev.expenses !== 0
+      ? { pct: ((stats.expenses - prev.expenses) / prev.expenses) * 100, label: (stats.expenses - prev.expenses) / prev.expenses >= 0 ? '+' + (((stats.expenses - prev.expenses) / prev.expenses) * 100).toFixed(1) + '%' : (((stats.expenses - prev.expenses) / prev.expenses) * 100).toFixed(1) + '%' }
+      : { pct: null, label: '—' };
+    const prevBalance = prev ? prev.income - prev.expenses : null;
+    const vsBalance = prevBalance != null
+      ? { pct: prevBalance !== 0 ? ((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100 : 0, label: prevBalance !== 0 ? ((stats.balance - prevBalance) / Math.abs(prevBalance)) >= 0 ? '+' + (((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100).toFixed(1) + '%' : (((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100).toFixed(1) + '%' : '0%' }
+      : { pct: null, label: '—' };
+
+    return { flow6, distribution, vsIncome, vsExpenses, vsBalance, vaultByMonth };
+  }, [hasActiveSub, compositeData, stats.income, stats.expenses, stats.balance]);
+
+  const userName = (userData?.full_name || (userData?.email || '').split('@')[0] || 'Utilizador').trim() || 'Utilizador';
+  const filterMonthLabel = new Date(viewMonth.year, viewMonth.month, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+
   const visibleAlerts = alerts.slice(0, 2);
   const hasMoreAlerts = alerts.length > 2;
   const budgetUsage = stats.totalBudget > 0 ? (stats.expenses / stats.totalBudget) * 100 : 0;
@@ -370,228 +463,354 @@ export default function DashboardPage() {
       transition={{ duration: 0.5 }}
       className="text-white pb-20 -mt-4"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-12 -mt-4 gap-4">
-        <h1 className="text-4xl font-black tracking-tighter text-white">{t.dashboard.page.title}</h1>
-        
-        {!isPro && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl w-fit"
-          >
-            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
-            <Link 
-              href="/pricing"
-              className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer"
-            >
-              {t.dashboard.page.upgradePro}
-            </Link>
-          </motion.div>
-        )}
+      {/* Cabeçalho: saudação + resumo */}
+      <div className="mb-6">
+        <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
+          Bom dia, {userName}
+        </h1>
+        <p className="text-slate-400 font-medium mt-1">Aqui está um resumo das suas finanças</p>
       </div>
-      
-      {/* Bloco 1 - Hoje */}
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Hoje</h2>
-          {isPro && (
-            <Link
-              href="/analytics"
-              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+
+      {/* Filtros (esquerda) | Nova transação (direita) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Filtros</span>
+          <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2">
+            <Calendar size={16} className="text-slate-400" />
+            <button
+              type="button"
+              onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 0 ? { year: p.year - 1, month: 11 } : { year: p.year, month: p.month - 1 }))}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Mês anterior"
             >
-              Ver análise completa
-            </Link>
-          )}
+              <ChevronLeft size={18} />
+            </button>
+            <span className="text-sm font-bold text-white min-w-[140px] text-center capitalize">{filterMonthLabel}</span>
+            <button
+              type="button"
+              onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 11 ? { year: p.year + 1, month: 0 } : { year: p.year, month: p.month + 1 }))}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Mês seguinte"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full" />
-            <div className="relative z-10 flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center">
-                <Zap size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">
-                  {t.dashboard.page.dailyAllowance}
-                </p>
-                <p className={`text-4xl font-black tracking-tighter ${stats.dailyAllowance > 20 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {formatCurrency(stats.dailyAllowance || 0)}
-                </p>
-                <p className="text-sm text-slate-500 font-medium italic mt-2">
-                  {t.dashboard.page.dailyAllowanceDesc}
-                </p>
-                <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-3">
-                  Baseado no orçamento do mês (não inclui saldo inicial)
-                </p>
-              </div>
+        <div className="flex items-center gap-3">
+          {!isPro && (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
+              <Link href="/pricing" className="text-amber-400 hover:text-amber-300 text-xs font-bold">
+                {t.dashboard.page.upgradePro}
+              </Link>
             </div>
+          )}
+          <Link
+            href="/transactions"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors"
+          >
+            <Plus size={18} />
+            Nova transação
+          </Link>
+        </div>
+      </div>
+
+      {/* 3 cards: Receitas | Despesas | Saldo */}
+      <section className="mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <ArrowUpCircle size={22} />
+              </div>
+              {chartProcessed.vsIncome.label && chartProcessed.vsIncome.label !== '—' && (
+                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsIncome.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {(chartProcessed.vsIncome.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  {chartProcessed.vsIncome.label}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
+            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.income)}</p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-xl flex flex-col justify-between"
+            whileHover={{ y: -4 }}
+            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-800/60 text-slate-300 rounded-2xl flex items-center justify-center">
-                <Wallet size={24} />
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="w-10 h-10 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <ArrowDownCircle size={22} />
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">
-                  Restante este mês
-                </p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.remainingMoney || 0)}
-                </p>
-              </div>
+              {chartProcessed.vsExpenses.label && chartProcessed.vsExpenses.label !== '—' && (
+                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                  {chartProcessed.vsExpenses.label}
+                </span>
+              )}
             </div>
-            <p className="text-sm text-slate-500 font-medium italic mt-4">
-              Orçamento disponível até ao final do mês
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
+            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.expenses)}</p>
+          </motion.div>
+
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                <Wallet size={22} />
+              </div>
+              {chartProcessed.vsBalance.label && chartProcessed.vsBalance.label !== '—' && (
+                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsBalance.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {(chartProcessed.vsBalance.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  {chartProcessed.vsBalance.label}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
+            <p className={`text-2xl font-black tracking-tighter ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatCurrency(stats.balance)}
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Bloco 2 - Este mês */}
+      {/* 4 quadrados: [Evolução] [Analytics donut – coluna direita inteira]; [Fundos/Inv/Emerg] [continua donut] */}
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Este mês</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
-          >
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ArrowUpCircle size={28} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{t.dashboard.page.income}</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.income)}
-                  <span className="text-emerald-400 ml-2 text-2xl">↑</span>
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
-          >
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ArrowDownCircle size={28} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{t.dashboard.page.expenses}</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.expenses)}
-                  <span className="text-red-400 ml-2 text-2xl">↓</span>
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
-          >
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-slate-800/50 text-slate-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Wallet size={28} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{t.dashboard.page.balance}</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.balance)}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-        <div className="mt-6 bg-slate-900/30 backdrop-blur-sm p-6 rounded-[24px] border border-white/5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-1">Resumo do mês</p>
-              <p className="text-sm text-slate-400 font-medium italic">Consumo do orçamento atual</p>
-            </div>
-            <div className="text-sm font-black text-white">
-              {formatCurrency(stats.expenses)} / {formatCurrency(stats.totalBudget || 0)}
-            </div>
-          </div>
-          <div className="mt-4 h-3 w-full bg-white/5 rounded-2xl p-1 border border-white/5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, budgetUsage)}%` }}
-              className={`h-full rounded-xl transition-colors duration-500 ${
-                budgetUsage > 90 ? 'bg-red-500' : budgetUsage > 70 ? 'bg-amber-500' : 'bg-blue-600'
-              }`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Bloco 3 - Futuro */}
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Futuro</h2>
+          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Gráficos</h2>
           {isPro && (
-            <Link
-              href="/vault"
-              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              Ver cofres
+            <Link href="/analytics" className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">
+              Ver análise completa
             </Link>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-6">
+          {/* Quadrado 1: Evolução Financeira – ocupa 2/3 */}
           <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2"
           >
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ShieldCheck size={28} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Fundo de Emergência</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.vaultEmergency)}
-                </p>
-                <p className="text-sm text-slate-500 font-medium italic mt-2">
-                  Reserva de segurança para imprevistos
-                </p>
-              </div>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução Financeira</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Últimos 6 meses · Receitas vs Despesas</p>
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartProcessed.flow6}>
+                  <defs>
+                    <linearGradient id="dashIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="dashExpenses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                  <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="bold" />
+                  <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={72} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Area type="monotone" dataKey="income" name="Receitas" stroke="#10b981" fill="url(#dashIncome)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="expenses" name="Despesas" stroke="#ef4444" fill="url(#dashExpenses)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-end gap-6 mt-2 text-[10px] font-bold uppercase tracking-wider">
+              <span className="text-emerald-400">● Receitas</span>
+              <span className="text-red-400">● Despesas</span>
             </div>
           </motion.div>
 
+          {/* Quadrado 2+4: Analytics – coluna direita 1/3, duas linhas, donut até ao fim */}
           <motion.div
-            whileHover={{ y: -5 }}
-            className="bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl shadow-slate-900/20 flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
-            <div className="flex items-center space-x-6">
-              <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Target size={28} />
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                <Activity size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{t.dashboard.page.invested}</p>
-                <p className="text-3xl font-black text-white tracking-tighter">
-                  {formatCurrency(stats.vaultInvestment)}
-                  <span className="text-blue-400 ml-2 text-2xl">💎</span>
-                </p>
-                <p className="text-sm text-slate-500 font-medium italic mt-2">
-                  Dinheiro guardado (não usado no dia a dia)
-                </p>
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">Analytics</h3>
+                <p className="text-xs text-slate-400 font-medium">Despesas por categoria</p>
               </div>
             </div>
+            <div className="relative flex-1 min-h-[280px] w-full flex items-center justify-center">
+              {chartProcessed.distribution.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartProcessed.distribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="45%"
+                        outerRadius="70%"
+                        paddingAngle={2}
+                        dataKey="value"
+                        nameKey="name"
+                        label={false}
+                      >
+                        {chartProcessed.distribution.map((_, i) => (
+                          <Cell key={i} fill={['#38bdf8','#2dd4bf','#a78bfa','#f472b6','#facc15','#fdba74','#34d399','#22d3ee'][i % 8]} stroke="rgba(15,23,42,0.6)" strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name ?? '']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <p className="text-2xl md:text-3xl font-black text-white">
+                        {chartProcessed.distribution.length > 0
+                          ? `${((chartProcessed.distribution[0].value / chartProcessed.distribution.reduce((s, x) => s + x.value, 0)) * 100).toFixed(0)}%`
+                          : '—'}
+                      </p>
+                      <p className="text-sm font-bold text-white/90 mt-0.5 capitalize">
+                        {chartProcessed.distribution[0]?.name ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-slate-500 text-sm italic">Sem despesas por categoria no período</p>
+              )}
+            </div>
+            {chartProcessed.distribution.length > 0 && (
+              <>
+                <div className="mt-4 p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex flex-row items-center justify-between gap-4 shrink-0">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total</p>
+                    <p className="text-lg font-black text-white">
+                      {formatCurrency(chartProcessed.distribution.reduce((s, x) => s + x.value, 0))}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Maior gasto</p>
+                    <p className="text-lg font-black text-violet-400 capitalize">
+                      {chartProcessed.distribution[0]?.name ?? '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 p-4 rounded-2xl bg-slate-800/40 border border-white/5 space-y-2 shrink-0 overflow-auto max-h-[180px]">
+                  {chartProcessed.distribution.map((entry, i) => {
+                    const total = chartProcessed.distribution.reduce((s, x) => s + x.value, 0);
+                    const pct = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
+                    const color = ['#38bdf8','#2dd4bf','#a78bfa','#f472b6','#facc15','#fdba74','#34d399','#22d3ee'][i % 8];
+                    return (
+                      <div key={entry.name} className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                          <span className="text-slate-300 font-medium truncate capitalize">{entry.name}</span>
+                        </div>
+                        <span className="text-white font-bold shrink-0 ml-2">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </motion.div>
+
+          {/* Metade esquerda (2/3 da linha): dentro, Fundos 1/3 + Distribuição 2/3 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:col-span-2">
+            {/* Fundos · Investimentos e Emergência – 1/3 da metade */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-1"
+            >
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Fundos · Investimentos e Emergência</h3>
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <ShieldCheck size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Fundo de Emergência</p>
+                      <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultEmergency)}</p>
+                    </div>
+                  </div>
+                  <div className="h-1 flex-1 max-w-[48px] bg-slate-700 rounded-full overflow-hidden shrink-0">
+                    <motion.div
+                      className="h-full bg-amber-500 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, (stats.vaultEmergency / Math.max(1, stats.vaultEmergency + stats.vaultInvestment)) * 100)}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                      <Target size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Investimentos</p>
+                      <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultInvestment)}</p>
+                    </div>
+                  </div>
+                  <div className="h-1 flex-1 max-w-[48px] bg-slate-700 rounded-full overflow-hidden shrink-0">
+                    <motion.div
+                      className="h-full bg-blue-500 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, (stats.vaultInvestment / Math.max(1, stats.vaultEmergency + stats.vaultInvestment)) * 100)}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+                <div className="py-2 px-3 rounded-xl bg-slate-800/30 border border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Total fundos</span>
+                  <span className="text-sm font-black text-white">{formatCurrency(stats.vaultEmergency + stats.vaultInvestment)}</span>
+                </div>
+              </div>
+              {isPro && (
+                <Link href="/vault" className="mt-3 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1">
+                  Ver cofres <ChevronRight size={12} />
+                </Link>
+              )}
+            </motion.div>
+
+            {/* Distribuição de fundos por mês – 2/3 da metade */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-2"
+            >
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Distribuição de fundos por mês</h3>
+            <div className="flex-1 min-h-[180px] flex items-center justify-center">
+              {chartProcessed.vaultByMonth.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartProcessed.vaultByMonth}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                    <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="bold" />
+                    <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} />
+                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                    <Line type="monotone" dataKey="Emergência" name="Emergência" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+                    <Line type="monotone" dataKey="Investimentos" name="Investimentos" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-slate-500 text-sm italic text-center">Sem dados nos cofres (últimos 6 meses)</p>
+              )}
+            </div>
+            {chartProcessed.vaultByMonth.length > 0 && (
+              <div className="flex items-center justify-end gap-4 mt-2 text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-amber-400">— Emergência</span>
+                <span className="text-blue-400">— Investimentos</span>
+              </div>
+            )}
+          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -611,7 +830,7 @@ export default function DashboardPage() {
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 backdrop-blur-sm p-5 rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-sm text-slate-200 font-medium italic flex items-center gap-3"
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm p-5 rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-sm text-slate-200 font-medium italic flex items-center gap-3"
             >
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles size={14} />
