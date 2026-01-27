@@ -698,9 +698,12 @@ function TransactionsPageContent() {
                       />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                        formatter={(value: any) => formatCurrency(value)}
+                        itemStyle={{ color: '#f1f5f9', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#94a3b8' }}
+                        cursor={{ fill: 'transparent' }}
+                        formatter={(value: any) => [formatCurrency(value), t.dashboard.transactions.value]}
                       />
-                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                      <Bar dataKey="value" name={t.dashboard.transactions.value} radius={[0, 6, 6, 0]} activeBar={{ fill: '#475569', opacity: 0.85 }}>
                         {chartData.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
@@ -833,8 +836,8 @@ function TransactionsPageContent() {
                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                         formatter={(value: any) => formatCurrency(value)}
                       />
-                      <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" />
-                      <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" />
+                      <Area type="monotone" dataKey="income" name={t.dashboard.analytics.income} stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" />
+                      <Area type="monotone" dataKey="expenses" name={t.dashboard.analytics.expenses} stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

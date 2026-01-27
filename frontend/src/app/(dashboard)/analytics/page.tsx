@@ -1020,8 +1020,8 @@ export default function AnalyticsPage() {
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                 />
-                <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
-                <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" strokeWidth={3} />
+                <Area type="monotone" dataKey="income" name={t.dashboard.analytics.income} stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
+                <Area type="monotone" dataKey="expenses" name={t.dashboard.analytics.expenses} stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
