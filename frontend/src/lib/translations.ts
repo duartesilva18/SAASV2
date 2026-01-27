@@ -693,7 +693,12 @@ export const translations = {
                 deleteError: "Erro ao eliminar a conta.",
                 marketingChannels: "Email • SMS • Telegram",
                 needHelp: "Precisas de ajuda?",
-                supportAvailable: "O nosso suporte está disponível 24/7 via Telegram."
+                supportAvailable: "O nosso suporte está disponível 24/7 via Telegram.",
+                sessionExpired: {
+                    title: "Sessão Expirada",
+                    message: "A tua sessão expirou por segurança. Por favor, inicia sessão novamente.",
+                    button: "Entendido"
+                }
             },
             affiliate: {
                 title: "Programa de Afiliados",
@@ -1017,6 +1022,39 @@ export const translations = {
                 title: "Guia do ",
                 titleAccent: "Mestre",
                 subtitle: "Domina as ferramentas do Finly e alcança a paz financeira.",
+                telegramBot: "Bot Telegram",
+                registerInTelegram: "Regista em ",
+                registerInTelegramAccent: "Telegram",
+                registerInTelegramSeconds: "em segundos.",
+                multipleWays: "Múltiplas formas de escrever. Especifica a categoria com um hífen ou deixa a IA categorizar automaticamente.",
+                waysToWrite: "Formas de Escrever:",
+                simpleFormat: "Formato Simples",
+                simpleFormatExample: "Biscoitos 10€",
+                aiCategorizes: "A IA categoriza automaticamente.",
+                withCategory: "Com Categoria (Hífen)",
+                withCategoryExample: "Iogurte - Alimentação 5€",
+                specifyCategory: "Especifica a categoria diretamente.",
+                keywords: "Palavras-Chave",
+                keywordsExample: "Uber 15€",
+                recognizesUber: "Reconhece 'Uber' como Transporte.",
+                income: "Receitas",
+                incomeExample: "Salário 1500€",
+                recognizesIncome: "Reconhece receitas automaticamente.",
+                openTelegramBot: "Abrir Bot Telegram",
+                goToDashboard: "Ir para Dashboard",
+                finlyBot: "Finly Bot",
+                onlineAlwaysReady: "Online • Sempre pronto",
+                confirm: "✓ Confirmar",
+                cancel: "✗ Cancelar",
+                writeExample: "Escreve 'Biscoitos 10€' ou 'Iogurte - Alimentação 5€'...",
+                otherFeatures: "Outras Funcionalidades",
+                exploreFeature: "Explorar funcionalidade",
+                privacyFirst: "Privacidade",
+                privacyFirstAccent: "Primeiro.",
+                privacyDescription: "O Finly é uma ferramenta de gestão, não de invasão. Nunca pedimos as tuas palavras-passe bancárias. Encriptação de ponta a ponta em cada mensagem.",
+                contactSupport: "Contactar Suporte",
+                configureProfile: "Configurar Perfil",
+                footer: "Finly • A simplicidade é a sofisticação máxima",
                 sections: [
                     {
                         title: "Telegram Fin",
@@ -1857,7 +1895,12 @@ export const translations = {
                 deleteError: "Error deleting account.",
                 marketingChannels: "Email • SMS • Telegram",
                 needHelp: "Need help?",
-                supportAvailable: "Our support is available 24/7 via Telegram."
+                supportAvailable: "Our support is available 24/7 via Telegram.",
+                sessionExpired: {
+                    title: "Session Expired",
+                    message: "Your session has expired for security reasons. Please log in again.",
+                    button: "Got it"
+                }
             },
             support: {
                 tooltip: "24/7 Support",

@@ -6,6 +6,7 @@ import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
 import SupportButton from '@/components/SupportButton';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import LoadingScreen from '@/components/LoadingScreen';
+import AlertModal from '@/components/AlertModal';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
@@ -23,12 +24,25 @@ export default function DashboardLayout({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
   const pathname = usePathname();
-  const { setCurrency, setLanguage } = useTranslation();
+  const { t, setCurrency, setLanguage } = useTranslation();
   const { user, loading, refreshUser } = useUser();
   const router = useRouter();
 
   const isAdminPage = pathname?.startsWith('/admin');
+
+  // Listener para token expirado
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      setShowSessionExpired(true);
+    };
+
+    window.addEventListener('token-expired', handleTokenExpired);
+    return () => {
+      window.removeEventListener('token-expired', handleTokenExpired);
+    };
+  }, []);
 
   useEffect(() => {
     if (!loading) {
@@ -94,6 +108,20 @@ export default function DashboardLayout({
 
       {showTermsAcceptance && (
         <TermsAcceptanceModal onAccept={() => setShowTermsAcceptance(false)} />
+      )}
+
+      {showSessionExpired && (
+        <AlertModal
+          isOpen={showSessionExpired}
+          onClose={() => {
+            setShowSessionExpired(false);
+            window.location.href = '/auth/login';
+          }}
+          title={t.dashboard.settings.sessionExpired.title}
+          message={t.dashboard.settings.sessionExpired.message}
+          type="warning"
+          buttonText={t.dashboard.settings.sessionExpired.button}
+        />
       )}
 
       <Sidebar 

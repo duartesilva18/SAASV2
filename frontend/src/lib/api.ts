@@ -34,9 +34,9 @@ api.interceptors.response.use(
       // Token expirado ou inválido - limpar tokens
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
-      // Redirecionar para login apenas se estiver numa página protegida
+      // Disparar evento customizado para mostrar modal
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth/')) {
-        window.location.href = '/auth/login';
+        window.dispatchEvent(new CustomEvent('token-expired'));
       }
     }
     return Promise.reject(error);

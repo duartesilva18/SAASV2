@@ -16,6 +16,7 @@ import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { TransactionSkeleton } from '@/components/LoadingSkeleton';
 import PageLoading from '@/components/PageLoading';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area, BarChart, Bar } from 'recharts';
 
 interface Transaction {
   id: string;
@@ -50,6 +51,7 @@ function TransactionsPageContent() {
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [evolutionPeriod, setEvolutionPeriod] = useState<'weekly' | 'daily'>('weekly');
   const itemsPerPage = 10;
   
   const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
@@ -152,6 +154,7 @@ function TransactionsPageContent() {
   const stats = useMemo(() => {
     // Backend garante sinais corretos: income > 0, expense < 0
     // Se não houver categoria, usar sinal do amount_cents
+    // Calcular com TODAS as transações (não apenas filtradas)
     const income = transactions
       .filter(t => {
         const cat = categories.find(c => c.id === t.category_id);
@@ -398,7 +401,7 @@ function TransactionsPageContent() {
     <motion.div 
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
-      className="max-w-[1400px] mx-auto space-y-12 pb-20 px-2 md:px-0"
+      className="w-full space-y-12 pb-20 px-4 md:px-6 lg:px-8"
     >
       {/* Hero Header */}
       <section className="relative">
@@ -408,29 +411,29 @@ function TransactionsPageContent() {
               <Sparkles size={14} className="text-blue-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.transactions.yourAbundanceDiary}</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white leading-none">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white leading-none">
               {t.dashboard.transactions.activityRecord} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 italic">{t.dashboard.transactions.activity}</span>
             </h1>
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] min-w-[200px] shadow-2xl relative overflow-hidden group">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full sm:w-auto">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-[32px] w-full sm:min-w-[200px] sm:w-auto shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
               <div className="flex items-center gap-3 mb-2 text-slate-500">
                 <ArrowUpRight size={16} className="text-emerald-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.totalIncome}</span>
               </div>
-              <p className="text-3xl font-black text-white">{formatCurrency(stats.income / 100)}</p>
+              <p className="text-2xl sm:text-3xl font-black text-white">{formatCurrency(stats.income)}</p>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-6 rounded-[32px] min-w-[200px] shadow-2xl relative overflow-hidden group">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-[32px] w-full sm:min-w-[200px] sm:w-auto shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-[40px] rounded-full" />
               <div className="flex items-center gap-3 mb-2 text-slate-500">
                 <ArrowDownRight size={16} className="text-red-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.totalExpenses}</span>
               </div>
-              <p className="text-3xl font-black text-white">{formatCurrency(stats.expenses / 100)}</p>
+              <p className="text-2xl sm:text-3xl font-black text-white">{formatCurrency(stats.expenses)}</p>
             </div>
             
             <button
@@ -440,7 +443,7 @@ function TransactionsPageContent() {
                 setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
                 setShowAddModal(true);
               }}
-              className="flex items-center gap-3 px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer h-full"
+              className="flex items-center justify-center gap-3 px-6 sm:px-8 py-4 sm:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer w-full sm:w-auto"
             >
               <Plus size={20} className="group-hover:rotate-90 transition-transform" />
               {t.dashboard.transactions.addNew}
@@ -450,14 +453,14 @@ function TransactionsPageContent() {
       </section>
 
       {/* Filters & Search */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
-        <div className="flex flex-col lg:flex-row gap-8 items-center justify-between mb-6">
-          <div className="flex items-center gap-4 bg-slate-950/50 border border-slate-800 rounded-2xl p-1.5 w-full lg:w-auto">
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col gap-6 mb-6">
+          <div className="flex items-center gap-2 sm:gap-4 bg-slate-950/50 border border-slate-800 rounded-2xl p-1.5 w-full">
             {['all', 'income', 'expense'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                   activeTab === tab 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
                   : 'text-slate-500 hover:text-slate-300'
@@ -468,7 +471,7 @@ function TransactionsPageContent() {
             ))}
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-auto flex-1 max-w-3xl">
+          <div className="flex flex-col sm:flex-row gap-4 w-full">
             <div className="relative flex-1 group">
               <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
               <input 
@@ -476,16 +479,16 @@ function TransactionsPageContent() {
                 placeholder={t.dashboard.transactions.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-3 sm:py-4 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium text-sm"
               />
             </div>
 
-            <div className="relative group min-w-[200px]">
+            <div className="relative group w-full sm:min-w-[200px] sm:w-auto">
               <Tag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-3 sm:py-4 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer text-sm"
               >
                 <option value="all">{t.dashboard.transactions.allCategories}</option>
                 {categories.map(c => (
@@ -505,18 +508,21 @@ function TransactionsPageContent() {
         </div>
       </section>
 
-      {/* Transactions List */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800/50">
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.date}</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.description}</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.category}</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 text-right">{t.dashboard.transactions.table.amount}</th>
-              </tr>
-            </thead>
+      {/* Transactions List & Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+        {/* Left: Transactions Table */}
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="border-b border-slate-800/50">
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.date}</th>
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.description}</th>
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hidden sm:table-cell">{t.dashboard.transactions.table.category}</th>
+                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 text-right">{t.dashboard.transactions.table.amount}</th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-800/30">
               <AnimatePresence mode="popLayout">
                 {paginatedTransactions.map((transaction, index) => {
@@ -531,7 +537,7 @@ function TransactionsPageContent() {
                       onClick={() => setSelectedTransaction(transaction)}
                       className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
                     >
-                      <td className="px-8 py-6">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
                           <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
@@ -539,16 +545,22 @@ function TransactionsPageContent() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
+                          <div className="flex items-center gap-2 sm:hidden">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 hidden sm:table-cell">
                         <div className="flex items-center gap-3">
                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
                         </div>
                       </td>
-                      <td className="px-8 py-6 text-right">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
                         {(() => {
                           // Determinar tipo: usar categoria se existir, senão usar sinal do amount_cents
                           const isIncome = cat ? cat.type === 'income' : transaction.amount_cents > 0;
@@ -577,12 +589,13 @@ function TransactionsPageContent() {
               </p>
             </div>
           )}
+          </div>
         </div>
 
         {/* Pagination Controls */}
         {filteredTransactions.length > itemsPerPage && (
-          <div className="px-8 py-6 border-t border-slate-800/50 flex items-center justify-between bg-slate-900/20">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
               Mostrando <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> de <span className="text-white">{filteredTransactions.length}</span>
             </p>
             
@@ -630,7 +643,210 @@ function TransactionsPageContent() {
             </div>
           </div>
         )}
-      </section>
+        </section>
+
+        {/* Right: Charts */}
+        <div className="space-y-6 lg:space-y-8">
+          {/* Chart 1: Top Categories Bar Chart */}
+          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8 shadow-2xl">
+            <div className="mb-4 sm:mb-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Top</p>
+              <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">Categorias</h3>
+            </div>
+            {(() => {
+              // Calcular top categorias por valor gasto
+              const categoryData = transactions.reduce((acc: any, t) => {
+                const cat = categories.find(c => c.id === t.category_id);
+                if (!cat || cat.vault_type !== 'none' || cat.type !== 'expense') return acc;
+                
+                const key = cat.id;
+                if (!acc[key]) {
+                  acc[key] = {
+                    name: cat.name,
+                    value: 0,
+                    color: cat.color_hex
+                  };
+                }
+                acc[key].value += Math.abs(t.amount_cents) / 100;
+                return acc;
+              }, {});
+              
+              const chartData = Object.values(categoryData)
+                .sort((a: any, b: any) => b.value - a.value)
+                .slice(0, 5)
+                .reverse(); // Inverter para mostrar maior em cima
+              
+              return chartData.length > 0 ? (
+                <div className="h-48 sm:h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis 
+                        type="number"
+                        tick={{ fill: '#94a3b8', fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => formatCurrency(value)}
+                      />
+                      <YAxis 
+                        type="category"
+                        dataKey="name"
+                        tick={{ fill: '#94a3b8', fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={60}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                        formatter={(value: any) => formatCurrency(value)}
+                      />
+                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                        {chartData.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-600">
+                  <p className="text-xs font-black uppercase">Sem dados</p>
+                </div>
+              );
+            })()}
+          </section>
+
+          {/* Chart 2: Weekly/Daily Evolution */}
+          <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Evolução</p>
+                <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
+                  {evolutionPeriod === 'weekly' ? 'Semanal' : 'Diária'}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-950/50 border border-slate-800 rounded-xl p-1 w-full sm:w-auto">
+                <button
+                  onClick={() => setEvolutionPeriod('weekly')}
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                    evolutionPeriod === 'weekly'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  Semanal
+                </button>
+                <button
+                  onClick={() => setEvolutionPeriod('daily')}
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                    evolutionPeriod === 'daily'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  Diária
+                </button>
+              </div>
+            </div>
+            {(() => {
+              // Agrupar transações por semana ou dia
+              const periodData = transactions.reduce((acc: any, t) => {
+                const date = new Date(t.transaction_date);
+                let periodKey: string;
+                
+                if (evolutionPeriod === 'weekly') {
+                  // Calcular semana (ano-semana)
+                  const year = date.getFullYear();
+                  const startOfYear = new Date(year, 0, 1);
+                  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+                  const week = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+                  periodKey = `${year}-W${String(week).padStart(2, '0')}`;
+                } else {
+                  // Diário
+                  periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                }
+                
+                if (!acc[periodKey]) {
+                  acc[periodKey] = { period: periodKey, income: 0, expenses: 0 };
+                }
+                
+                const cat = categories.find(c => c.id === t.category_id);
+                const isIncome = cat ? cat.type === 'income' : t.amount_cents > 0;
+                
+                if (isIncome && (!cat || cat.vault_type === 'none')) {
+                  acc[periodKey].income += Math.abs(t.amount_cents) / 100;
+                } else if (!isIncome && (!cat || cat.vault_type === 'none')) {
+                  acc[periodKey].expenses += Math.abs(t.amount_cents) / 100;
+                }
+                
+                return acc;
+              }, {});
+              
+              const chartData = Object.values(periodData)
+                .sort((a: any, b: any) => a.period.localeCompare(b.period))
+                .slice(-(evolutionPeriod === 'weekly' ? 8 : 14)) // Últimas 8 semanas ou 14 dias
+                .map((item: any) => {
+                  if (evolutionPeriod === 'weekly') {
+                    const [year, week] = item.period.split('-W');
+                    const weekNum = parseInt(week);
+                    return {
+                      ...item,
+                      label: `Sem ${weekNum}`
+                    };
+                  } else {
+                    const date = new Date(item.period);
+                    return {
+                      ...item,
+                      label: date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
+                    };
+                  }
+                });
+              
+              return chartData.length > 0 ? (
+                <div className="h-48 sm:h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis 
+                        dataKey="label" 
+                        tick={{ fill: '#94a3b8', fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fill: '#94a3b8', fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => formatCurrency(value)}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
+                        formatter={(value: any) => formatCurrency(value)}
+                      />
+                      <Area type="monotone" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" />
+                      <Area type="monotone" dataKey="expenses" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-600">
+                  <p className="text-xs font-black uppercase">Sem dados</p>
+                </div>
+              );
+            })()}
+          </section>
+        </div>
+      </div>
 
       {/* Add/Edit Modal */}
       <AnimatePresence>
