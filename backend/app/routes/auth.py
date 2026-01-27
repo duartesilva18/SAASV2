@@ -630,6 +630,48 @@ async def update_profile(request: Request, onboarding_data: schemas.UserUpdateOn
     logger.info(f'Utilizador atualizou perfil: {current_user.email}')
     return current_user
 
+
+@router.patch('/email', response_model=schemas.UserResponse)
+async def update_email(request: Request, data: schemas.UserUpdateEmail, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.password_hash:
+        raise HTTPException(status_code=400, detail='Alteração de email não disponível para contas ligadas a redes sociais.')
+    if not security.verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail='Password atual incorreta.')
+    new_email_normalized = (data.new_email or '').strip().lower()
+    if not validate_email(new_email_normalized):
+        raise HTTPException(status_code=400, detail='Formato de email inválido.')
+    if new_email_normalized == current_user.email:
+        raise HTTPException(status_code=400, detail='O novo email é igual ao atual.')
+    existing = db.query(models.User).filter(models.User.email == new_email_normalized).first()
+    if existing:
+        raise HTTPException(status_code=400, detail='Este email já está associado a outra conta.')
+    current_user.email = new_email_normalized
+    current_user.is_email_verified = False
+    db.commit()
+    db.refresh(current_user)
+    await log_action(db, action='email_update', user_id=current_user.id, details=f'Email alterado para {new_email_normalized}', request=request)
+    logger.info(f'Utilizador alterou email para: {new_email_normalized}')
+    return current_user
+
+
+@router.post('/change-password')
+async def change_password(request: Request, data: schemas.UserChangePassword, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.password_hash:
+        raise HTTPException(status_code=400, detail='Alteração de password não disponível para contas ligadas a redes sociais.')
+    if not security.verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail='Password atual incorreta.')
+    is_valid, error_msg = validate_password(data.new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    if data.current_password == data.new_password:
+        raise HTTPException(status_code=400, detail='A nova password deve ser diferente da atual.')
+    current_user.password_hash = security.get_password_hash(data.new_password)
+    db.commit()
+    await log_action(db, action='password_change', user_id=current_user.id, details='Password alterada', request=request)
+    logger.info(f'Utilizador alterou password: {current_user.email}')
+    return {'message': 'Password alterada com sucesso!'}
+
+
 @router.patch('/language', response_model=schemas.UserResponse)
 async def update_language(request: Request, language_data: schemas.UserUpdateLanguage, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Validate language (only 'pt' or 'en' supported)

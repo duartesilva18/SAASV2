@@ -1,25 +1,31 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { Zap, Trophy, Crown, Check, CheckCircle2 } from 'lucide-react';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
+import Toast from '@/components/Toast';
+import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect } from 'react';
 
 export default function PlansPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
   const [currentPlanPriceId, setCurrentPlanPriceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [changePlanModal, setChangePlanModal] = useState<{ isOpen: boolean; priceId: string | null }>({ isOpen: false, priceId: null });
+  const [changePlanLoading, setChangePlanLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // Mapeamento de price_ids para planos (igual à homepage)
   const priceIdMap: { [key: string]: string } = {
-    'price_1SrkUWLtWlVpaXrb8zFq6OvW': 'basic',
-    'price_1Stb4lLtWlVpaXrbdoI7hHDx': 'plus',
-    'price_1SrkUrLtWlVpaXrb8zFq6OvW': 'pro'
+    'price_1SuIypLtWlVpaXrbD7ph1fhf': 'basic',
+    'price_1SuIzcLtWlVpaXrbLkHE0QbS': 'plus',
+    'price_1SuJ0GLtWlVpaXrb8BH9HIve': 'pro'
   };
 
   useEffect(() => {
@@ -95,7 +101,7 @@ export default function PlansPage() {
       features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
       limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
       buttonText: 'Começar agora',
-      priceId: 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
+      priceId: 'price_1SuIypLtWlVpaXrbD7ph1fhf',
       icon: Zap,
       popular: false,
     },
@@ -110,7 +116,7 @@ export default function PlansPage() {
       features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
       limitation: null,
       buttonText: 'Quero começar a ganhar com a FinLy',
-      priceId: 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
+      priceId: 'price_1SuIzcLtWlVpaXrbLkHE0QbS',
       icon: Trophy,
       popular: true,
       popularLabel: '🔥 MAIS ESCOLHIDO',
@@ -126,7 +132,7 @@ export default function PlansPage() {
       features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
       limitation: null,
       buttonText: 'Quero o plano mais completo',
-      priceId: 'price_1SrkUrLtWlVpaXrb8zFq6OvW',
+      priceId: 'price_1SuJ0GLtWlVpaXrb8BH9HIve',
       icon: Crown,
       popular: false,
     }
@@ -138,35 +144,87 @@ export default function PlansPage() {
       ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status));
   };
 
+  const hasActiveSubscription = !!(
+    user?.subscription_status &&
+    ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status)
+  );
+
   const handlePlanSelect = async (planPriceId: string) => {
-    // Se já tem este plano, não fazer nada
-    if (isCurrentPlan(planPriceId)) {
+    if (isCurrentPlan(planPriceId)) return;
+
+    if (!user) {
+      const planId = priceIdMap[planPriceId];
+      if (planId) router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${planId}`)}`);
       return;
     }
 
-    if (user) {
-      try {
-        const res = await api.post('/stripe/create-checkout-session', null, {
-          params: { price_id: planPriceId }
-        });
-        window.location.href = res.data.url;
-      } catch (err: any) {
-        console.error('Erro ao criar sessão Stripe:', err);
-        const planId = priceIdMap[planPriceId];
-        if (planId) {
-          router.push(`/pricing?plan=${planId}`);
-        }
-      }
-    } else {
-      const planId = priceIdMap[planPriceId];
-      if (planId) {
-        router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${planId}`)}`);
-      }
+    if (hasActiveSubscription) {
+      setChangePlanModal({ isOpen: true, priceId: planPriceId });
+      return;
+    }
+
+    setCheckoutLoading(true);
+    try {
+      const res = await api.post('/stripe/create-checkout-session', null, {
+        params: { price_id: planPriceId }
+      });
+      window.location.href = res.data.url;
+    } catch (err: any) {
+      setCheckoutLoading(false);
+      console.error('Erro Stripe:', err);
+      const msg = err?.response?.data?.detail;
+      const detail = typeof msg === 'string' ? msg : (Array.isArray(msg) ? msg.map((x: any) => x?.msg ?? JSON.stringify(x)).join(', ') : 'Erro. Tenta novamente ou abre o portal de faturação nas Definições.');
+      setToast({ isVisible: true, message: detail, type: 'error' });
+    }
+  };
+
+  const handleConfirmChangePlan = async () => {
+    const priceId = changePlanModal.priceId;
+    if (!priceId) return;
+    setChangePlanLoading(true);
+    try {
+      const res = await api.post('/stripe/change-plan', null, { params: { price_id: priceId } });
+      setChangePlanModal({ isOpen: false, priceId: null });
+      setCurrentPlanPriceId(priceId);
+      localStorage.setItem('current_plan_price_id', priceId);
+      localStorage.setItem('current_plan_updated_at', Date.now().toString());
+      await refreshUser();
+      setToast({ isVisible: true, message: res.data?.message || 'Plano alterado.', type: 'success' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail;
+      const detail = typeof msg === 'string' ? msg : (Array.isArray(msg) ? msg.map((x: any) => x?.msg ?? JSON.stringify(x)).join(', ') : 'Erro ao alterar plano.');
+      setToast({ isVisible: true, message: detail, type: 'error' });
+    } finally {
+      setChangePlanLoading(false);
     }
   };
 
   return (
     <div className="space-y-20 pb-20 px-4 md:px-8 pt-10 max-w-7xl mx-auto">
+      {/* Modal de loading ao abrir Stripe Checkout */}
+      <AnimatePresence>
+        {checkoutLoading && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-[24px] p-8 shadow-2xl text-center"
+            >
+              <div className="w-14 h-14 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-6" />
+              <p className="text-white font-black uppercase tracking-widest text-sm mb-1">A abrir Stripe</p>
+              <p className="text-slate-500 text-xs font-medium">Aguarda um momento...</p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header Section — igual à homepage */}
       <section className="text-center mb-20 md:mb-28 lg:mb-32">
         <motion.h2
@@ -345,6 +403,25 @@ export default function PlansPage() {
           </div>
         </div>
       </motion.section>
+
+      <ConfirmModal
+        isOpen={changePlanModal.isOpen}
+        onClose={() => setChangePlanModal({ isOpen: false, priceId: null })}
+        onConfirm={handleConfirmChangePlan}
+        title="Deseja alterar plano?"
+        message="A tua subscrição passará para o novo plano. Se fores para um plano mais caro, serás cobrado na tua forma de pagamento guardada pela diferença do período em falta. Se fores para um mais barato, o ajuste aparece a teu favor na próxima fatura."
+        confirmText="Sim, alterar"
+        cancelText="Cancelar"
+        variant="info"
+        isLoading={changePlanLoading}
+      />
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 }

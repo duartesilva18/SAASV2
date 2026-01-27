@@ -29,7 +29,6 @@ import {
   Lightbulb,
   Compass,
   Target,
-  Zap,
   Lock,
   Trophy,
   Gift
@@ -84,11 +83,6 @@ const menuSections = (t: any) => [
         name: t.dashboard.sidebar.goals || "Metas de Poupança",
         href: '/goals',
         icon: Target,
-      },
-      {
-        name: t.dashboard.sidebar.fire || "Simulador FIRE",
-        href: '/fire',
-        icon: Zap,
       }
     ]
   },
@@ -192,6 +186,12 @@ const menuSections = (t: any) => [
   }
 ];
 
+const PLAN_BY_PRICE_ID: Record<string, { label: string; variant: 'basic' | 'plus' | 'pro' }> = {
+  'price_1SuIypLtWlVpaXrbD7ph1fhf': { label: 'FinLy Basic', variant: 'basic' },
+  'price_1SuIzcLtWlVpaXrbLkHE0QbS': { label: 'FinLy Plus', variant: 'plus' },
+  'price_1SuJ0GLtWlVpaXrb8BH9HIve': { label: 'FinLy Pro', variant: 'pro' },
+};
+
 export default function Sidebar({ 
   isCollapsed, 
   onToggle, 
@@ -210,6 +210,7 @@ export default function Sidebar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [hasCritical, setHasCritical] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<{ label: string; variant: 'basic' | 'plus' | 'pro' } | null>(null);
   const router = useRouter();
 
   const handleMarkAsRead = (id: string) => {
@@ -220,6 +221,27 @@ export default function Sidebar({
     setNotifications([]);
     setHasCritical(false);
   };
+
+  useEffect(() => {
+    if (!user || !isPro) {
+      setCurrentPlan(null);
+      return;
+    }
+    const fetchPlan = async () => {
+      try {
+        const res = await api.get('/stripe/subscription-details');
+        const priceId = res.data?.price_id;
+        if (priceId && PLAN_BY_PRICE_ID[priceId]) {
+          setCurrentPlan(PLAN_BY_PRICE_ID[priceId]);
+        } else {
+          setCurrentPlan({ label: 'FinLy Pro', variant: 'pro' });
+        }
+      } catch {
+        setCurrentPlan({ label: 'FinLy Pro', variant: 'pro' });
+      }
+    };
+    fetchPlan();
+  }, [user, isPro]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -515,13 +537,13 @@ export default function Sidebar({
                 user.is_admin 
                   ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-300/30' 
                   : isPro 
-                    ? 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-300/30' 
+                    ? (currentPlan?.variant === 'basic' ? 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 border-slate-400/30' : currentPlan?.variant === 'plus' ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 border-blue-300/30' : 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-300/30')
                     : 'bg-gradient-to-br from-slate-600 to-slate-800 border-slate-500/30'
               } w-9 h-9 xl:w-11 xl:h-11 text-[8px] max-[1300px]:text-[9px] xl:text-xs`}>
                 {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : user.email[0].toUpperCase()}
                 
                 {(user.is_admin || isPro) && (
-                  <div className={`absolute -inset-1 rounded-2xl blur-md opacity-20 group-hover:opacity-40 transition-opacity ${user.is_admin ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <div className={`absolute -inset-1 rounded-2xl blur-md opacity-20 group-hover:opacity-40 transition-opacity ${user.is_admin ? 'bg-amber-500' : currentPlan?.variant === 'basic' ? 'bg-slate-500' : currentPlan?.variant === 'plus' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                 )}
               </div>
 
@@ -564,10 +586,10 @@ export default function Sidebar({
                     user.is_admin 
                       ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
                       : isPro 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        ? (currentPlan?.variant === 'basic' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : currentPlan?.variant === 'plus' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
                         : 'bg-slate-800 text-slate-500 border-white/5'
                   }`}>
-                    {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? t.dashboard.sidebar.planPro : t.dashboard.sidebar.planFree}
+                    {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? (currentPlan?.label ?? t.dashboard.sidebar.planPro) : t.dashboard.sidebar.planFree}
                   </span>
                 </div>
               </div>

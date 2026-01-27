@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/affiliate', tags=['affiliate'])
 
 # Price IDs dos planos
-PLAN_BASIC_MONTHLY = 'price_1SrkUWLtWlVpaXrb8zFq6OvW'  # 1 mês
-PLAN_3_MONTHS = 'price_1Stb4lLtWlVpaXrbdoI7hHDx'  # 3 meses
-PLAN_YEARLY = 'price_1SrkUrLtWlVpaXrb8zFq6OvW'  # 1 ano
+PLAN_BASIC_MONTHLY = 'price_1SuIypLtWlVpaXrbD7ph1fhf'  # Finly Basic
+PLAN_PLUS = 'price_1SuIzcLtWlVpaXrbLkHE0QbS'  # Finly Plus
+PLAN_YEARLY = 'price_1SuJ0GLtWlVpaXrb8BH9HIve'  # Finly Pro (1 ano)
 
 def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[bool, str]:
     """
@@ -76,7 +76,7 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
             return (False, 'Plano inválido')
         
         # Planos que dão acesso direto a afiliados
-        if current_price_id in [PLAN_3_MONTHS, PLAN_YEARLY]:
+        if current_price_id in [PLAN_PLUS, PLAN_YEARLY]:
             return (True, 'Plano com acesso a afiliados')
         
         # Plano básico (1 mês) - verificar se tem 3 meses consecutivos pagos

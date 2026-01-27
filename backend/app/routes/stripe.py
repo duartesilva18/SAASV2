@@ -118,6 +118,46 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post('/change-plan')
+async def change_plan(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Altera o plano da subscrição ativa do utilizador para o novo price_id (upgrade/downgrade com proration)."""
+    try:
+        if not current_user.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail='Não tens uma subscrição ativa. Subscreve primeiro um plano em Planos ou Preços.'
+            )
+        if current_user.subscription_status not in ('active', 'trialing', 'cancel_at_period_end'):
+            raise HTTPException(
+                status_code=400,
+                detail='A tua subscrição não está ativa. Subscreve um plano para continuar.'
+            )
+        # Verificar que o novo preço existe
+        stripe.Price.retrieve(price_id)
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        items = sub.get('items', {}).get('data', [])
+        if not items:
+            raise HTTPException(status_code=400, detail='Subscrição sem itens. Contacta o suporte.')
+        item_id = items[0]['id']
+        stripe.Subscription.modify(
+            current_user.stripe_subscription_id,
+            items=[{'id': item_id, 'price': price_id}]
+        )
+        # Atualizar localmente para resposta imediata (o webhook subscription.updated também atualiza)
+        sub_after = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        current_user.subscription_status = sub_after.status
+        db.commit()
+        logger.info(f'Plano alterado para price_id={price_id} para user {current_user.email}')
+        return {'success': True, 'message': 'Plano alterado.', 'subscription_status': sub_after.status}
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro Stripe ao alterar plano: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f'Erro inesperado ao alterar plano: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=500, detail='Erro ao alterar plano.')
+
 @router.post('/portal')
 async def customer_portal(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:

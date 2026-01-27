@@ -656,9 +656,27 @@ export const translations = {
                 personalData: {
                     title: "Dados Pessoais",
                     fullName: "Nome Completo",
+                    email: "Email",
+                    newEmail: "Novo email",
+                    currentPassword: "Password atual",
+                    newPassword: "Nova password",
+                    confirmPassword: "Confirmar nova password",
+                    changeEmail: "Alterar email",
+                    changePassword: "Alterar password",
                     phone: "Telemóvel (Telegram)",
                     gender: "Género",
                     save: "Guardar Alterações"
+                },
+                accountSecurity: {
+                    title: "Email e Password",
+                    emailLabel: "Email atual",
+                    changeEmailTitle: "Alterar email",
+                    changeEmailDesc: "Confirma com a tua password atual.",
+                    changePasswordTitle: "Alterar password",
+                    changePasswordDesc: "Mínimo 8 caracteres, com maiúscula, minúscula e número.",
+                    emailSuccess: "Email alterado com sucesso.",
+                    passwordSuccess: "Password alterada com sucesso.",
+                    socialAccountNote: "Contas ligadas a redes sociais não podem alterar email ou password aqui."
                 },
                 preferences: {
                     title: "Preferências",
@@ -1891,9 +1909,27 @@ export const translations = {
                 personalData: {
                     title: "Personal Data",
                     fullName: "Full Name",
+                    email: "Email",
+                    newEmail: "New email",
+                    currentPassword: "Current password",
+                    newPassword: "New password",
+                    confirmPassword: "Confirm new password",
+                    changeEmail: "Change email",
+                    changePassword: "Change password",
                     phone: "Phone (Telegram)",
                     gender: "Gender",
                     save: "Save Changes"
+                },
+                accountSecurity: {
+                    title: "Email and Password",
+                    emailLabel: "Current email",
+                    changeEmailTitle: "Change email",
+                    changeEmailDesc: "Confirm with your current password.",
+                    changePasswordTitle: "Change password",
+                    changePasswordDesc: "Minimum 8 characters, with uppercase, lowercase and number.",
+                    emailSuccess: "Email changed successfully.",
+                    passwordSuccess: "Password changed successfully.",
+                    socialAccountNote: "Accounts linked to social networks cannot change email or password here."
                 },
                 preferences: {
                     title: "Preferences",

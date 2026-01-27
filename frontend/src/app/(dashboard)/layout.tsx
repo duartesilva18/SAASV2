@@ -11,7 +11,8 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard } from 'lucide-react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
 
@@ -164,6 +165,23 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
+
+        {/* Aviso quando o pagamento falhou (past_due) – período de graça */}
+        {user?.subscription_status === 'past_due' && (
+          <div className="sticky top-0 z-30 px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-center">
+            <AlertTriangle size={20} className="text-amber-400 shrink-0" />
+            <p className="text-sm font-medium text-amber-200">
+              O teu último pagamento falhou. Atualiza o método de pagamento para manter o acesso.
+            </p>
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-semibold text-sm transition-colors"
+            >
+              <CreditCard size={16} />
+              Ir para Definições
+            </Link>
+          </div>
+        )}
 
         <main className={`flex-1 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-72'} relative z-10 overflow-y-auto`}>
           <AnimatePresence mode="wait">

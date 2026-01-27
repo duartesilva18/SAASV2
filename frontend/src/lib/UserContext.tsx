@@ -95,12 +95,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  // Considera Pro se estiver ativo, em trial, ou marcado para cancelar no fim do período
-  // Status 'past_due' e 'unpaid' não são considerados Pro (acesso bloqueado)
-  // 'cancel_at_period_end' mantém acesso até ao fim do período pago
+  // Considera Pro se estiver ativo, em trial, cancel_at_period_end ou past_due (período de graça)
+  // past_due = pagamento falhou mas Stripe ainda está a tentar cobrar – mantém acesso para atualizar o método de pagamento
+  // unpaid = sem acesso (subscrição efetivamente em incumprimento)
   const isPro = user?.subscription_status === 'active' 
     || user?.subscription_status === 'trialing' 
-    || user?.subscription_status === 'cancel_at_period_end';
+    || user?.subscription_status === 'cancel_at_period_end'
+    || user?.subscription_status === 'past_due';
 
   return (
     <UserContext.Provider value={{ user, loading, refreshUser: fetchUser, logout, isPro }}>

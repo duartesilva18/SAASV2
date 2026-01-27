@@ -430,9 +430,9 @@ export default function LandingPage() {
                     if (user) {
                       try {
                         const priceIdMap: { [key: string]: string } = {
-                          basic: 'price_1SrkUWLtWlVpaXrb8zFq6OvW',
-                          plus: 'price_1Stb4lLtWlVpaXrbdoI7hHDx',
-                          pro: 'price_1SrkUrLtWlVpaXrb8zFq6OvW'
+                          basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf',
+                          plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS',
+                          pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve'
                         };
                         const priceId = priceIdMap[plan.id];
                         if (priceId) {

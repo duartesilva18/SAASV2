@@ -6,7 +6,8 @@ import {
   User, Phone, Coins, UserCircle, 
   CreditCard, Download, 
   Trash2, CheckCircle2, AlertCircle, Loader2,
-  ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink
+  ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink,
+  Lock
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
@@ -45,6 +46,9 @@ export default function SettingsPage() {
     type: 'info'
   });
   const [showEnglishAlert, setShowEnglishAlert] = useState(false);
+  const [hasPassword, setHasPassword] = useState(true); // false = entrou só por Gmail/Google
+  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const countries = [
     { code: '+351', flag: '🇵🇹', name: 'Portugal' },
@@ -71,6 +75,7 @@ export default function SettingsPage() {
         const user = res.data;
         const customerId = user.stripe_customer_id || '';
         setIsSimulated(customerId.startsWith('sim_') || customerId.startsWith('test_'));
+        setHasPassword(user.has_password !== false);
         
         // Parse phone number to extract country code if possible
         let extractedCode = '+351';
@@ -128,6 +133,40 @@ export default function SettingsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setToast({
+        message: 'As passwords não coincidem.',
+        type: 'error',
+        isVisible: true
+      });
+      return;
+    }
+    setSavingPassword(true);
+    setToast({ ...toast, isVisible: false });
+    try {
+      await api.post('/auth/change-password', {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setToast({
+        message: (t.dashboard.settings as any).accountSecurity?.passwordSuccess || 'Password alterada com sucesso.',
+        type: 'success',
+        isVisible: true
+      });
+    } catch (err: any) {
+      setToast({
+        message: err.response?.data?.detail || t.dashboard.settings.error,
+        type: 'error',
+        isVisible: true
+      });
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -409,6 +448,58 @@ export default function SettingsPage() {
                 </div>
               </div>
             </section>
+
+            {/* Alterar password — só para quem criou conta com email/password (não Gmail) */}
+            {hasPassword && (
+              <div className="space-y-4 p-6 bg-white/[0.02] border border-slate-800 rounded-2xl">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                  {(t.dashboard.settings as { accountSecurity?: { changePasswordTitle: string } }).accountSecurity?.changePasswordTitle || t.dashboard.settings.personalData.changePassword}
+                </p>
+                <p className="text-xs text-slate-500 mb-4">
+                  {(t.dashboard.settings as { accountSecurity?: { changePasswordDesc: string } }).accountSecurity?.changePasswordDesc || 'Mínimo 8 caracteres, com maiúscula, minúscula e número.'}
+                </p>
+                <div className="space-y-3">
+                  <div className="relative group/field">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
+                    <input
+                      type="password"
+                      placeholder={t.dashboard.settings.personalData.currentPassword}
+                      value={passwordForm.current_password}
+                      onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
+                    />
+                  </div>
+                  <div className="relative group/field">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
+                    <input
+                      type="password"
+                      placeholder={t.dashboard.settings.personalData.newPassword}
+                      value={passwordForm.new_password}
+                      onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
+                    />
+                  </div>
+                  <div className="relative group/field">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
+                    <input
+                      type="password"
+                      placeholder={t.dashboard.settings.personalData.confirmPassword}
+                      value={passwordForm.confirm_password}
+                      onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleChangePassword()}
+                  disabled={savingPassword || !passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password}
+                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {savingPassword ? <Loader2 size={18} className="animate-spin" /> : t.dashboard.settings.personalData.changePassword}
+                </button>
+              </div>
+            )}
 
             <button
               type="submit"

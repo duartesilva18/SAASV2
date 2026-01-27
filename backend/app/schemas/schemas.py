@@ -27,6 +27,7 @@ class UserResponse(UserBase):
     terms_accepted: bool = False
     terms_accepted_at: Optional[datetime] = None
     created_at: datetime
+    has_password: bool = True  # True = conta criada com email/password; False = só Google/social
 
     class Config:
         from_attributes = True
@@ -41,28 +42,39 @@ class UserUpdateOnboarding(BaseModel):
 class UserUpdateLanguage(BaseModel):
     language: str
 
+
+class UserUpdateEmail(BaseModel):
+    new_email: EmailStr
+    current_password: str
+
+
+class UserChangePassword(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
 class Token(BaseModel):
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str
 
+
 class RegisterResponse(BaseModel):
     message: str
-    email: EmailStr
+    email: str
     access_token: str
     refresh_token: Optional[str] = None
-    token_type: str
+    token_type: str = 'bearer'
 
 class TokenData(BaseModel):
     email: Optional[str] = None
 
-class PasswordResetRequest(BaseModel):
-    email: EmailStr
-
-
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
 
 class PasswordResetVerify(BaseModel):
     email: EmailStr
