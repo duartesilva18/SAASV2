@@ -183,7 +183,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className={`flex-1 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-72'} relative z-10 overflow-y-auto`}>
+        <main className={`flex-1 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'} relative z-10 overflow-y-auto`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

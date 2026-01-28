@@ -1,20 +1,29 @@
 /**
  * SWR hook para dashboard snapshot
- * Cache inteligente, deduplicação automática
+ * Cache inteligente, deduplicação automática.
+ * year/month opcionais: se fornecidos (month 1-12), o snapshot e collections são do mês indicado.
  */
 import useSWR from 'swr';
 import { fetcher } from '@/lib/api';
 
-export function useDashboardSnapshot() {
+function snapshotKey(year?: number, month?: number): string {
+  if (year != null && month != null && month >= 1 && month <= 12) {
+    return `/dashboard/snapshot?include_collections=true&year=${year}&month=${month}`;
+  }
+  return '/dashboard/snapshot?include_collections=true';
+}
+
+export function useDashboardSnapshot(year?: number, month?: number) {
+  const key = snapshotKey(year, month);
   const { data, error, isLoading, mutate } = useSWR(
-    '/dashboard/snapshot',
+    key,
     fetcher,
     {
-      revalidateOnFocus: false, // Não refetch ao focar na janela
-      revalidateOnReconnect: true, // Refetch se reconectar
-      dedupingInterval: 60000, // 1 minuto - deduplicar requests
-      refreshInterval: 0, // Não auto-refresh
-      keepPreviousData: true, // Manter dados anteriores durante refetch
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // ao mudar de mês (key diferente) fazer fetch imediato
+      refreshInterval: 0,
+      keepPreviousData: true, // enquanto carrega o novo mês, manter dados do mês anterior na UI
     }
   );
 
@@ -24,7 +33,7 @@ export function useDashboardSnapshot() {
     currency: data?.currency,
     isLoading,
     isError: error,
-    mutate, // Para invalidar cache manualmente
+    mutate,
   };
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import api, { fetcher } from '@/lib/api';
 import useSWR, { mutate } from 'swr';
 import { useDashboardSnapshot } from '@/lib/hooks/useDashboard';
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
 import PricingModal from '@/components/PricingModal';
+import TransactionAddModal from '@/components/TransactionAddModal';
 import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -43,9 +44,13 @@ export default function DashboardPage() {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+  const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
 
-  // Usar SWR para cache inteligente e deduplicação
-  const { snapshot, collections, isLoading: snapshotLoading, mutate: mutateSnapshot } = useDashboardSnapshot();
+  // Usar SWR para cache inteligente; viewMonth filtra snapshot por mês (backend month 1-12)
+  const { snapshot, collections, isLoading: snapshotLoading, mutate: mutateSnapshot } = useDashboardSnapshot(
+    viewMonth.year,
+    viewMonth.month + 1
+  );
   
   // Buscar invoices separadamente (não está no snapshot)
   const { data: invoicesData } = useSWR('/stripe/invoices', fetcher, {
@@ -102,14 +107,13 @@ export default function DashboardPage() {
   // }, [hasActiveSub, searchParams]);
 
   const fetchData = useCallback(async () => {
+      // Se snapshot ainda está a carregar ou faltam dados, não fazer nada (evita loading preso)
+      if (snapshotLoading || !snapshot || !collections) {
+        return;
+      }
       try {
-        setLoading(true);
-        
-        // Se snapshot ainda está a carregar, esperar
-        if (snapshotLoading || !snapshot || !collections) {
-          return;
-        }
-
+        // Não voltar a setLoading(true) aqui: no refresh/revalidação os dados já estão visíveis,
+        // e mostrar loading de novo fazia o conteúdo "desaparecer" à frente do utilizador
         const user = userData;
         const invoices = invoicesData || [];
         
@@ -293,12 +297,22 @@ export default function DashboardPage() {
     }
   }, [searchParams, refreshUser, mutateUserData, mutateSnapshot]);
 
-  // Carregar dados quando snapshot estiver pronto
+  // Carregar dados quando snapshot estiver pronto; ao mudar viewMonth o hook pede novo mês e snapshot/collections atualizam
   useEffect(() => {
-    if (snapshot && collections && userData && !snapshotLoading) {
-      fetchData();
-    }
+    if (!userData) return;
+    if (snapshotLoading || !snapshot || !collections) return;
+    fetchData();
   }, [snapshot, collections, userData, snapshotLoading, fetchData]);
+
+  // Ao mudar o mês nas setas, forçar revalidação do snapshot para esse mês (não no primeiro mount)
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    mutateSnapshot();
+  }, [viewMonth.year, viewMonth.month, mutateSnapshot]);
 
   // Prefetch dos dados da Análise Pro quando o dashboard já está carregado
   useEffect(() => {
@@ -476,24 +490,43 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Filtros</span>
           <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2">
-            <Calendar size={16} className="text-slate-400" />
+            <Calendar size={16} className="text-slate-400 shrink-0" />
             <button
               type="button"
+              disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 0 ? { year: p.year - 1, month: 11 } : { year: p.year, month: p.month - 1 }))}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Mês anterior"
             >
               <ChevronLeft size={18} />
             </button>
-            <span className="text-sm font-bold text-white min-w-[140px] text-center capitalize">{filterMonthLabel}</span>
+            <span className="text-sm font-bold text-white min-w-[140px] text-center capitalize flex items-center justify-center gap-2">
+              {snapshotLoading ? <Loader2 size={14} className="animate-spin text-slate-400 shrink-0" /> : null}
+              {filterMonthLabel}
+            </span>
             <button
               type="button"
+              disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 11 ? { year: p.year + 1, month: 0 } : { year: p.year, month: p.month + 1 }))}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Mês seguinte"
             >
               <ChevronRight size={18} />
             </button>
+            {(() => {
+              const now = new Date();
+              const isCurrentMonth = viewMonth.year === now.getFullYear() && viewMonth.month === now.getMonth();
+              if (isCurrentMonth) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
+                  className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 transition-colors cursor-pointer"
+                >
+                  Mês atual
+                </button>
+              );
+            })()}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -505,13 +538,14 @@ export default function DashboardPage() {
               </Link>
             </div>
           )}
-          <Link
-            href="/transactions"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors"
+          <button
+            type="button"
+            onClick={() => setShowAddTransactionModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer"
           >
             <Plus size={18} />
             Nova transação
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -728,18 +762,18 @@ export default function DashboardPage() {
               className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-1"
             >
               <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Fundos · Investimentos e Emergência</h3>
-              <div className="space-y-3 flex-1">
-                <div className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5">
-                  <div className="flex items-center gap-2 min-w-0">
+              <div className="space-y-3 flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
                       <ShieldCheck size={16} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Fundo de Emergência</p>
+                    <div className="min-w-0 overflow-hidden">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">Fundo de Emergência</p>
                       <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultEmergency)}</p>
                     </div>
                   </div>
-                  <div className="h-1 flex-1 max-w-[48px] bg-slate-700 rounded-full overflow-hidden shrink-0">
+                  <div className="h-1.5 w-full sm:w-14 sm:shrink-0 sm:min-w-[3.5rem] bg-slate-700 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-amber-500 rounded-full"
                       initial={{ width: 0 }}
@@ -748,17 +782,17 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
                       <Target size={16} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Investimentos</p>
+                    <div className="min-w-0 overflow-hidden">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">Investimentos</p>
                       <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultInvestment)}</p>
                     </div>
                   </div>
-                  <div className="h-1 flex-1 max-w-[48px] bg-slate-700 rounded-full overflow-hidden shrink-0">
+                  <div className="h-1.5 w-full sm:w-14 sm:shrink-0 sm:min-w-[3.5rem] bg-slate-700 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-blue-500 rounded-full"
                       initial={{ width: 0 }}
@@ -932,6 +966,16 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
+
+      <TransactionAddModal
+        isOpen={showAddTransactionModal}
+        onClose={() => setShowAddTransactionModal(false)}
+        onSuccess={() => {
+          setToast({ show: true, message: t.dashboard.transactions.success, type: 'success' });
+          mutateSnapshot();
+        }}
+        categories={collections?.categories ?? []}
+      />
 
       <PricingModal 
         isVisible={showPaywall} 

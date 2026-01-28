@@ -407,7 +407,7 @@ export default function Sidebar({
   })).filter((section) => section.items.length > 0);
 
   const sidebarContent = (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full relative overflow-visible min-h-0 -mt-3">
       <div className={`flex items-center mb-0 px-4 py-0 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
         <img
           src="/images/logo/logo.png"
@@ -421,7 +421,7 @@ export default function Sidebar({
         {sections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-3">
             {(!isCollapsed || isMobileOpen) && (
-              <h3 className={`px-4 text-[7px] max-[1300px]:text-[8px] xl:text-[10px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
+              <h3 className={`px-4 text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
                 {section.title}
               </h3>
             )}
@@ -441,14 +441,14 @@ export default function Sidebar({
                       <div
                         key={item.href}
                         onClick={() => router.push('/pricing')}
-                        className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                        className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                       >
                     <div className="relative">
-                      <Icon size={16} className="xl:w-5 xl:h-5 text-slate-600" />
-                      <Lock size={10} className="xl:w-3 xl:h-3 absolute -top-1 -right-1 text-amber-400" />
+                      <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-slate-600" />
+                      <Lock size={9} className="xl:w-2.5 xl:h-2.5 absolute -top-1 -right-1 text-amber-400" />
                     </div>
                     {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-slate-600">
+                      <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-slate-600">
                         {item.name}
                       </span>
                     )}
@@ -462,11 +462,11 @@ export default function Sidebar({
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                      className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                     >
-                      <Icon size={16} className="xl:w-5 xl:h-5 text-blue-400 group-hover:scale-110 transition-transform" />
+                      <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
                       {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-inherit">
+                        <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-inherit">
                           {item.name}
                         </span>
                       )}
@@ -483,14 +483,14 @@ export default function Sidebar({
                     <div
                       key={item.href}
                       onClick={() => router.push('/pricing')}
-                      className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                      className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
                     >
                       <div className="relative">
-                        <Icon size={16} className="xl:w-5 xl:h-5 text-slate-600" />
-                        <Lock size={10} className="xl:w-3 xl:h-3 absolute -top-1 -right-1 text-amber-400" />
+                        <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-slate-600" />
+                        <Lock size={9} className="xl:w-2.5 xl:h-2.5 absolute -top-1 -right-1 text-amber-400" />
                       </div>
                       {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-[8px] max-[1300px]:text-[9px] xl:text-xs font-black uppercase tracking-widest text-slate-600">
+                        <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-slate-600">
                           {item.name}
                         </span>
                       )}
@@ -503,18 +503,18 @@ export default function Sidebar({
                     key={item.href}
                     href={item.href}
                     onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
-                    className={`flex items-center gap-3 xl:gap-4 p-3 xl:p-3.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
+                    className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
                   >
                     <div className="relative">
-                      <Icon size={16} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
+                      <Icon size={12} className={`xl:w-3.5 xl:h-3.5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
                       {isAffiliateItem && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-5 h-5 xl:w-6 xl:h-6 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
+                          <div className={`w-3.5 h-3.5 xl:w-4 xl:h-4 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
                         </div>
                       )}
                     </div>
                     {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[9px] xl:text-xs font-black uppercase tracking-widest text-inherit">
+                      <span className="text-[6px] xl:text-[9px] font-black uppercase tracking-widest text-inherit">
                         {item.name}
                       </span>
                     )}
@@ -529,17 +529,17 @@ export default function Sidebar({
         ))}
       </nav>
 
-      <div className="p-4 border-t border-white/5 space-y-4 bg-white/[0.01] relative">
+      <div className="flex-shrink-0 p-3 pt-4 pb-3 border-t border-white/5 space-y-2.5 bg-white/[0.01] relative overflow-visible">
         {user && (
-          <div className={`group flex items-center gap-3 xl:gap-4 transition-all duration-300 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : 'px-3 xl:px-4 py-2.5 xl:py-3 hover:bg-white/[0.03] rounded-2xl cursor-default border border-transparent hover:border-white/5'}`}>
-            <div className="relative">
-              <div className={`relative shrink-0 flex items-center justify-center font-black text-white rounded-2xl border shadow-2xl transition-all duration-500 group-hover:scale-110 ${
+          <div className={`group flex items-center gap-2 xl:gap-3 transition-all duration-300 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center lg:px-1' : 'px-2.5 xl:px-3 py-2 xl:py-2.5 hover:bg-white/[0.03] rounded-xl cursor-default border border-transparent hover:border-white/5 min-w-0'}`}>
+            <div className="relative overflow-visible shrink-0">
+              <div className={`relative shrink-0 flex items-center justify-center font-black text-white rounded-xl border shadow-2xl transition-all duration-500 group-hover:scale-110 ${
                 user.is_admin 
                   ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-amber-300/30' 
                   : isPro 
                     ? (currentPlan?.variant === 'basic' ? 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 border-slate-400/30' : currentPlan?.variant === 'plus' ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 border-blue-300/30' : 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-300/30')
                     : 'bg-gradient-to-br from-slate-600 to-slate-800 border-slate-500/30'
-              } w-9 h-9 xl:w-11 xl:h-11 text-[8px] max-[1300px]:text-[9px] xl:text-xs`}>
+              } w-8 h-8 xl:w-9 xl:h-9 text-[7px] max-[1300px]:text-[8px] xl:text-[10px]`}>
                 {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : user.email[0].toUpperCase()}
                 
                 {(user.is_admin || isPro) && (
@@ -549,7 +549,7 @@ export default function Sidebar({
 
               {/* Bell only when collapsed */}
               {(isCollapsed && !isMobileOpen) && (
-                <div className="absolute -top-2 -right-2 z-30">
+                <div className="absolute -top-1 -right-1 z-30">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -694,12 +694,16 @@ export default function Sidebar({
 
         <button
           onClick={logout}
-          className={`w-full flex items-center gap-3 xl:gap-4 p-3 xl:p-4 rounded-2xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
+          className={`w-full flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
         >
-          <div className="w-4 h-4 xl:w-5 xl:h-5 flex items-center justify-center group-hover:-translate-x-1 transition-transform">
-            <LogOut size={14} className="xl:w-[18px] xl:h-[18px]" />
+          <div className="w-3.5 h-3.5 flex items-center justify-center group-hover:-translate-x-1 transition-transform shrink-0">
+            <LogOut size={11} className="xl:w-3 xl:h-3" />
           </div>
-          {(!isCollapsed || isMobileOpen) && <span className="text-[7px] max-[1300px]:text-[8px] xl:text-[10px] font-black uppercase tracking-[0.2em]">{t.dashboard.sidebar.logout}</span>}
+          {(!isCollapsed || isMobileOpen) && (
+            <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-wide whitespace-nowrap shrink-0">
+              {t.dashboard.sidebar.logout}
+            </span>
+          )}
         </button>
       </div>
     </div>
@@ -722,7 +726,7 @@ export default function Sidebar({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring' as const, damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-screen w-72 bg-[#020617] border-r border-slate-800 z-[70] flex flex-col lg:hidden shadow-2xl"
+              className="fixed left-0 top-0 h-screen w-64 bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-visible lg:hidden shadow-2xl"
             >
               {sidebarContent}
             </motion.aside>
@@ -731,7 +735,7 @@ export default function Sidebar({
       </AnimatePresence>
 
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col ${isCollapsed ? 'w-24' : 'w-72'}`}
+        className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24' : 'w-64'}`}
       >
         {sidebarContent}
         <button 

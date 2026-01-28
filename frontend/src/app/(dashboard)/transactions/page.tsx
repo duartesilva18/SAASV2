@@ -97,6 +97,17 @@ function TransactionsPageContent() {
     return () => clearInterval(interval);
   }, [refetchData]);
 
+  // Verificar parâmetros de URL: ?add=1 abre o modal de inserção (ex.: vindo do dashboard "Nova transação")
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setShowAddModal(true);
+      setEditingTransaction(null);
+      setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+      window.history.replaceState({}, '', '/transactions');
+      return;
+    }
+  }, [searchParams]);
+
   // Verificar parâmetros de URL para abrir modal de cofre
   useEffect(() => {
     const action = searchParams.get('action');
@@ -116,7 +127,7 @@ function TransactionsPageContent() {
         window.history.replaceState({}, '', '/transactions');
       }
     }
-  }, [searchParams, categories]);
+  }, [searchParams, categories, t.dashboard.transactions.depositIn, t.dashboard.transactions.withdrawalFrom]);
 
   const filteredTransactions = useMemo(() => {
     return [...transactions]
