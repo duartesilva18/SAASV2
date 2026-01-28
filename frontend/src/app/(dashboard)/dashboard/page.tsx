@@ -738,7 +738,7 @@ export default function DashboardPage() {
                     const pct = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
                     const color = ['#38bdf8','#2dd4bf','#a78bfa','#f472b6','#facc15','#fdba74','#34d399','#22d3ee'][i % 8];
                     return (
-                      <div key={entry.name} className="flex items-center justify-between text-[11px]">
+                      <div key={`dist-${i}-${entry.name}`} className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                           <span className="text-slate-300 font-medium truncate capitalize">{entry.name}</span>

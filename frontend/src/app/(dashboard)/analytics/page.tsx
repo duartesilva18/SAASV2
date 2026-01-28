@@ -4,8 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
-  LineChart, Line
+  Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Target, Zap, 
@@ -29,9 +28,9 @@ export default function AnalyticsPage() {
   const [isPro, setIsPro] = useState(false);
   const [rawData, setRawData] = useState<{ transactions: any[], categories: any[], insights: any, recurring: any[] }>({ transactions: [], categories: [], insights: null, recurring: [] });
   const [processedData, setProcessedData] = useState<any>(null);
+  const [goals, setGoals] = useState<any[]>([]);
   const periods = t.dashboard.analytics.periods;
   const [selectedPeriod, setSelectedPeriod] = useState('Tudo'); // Will be translated in display
-  const [isFlowInfoOpen, setIsFlowInfoOpen] = useState(false);
   const [isDistInfoOpen, setIsDistInfoOpen] = useState(false);
   const [isWeeklyInfoOpen, setIsWeeklyInfoOpen] = useState(false);
   const [isTopInfoOpen, setIsTopInfoOpen] = useState(false);
@@ -121,6 +120,12 @@ export default function AnalyticsPage() {
       }
 
       setRawData(compositeData);
+      try {
+        const goalsRes = await api.get('/goals/');
+        setGoals(Array.isArray(goalsRes.data) ? goalsRes.data : []);
+      } catch {
+        setGoals([]);
+      }
       const cacheTimestamp = Date.now();
       lastUpdateTimestampRef.current = cacheTimestamp;
       localStorage.setItem('analytics_cache', JSON.stringify({
@@ -333,7 +338,11 @@ export default function AnalyticsPage() {
     // Process data for charts
     const monthlyData: any = {};
     const catDistribution: any = {};
+    const catExpenseCount: any = {};
+    const volumeByMonthData: any = {};
+    const dayExpenses: any = {};
     const weekDays = t.dashboard.analytics.weekDays;
+    const othersLabel = t.dashboard?.analytics?.others ?? 'Outros';
     const weeklyRhythm: any = { 
       [weekDays.mon]: 0, 
       [weekDays.tue]: 0, 
@@ -555,51 +564,41 @@ export default function AnalyticsPage() {
       const date = new Date(t.transaction_date);
       const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
       const dayName = weekMap[date.getDay()];
-      
+      volumeByMonthData[monthYear] = (volumeByMonthData[monthYear] || 0) + 1;
+
       const cat = rawData.categories.find((c: any) => c.id === t.category_id);
-      
-      // Excluir categorias de Investimento ou Emergência dos gráficos de FLUXO e GASTOS
       if (cat && cat.vault_type !== 'none') return;
 
       if (!monthlyData[monthYear]) {
         monthlyData[monthYear] = { name: monthYear, income: 0, expenses: 0 };
       }
-      
-      // Backend garante sinais corretos:
-      // income: amount_cents > 0
-      // expense: amount_cents < 0
-      // Frontend confia nos sinais (sem Math.abs() nos cálculos)
       const amount = t.amount_cents / 100;
-      
+
       if (cat) {
         if (cat.type === 'income' && cat.vault_type === 'none') {
-          // Receitas são positivas (backend garante)
-          monthlyData[monthYear].income += amount; // Já é positivo
+          monthlyData[monthYear].income += amount;
           periodIncome += amount;
-          // NÃO adicionar ao weeklyRhythm - apenas despesas
         } else if (cat.type === 'expense' && cat.vault_type === 'none') {
-          // Despesas são negativas (backend garante), converter para positivo
-          const expenseAmount = -amount; // Converte negativo para positivo
+          const expenseAmount = -amount;
           monthlyData[monthYear].expenses += expenseAmount;
           periodExpenses += expenseAmount;
           catDistribution[cat.name] = (catDistribution[cat.name] || 0) + expenseAmount;
-          weeklyRhythm[dayName] += expenseAmount; // Apenas despesas no ritmo semanal
+          catExpenseCount[cat.name] = (catExpenseCount[cat.name] || 0) + 1;
+          dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
+          weeklyRhythm[dayName] += expenseAmount;
         }
-        // Vault transactions já foram excluídas acima (return)
       } else {
-        // Categoria não encontrada - tratar como despesa APENAS se for negativa
-        // Se for positiva (receita), não adicionar ao weeklyRhythm
         if (amount < 0) {
-          const expenseAmount = -amount; // Converte negativo para positivo
+          const expenseAmount = -amount;
           monthlyData[monthYear].expenses += expenseAmount;
           periodExpenses += expenseAmount;
-          catDistribution[t.dashboard.analytics.others] = (catDistribution[t.dashboard.analytics.others] || 0) + expenseAmount;
-          weeklyRhythm[dayName] += expenseAmount; // Apenas despesas no ritmo semanal
+          catDistribution[othersLabel] = (catDistribution[othersLabel] || 0) + expenseAmount;
+          catExpenseCount[othersLabel] = (catExpenseCount[othersLabel] || 0) + 1;
+          dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
+          weeklyRhythm[dayName] += expenseAmount;
         } else {
-          // Se for positiva, tratar como receita
           monthlyData[monthYear].income += amount;
           periodIncome += amount;
-          // NÃO adicionar ao weeklyRhythm
         }
       }
     });
@@ -609,6 +608,8 @@ export default function AnalyticsPage() {
 
     let prevSavingRate: number | null = null;
     let prevHealthScore: number | null = null;
+    let prevPeriodIncome = 0;
+    let prevPeriodExpenses = 0;
     if (selectedPeriod !== 'Tudo') {
       const periodStart = filterDate;
       const periodEnd = todayStart;
@@ -617,26 +618,76 @@ export default function AnalyticsPage() {
       const prevEnd = periodStart;
       const prevTransactions = rawData.transactions.filter((t: any) => {
         const transDate = new Date(t.transaction_date);
-        // Incluir transações do período anterior [prevStart, prevEnd)
         return transDate >= prevStart && transDate < prevEnd;
       });
-      
-      // Só calcular se houver transações no período anterior
       if (prevTransactions.length > 0) {
         const prevTotals = computeTotals(prevTransactions);
+        prevPeriodIncome = prevTotals.income;
+        prevPeriodExpenses = prevTotals.expenses;
         prevSavingRate = computeSavingRate(prevTotals.income, prevTotals.expenses);
         prevHealthScore = computeHealthScore(prevTotals.income, prevTotals.expenses, prevSavingRate);
       }
     }
 
+    const recurringMonthly = (rawData.recurring || []).map((r: any) => ({
+      name: r.description || t.dashboard.analytics.noDescription,
+      value: Math.abs(Number(r.amount_cents)) / 100
+    }));
+
+    const volumeByMonth = Object.keys(monthlyData).length ? Object.keys(monthlyData).reverse().map((name) => ({ name, value: volumeByMonthData[name] || 0 })) : Object.entries(volumeByMonthData).map(([name, value]) => ({ name, value })).sort((a, b) => {
+      try {
+        const dA = new Date(a.name + ' 1').getTime();
+        const dB = new Date(b.name + ' 1').getTime();
+        return dB - dA;
+      } catch { return 0; }
+    });
+
+    // Despesas por dia do mês (1–31)
+    const expensesByDayOfMonth = Array.from({ length: 31 }, (_, i) => i + 1).map((day) => ({ day, value: dayExpenses[day] || 0 }));
+
+    // Taxa de poupança ao longo do tempo (por mês)
+    const savingRateOverTime = (Object.values(monthlyData) as { name: string; income: number; expenses: number }[]).map((m) => ({
+      name: m.name,
+      value: m.income > 0 ? Math.max(-100, Math.min(100, ((m.income - m.expenses) / m.income) * 100)) : 0
+    })).reverse();
+
+    // Concentração: % das despesas nas top 2 categorias
+    const distEntries = Object.entries(catDistribution).sort((a, b) => (b[1] as number) - (a[1] as number));
+    const totalDist = (Object.values(catDistribution) as number[]).reduce((a, x) => a + x, 0);
+    const top2 = distEntries.slice(0, 2);
+    const concentrationPctTop2 = totalDist > 0 ? (top2.reduce((a, x) => a + (x[1] as number), 0) / totalDist) * 100 : 0;
+    const concentrationTop2Names = top2.map((x) => x[0]);
+
+    // Ticket médio por categoria (despesas)
+    const ticketMedioByCategory = Object.entries(catDistribution).map(([name, total]) => ({
+      name,
+      value: (catExpenseCount[name] || 1) > 0 ? (total as number) / (catExpenseCount[name] || 1) : 0
+    })).sort((a, b) => b.value - a.value).slice(0, 8);
+
+    // Recorrentes vs variáveis (€)
+    const recurringTotal = recurringMonthly.reduce((a: number, x: { value: number }) => a + x.value, 0);
+    const variableTotal = Math.max(0, periodExpenses - recurringTotal);
+    const recurringVsVariable = [
+      { name: 'Recorrentes', value: recurringTotal },
+      { name: 'Variáveis', value: variableTotal }
+    ].filter((x) => x.value > 0);
+
+    const periodComparison = {
+      current: { income: periodIncome, expenses: periodExpenses, balance: periodIncome - periodExpenses },
+      previous: prevPeriodIncome || prevPeriodExpenses ? { income: prevPeriodIncome, expenses: prevPeriodExpenses, balance: prevPeriodIncome - prevPeriodExpenses } : null
+    };
+
+    const categoriesAtRisk = (rawData.insights?.predictions?.categories_at_risk || []).slice(0, 5);
+
     setProcessedData({
       flow: Object.values(monthlyData).reverse(),
       distribution: Object.entries(catDistribution).map(([name, value]) => ({ name, value })),
       weekly: Object.entries(weeklyRhythm).map(([name, value]) => ({ name, value })),
-      evolution: evolutionData.slice(-20), // Last 20 points for smoothness
+      evolution: evolutionData.slice(-20),
       recentTransactions,
       upcomingPayments,
       topExpenses,
+      recurringMonthly,
       healthScore: dynamicScore,
       savingRate: savingRate.toFixed(1),
       prevSavingRate,
@@ -647,7 +698,16 @@ export default function AnalyticsPage() {
       summary: rawData.insights?.summary || t.dashboard.analytics.subtitle,
       insights: rawData.insights?.insights || [],
       investmentTotal,
-      emergencyTotal
+      emergencyTotal,
+      volumeByMonth,
+      expensesByDayOfMonth,
+      savingRateOverTime,
+      concentrationPctTop2,
+      concentrationTop2Names,
+      ticketMedioByCategory,
+      recurringVsVariable,
+      periodComparison,
+      categoriesAtRisk
     });
   }, [selectedPeriod, rawData]);
 
@@ -709,15 +769,15 @@ export default function AnalyticsPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-10 pb-20 relative"
+      className="space-y-8 pb-20 relative"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-12">
+      {/* Header – compacto para choque visual logo abaixo */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white mb-2">
+          <h1 className="text-3xl font-black tracking-tighter text-white mb-1">
             {t.dashboard.analytics.title}
           </h1>
-          <p className="text-slate-500 font-medium italic">
+          <p className="text-slate-500 text-sm font-medium italic">
             {t.dashboard.analytics.subtitle}
           </p>
         </div>
@@ -802,510 +862,299 @@ export default function AnalyticsPage() {
         </motion.div>
       )}
 
-      {/* Metricas ancora */}
-      {hasEnoughData && (
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.anchorMetricTitle}</h2>
-            <p className="text-sm text-slate-500 italic">{t.dashboard.analytics.anchorMetricSubtitle}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className={`lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] relative overflow-hidden p-6`}>
-            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex items-center gap-3 flex-wrap">
-                <Activity className="text-blue-500" size={22} />
-                <span className="text-xs font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.health}</span>
-                <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest border rounded-lg ${healthBand.badge} ${healthBand.color}`}>
-                  {healthBand.label}
-                </span>
-                {hasLowConfidence && (
-                  <div className="group relative">
-                    <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
-                      {t.dashboard.analytics.lowConfidenceBadgeShort}
-                    </span>
-                    <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                      {t.dashboard.analytics.lowConfidenceTooltip}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-wrap items-end gap-6">
-                <div>
-                  <p className="text-4xl font-black text-white">{processedData.healthScore}%</p>
-                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.financialScore}</p>
-                  {healthDelta !== null && (
-                    <p className={`text-xs font-black uppercase tracking-widest mt-2 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)} {t.dashboard.analytics.vsPreviousPeriod}
-                    </p>
-                  )}
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <p className="text-sm text-slate-400 italic">
-                    Resultado liquido do periodo: <span className="text-white font-black">{formatCurrency(processedData.netResult || 0)}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Este score resume a saude financeira do periodo.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] group hover:border-emerald-500/30 transition-all p-6`}>
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <Target className="text-emerald-500" size={20} />
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${savingRateBand.color} bg-white/5`}>
-                  {savingRateBand.label}
-                </div>
-                {hasLowConfidence && (
-                  <div className="group relative">
-                    <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-amber-500/30 rounded-lg bg-amber-500/10 text-amber-400 cursor-help">
-                      Baixa confiança
-                    </span>
-                    <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                      Ainda estamos a aprender com os teus dados. Com mais transações, esta taxa ficará mais precisa.
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <p className="text-3xl font-black text-white mb-1">{processedData.savingRate}%</p>
-            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.dashboard.analytics.savingsRate}</p>
-            {savingRateDelta !== null && (
-              <p className={`text-xs font-black uppercase tracking-widest mt-2 ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)} {t.dashboard.analytics.vsPreviousPeriod}
-              </p>
-            )}
-            <div className="mt-4 space-y-1 text-[10px] uppercase tracking-widest text-slate-500">
-              <div className="flex justify-between"><span>&lt; 0%</span><span>Critico</span></div>
-              <div className="flex justify-between"><span>0-10%</span><span>Fraco</span></div>
-              <div className="flex justify-between"><span>10-25%</span><span>Saudavel</span></div>
-              <div className="flex justify-between"><span>&gt; 25%</span><span>Excelente</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div className={`bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] relative overflow-hidden shadow-2xl shadow-blue-600/20 p-6`}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[40px] rounded-full" />
-          <div className="relative z-10 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-white animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Insight</span>
-            </div>
-            {hasLowConfidence || !processedData?.summary || (processedData.summary && processedData.summary.trim() === '') || maxWeekly.name === 'N/A' ? (
-              <>
-                <p className="text-lg font-bold text-white leading-tight italic">
-                  "{t.dashboard?.analytics?.zenInsightGeneric || "Ainda estamos a aprender com os teus dados. À medida que adicionas mais transações, os insights vão ficar mais precisos e personalizados."}"
-                </p>
-                <p className="text-sm text-white/70 italic">
-                  "{t.dashboard?.analytics?.zenInsightGenericSubtitle || "Recomendamos pelo menos 10 transações para análises mais fiáveis. Continua a registar as tuas despesas e receitas para começares a ver padrões claros nos teus hábitos financeiros."}"
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-bold text-white leading-tight italic">
-                  "O teu saving rate esta em {processedData.savingRate}%, e os maiores gastos concentram-se em {maxWeekly.name}{topExpense ? `, com destaque para ${topExpense}` : ''}."
-                </p>
-                <p className="text-sm text-white/70 italic">"{processedData.summary || ''}"</p>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-      )}
-
-      {/* Analytics Filters e Gráficos */}
+      {/* Filtro + 3 cards compactos (estilo dashboard) + grid gráficos choque visual */}
       {hasEnoughData && (
       <>
-      <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 rounded-[24px]">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-          <Calendar size={14} className="text-blue-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.periodFilters}</span>
+      {/* Filtro período – topo */}
+      <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl mb-6">
+        <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <Calendar size={12} className="text-blue-500" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.periodFilters}</span>
         </div>
-        
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {Object.entries(periods).map(([key, period]) => (
             <button
               key={key}
               onClick={() => setSelectedPeriod(key)}
-              className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
-                selectedPeriod === key
-                ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
-                : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
+              className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
+                selectedPeriod === key ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
               {period}
             </button>
           ))}
         </div>
+      </div>
 
-        <div className="h-4 w-px bg-slate-800 mx-2" />
+      {/* 3 cards compactos: Saúde | Taxa Poupança | Resultado (estilo dashboard) */}
+      <section className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+            <div className="flex items-center justify-between mb-1">
+              <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
+                <Activity size={18} />
+              </div>
+              {healthDelta !== null && (
+                <span className={`text-[10px] font-black uppercase flex items-center gap-0.5 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
+            <p className="text-xl font-black text-white tracking-tighter">{processedData.healthScore}%</p>
+            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
+          </motion.div>
 
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-900/50 border border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300 transition-all cursor-pointer flex items-center gap-2">
-            <PieChartIcon size={12} />
-            {t.dashboard.analytics.allCategories}
-          </button>
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+            <div className="flex items-center justify-between mb-1">
+              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
+                <Target size={18} />
+              </div>
+              {savingRateDelta !== null && (
+                <span className={`text-[10px] font-black uppercase ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
+            <p className="text-xl font-black text-white tracking-tighter">{processedData.savingRate}%</p>
+            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+            <div className="flex items-center justify-between mb-1">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                <Wallet size={18} />
+              </div>
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">Resultado período</p>
+            <p className={`text-xl font-black tracking-tighter ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {formatCurrency(processedData.netResult || 0)}
+            </p>
+          </motion.div>
         </div>
-      </div>
 
-      {/* O que esta a puxar o teu saldo */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whatPullsBalance}</h2>
-        {/* Main Flow Chart */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.spendingOverTime}</h3>
-                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.cashFlowHistory}</p>
-              </div>
-              
-              <div 
-                className="relative"
-                onMouseEnter={() => setIsFlowInfoOpen(true)}
-                onMouseLeave={() => setIsFlowInfoOpen(false)}
-              >
-                <button className="p-2 rounded-full bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:bg-white/10 transition-all cursor-help">
-                  <Info size={12} />
-                </button>
-                
-                <AnimatePresence>
-                  {isFlowInfoOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 mt-3 w-64 p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl pointer-events-none z-20"
-                    >
-                      <p className="text-[10px] leading-relaxed text-slate-400 font-medium">
-                        {t.dashboard.analytics.flowChartInfo}
-                      </p>
-                      <div className="absolute bottom-full left-4 border-[6px] border-transparent border-b-slate-800" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <Calendar size={20} className="text-slate-700" />
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={processedData.flow}>
-                <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="900" />
-                <YAxis 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  fontWeight="900"
-                  tickFormatter={(value) => formatCurrency(value)}
-                  width={80}
-                  domain={['auto', 'auto']}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                />
-                <Area type="monotone" dataKey="income" name={t.dashboard.analytics.income} stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
-                <Area type="monotone" dataKey="expenses" name={t.dashboard.analytics.expenses} stroke="#ef4444" fillOpacity={1} fill="url(#colorExpenses)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      </section>
-
-      {/* Onde o dinheiro esta a fugir */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.whereMoneyFlees}</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Distribution Chart */}
-          <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.categoryDistribution}</h3>
-                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.categoryEnergy}</p>
-              </div>
-
-              <div 
-                className="relative"
-                onMouseEnter={() => setIsDistInfoOpen(true)}
-                onMouseLeave={() => setIsDistInfoOpen(false)}
-              >
-                <button className="p-2 rounded-full bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:bg-white/10 transition-all cursor-help">
-                  <Info size={12} />
-                </button>
-                
-                <AnimatePresence>
-                  {isDistInfoOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 mt-3 w-64 p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl pointer-events-none z-20"
-                    >
-                      <p className="text-[10px] leading-relaxed text-slate-400 font-medium">
-                        {t.dashboard.analytics.distributionChartInfo}
-                      </p>
-                      <div className="absolute bottom-full left-4 border-[6px] border-transparent border-b-slate-800" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <PieChartIcon size={20} className="text-slate-700" />
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={processedData.distribution as any}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  {processedData.distribution.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number | undefined) => {
-                    if (value === undefined) return '';
-                    return formatCurrency(value);
-                  }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-        {/* Weekly Rhythm Chart */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.weeklyRhythm}</h3>
-                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.weeklyRhythmSubtitle}</p>
-              </div>
-
-              <div 
-                className="relative"
-                onMouseEnter={() => setIsWeeklyInfoOpen(true)}
-                onMouseLeave={() => setIsWeeklyInfoOpen(false)}
-              >
-                <button className="p-2 rounded-full bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:bg-white/10 transition-all cursor-help">
-                  <Info size={12} />
-                </button>
-                
-                <AnimatePresence>
-                  {isWeeklyInfoOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 mt-3 w-64 p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl pointer-events-none z-20"
-                    >
-                      <p className="text-[10px] leading-relaxed text-slate-400 font-medium">
-                        {t.dashboard.analytics.weeklyRhythmInfo}
-                      </p>
-                      <div className="absolute bottom-full left-4 border-[6px] border-transparent border-b-slate-800" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <Activity size={20} className="text-slate-700" />
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={processedData.weekly}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="900" />
-                <YAxis 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  fontWeight="900"
-                  tickFormatter={(value) => formatCurrency(value)}
-                  width={80}
-                  domain={['auto', 'auto']}
-                />
-                <Tooltip 
-                  cursor={{ fill: 'rgba(59, 130, 246, 0.03)' }}
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number | undefined) => {
-                    if (value === undefined) return '';
-                    return formatCurrency(value);
-                  }}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={30}>
-                  {processedData.weekly.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.value > 0 ? '#3b82f6' : '#1e293b'} fillOpacity={0.8} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-      </div>
-      </section>
-
-      {/* Culpados principais */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.mainCulprits}</h2>
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.topExpenses}</h3>
-                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.topExpensesSubtitle}</p>
-              </div>
-
-              <div 
-                className="relative"
-                onMouseEnter={() => setIsTopInfoOpen(true)}
-                onMouseLeave={() => setIsTopInfoOpen(false)}
-              >
-                <button className="p-2 rounded-full bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:bg-white/10 transition-all cursor-help">
-                  <Info size={12} />
-                </button>
-                
-                <AnimatePresence>
-                  {isTopInfoOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      className="absolute top-full left-0 mt-3 w-64 p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl pointer-events-none z-20"
-                    >
-                      <p className="text-[10px] leading-relaxed text-slate-400 font-medium">
-                        {t.dashboard.analytics.topExpensesInfo}
-                      </p>
-                      <div className="absolute bottom-full left-4 border-[6px] border-transparent border-b-slate-800" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <TrendingDown size={20} className="text-red-900/40" />
-          </div>
-          <div className="space-y-4">
-            {processedData.topExpenses.map((expense: any, index: number) => (
-              <div key={index} className="flex flex-col gap-2">
-                <div className="flex justify-between items-center px-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate max-w-[70%]">{expense.name}</span>
-                  <span className="text-xs font-black text-white">{formatCurrency(expense.value)}</span>
-                </div>
-                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(expense.value / processedData.topExpenses[0].value) * 100}%` }}
-                    transition={{ duration: 1, delay: index * 0.1 }}
-                    className="h-full bg-gradient-to-r from-red-600 to-rose-400"
-                  />
-                </div>
-              </div>
-            ))}
-            {processedData.topExpenses.length === 0 && (
-              <p className="text-center text-slate-500 text-xs italic py-10">{t.dashboard.analytics.noExpenses}</p>
-            )}
-          </div>
-        </section>
-      </section>
-
-      {/* Impacto acumulado no tempo */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{t.dashboard.analytics.accumulatedImpact}</h2>
-        {/* Evolution Chart */}
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[60px] rounded-full" />
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.evolution}</h3>
-                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.evolutionSubtitle}</p>
-              </div>
-              <div 
-                className="relative"
-                onMouseEnter={() => setIsEvoInfoOpen(true)}
-                onMouseLeave={() => setIsEvoInfoOpen(false)}
-              >
-                <button className="p-2 rounded-full bg-white/5 border border-white/10 text-slate-500 hover:text-white transition-all">
-                  <Info size={12} />
-                </button>
-                <AnimatePresence>
-                  {isEvoInfoOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 mt-3 w-64 p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-20 pointer-events-none"
-                    >
-                      <p className="text-[10px] text-slate-400">{t.dashboard.analytics.evolutionInfo}</p>
-                      <div className="absolute bottom-full left-4 border-[6px] border-transparent border-b-slate-800" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <TrendingUp size={20} className="text-emerald-500/30" />
-          </div>
-          <p className="text-[10px] text-slate-500 italic mb-4">
-            Mostra apenas dinheiro de uso diario.{' '}
-            <Link href="/vault" className="text-blue-400 hover:text-blue-300">
-              Ver patrimonio total (inclui vault)
-            </Link>
+        {/* Insight uma linha – compacto */}
+        <div className="mt-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/20 rounded-2xl px-4 py-3 flex items-center gap-3">
+          <Sparkles size={14} className="text-blue-400 shrink-0" />
+          <p className="text-[10px] font-medium text-slate-300 italic truncate">
+            {hasLowConfidence || !processedData?.summary || (String(processedData.summary || '').trim() === '') || maxWeekly.name === 'N/A'
+              ? (t.dashboard?.analytics?.zenInsightGeneric || "Ainda a aprender com os teus dados. Mais transações = insights mais precisos.")
+              : `Saving rate ${processedData.savingRate}%. Maior gasto: ${maxWeekly.name}${topExpense ? ` → ${topExpense}` : ''}. ${(processedData.summary || '').slice(0, 80)}…`}
           </p>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={processedData.evolution}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                <XAxis dataKey="date" stroke="#475569" fontSize={10} fontWeight="900" />
-                <YAxis 
-                  stroke="#475569" 
-                  fontSize={10} 
-                  fontWeight="900"
-                  tickFormatter={(value) => formatCurrency(value)}
-                  width={80}
-                  domain={['auto', 'auto']}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                  formatter={(value: number | undefined) => {
-                    if (value === undefined) return '';
-                    return formatCurrency(value);
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="balance" 
-                  stroke="#10b981" 
-                  strokeWidth={4} 
-                  dot={false}
-                  activeDot={{ r: 6, fill: '#10b981', stroke: '#fff' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        </div>
+      </section>
+
+      {/* Análise Pro – 5 blocos (2/3 + 1/3), sem repetir o dashboard principal */}
+      <section className="mb-12 space-y-8">
+        {/* Bloco 1 – Tendência e futuro (onde vou parar) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Comparação período atual vs anterior</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Tendência: para onde estás a ir</p>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={(() => {
+                  const pc = processedData.periodComparison;
+                  if (!pc) return [];
+                  return [
+                    { name: 'Receitas', atual: pc.current.income, anterior: pc.previous?.income ?? 0 },
+                    { name: 'Despesas', atual: pc.current.expenses, anterior: pc.previous?.expenses ?? 0 },
+                    { name: 'Saldo', atual: pc.current.balance, anterior: pc.previous?.balance ?? 0 }
+                  ];
+                })()} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                  <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }}
+                    formatter={(v: number | undefined) => (v != null ? formatCurrency(v) : '')}
+                    labelStyle={{ color: '#e2e8f0', fontWeight: 600 }}
+                  />
+                  <Bar dataKey="atual" name="Período atual" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
+                  <Bar dataKey="anterior" name="Período anterior" fill="#475569" radius={[4, 4, 0, 0]} barSize={28} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Categorias em risco</h3>
+            {processedData.categoriesAtRisk?.length > 0 ? (
+              <ul className="space-y-2 mb-4">
+                {(processedData.categoriesAtRisk as { category_name?: string; risk_level?: string }[]).map((c: any, i: number) => (
+                  <li key={i} className="text-sm text-slate-300 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    {c.category_name ?? c.name ?? 'Categoria'} {c.risk_level != null && <span className="text-[10px] text-slate-500">({c.risk_level})</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-slate-500 italic mb-4">Nenhuma categoria em risco identificada.</p>
+            )}
+            <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || 'Resumo automático com base nos teus dados.'}</p>
+          </motion.div>
+        </div>
+
+        {/* Bloco 2 – Comportamento de gastos (padrão, não total) – 1/2 + 1/2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Volume de atividade</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Nº de transações por mês</p>
+            <div className="h-[180px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
+
+                  <XAxis dataKey="name" stroke="#475569" fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? v : 0, 'Transações']} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} />
+                  <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Despesas por dia do mês</h3>
+            <p className="text-[10px] text-slate-500 italic mb-3">Em que dias gastas mais (1–31)</p>
+            <div className="h-[160px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={processedData.expensesByDayOfMonth || []} margin={{ top: 4, right: 4, bottom: 4 }}>
+                  <XAxis dataKey="day" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={4} />
+                  <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={44} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? formatCurrency(v) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[2, 2, 0, 0]} barSize={6} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Bloco 3 – Onde o dinheiro se concentra */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Distribuição por categoria</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Peso de cada categoria no total de despesas</p>
+            <div className="h-[200px] w-full flex items-center justify-center">
+              {(processedData.distribution?.length ?? 0) > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={processedData.distribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={2} stroke="#1e293b" strokeWidth={1} label={false}>
+                      {(processedData.distribution as { name: string; value: number }[]).map((_: { name: string }, i: number) => (
+                        <Cell key={i} fill={['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#64748b'][i % 7]} fillOpacity={0.9} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined, n?: string) => {
+                      const val = v ?? 0;
+                      const total = (processedData.distribution as { value: number }[]).reduce((a, x) => a + x.value, 0);
+                      const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                      return [formatCurrency(val) + ' · ' + pct + '%', n ?? ''];
+                    }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-xs text-slate-500 italic">Sem dados de categorias.</p>
+              )}
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1 flex flex-col justify-center">
+            <p className="text-2xl font-black text-white leading-tight mb-2">
+              {(processedData.concentrationPctTop2 ?? 0).toFixed(0)}% das despesas concentram-se em 2 categorias
+            </p>
+            <p className="text-sm text-slate-400 font-medium">
+              {(processedData.concentrationTop2Names ?? []).length > 0 ? (processedData.concentrationTop2Names as string[]).join(', ') : '—'}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Bloco 4 – Eficiência e qualidade do gasto */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Ticket médio por categoria</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Valor médio por transação (despesas)</p>
+            <div className="min-h-[180px]">
+              {(processedData.ticketMedioByCategory?.length ?? 0) > 0 ? (
+                <ResponsiveContainer width="100%" height={Math.max(180, (processedData.ticketMedioByCategory?.length ?? 0) * 28 + 24)}>
+                  <BarChart data={processedData.ticketMedioByCategory} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                    <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} hide />
+                    <YAxis type="category" dataKey="name" stroke="#475569" fontSize={10} width={72} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? formatCurrency(v) : '', 'Ticket médio']} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
+                      {(processedData.ticketMedioByCategory as { name: string; value: number }[]).map((_: { name: string }, i: number) => (
+                        <Cell key={i} fill="#14b8a6" fillOpacity={0.5 + (i % 4) * 0.12} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-xs text-slate-500 italic py-8 text-center">Sem dados.</p>
+              )}
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Recorrentes vs variáveis</h3>
+            <p className="text-[10px] text-slate-500 italic mb-4">Peso das subscrições no total de despesas</p>
+            {(processedData.recurringVsVariable?.length ?? 0) > 0 ? (
+              <div className="space-y-3">
+                {(processedData.recurringVsVariable as { name: string; value: number }[]).map((entry, i) => {
+                  const total = (processedData.recurringVsVariable as { value: number }[]).reduce((a, x) => a + x.value, 0);
+                  const pct = total > 0 ? (entry.value / total) * 100 : 0;
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-300">{entry.name}</span>
+                        <span className="text-white font-bold tabular-nums">{formatCurrency(entry.value)}</span>
+                      </div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} className={`h-full rounded-full ${entry.name === 'Recorrentes' ? 'bg-cyan-500' : 'bg-violet-500'}`} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 italic">Sem dados de subscrições.</p>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Bloco 5 – Metas (só se existirem) */}
+        {goals.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">Progresso por meta</h3>
+              <div className="space-y-4">
+                {goals.slice(0, 4).map((g: any) => {
+                  const target = (g.target_amount_cents ?? 0) / 100;
+                  const current = (g.current_amount_cents ?? 0) / 100;
+                  const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
+                  return (
+                    <div key={g.id}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-slate-200 truncate font-medium">{g.name}</span>
+                        <span className="text-slate-400 tabular-nums shrink-0 ml-2">{formatCurrency(current)} / {formatCurrency(target)}</span>
+                      </div>
+                      <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6 }} className="h-full bg-emerald-500 rounded-full" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Metas por tipo</h3>
+              <div className="flex items-center justify-center min-h-[120px]">
+                <ResponsiveContainer width="100%" height={120}>
+                  <PieChart>
+                    <Pie data={[{ name: 'Despesa', value: goals.filter((x: any) => x.goal_type === 'expense').length }, { name: 'Receita', value: goals.filter((x: any) => x.goal_type === 'income').length }].filter(d => d.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={32} outerRadius={48} paddingAngle={2} label={false}>
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#10b981" />
+                    </Pie>
+                    <Tooltip formatter={(v: number | undefined) => [v != null ? v : 0, 'metas']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
           </div>
-        </section>
+        )}
       </section>
 
       {/* Dimensao Cofres */}

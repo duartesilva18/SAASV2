@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, AlertTriangle, CreditCard } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -32,6 +32,33 @@ export default function DashboardLayout({
   const router = useRouter();
 
   const isAdminPage = pathname?.startsWith('/admin');
+
+  // Menu secundário no header: tabs contextuais conforme a página
+  const secondaryTabs = (() => {
+    const s = t?.dashboard?.sidebar;
+    if (!s) return null;
+    if (['/transactions', '/categories', '/recurring'].includes(pathname || '')) {
+      return [
+        { label: s.transactions, href: '/transactions' },
+        { label: s.categories, href: '/categories' },
+        { label: s.recurring, href: '/recurring' },
+      ];
+    }
+    if (['/vault', '/goals'].includes(pathname || '')) {
+      return [
+        { label: s.vault, href: '/vault' },
+        { label: s.goals, href: '/goals' },
+      ];
+    }
+    if (['/settings', '/billing', '/plans'].includes(pathname || '')) {
+      return [
+        { label: s.settings, href: '/settings' },
+        { label: s.billing, href: '/billing' },
+        { label: s.plans, href: '/plans' },
+      ];
+    }
+    return null;
+  })();
 
   // Listener para token expirado
   useEffect(() => {
@@ -131,9 +158,9 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         {/* Mobile Header */}
-        <header className="lg:hidden flex flex-col gap-3 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
+        <header className="lg:hidden flex flex-col gap-2 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center select-none min-w-0 shrink">
               <img
@@ -144,6 +171,14 @@ export default function DashboardLayout({
               />
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
+                  <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                </svg>
+              </a>
+              <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
+                <HelpCircle size={18} />
+              </Link>
               <LanguageSelector />
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
@@ -153,14 +188,45 @@ export default function DashboardLayout({
               </button>
             </div>
           </div>
+          {secondaryTabs && secondaryTabs.length > 0 && (
+            <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1" aria-label="Menu secundário">
+              {secondaryTabs.map((tab) => (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </nav>
+          )}
         </header>
 
-        {/* Desktop Header */}
+        {/* Desktop Header – menu secundário (tabs) ao centro; Bot Telegram, Guia, idioma à direita */}
         <header className="hidden lg:flex flex-col gap-3 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center w-full">
             <div className="flex-1 min-w-0" />
-            <div className="flex-1" />
-            <div className="flex-1 flex justify-end">
+            <nav className="flex items-center justify-center gap-1 shrink-0 px-4" aria-label="Menu secundário">
+              {secondaryTabs?.map((tab) => (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="flex-1 flex justify-end items-center gap-2 shrink-0">
+              <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
+                  <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                </svg>
+              </a>
+              <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
+                <HelpCircle size={18} />
+              </Link>
               <LanguageSelector />
             </div>
           </div>
@@ -183,7 +249,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className={`flex-1 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'} relative z-10 overflow-y-auto`}>
+        <main className="flex-1 relative z-10 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

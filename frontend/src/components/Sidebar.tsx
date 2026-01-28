@@ -3,25 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
+import {
   Send,
-  LayoutDashboard, 
-  PieChart, 
-  Clock, 
-  Receipt, 
-  Tag, 
-  HelpCircle, 
-  CreditCard, 
-  Settings, 
-  Shield, 
-  Landmark, 
-  Sparkles, 
-  LogOut, 
-  ChevronLeft, 
+  LayoutDashboard,
+  PieChart,
+  Clock,
+  Receipt,
+  CreditCard,
+  Settings,
+  Shield,
+  Landmark,
+  Sparkles,
+  LogOut,
+  ChevronLeft,
   ChevronRight,
   Menu,
   X,
-  Megaphone,
   Bell,
   AlertCircle,
   Activity,
@@ -31,7 +28,6 @@ import {
   Target,
   Lock,
   Trophy,
-  Gift
 } from 'lucide-react';
 
 const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -55,135 +51,15 @@ import { useUser } from '@/lib/UserContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 
-const menuSections = (t: any) => [
-  {
-    title: t.dashboard.sidebar.overview || "Visão Geral",
-    items: [
-      {
-        name: t.dashboard.sidebar.dashboard,
-        href: '/dashboard',
-        icon: LayoutDashboard,
-      },
-      {
-        name: t.dashboard.sidebar.analytics,
-        href: '/analytics',
-        icon: PieChart,
-      }
-    ]
-  },
-  {
-    title: t.dashboard.sidebar.savings || "Poupança & Investimento",
-    items: [
-      {
-        name: t.dashboard.sidebar.vault || "Cofre de Reservas",
-        href: '/vault',
-        icon: Landmark,
-      },
-      {
-        name: t.dashboard.sidebar.goals || "Metas de Poupança",
-        href: '/goals',
-        icon: Target,
-      }
-    ]
-  },
-  {
-    title: t.dashboard.sidebar.financial || "Gestão Financeira",
-    items: [
-      {
-        name: t.dashboard.sidebar.transactions,
-        href: '/transactions',
-        icon: Receipt,
-      },
-      {
-        name: t.dashboard.sidebar.categories,
-        href: '/categories',
-        icon: Tag,
-      },
-      {
-        name: t.dashboard.sidebar.recurring,
-        href: '/recurring',
-        icon: Clock,
-      }
-    ]
-  },
-  {
-    title: t.dashboard.sidebar.tools || "Ferramentas",
-    items: [
-      {
-        name: t.dashboard.sidebar.telegramBot || "Bot Telegram",
-        href: 'https://t.me/FinanZenApp_bot',
-        icon: Send,
-        isExternal: true,
-        isBlocked: true
-      },
-      {
-        name: t.dashboard.sidebar.guide,
-        href: '/guide',
-        icon: HelpCircle,
-      },
-      {
-        name: t.dashboard.sidebar.plans || "Planos",
-        href: '/plans',
-        icon: Trophy,
-      }
-    ]
-  },
-  {
-    title: t.dashboard.sidebar.settings || "Configurações",
-    items: [
-      {
-        name: t.dashboard.sidebar.billing,
-        href: '/billing',
-        icon: CreditCard,
-      },
-      {
-        name: t.dashboard.sidebar.settings,
-        href: '/settings',
-        icon: Settings,
-      }
-    ]
-  },
-  {
-    title: "Afiliados",
-    isAffiliateSection: true,
-    items: [
-      {
-        name: "Programa de Afiliados",
-        href: '/affiliate',
-        icon: Trophy
-      }
-    ]
-  },
-  {
-    title: t.dashboard.sidebar.admin || "Administração",
-    isAdminSection: true,
-    items: [
-      {
-        name: t.dashboard.sidebar.adminPanel || "Painel de Comando",
-        href: '/admin',
-        icon: Shield,
-        adminOnly: true
-      },
-      {
-        name: t.dashboard.sidebar.globalTreasury || "Tesouraria Global",
-        href: '/admin/finance',
-        icon: Landmark,
-        adminOnly: true
-      },
-      {
-        name: t.dashboard.sidebar.marketing || "Marketing",
-        href: '/admin/marketing',
-        icon: Megaphone,
-        adminOnly: true
-      },
-      {
-        name: "Gestão de Afiliados",
-        href: '/admin/affiliates',
-        icon: Sparkles,
-        adminOnly: true
-      }
-    ]
-  }
+// Menu principal da sidebar: apenas páginas de alto nível (lista plana, sem grupos)
+const getMainMenu = (t: any) => [
+  { name: t.dashboard.sidebar.dashboard, href: '/dashboard', icon: LayoutDashboard, activePaths: ['/dashboard'] },
+  { name: t.dashboard.sidebar.transactions, href: '/transactions', icon: Receipt, activePaths: ['/transactions', '/categories', '/recurring'] },
+  { name: t.dashboard.sidebar.analytics, href: '/analytics', icon: PieChart, activePaths: ['/analytics'] },
+  { name: 'Cofre e Reservas', href: '/vault', icon: Landmark, activePaths: ['/vault', '/goals'] },
+  { name: 'Afiliados', href: '/affiliate', icon: Trophy, isAffiliateSection: true, activePaths: ['/affiliate'] },
+  { name: t.dashboard.sidebar.settings, href: '/settings', icon: Settings, activePaths: ['/settings', '/billing', '/plans'] },
+  { name: t.dashboard.sidebar.admin, href: '/admin', icon: Shield, adminOnly: true, activePaths: ['/admin'] },
 ];
 
 const PLAN_BY_PRICE_ID: Record<string, { label: string; variant: 'basic' | 'plus' | 'pro' }> = {
@@ -388,145 +264,80 @@ export default function Sidebar({
 
   if (!mounted) return null;
 
-  // Para free users: mostrar todos os itens mas marcar como bloqueados
-  const sections = menuSections(t).map((section) => ({
-    ...section,
-    items: section.items.map((item: any) => {
-      // Se já tiver isBlocked definido, manter. Caso contrário, marcar como bloqueado se for free user e não for dashboard/analytics
-      if (!isPro && !item.adminOnly && !section.isAffiliateSection && !item.affiliateOnly && item.isBlocked === undefined) {
-        const isAllowed = item.href === '/dashboard' || item.href === '/analytics' || item.href === '/settings' || item.href === '/billing' || item.href === '/guide' || item.href === '/affiliate' || item.href === '/plans';
-        return { ...item, isBlocked: !isAllowed };
-      }
-      return item;
-    }).filter((item: any) => {
-      if (item.adminOnly) return user?.is_admin === true;
-      if (section.isAffiliateSection) return true;
-      if (item.affiliateOnly) return user?.is_affiliate === true;
-      return true; // Mostrar todos os itens agora
-    })
-  })).filter((section) => section.items.length > 0);
+  const allowedHrefsFree = ['/dashboard', '/analytics', '/settings', '/billing', '/affiliate', '/plans'];
+  const mainMenu = getMainMenu(t)
+    .filter((item: any) => !item.adminOnly || user?.is_admin)
+    .map((item: any) => ({
+      ...item,
+      isBlocked: !isPro && !item.adminOnly && !item.isAffiliateSection && !allowedHrefsFree.includes(item.href),
+    }));
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative overflow-visible min-h-0 -mt-3">
-      <div className={`flex items-center mb-0 px-4 py-0 select-none ${isCollapsed ? 'lg:justify-center' : ''}`}>
+      <div className={`flex items-center gap-4 px-4 pt-8 pb-5 select-none min-h-[5rem] ${isCollapsed ? 'lg:justify-center lg:px-2 lg:min-h-0 lg:pt-8' : ''}`}>
         <img
-          src="/images/logo/logo.png"
+          src="/images/logo/logo-semfundo.png"
           alt="Finly"
-          className={`${isCollapsed && !isMobileOpen ? 'h-36 w-36' : 'h-40 w-auto'} shrink-0 m-0 p-0 select-none pointer-events-none`}
+          className={`shrink-0 m-0 p-0 select-none pointer-events-none object-contain self-center ${isCollapsed && !isMobileOpen ? 'h-20 w-20' : 'h-16 w-16'}`}
           draggable="false"
         />
+        {(!isCollapsed || isMobileOpen) && (
+          <span
+            className="text-white font-semibold tracking-tight text-3xl leading-none self-center whitespace-nowrap"
+            style={{ fontFamily: 'var(--font-brand), sans-serif' }}
+          >
+            Finly
+          </span>
+        )}
       </div>
 
-      <nav className="flex-1 px-4 -mt-4 space-y-6 xl:space-y-8 overflow-y-auto no-scrollbar">
-        {sections.map((section, sIdx) => (
-          <div key={sIdx} className="space-y-3">
-            {(!isCollapsed || isMobileOpen) && (
-              <h3 className={`px-4 text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-[0.3em] ${section.isAffiliateSection ? 'text-amber-500/60' : 'text-slate-600'}`}>
-                {section.title}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                const isAdminItem = section.isAdminSection;
-                const isAffiliateItem = section.isAffiliateSection;
-                const isBlocked = item.isBlocked && !isPro;
-                
-                if (item.isExternal) {
-                  const isExternalBlocked = item.isBlocked && !isPro;
-                  
-                  if (isExternalBlocked) {
-                    return (
-                      <div
-                        key={item.href}
-                        onClick={() => router.push('/pricing')}
-                        className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
-                      >
-                    <div className="relative">
-                      <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-slate-600" />
-                      <Lock size={9} className="xl:w-2.5 xl:h-2.5 absolute -top-1 -right-1 text-amber-400" />
-                    </div>
-                    {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-slate-600">
-                        {item.name}
-                      </span>
-                    )}
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer border border-blue-500/20 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/40 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
-                    >
-                      <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
-                      {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-inherit">
-                          {item.name}
-                        </span>
-                      )}
-                      <div className="absolute -top-1 -right-1">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping" />
-                      </div>
-                    </a>
-                  );
-                }
-                
-                // Se estiver bloqueado, usar div com onClick para redirecionar para pricing
-                if (isBlocked) {
-                  return (
-                    <div
-                      key={item.href}
-                      onClick={() => router.push('/pricing')}
-                      className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
-                    >
-                      <div className="relative">
-                        <Icon size={12} className="xl:w-3.5 xl:h-3.5 text-slate-600" />
-                        <Lock size={9} className="xl:w-2.5 xl:h-2.5 absolute -top-1 -right-1 text-amber-400" />
-                      </div>
-                      {(!isCollapsed || isMobileOpen) && (
-                        <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-widest text-slate-600">
-                          {item.name}
-                        </span>
-                      )}
-                    </div>
-                  );
-                }
-                
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
-                    className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 border border-amber-500/10 hover:border-amber-500/20 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''} ${isAdminItem ? 'border border-amber-500/10' : isAffiliateItem ? '' : ''}`}
-                  >
-                    <div className="relative">
-                      <Icon size={12} className={`xl:w-3.5 xl:h-3.5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
-                      {isAffiliateItem && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-3.5 h-3.5 xl:w-4 xl:h-4 rounded-full ${isActive ? 'bg-amber-500/20 animate-pulse' : 'bg-amber-500/10 group-hover:bg-amber-500/15'} blur-sm transition-all`} />
-                        </div>
-                      )}
-                    </div>
-                    {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[6px] xl:text-[9px] font-black uppercase tracking-widest text-inherit">
-                        {item.name}
-                      </span>
-                    )}
-                    {isActive && (
-                      <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : isAffiliateItem ? 'bg-amber-500' : 'bg-blue-500'}`} />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 px-4 pt-4 space-y-1 overflow-y-auto no-scrollbar">
+        {mainMenu.map((item: any) => {
+          const Icon = item.icon;
+          const isActive = item.adminOnly ? (pathname?.startsWith(item.href)) : (item.activePaths || [item.href]).includes(pathname);
+          const isAdminItem = item.adminOnly;
+          const isAffiliateItem = item.isAffiliateSection;
+          const isBlocked = item.isBlocked;
+
+          if (isBlocked) {
+            return (
+              <div
+                key={item.href}
+                onClick={() => router.push('/plans')}
+                className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+              >
+                <div className="relative">
+                  <Icon size={20} className="xl:w-5 xl:h-5 text-slate-600" />
+                  <Lock size={12} className="xl:w-3 xl:h-3 absolute -top-0.5 -right-0.5 text-amber-400" />
+                </div>
+                {(!isCollapsed || isMobileOpen) && (
+                  <span className="text-[11px] xl:text-[13px] font-semibold text-slate-600">
+                    {item.name}
+                  </span>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
+              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+            >
+              <Icon size={20} className={`xl:w-5 xl:h-5 shrink-0 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
+              {(!isCollapsed || isMobileOpen) && (
+                <span className="text-[11px] xl:text-[13px] font-semibold text-inherit truncate">
+                  {item.name}
+                </span>
+              )}
+              {isActive && (
+                <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : isAffiliateItem ? 'bg-amber-500' : 'bg-blue-500'}`} />
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="flex-shrink-0 p-3 pt-4 pb-3 border-t border-white/5 space-y-2.5 bg-white/[0.01] relative overflow-visible">

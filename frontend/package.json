@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "node -e \"const fs=require('fs');const path=require('path');['.next','node_modules/.cache'].forEach(p=>{const full=path.join(process.cwd(),p);try{fs.rmSync(full,{recursive:true});console.log('Removed',p);}catch(e){if(e.code!=='ENOENT')throw e;}})\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
