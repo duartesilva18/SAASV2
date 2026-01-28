@@ -57,6 +57,14 @@ export default function DashboardLayout({
         { label: s.plans, href: '/plans' },
       ];
     }
+    if (pathname?.startsWith('/admin')) {
+      return [
+        { label: s.adminPanel, href: '/admin' },
+        { label: s.globalTreasury, href: '/admin/finance' },
+        { label: s.marketing, href: '/admin/marketing' },
+        { label: s.affiliatesManagement, href: '/admin/affiliates' },
+      ];
+    }
     return null;
   })();
 

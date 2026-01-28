@@ -140,7 +140,7 @@ export default function Sidebar({
         const newNotifications: any[] = [];
         let criticalFound = false;
 
-        // 1. Insights Reais
+        // 1. Insights Reais -> dashboard
         insightsRes.data?.insights?.forEach((ins: any) => {
           if (ins.type === 'danger' || ins.type === 'warning') {
             if (ins.type === 'danger') criticalFound = true;
@@ -150,12 +150,13 @@ export default function Sidebar({
               message: ins.message,
               type: ins.type,
               icon: ins.icon,
-              date: t.dashboard.sidebar.now
+              date: t.dashboard.sidebar.now,
+              section: '/dashboard'
             });
           }
         });
 
-        // 2. Próximos Vencimentos (nos próximos 3 dias)
+        // 2. Próximos Vencimentos -> transactions
         const today = new Date().getDate();
         recurringRes.data?.forEach((rec: any) => {
           const diff = rec.day_of_month - today;
@@ -166,12 +167,13 @@ export default function Sidebar({
               message: t.dashboard.sidebar.subscriptionDue.replace('{description}', rec.description).replace('{amount}', formatPrice(rec.amount_cents/100)),
               type: 'info',
               icon: 'clock',
-              date: t.dashboard.sidebar.next
+              date: t.dashboard.sidebar.next,
+              section: '/transactions'
             });
           }
         });
 
-        // 3. Faturas em Aberto
+        // 3. Faturas em Aberto -> settings
         const hasUnpaid = invoicesRes.data?.some((inv: any) => 
           inv.status.toLowerCase() === 'unpaid' || 
           (inv.status.toLowerCase() === 'open' && inv.amount_due > 0)
@@ -184,11 +186,12 @@ export default function Sidebar({
             message: t.dashboard.sidebar.unpaidInvoice,
             type: 'danger',
             icon: 'credit-card',
-            date: t.dashboard.sidebar.urgent
+            date: t.dashboard.sidebar.urgent,
+            section: '/settings'
           });
         }
 
-        // 4. Metas Concluídas
+        // 4. Metas Concluídas -> vault
         const completedGoals = goalsRes.data?.filter((goal: any) => 
           goal.current_amount_cents >= goal.target_amount_cents && goal.target_amount_cents > 0
         ) || [];
@@ -199,11 +202,12 @@ export default function Sidebar({
             message: `Parabéns! Atingiste a meta "${goal.name}" de ${formatPrice(goal.target_amount_cents / 100)}`,
             type: 'success',
             icon: 'trophy',
-            date: t.dashboard.sidebar.now
+            date: t.dashboard.sidebar.now,
+            section: '/vault'
           });
         });
 
-        // Se não houver nada, adicionar boas-vindas
+        // Se não houver nada, adicionar boas-vindas (sem section = não mostra dot)
         if (newNotifications.length === 0) {
           newNotifications.push({
             id: 'welcome',
@@ -265,6 +269,21 @@ export default function Sidebar({
   if (!mounted) return null;
 
   const allowedHrefsFree = ['/dashboard', '/analytics', '/settings', '/billing', '/affiliate', '/plans'];
+  const notificationsBySection = (item: any) => {
+    const paths = item.adminOnly ? [item.href] : (item.activePaths || [item.href]);
+    return notifications.filter((n: any) => n.section && paths.some((p: string) => n.section === p || (item.adminOnly && n.section?.startsWith?.(p))));
+  };
+  const badgeForItem = (item: any): { show: boolean; type: 'danger' | 'warning' | 'info' | 'success' } => {
+    const rel = notificationsBySection(item);
+    if (rel.length === 0) return { show: false, type: 'info' };
+    const hasDanger = rel.some((n: any) => n.type === 'danger');
+    const hasWarning = rel.some((n: any) => n.type === 'warning');
+    if (hasDanger) return { show: true, type: 'danger' };
+    if (hasWarning) return { show: true, type: 'warning' };
+    if (rel.some((n: any) => n.type === 'success')) return { show: true, type: 'success' };
+    return { show: true, type: 'info' };
+  };
+
   const mainMenu = getMainMenu(t)
     .filter((item: any) => !item.adminOnly || user?.is_admin)
     .map((item: any) => ({
@@ -299,6 +318,14 @@ export default function Sidebar({
           const isAffiliateItem = item.isAffiliateSection;
           const isBlocked = item.isBlocked;
 
+          const badge = badgeForItem(item);
+          const dotClasses = {
+            danger: 'bg-red-500 notification-dot-blink',
+            warning: 'bg-amber-500 notification-dot-blink',
+            success: 'bg-emerald-500 notification-dot-blink',
+            info: 'bg-blue-500 notification-dot-blink',
+          };
+
           if (isBlocked) {
             return (
               <div
@@ -306,9 +333,12 @@ export default function Sidebar({
                 onClick={() => router.push('/plans')}
                 className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
               >
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Icon size={20} className="xl:w-5 xl:h-5 text-slate-600" />
                   <Lock size={12} className="xl:w-3 xl:h-3 absolute -top-0.5 -right-0.5 text-amber-400" />
+                  {badge.show && (
+                    <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0f172a] ${dotClasses[badge.type]}`} aria-hidden />
+                  )}
                 </div>
                 {(!isCollapsed || isMobileOpen) && (
                   <span className="text-[11px] xl:text-[13px] font-semibold text-slate-600">
@@ -326,7 +356,12 @@ export default function Sidebar({
               onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
               className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
             >
-              <Icon size={20} className={`xl:w-5 xl:h-5 shrink-0 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
+              <div className="relative shrink-0">
+                <Icon size={20} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
+                {badge.show && (
+                  <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0f172a] ${dotClasses[badge.type]}`} aria-hidden />
+                )}
+              </div>
               {(!isCollapsed || isMobileOpen) && (
                 <span className="text-[11px] xl:text-[13px] font-semibold text-inherit truncate">
                   {item.name}
@@ -413,11 +448,11 @@ export default function Sidebar({
                   initial={{ opacity: 0, scale: 0.9, x: -20 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                  className="absolute bottom-0 left-full ml-4 w-[420px] bg-[#0a0f1d] border border-white/10 rounded-[32px] shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-8 notification-card"
+                  className="absolute bottom-0 left-full ml-4 w-[320px] max-w-[90vw] bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-5 notification-card"
                   style={{ pointerEvents: 'auto' }}
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white">{t.dashboard.sidebar.notifications}</h4>
                       {notifications.length > 0 && (
                         <span className="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black shadow-[0_0_10px_rgba(59,130,246,0.5)]">
@@ -425,7 +460,7 @@ export default function Sidebar({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                       {notifications.length > 0 && (
                         <button 
                           onClick={handleClearAll}
@@ -435,64 +470,74 @@ export default function Sidebar({
                         </button>
                       )}
                       <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-white cursor-pointer p-1">
-                        <X size={18} />
+                        <X size={16} />
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-5 max-h-[450px] overflow-y-auto no-scrollbar pr-1">
+                  <div className="space-y-3 max-h-[360px] overflow-y-auto no-scrollbar pr-1">
                     {notifications.length === 0 ? (
-                      <div className="py-16 text-center space-y-4">
-                        <div className="w-16 h-16 bg-white/5 rounded-[24px] flex items-center justify-center mx-auto text-slate-700">
-                          <Bell size={28} />
+                      <div className="py-10 text-center space-y-3">
+                        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mx-auto text-slate-700">
+                          <Bell size={22} />
                         </div>
-                        <p className="text-xs text-slate-600 font-black uppercase tracking-[0.2em] italic">{t.dashboard.sidebar.nothingToReport}</p>
+                        <p className="text-[11px] text-slate-600 font-black uppercase tracking-[0.2em] italic">{t.dashboard.sidebar.nothingToReport}</p>
                       </div>
                     ) : (
                       notifications.map((notif) => (
                         <div 
                           key={notif.id}
-                          className={`flex gap-4 items-start p-5 rounded-[24px] border transition-all hover:scale-[1.02] group/notif ${
-                            notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_30px_-10px_#ef4444]' : 
+                          className={`flex gap-3 items-start p-4 rounded-xl border transition-colors group/notif min-h-[4.5rem] ${
+                            notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20' : 
                             notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
-                            notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_30px_-10px_#10b981]' : 
+                            notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 
                             'bg-white/5 border-white/5'
                           }`}
                         >
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                             notif.type === 'danger' ? 'bg-red-500/20 text-red-400' :
                             notif.type === 'warning' ? 'bg-amber-500/20 text-amber-400' :
                             notif.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
                             'bg-blue-500/20 text-blue-400'
                           }`}>
-                            <IconComponent name={notif.icon} size={22} />
+                            <IconComponent name={notif.icon} size={18} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-2">
-                              <p className={`text-xs font-black uppercase tracking-tight leading-tight ${
-                                notif.type === 'danger' ? 'text-red-400' : 
-                                notif.type === 'warning' ? 'text-amber-400' : 
-                                notif.type === 'success' ? 'text-emerald-400' : 
-                                'text-white'
-                              }`}>{notif.title}</p>
-                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex justify-between items-center gap-2 mb-0.5">
+                              <p 
+                                className={`text-[11px] font-black uppercase tracking-tight leading-tight truncate ${
+                                  notif.type === 'danger' ? 'text-red-400' : 
+                                  notif.type === 'warning' ? 'text-amber-400' : 
+                                  notif.type === 'success' ? 'text-emerald-400' : 
+                                  'text-white'
+                                }`}
+                                title={notif.title}
+                              >
+                                {notif.title}
+                              </p>
+                              <div className="flex items-center gap-1 shrink-0">
                                 <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{notif.date}</span>
                                 <button 
                                   onClick={() => handleMarkAsRead(notif.id)}
-                                  className="opacity-0 group-hover/notif:opacity-100 p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-all cursor-pointer"
+                                  className="opacity-0 group-hover/notif:opacity-100 p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-all cursor-pointer"
                                   title={t.dashboard.sidebar.markAsRead}
                                 >
-                                  <X size={12} />
+                                  <X size={10} />
                                 </button>
                               </div>
                             </div>
-                            <p className="text-xs text-slate-400 leading-relaxed font-medium italic">"{notif.message}"</p>
+                            <p 
+                              className="text-[11px] text-slate-400 leading-snug font-medium italic line-clamp-2 break-words"
+                              title={notif.message}
+                            >
+                              "{notif.message}"
+                            </p>
                           </div>
                         </div>
                       ))
                     )}
                     
                     {notifications.length > 0 && (
-                      <p className="text-[9px] text-slate-600 text-center py-4 font-black uppercase tracking-[0.4em] italic">
+                      <p className="text-[9px] text-slate-600 text-center py-3 font-black uppercase tracking-[0.4em] italic">
                         {t.dashboard.sidebar.zenCommandCenter}
                       </p>
                     )}

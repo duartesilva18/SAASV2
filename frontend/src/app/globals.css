@@ -74,6 +74,14 @@ body {
   .field-error-message {
     @apply mt-2 text-[10px] font-black uppercase tracking-widest text-red-400 ml-2;
   }
+  .notification-dot-blink {
+    animation: notification-blink 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes notification-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.1); }
 }
 
 /* Custom Scrollbar */
