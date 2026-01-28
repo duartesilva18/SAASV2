@@ -175,37 +175,14 @@ function RegisterPageContent() {
       });
 
       setSuccess(true);
-
-      const accessToken = response.data?.access_token;
-      const refreshToken = response.data?.refresh_token;
-
-      if (!accessToken) {
-        throw new Error('Não foi possível iniciar sessão automaticamente.');
-      }
-
-      const storage = localStorage;
-      storage.setItem('token', accessToken);
-      if (refreshToken) {
-        storage.setItem('refresh_token', refreshToken);
-      }
-      localStorage.removeItem('pending_verification_expires_at');
-
-      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-      // Não esperar refreshUser — o layout do dashboard carrega o user ao montar
-
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#10b981', '#3b82f6', '#ffffff']
-      });
-
-      router.replace('/dashboard');
+      // Registo envia código por email — redirecionar para página de verificação
+      const emailFromResponse = response.data?.email || email;
+      const devCode = response.data?.dev_code;
+      const query = new URLSearchParams({ email: emailFromResponse });
+      if (devCode) query.set('dev_code', devCode);
       setTimeout(() => {
-        if (window.location.pathname.startsWith('/auth/')) {
-          window.location.href = '/dashboard';
-        }
-      }, 600);
+        router.push(`/auth/verify-register?${query.toString()}`);
+      }, 2500);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || err.message || t.auth.register.error);
@@ -331,10 +308,10 @@ function RegisterPageContent() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-black uppercase tracking-widest mb-1 text-emerald-400">
-                      {t.auth.register.successTitle || 'Conta criada com sucesso!'}
+                      {t.auth.verifyRegister?.codeSentTitle ?? 'Código enviado!'}
                     </p>
                     <p className="text-xs font-medium opacity-90 leading-relaxed">
-                      {t.auth.register.successMessage || `Enviamos um email de verificação para ${email}. Por favor, verifica a tua caixa de entrada.`}
+                      {t.auth.verifyRegister?.codeSentMessage ?? `Enviamos um código de verificação para ${email}. A redirecionar...`}
                     </p>
                   </div>
                 </motion.div>

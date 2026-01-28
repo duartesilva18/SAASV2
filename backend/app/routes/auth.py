@@ -126,123 +126,220 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
-@router.post('/register', response_model=schemas.RegisterResponse)
+def _purge_expired_registration_verifications(db: Session):
+    """Remove códigos de verificação de registo expirados."""
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
+    deleted = db.query(models.RegistrationVerification).filter(
+        models.RegistrationVerification.expires_at < cutoff
+    ).delete(synchronize_session=False)
+    if deleted:
+        db.commit()
+
+
+@router.post('/register', response_model=schemas.RegisterPendingResponse)
 @limiter.limit('30/hour')
 async def register(request: Request, user_in: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Registo: envia código de 6 dígitos por email. O utilizador confirma em POST /register/confirm."""
     try:
         purge_expired_unverified_users(db)
+        _purge_expired_registration_verifications(db)
 
-        # Normalizar email (lowercase, sem espaços) para evitar duplicados por maiúsculas
         email_normalized = user_in.email.strip().lower()
-
-        # Validação de email
         if not validate_email(email_normalized):
             raise HTTPException(status_code=400, detail='Formato de email inválido.')
-        
-        # Validação de senha forte
         is_valid, error_msg = validate_password(user_in.password)
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_msg)
-        
+
         db_user = db.query(models.User).filter(models.User.email == email_normalized).first()
         if db_user:
             logger.warning(f'Tentativa de registo com email já existente: {email_normalized}')
             raise HTTPException(status_code=400, detail='Este email já está registado. Inicia sessão na página de login.')
-        
+
         hashed_pw = security.get_password_hash(user_in.password)
-        # Validar código de referência se fornecido
-        referrer_id = None
         referral_code = getattr(user_in, 'referral_code', None)
-        if referral_code:
-            logger.info(f'🔍 Processando código de referência no registo: {referral_code} para email: {user_in.email}')
-            try:
-                referrer = db.query(models.User).filter(
-                    and_(
-                        models.User.affiliate_code == referral_code,
-                        models.User.is_affiliate == True
-                    )
-                ).first()
-                if referrer:
-                    referrer_id = referrer.id
-                    logger.info(f'✅ Código de referência válido no registo: {referral_code} -> afiliado {referrer.email} (ID: {referrer_id})')
-                else:
-                    logger.warning(f'⚠️ Código de referência inválido no registo: {referral_code}')
-                    # Não bloquear o registo, apenas ignorar o código inválido
-            except Exception as e:
-                logger.warning(f'Erro ao validar código de referência (não crítico): {str(e)}')
-        else:
-            logger.info(f'ℹ️ Nenhum código de referência fornecido no registo para {user_in.email}')
-        
-        # Get user language preference from user_in or default to 'pt'
         user_lang = getattr(user_in, 'language', 'pt') or 'pt'
-        # Validate language (only 'pt' or 'en' supported)
         if user_lang not in ['pt', 'en']:
             user_lang = 'pt'
 
-        user = models.User(
+        # Remover verificação anterior para este email (novo pedido)
+        db.query(models.RegistrationVerification).filter(
+            models.RegistrationVerification.email == email_normalized
+        ).delete(synchronize_session=False)
+
+        code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        rv = models.RegistrationVerification(
             email=email_normalized,
             password_hash=hashed_pw,
-            is_email_verified=True,
             language=user_lang,
-            referrer_id=referrer_id
+            referral_code=referral_code,
+            code=code,
+            expires_at=expires_at,
         )
-        db.add(user)
+        db.add(rv)
         db.commit()
-        db.refresh(user)
 
-        # Criar referência de afiliado se aplicável
-        if referrer_id and referral_code:
-            existing_referral = db.query(models.AffiliateReferral).filter(
-                models.AffiliateReferral.referred_user_id == user.id
-            ).first()
-            if not existing_referral:
-                ip_address = request.client.host if request.client else None
-                user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
-                referral = models.AffiliateReferral(
-                    referrer_id=referrer_id,
-                    referred_user_id=user.id,
-                    referral_code=referral_code,
-                    has_subscribed=False,
-                    ip_address=ip_address,
-                    user_agent=user_agent
-                )
-                db.add(referral)
-                db.commit()
-                logger.info(f'✅ Referência criada: {referral_code} -> utilizador {user.email}')
-            else:
-                logger.warning(f'⚠️ Referência já existe para {user.email}, não criando duplicado')
-        else:
-            logger.info(f'ℹ️ Nenhuma referência criada para {user.email} (referral_code={referral_code}, referrer_id={referrer_id})')
+        t = get_email_translation(user_lang, 'register_verify')
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
+                .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
+                .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
+                .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
+                .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
+                .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
+                .code-box {{ background-color: #020617; border: 2px dashed #1e293b; border-radius: 24px; padding: 45px; text-align: center; margin: 35px 0; }}
+                .code {{ font-size: 52px; font-weight: 900; color: #10b981; letter-spacing: 12px; margin: 0; text-shadow: 0 0 30px rgba(16, 185, 129, 0.4); }}
+                .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
+                .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="logo">Finly</div>
+                </div>
+                <div class="content">
+                    <h2>{t['title']}</h2>
+                    <p>{t['message']}</p>
+                    <div class="code-box">
+                        <p style="margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #475569; font-weight: 800;">{t['code_label']}</p>
+                        <div class="code">{code}</div>
+                    </div>
+                    <p class="security-notice">{t['security_notice']}</p>
+                </div>
+                <div class="footer">
+                    {t['footer']}
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+        env = getattr(settings, 'ENVIRONMENT', 'development')
+        if not (getattr(settings, 'MAIL_USERNAME', '') or '').strip() or not (getattr(settings, 'MAIL_PASSWORD', '') or '').strip():
+            logger.warning('MAIL_USERNAME ou MAIL_PASSWORD vazios no .env – o email de verificação pode não ser enviado.')
 
-        new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
-        db.add(new_workspace)
-        db.commit()
-        db.refresh(new_workspace)
-        categories_map = create_default_categories(db, new_workspace.id)
-        create_seed_transactions(db, new_workspace.id, categories_map)
+        conf = ConnectionConfig(
+            MAIL_USERNAME=(getattr(settings, 'MAIL_USERNAME', '') or '').strip(),
+            MAIL_PASSWORD=(getattr(settings, 'MAIL_PASSWORD', '') or '').strip(),
+            MAIL_FROM=(getattr(settings, 'MAIL_FROM', '') or '').strip() or mail_user,
+            MAIL_PORT=getattr(settings, 'MAIL_PORT', 587),
+            MAIL_SERVER=(getattr(settings, 'MAIL_SERVER', '') or 'smtp.gmail.com').strip(),
+            MAIL_STARTTLS=True,
+            MAIL_SSL_TLS=False,
+            USE_CREDENTIALS=True,
+            VALIDATE_CERTS=True,
+            MAIL_FROM_NAME='Finly Portugal'
+        )
+        msg = MessageSchema(subject=t['subject'], recipients=[email_normalized], body=html, subtype=MessageType.html)
+        fm = FastMail(conf)
+        email_sent = False
+        try:
+            await fm.send_message(msg)
+            email_sent = True
+            logger.info(f'Email de verificação de registo enviado com sucesso para {email_normalized}')
+        except Exception as e:
+            logger.error(f'Erro ao enviar email de verificação de registo para {email_normalized}: {e}', exc_info=True)
 
-        await log_action(db, action='register', user_id=user.id, details=f'Registo concluído: {user.email}', request=request)
-
-        logger.info(f'Utilizador criado: {user.email}')
-        access_token = security.create_access_token(subject=user.email)
-        refresh_token = security.create_refresh_token(subject=user.email)
-        return {
-            'message': 'Conta criada com sucesso.',
-            'email': email_normalized,
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'token_type': 'bearer'
-        }
+        out = {'message': 'Código de verificação enviado para o teu email.', 'email': email_normalized}
+        if not email_sent and str(env).lower() == 'development':
+            out['dev_code'] = code
+            logger.warning(f'[DEV] Envio falhou – usar código manualmente: {code}')
+        return out
     except HTTPException:
-        # Re-raise HTTPExceptions (400, 401, etc.) para manter o status code correto
         raise
     except Exception as e:
         logger.error(f'Erro ao processar registo para {user_in.email}: {str(e)}', exc_info=True)
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f'Erro interno ao processar registo. Por favor, tente novamente mais tarde.'
+            detail='Erro interno ao processar registo. Por favor, tente novamente mais tarde.'
         )
+
+
+@router.post('/register/confirm', response_model=schemas.Token)
+@limiter.limit('20/hour')
+async def register_confirm(request: Request, data: schemas.RegisterConfirmRequest, db: Session = Depends(get_db)):
+    """Confirma o registo com email + código de 6 dígitos. Cria o utilizador e devolve tokens."""
+    _purge_expired_registration_verifications(db)
+    email_normalized = (data.email or '').strip().lower()
+    code_clean = (data.code or '').strip()
+    if len(code_clean) != 6 or not code_clean.isdigit():
+        raise HTTPException(status_code=400, detail='Código inválido ou expirado.')
+
+    rv = db.query(models.RegistrationVerification).filter(
+        models.RegistrationVerification.email == email_normalized,
+        models.RegistrationVerification.code == code_clean,
+        models.RegistrationVerification.is_used == False,
+        models.RegistrationVerification.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not rv:
+        raise HTTPException(status_code=400, detail='Código inválido ou expirado.')
+
+    referrer_id = None
+    referral_code = getattr(rv, 'referral_code', None)
+    if referral_code:
+        referrer = db.query(models.User).filter(
+            and_(
+                models.User.affiliate_code == referral_code,
+                models.User.is_affiliate == True
+            )
+        ).first()
+        if referrer:
+            referrer_id = referrer.id
+
+    user = models.User(
+        email=email_normalized,
+        password_hash=rv.password_hash,
+        is_email_verified=True,
+        language=rv.language,
+        referrer_id=referrer_id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    if referrer_id and referral_code:
+        existing = db.query(models.AffiliateReferral).filter(
+            models.AffiliateReferral.referred_user_id == user.id
+        ).first()
+        if not existing:
+            ip_address = request.client.host if request.client else None
+            user_agent = request.headers.get('user-agent', '')[:500] if request.headers.get('user-agent') else None
+            affiliate_ref = models.AffiliateReferral(
+                referrer_id=referrer_id,
+                referred_user_id=user.id,
+                referral_code=referral_code,
+                has_subscribed=False,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            db.add(affiliate_ref)
+            db.commit()
+
+    new_workspace = models.Workspace(owner_id=user.id, name='Meu Workspace')
+    db.add(new_workspace)
+    db.commit()
+    db.refresh(new_workspace)
+    categories_map = create_default_categories(db, new_workspace.id)
+    create_seed_transactions(db, new_workspace.id, categories_map)
+
+    rv.is_used = True
+    db.commit()
+
+    await log_action(db, action='register', user_id=user.id, details=f'Registo confirmado: {user.email}', request=request)
+    access_token = security.create_access_token(subject=user.email)
+    refresh_token = security.create_refresh_token(subject=user.email)
+    return {
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'token_type': 'bearer',
+    }
 
 
 @router.post('/resend-verification')

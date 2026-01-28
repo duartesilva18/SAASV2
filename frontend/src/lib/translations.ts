@@ -270,6 +270,20 @@ export const translations = {
                 submit: "Confirmar Nova Password",
                 successMessage: "Password alterada com sucesso! A redirecionar...",
                 invalidCode: "Código inválido ou expirado."
+            },
+            verifyRegister: {
+                title: "Verificar ",
+                titleAccent: "Registo",
+                subtitle: "Introduz o código de 6 dígitos enviado para {email}.",
+                back: "Voltar ao Registo",
+                codeLabel: "Código de 6 dígitos",
+                codePlaceholder: "000000",
+                codeError: "O código deve ter 6 dígitos.",
+                submit: "Confirmar e Entrar",
+                successMessage: "Conta ativada! A redirecionar para o dashboard...",
+                invalidCode: "Código inválido ou expirado.",
+                codeSentTitle: "Código enviado!",
+                codeSentMessage: "Enviamos um código de verificação para o teu email. A redirecionar para a verificação..."
             }
         },
         dashboard: {
@@ -1427,6 +1441,20 @@ export const translations = {
                 submit: "Confirm New Password",
                 successMessage: "Password changed successfully! Redirecting...",
                 invalidCode: "Invalid or expired code."
+            },
+            verifyRegister: {
+                title: "Verify ",
+                titleAccent: "Registration",
+                subtitle: "Enter the 6-digit code sent to {email}.",
+                back: "Back to Register",
+                codeLabel: "6-digit Code",
+                codePlaceholder: "000000",
+                codeError: "The code must have 6 digits.",
+                submit: "Confirm and Enter",
+                successMessage: "Account activated! Redirecting to dashboard...",
+                invalidCode: "Invalid or expired code.",
+                codeSentTitle: "Code sent!",
+                codeSentMessage: "We sent a verification code to your email. Redirecting to verification..."
             }
         },
         dashboard: {

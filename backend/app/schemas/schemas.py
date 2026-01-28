@@ -62,9 +62,19 @@ class Token(BaseModel):
 class RegisterResponse(BaseModel):
     message: str
     email: str
-    access_token: str
+    access_token: Optional[str] = None
     refresh_token: Optional[str] = None
     token_type: str = 'bearer'
+
+class RegisterPendingResponse(BaseModel):
+    """Resposta do registo quando se envia código por email (sem tokens)."""
+    message: str
+    email: str
+    dev_code: Optional[str] = None  # só em development quando o envio do email falha
+
+class RegisterConfirmRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
 
 class TokenData(BaseModel):
     email: Optional[str] = None

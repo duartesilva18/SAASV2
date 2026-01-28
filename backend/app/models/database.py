@@ -180,6 +180,19 @@ class PasswordReset(Base):
     is_used = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
+class RegistrationVerification(Base):
+    """Código de 6 dígitos enviado por email para confirmar o registo (fluxo tipo esqueci-password)."""
+    __tablename__ = 'registration_verifications'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, nullable=False, index=True)
+    password_hash = Column(String, nullable=False)
+    language = Column(String(5), nullable=False, server_default='pt')
+    referral_code = Column(String(20), nullable=True)
+    code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
 class AuditLog(Base):
     __tablename__ = 'audit_logs'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
