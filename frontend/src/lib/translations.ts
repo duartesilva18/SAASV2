@@ -435,7 +435,9 @@ export const translations = {
                 zenHarmony: "O teu ecossistema Zen está em harmonia plena. Continua o bom trabalho.",
                 now: "Agora",
                 next: "Próximo",
-                urgent: "Urgente"
+                urgent: "Urgente",
+                goalAlmostReached: "Meta quase atingida",
+                goalAlmostReachedMessage: "{name} está a {pct}% do objetivo."
             },
             billing: {
                 title: "Histórico de ",
@@ -1590,7 +1592,9 @@ export const translations = {
                 zenHarmony: "Your Zen ecosystem is in perfect harmony. Keep up the good work.",
                 now: "Now",
                 next: "Next",
-                urgent: "Urgent"
+                urgent: "Urgent",
+                goalAlmostReached: "Goal almost reached",
+                goalAlmostReachedMessage: "{name} is {pct}% of the way to the target."
             },
             pricing: {
                 pageTitle: "Pricing",

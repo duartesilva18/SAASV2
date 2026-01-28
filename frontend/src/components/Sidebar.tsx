@@ -140,12 +140,12 @@ export default function Sidebar({
         const newNotifications: any[] = [];
         let criticalFound = false;
 
-        // 1. Insights Reais -> dashboard
+        // 1. Insights Reais -> dashboard (danger, warning e info)
         insightsRes.data?.insights?.forEach((ins: any) => {
-          if (ins.type === 'danger' || ins.type === 'warning') {
+          if (ins.type === 'danger' || ins.type === 'warning' || ins.type === 'info') {
             if (ins.type === 'danger') criticalFound = true;
             newNotifications.push({
-              id: `ins-${ins.title}`,
+              id: `ins-${ins.title}-${ins.message?.slice(0, 8) || ''}`,
               title: ins.title,
               message: ins.message,
               type: ins.type,
@@ -156,16 +156,16 @@ export default function Sidebar({
           }
         });
 
-        // 2. Próximos Vencimentos -> transactions
+        // 2. Próximos Vencimentos -> transactions (janela 0–7 dias)
         const today = new Date().getDate();
         recurringRes.data?.forEach((rec: any) => {
           const diff = rec.day_of_month - today;
-          if (diff >= 0 && diff <= 3) {
+          if (diff >= 0 && diff <= 7) {
             newNotifications.push({
               id: `rec-${rec.id}`,
               title: diff === 0 ? t.dashboard.sidebar.dueToday : t.dashboard.sidebar.dueInDays.replace('{days}', diff.toString()),
               message: t.dashboard.sidebar.subscriptionDue.replace('{description}', rec.description).replace('{amount}', formatPrice(rec.amount_cents/100)),
-              type: 'info',
+              type: diff <= 1 ? 'warning' : 'info',
               icon: 'clock',
               date: t.dashboard.sidebar.next,
               section: '/transactions'
@@ -205,6 +205,26 @@ export default function Sidebar({
             date: t.dashboard.sidebar.now,
             section: '/vault'
           });
+        });
+
+        // 5. Metas quase atingidas (80%–99%) -> vault
+        const s = t.dashboard.sidebar;
+        (goalsRes.data || []).forEach((goal: any) => {
+          if (!goal.target_amount_cents || goal.target_amount_cents <= 0) return;
+          const pct = Math.round((goal.current_amount_cents / goal.target_amount_cents) * 100);
+          if (pct >= 80 && pct < 100 && !completedGoals?.some((g: any) => g.id === goal.id)) {
+            newNotifications.push({
+              id: `goal-almost-${goal.id}`,
+              title: s.goalAlmostReached || 'Meta quase atingida',
+              message: (s.goalAlmostReachedMessage || '{name} está a {pct}% do objetivo.')
+                .replace('{name}', goal.name || '')
+                .replace('{pct}', String(pct)),
+              type: 'info',
+              icon: 'target',
+              date: s.next,
+              section: '/vault'
+            });
+          }
         });
 
         // Se não houver nada, adicionar boas-vindas (sem section = não mostra dot)
