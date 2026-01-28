@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, Mail, AlertCircle, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Mail, AlertCircle, ChevronLeft, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 
@@ -62,8 +62,8 @@ export default function ForgotPasswordPage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[520px]">
         <div className="mb-8 lg:mb-12 text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white mx-auto mb-6 shadow-blue-600/30">
-            <Sparkles size={24} />
+          <div className="flex items-center justify-center mx-auto mb-6">
+            <img src="/images/logo/logo-semfundo.png" alt="Finly" className="w-20 h-20 sm:w-24 sm:h-24 object-contain" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-black tracking-tighter mb-3 lg:mb-4 text-white">
             {t.auth.forgotPassword.title}<span className="text-blue-500 italic">{t.auth.forgotPassword.titleAccent}</span>
