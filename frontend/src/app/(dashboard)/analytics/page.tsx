@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { 
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Cell, PieChart, Pie
 } from 'recharts';
 import { 
@@ -945,38 +945,48 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Análise Pro – 5 blocos (2/3 + 1/3), sem repetir o dashboard principal */}
-      <section className="mb-12 space-y-8">
-        {/* Bloco 1 – Tendência e futuro (onde vou parar) */}
+      {/* Análise Pro – gráficos: estrutura fixa (top 10), cores vivas, tooltip = dashboard */}
+      <section className="mb-12 space-y-6">
+        {/* Linha 1: 2/3 Evolução do saldo | 1/3 Ritmo mensal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Comparação período atual vs anterior</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Tendência: para onde estás a ir</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução do saldo</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Património acumulado ao longo do tempo</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={(() => {
-                  const pc = processedData.periodComparison;
-                  if (!pc) return [];
-                  return [
-                    { name: 'Receitas', atual: pc.current.income, anterior: pc.previous?.income ?? 0 },
-                    { name: 'Despesas', atual: pc.current.expenses, anterior: pc.previous?.expenses ?? 0 },
-                    { name: 'Saldo', atual: pc.current.balance, anterior: pc.previous?.balance ?? 0 }
-                  ];
-                })()} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-                  <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                <AreaChart data={processedData.evolution || []} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                  <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={(v) => v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : ''} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }}
-                    formatter={(v: number | undefined) => (v != null ? formatCurrency(v) : '')}
-                    labelStyle={{ color: '#e2e8f0', fontWeight: 600 }}
-                  />
-                  <Bar dataKey="atual" name="Período atual" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
-                  <Bar dataKey="anterior" name="Período anterior" fill="#475569" radius={[4, 4, 0, 0]} barSize={28} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
+                  <Area type="monotone" dataKey="balance" name="Saldo" stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Ritmo mensal</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Despesas por dia da semana</p>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={processedData.weekly || []} margin={{ top: 8, right: 8, bottom: 8 }}>
+                  <XAxis dataKey="name" stroke="#475569" fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={24}>
+                    {(processedData.weekly || []).map((_: unknown, i: number) => (
+                      <Cell key={i} fill={['#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6', '#ec4899'][i % 7]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
+        </div>
+
+        {/* Linha 2: 1/3 Categorias em risco | 2/3 Comparação atual anterior */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Categorias em risco</h3>
             {processedData.categoriesAtRisk?.length > 0 ? (
               <ul className="space-y-2 mb-4">
@@ -992,139 +1002,77 @@ export default function AnalyticsPage() {
             )}
             <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || 'Resumo automático com base nos teus dados.'}</p>
           </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Comparação período atual vs anterior</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Tendência: para onde estás a ir</p>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={(() => {
+                  const pc = processedData.periodComparison;
+                  if (!pc) return [];
+                  return [
+                    { name: 'Receitas', atual: pc.current.income, anterior: pc.previous?.income ?? 0 },
+                    { name: 'Despesas', atual: pc.current.expenses, anterior: pc.previous?.expenses ?? 0 },
+                    { name: 'Saldo', atual: pc.current.balance, anterior: pc.previous?.balance ?? 0 }
+                  ];
+                })()} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                  <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Line type="monotone" dataKey="atual" name="Período atual" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
+                  <Line type="monotone" dataKey="anterior" name="Período anterior" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
         </div>
 
-        {/* Bloco 2 – Comportamento de gastos (padrão, não total) – 1/2 + 1/2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Volume de atividade</h3>
+        {/* Linha 3: 3/3 Volume por mês */}
+        <div className="grid grid-cols-1 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Volume por mês</h3>
             <p className="text-xs text-slate-500 font-medium italic mb-4">Nº de transações por mês</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
-
-                  <XAxis dataKey="name" stroke="#475569" fontSize={9} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? v : 0, 'Transações']} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} />
-                  <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value ?? 0, 'Transações']} />
+                  <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Despesas por dia do mês</h3>
-            <p className="text-[10px] text-slate-500 italic mb-3">Em que dias gastas mais (1–31)</p>
-            <div className="h-[160px] w-full">
+        </div>
+
+        {/* Linha 4: 2/3 Despesas por mês | 1/3 Progresso das metas */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Despesas por mês</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">Em que dias gastas mais (1–31)</p>
+            <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={processedData.expensesByDayOfMonth || []} margin={{ top: 4, right: 4, bottom: 4 }}>
+                <LineChart data={processedData.expensesByDayOfMonth || []} margin={{ top: 4, right: 4, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="day" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={4} />
-                  <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={44} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? formatCurrency(v) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
-                  <Bar dataKey="value" fill="#8b5cf6" radius={[2, 2, 0, 0]} barSize={6} />
-                </BarChart>
+                  <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
+                  <Line type="monotone" dataKey="value" name="Despesas" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 2 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
-        </div>
-
-        {/* Bloco 3 – Onde o dinheiro se concentra */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Distribuição por categoria</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Peso de cada categoria no total de despesas</p>
-            <div className="h-[200px] w-full flex items-center justify-center">
-              {(processedData.distribution?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={processedData.distribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={2} stroke="#1e293b" strokeWidth={1} label={false}>
-                      {(processedData.distribution as { name: string; value: number }[]).map((_: { name: string }, i: number) => (
-                        <Cell key={i} fill={['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#64748b'][i % 7]} fillOpacity={0.9} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined, n?: string) => {
-                      const val = v ?? 0;
-                      const total = (processedData.distribution as { value: number }[]).reduce((a, x) => a + x.value, 0);
-                      const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
-                      return [formatCurrency(val) + ' · ' + pct + '%', n ?? ''];
-                    }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-xs text-slate-500 italic">Sem dados de categorias.</p>
-              )}
-            </div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1 flex flex-col justify-center">
-            <p className="text-2xl font-black text-white leading-tight mb-2">
-              {(processedData.concentrationPctTop2 ?? 0).toFixed(0)}% das despesas concentram-se em 2 categorias
-            </p>
-            <p className="text-sm text-slate-400 font-medium">
-              {(processedData.concentrationTop2Names ?? []).length > 0 ? (processedData.concentrationTop2Names as string[]).join(', ') : '—'}
-            </p>
-          </motion.div>
-        </div>
-
-        {/* Bloco 4 – Eficiência e qualidade do gasto */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Ticket médio por categoria</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Valor médio por transação (despesas)</p>
-            <div className="min-h-[180px]">
-              {(processedData.ticketMedioByCategory?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={Math.max(180, (processedData.ticketMedioByCategory?.length ?? 0) * 28 + 24)}>
-                  <BarChart data={processedData.ticketMedioByCategory} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                    <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} hide />
-                    <YAxis type="category" dataKey="name" stroke="#475569" fontSize={10} width={72} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9' }} formatter={(v: number | undefined) => [v != null ? formatCurrency(v) : '', 'Ticket médio']} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
-                      {(processedData.ticketMedioByCategory as { name: string; value: number }[]).map((_: { name: string }, i: number) => (
-                        <Cell key={i} fill="#14b8a6" fillOpacity={0.5 + (i % 4) * 0.12} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-xs text-slate-500 italic py-8 text-center">Sem dados.</p>
-              )}
-            </div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Recorrentes vs variáveis</h3>
-            <p className="text-[10px] text-slate-500 italic mb-4">Peso das subscrições no total de despesas</p>
-            {(processedData.recurringVsVariable?.length ?? 0) > 0 ? (
-              <div className="space-y-3">
-                {(processedData.recurringVsVariable as { name: string; value: number }[]).map((entry, i) => {
-                  const total = (processedData.recurringVsVariable as { value: number }[]).reduce((a, x) => a + x.value, 0);
-                  const pct = total > 0 ? (entry.value / total) * 100 : 0;
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-300">{entry.name}</span>
-                        <span className="text-white font-bold tabular-nums">{formatCurrency(entry.value)}</span>
-                      </div>
-                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} className={`h-full rounded-full ${entry.name === 'Recorrentes' ? 'bg-cyan-500' : 'bg-violet-500'}`} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500 italic">Sem dados de subscrições.</p>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Bloco 5 – Metas (só se existirem) */}
-        {goals.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">Progresso por meta</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">Progresso das metas</h3>
+            {goals.length > 0 ? (
               <div className="space-y-4">
-                {goals.slice(0, 4).map((g: any) => {
+                {goals.slice(0, 4).map((g: any, idx: number) => {
                   const target = (g.target_amount_cents ?? 0) / 100;
                   const current = (g.current_amount_cents ?? 0) / 100;
                   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
+                  const barColors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500'];
+                  const barColor = barColors[idx % barColors.length];
                   return (
                     <div key={g.id}>
                       <div className="flex justify-between text-xs mb-1.5">
@@ -1132,29 +1080,17 @@ export default function AnalyticsPage() {
                         <span className="text-slate-400 tabular-nums shrink-0 ml-2">{formatCurrency(current)} / {formatCurrency(target)}</span>
                       </div>
                       <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6 }} className="h-full bg-emerald-500 rounded-full" />
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6 }} className={`h-full rounded-full ${barColor}`} />
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-xl lg:col-span-1">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Metas por tipo</h3>
-              <div className="flex items-center justify-center min-h-[120px]">
-                <ResponsiveContainer width="100%" height={120}>
-                  <PieChart>
-                    <Pie data={[{ name: 'Despesa', value: goals.filter((x: any) => x.goal_type === 'expense').length }, { name: 'Receita', value: goals.filter((x: any) => x.goal_type === 'income').length }].filter(d => d.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={32} outerRadius={48} paddingAngle={2} label={false}>
-                      <Cell fill="#3b82f6" />
-                      <Cell fill="#10b981" />
-                    </Pie>
-                    <Tooltip formatter={(v: number | undefined) => [v != null ? v : 0, 'metas']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-          </div>
-        )}
+            ) : (
+              <p className="text-xs text-slate-500 italic">Sem metas definidas.</p>
+            )}
+          </motion.div>
+        </div>
       </section>
 
       {/* Dimensao Cofres */}

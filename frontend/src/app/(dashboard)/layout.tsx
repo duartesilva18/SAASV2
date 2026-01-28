@@ -167,17 +167,18 @@ export default function DashboardLayout({
       />
       
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
-        {/* Mobile Header */}
-        <header className="lg:hidden flex flex-col gap-2 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center select-none min-w-0 shrink">
+        {/* Mobile Header – mesmo tamanho que o header da página inicial */}
+        <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+          <div className="flex items-center justify-between gap-3 min-h-[56px]">
+            <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
               <img
-                src="/images/logo/logo.png"
+                src="/images/logo/logo-semfundo.png"
                 alt="Finly"
-                className="h-36 w-auto m-0 p-0 select-none pointer-events-none"
+                className="h-10 w-10 shrink-0 select-none pointer-events-none object-contain"
                 draggable="false"
               />
-            </div>
+              <span className="text-white font-semibold tracking-tight text-xl leading-none whitespace-nowrap" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>Finly</span>
+            </Link>
             <div className="flex items-center gap-2 shrink-0">
               <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
@@ -190,9 +191,9 @@ export default function DashboardLayout({
               <LanguageSelector />
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-2 text-slate-400 hover:text-white transition-colors"
+                className="p-2 text-slate-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <Menu size={24} />
+                <Menu size={22} />
               </button>
             </div>
           </div>

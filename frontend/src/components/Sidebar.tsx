@@ -89,11 +89,39 @@ export default function Sidebar({
   const [currentPlan, setCurrentPlan] = useState<{ label: string; variant: 'basic' | 'plus' | 'pro' } | null>(null);
   const router = useRouter();
 
+  const DISMISSED_KEY = 'sidebar_dismissed_notification_ids';
+  const DISMISSED_MAX = 200;
+
+  const getDismissedIds = (): string[] => {
+    try {
+      const raw = localStorage.getItem(DISMISSED_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw) as string[];
+      return Array.isArray(arr) ? arr.slice(-DISMISSED_MAX) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const addDismissedIds = (ids: string[]) => {
+    if (ids.length === 0) return;
+    const current = getDismissedIds();
+    const next = [...new Set([...current, ...ids])].slice(-DISMISSED_MAX);
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(next));
+  };
+
   const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    addDismissedIds([id]);
+    setNotifications(prev => {
+      const next = prev.filter(n => n.id !== id);
+      setHasCritical(next.some((n: any) => n.type === 'danger'));
+      return next;
+    });
   };
 
   const handleClearAll = () => {
+    const ids = notifications.map(n => n.id).filter(Boolean);
+    addDismissedIds(ids);
     setNotifications([]);
     setHasCritical(false);
   };
@@ -227,20 +255,27 @@ export default function Sidebar({
           }
         });
 
-        // Se não houver nada, adicionar boas-vindas (sem section = não mostra dot)
-        if (newNotifications.length === 0) {
-          newNotifications.push({
-            id: 'welcome',
-            title: t.dashboard.sidebar.systemOperational,
-            message: t.dashboard.sidebar.zenHarmony,
-            type: 'success',
-            icon: 'sparkles',
-            date: t.dashboard.sidebar.now
-          });
+        // Filtrar as que o utilizador já dispensou (persistido em localStorage)
+        const dismissedIds = getDismissedIds();
+        const filtered = newNotifications.filter((n: any) => !dismissedIds.includes(n.id));
+
+        // Se não houver nada (ou todas dispensadas), adicionar boas-vindas (sem section = não mostra dot)
+        if (filtered.length === 0) {
+          const welcomeId = 'welcome';
+          if (!dismissedIds.includes(welcomeId)) {
+            filtered.push({
+              id: welcomeId,
+              title: t.dashboard.sidebar.systemOperational,
+              message: t.dashboard.sidebar.zenHarmony,
+              type: 'success',
+              icon: 'sparkles',
+              date: t.dashboard.sidebar.now
+            });
+          }
         }
 
-        setNotifications(newNotifications);
-        setHasCritical(criticalFound);
+        setNotifications(filtered);
+        setHasCritical(filtered.some((n: any) => n.type === 'danger'));
       } catch (err: any) {
         // Se for erro 401 (não autorizado), não fazer nada (token pode ter expirado)
         if (err?.response?.status === 401) {
@@ -264,6 +299,20 @@ export default function Sidebar({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Bloquear scroll do body quando a sidebar mobile está aberta
+  useEffect(() => {
+    if (!mounted) return;
+    if (isMobileOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      return () => {
+        document.body.style.overflow = prev;
+        document.body.style.touchAction = '';
+      };
+    }
+  }, [mounted, isMobileOpen]);
 
   useEffect(() => {
     if (isMobileOpen) {
@@ -587,26 +636,32 @@ export default function Sidebar({
 
   return (
     <>
-      <AnimatePresence>
+      <AnimatePresence mode="sync">
         {isMobileOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onMobileClose}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] lg:hidden"
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring' as const, damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-screen w-64 bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-visible lg:hidden shadow-2xl"
-            >
-              {sidebarContent}
-            </motion.aside>
-          </>
+          <motion.div
+            key="sidebar-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onMobileClose}
+            className="fixed inset-0 bg-black/70 z-[60] lg:hidden"
+            style={{ touchAction: 'none' }}
+            aria-hidden
+          />
+        )}
+        {isMobileOpen && (
+          <motion.aside
+            key="sidebar-drawer"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'tween', duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden shadow-2xl"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            {sidebarContent}
+          </motion.aside>
         )}
       </AnimatePresence>
 
