@@ -294,11 +294,11 @@ function LoginPageContent() {
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-[24px] flex items-center justify-center shadow-2xl mb-8 lg:mb-12 shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10 overflow-hidden">
+                <div className="mt-4 mb-8 lg:mb-12 rotate-3 flex items-center justify-start">
                   <img 
                     src="/images/logo/logo-semfundo.png" 
-                    alt="Finly Logo" 
-                    className="w-[90%] h-[90%] object-contain"
+                    alt="Finly" 
+                    className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
                   />
                 </div>
                 <h2 className="text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-6 lg:mb-8">
@@ -350,8 +350,8 @@ function LoginPageContent() {
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[520px]">
             <div className="mb-8 lg:mb-12 text-center lg:text-left">
-              <div className="lg:hidden w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white mx-auto mb-6 shadow-blue-600/30">
-                <Sparkles size={24} />
+              <div className="lg:hidden w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-6 overflow-hidden border border-slate-700 bg-slate-800/90 shadow-xl">
+                <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
               <h1 className="text-4xl lg:text-5xl font-black tracking-tighter mb-3 lg:mb-4 text-white">
                 {t.auth.login.title}
