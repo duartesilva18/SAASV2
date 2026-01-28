@@ -1,17 +1,25 @@
-# robots.txt para Finly
-# Permite todos os crawlers a indexar o site
+# robots.txt para Finly - https://app.finlybot.com
+# Permite crawlers a indexar páginas públicas
 
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /auth/
 Disallow: /dashboard/
 Disallow: /admin/
+Disallow: /transactions/
+Disallow: /settings/
+Disallow: /recurring/
+Disallow: /analytics/
+Disallow: /billing/
+Disallow: /categories/
+Disallow: /goals/
+Disallow: /guide/
+Disallow: /vault/
+Disallow: /affiliate/
+Disallow: /plans/
+Disallow: /pricing/
 Disallow: /_next/
 Disallow: /static/
 
 # Sitemap
-Sitemap: https://finly.pt/sitemap.xml
-
-# Crawl-delay (opcional, em segundos)
-Crawl-delay: 1
+Sitemap: https://app.finlybot.com/sitemap.xml

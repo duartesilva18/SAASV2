@@ -1,41 +1,39 @@
 import { MetadataRoute } from 'next'
 
+// Usar sempre app.finlybot.com no sitemap (o domínio verificado na Search Console).
+// Se usares outro domínio no futuro, define NEXT_PUBLIC_SITE_URL no deploy.
+const BASE_URL = 'https://app.finlybot.com'
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finly.pt'
+  const url = (path: string) => `${BASE_URL}${path}`
   
   return [
     {
-      url: baseUrl,
+      url: url(''),
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
     },
     {
-      url: `${baseUrl}/auth/login`,
+      url: url('/auth/login'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/auth/register`,
+      url: url('/auth/register'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/terms`,
+      url: url('/terms'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/privacy`,
+      url: url('/privacy'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,
