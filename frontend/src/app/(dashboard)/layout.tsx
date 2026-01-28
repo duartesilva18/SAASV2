@@ -7,11 +7,13 @@ import SupportButton from '@/components/SupportButton';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import LoadingScreen from '@/components/LoadingScreen';
 import AlertModal from '@/components/AlertModal';
+import NotificationsPanel from '@/components/NotificationsPanel';
+import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, AlertTriangle, CreditCard, HelpCircle } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -128,6 +130,7 @@ export default function DashboardLayout({
   if (!user) return null;
 
   return (
+    <NotificationsProvider>
     <div className="flex bg-[#020617] min-h-screen relative overflow-hidden selection:bg-blue-500/30">
       {/* Background Glows */}
       <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -167,50 +170,13 @@ export default function DashboardLayout({
       />
       
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
-        {/* Mobile Header – mesmo tamanho que o header da página inicial */}
-        <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-          <div className="flex items-center justify-between gap-3 min-h-[56px]">
-            <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
-              <img
-                src="/images/logo/logo-semfundo.png"
-                alt="Finly"
-                className="h-10 w-10 shrink-0 select-none pointer-events-none object-contain"
-                draggable="false"
-              />
-              <span className="text-white font-semibold tracking-tight text-xl leading-none whitespace-nowrap" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>Finly</span>
-            </Link>
-            <div className="flex items-center gap-2 shrink-0">
-              <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
-                  <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
-                </svg>
-              </a>
-              <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
-                <HelpCircle size={18} />
-              </Link>
-              <LanguageSelector />
-              <button
-                onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-2 text-slate-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                <Menu size={22} />
-              </button>
-            </div>
-          </div>
-          {secondaryTabs && secondaryTabs.length > 0 && (
-            <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1" aria-label="Menu secundário">
-              {secondaryTabs.map((tab) => (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </nav>
-          )}
-        </header>
+        {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
+        <MobileHeaderWithNotifications
+          t={t}
+          pathname={pathname}
+          secondaryTabs={secondaryTabs}
+          onOpenMenu={() => setIsMobileSidebarOpen(true)}
+        />
 
         {/* Desktop Header – menu secundário (tabs) ao centro; Bot Telegram, Guia, idioma à direita */}
         <header className="hidden lg:flex flex-col gap-3 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
@@ -277,5 +243,91 @@ export default function DashboardLayout({
       <SupportButton />
       <LoadingIndicator />
     </div>
+    </NotificationsProvider>
+  );
+}
+
+/** Mobile header: sino abre apenas o card de notificações (não a sidebar). Usa NotificationsContext. */
+function MobileHeaderWithNotifications({
+  t,
+  pathname,
+  secondaryTabs,
+  onOpenMenu,
+}: {
+  t: any;
+  pathname: string | null;
+  secondaryTabs: { label: string; href: string }[] | null;
+  onOpenMenu: () => void;
+}) {
+  const { setShowNotifications, showNotifications } = useNotifications();
+
+  return (
+    <>
+      <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+        <div className="flex items-center justify-between gap-3 min-h-[56px]">
+          <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
+            <img
+              src="/images/logo/logo-semfundo.png"
+              alt="Finly"
+              className="h-10 w-10 shrink-0 select-none pointer-events-none object-contain"
+              draggable="false"
+            />
+            <span className="text-white font-semibold tracking-tight text-xl leading-none whitespace-nowrap" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>Finly</span>
+          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
+                <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+              </svg>
+            </a>
+            <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
+              <HelpCircle size={18} />
+            </Link>
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center relative notification-trigger"
+              title={t.dashboard?.sidebar?.notifications || 'Notificações'}
+              aria-label="Notificações"
+            >
+              <Bell size={20} />
+            </button>
+            <LanguageSelector />
+            <button
+              onClick={onOpenMenu}
+              className="p-2 text-slate-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <Menu size={22} />
+            </button>
+          </div>
+        </div>
+        {secondaryTabs && secondaryTabs.length > 0 && (
+          <nav className="flex items-center justify-center gap-1 overflow-x-auto no-scrollbar pb-1" aria-label="Menu secundário">
+            {secondaryTabs.map((tab) => (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+      </header>
+      {/* Card de notificações no mobile: fixo abaixo do header, só quando aberto pelo sino */}
+      {showNotifications && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 z-[199] bg-black/50"
+            style={{ top: 'max(56px, calc(env(safe-area-inset-top) + 3rem))' }}
+            onClick={() => setShowNotifications(false)}
+            aria-hidden
+          />
+          <div className="lg:hidden fixed left-4 right-4 z-[200] px-0" style={{ top: 'max(60px, calc(env(safe-area-inset-top) + 3.5rem))' }}>
+            <NotificationsPanel />
+          </div>
+        </>
+      )}
+    </>
   );
 }

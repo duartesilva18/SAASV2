@@ -134,11 +134,11 @@ export default function LandingPage() {
             <img
               src="/images/logo/logo-semfundo.png"
               alt="Finly"
-              className="h-10 w-10 sm:h-14 sm:w-14 shrink-0 select-none pointer-events-none object-contain"
+              className="h-9 w-9 sm:h-14 sm:w-14 shrink-0 select-none pointer-events-none object-contain"
               draggable="false"
             />
             <span
-              className="text-white font-semibold tracking-tight text-xl sm:text-3xl leading-none whitespace-nowrap"
+              className="text-white font-semibold tracking-tight text-lg sm:text-3xl leading-none whitespace-nowrap"
               style={{ fontFamily: 'var(--font-brand), sans-serif' }}
             >
               Finly
@@ -216,7 +216,7 @@ export default function LandingPage() {
               className="sm:hidden h-11 flex items-center justify-center bg-white px-5 rounded-2xl shadow-xl touch-manipulation shrink-0 hover:bg-blue-50 active:scale-[0.98] transition-all"
             >
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">
-                {t.nav?.loginButton ?? 'Entrar'}
+                {(t.nav as { loginButton?: string })?.loginButton ?? 'Entrar'}
               </span>
             </Link>
             {/* Desktop: Já tenho conta + Começar Grátis */}
@@ -236,14 +236,14 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-24 pb-32 text-center relative">
+      {/* Hero Section — mobile: texto/botões mais pequenos; desktop: como antes */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-28 md:pt-32 pb-20 sm:pb-32 text-center relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-blue-600/10 blur-[160px] -z-10 rounded-full" />
         
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
+          className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] sm:text-[10px] font-black uppercase tracking-[0.3em] mb-4 sm:mb-8"
         >
           <Sparkles size={14} />
           {t.hero.badge}
@@ -252,7 +252,7 @@ export default function LandingPage() {
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl mx-auto relative"
+          className="text-3xl sm:text-5xl md:text-8xl font-black tracking-tighter mb-4 sm:mb-8 leading-[0.9] max-w-5xl mx-auto relative"
         >
           {t.hero.title1}
           <span className="text-blue-500 italic block md:inline">
@@ -265,7 +265,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-slate-400 text-lg md:text-xl font-medium max-w-2xl mx-auto italic mb-12"
+          className="text-slate-400 text-sm sm:text-lg md:text-xl font-medium max-w-xl sm:max-w-2xl mx-auto italic mb-8 sm:mb-12"
         >
           {t.hero.description.split('Telegram').map((part, index, array) => {
             if (index === array.length - 1) return <span key={`desc-part-${index}`}>{part}</span>;
@@ -282,13 +282,13 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-6"
+          className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6"
         >
-          <Link href="/auth/register" className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-[24px] text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-2xl flex items-center justify-center gap-3">
+          <Link href="/auth/register" className="w-auto sm:w-auto bg-blue-600 text-white px-2 py-2 sm:px-12 sm:py-6 rounded-md sm:rounded-[24px] text-[8px] sm:text-xs font-black uppercase tracking-[0.1em] sm:tracking-[0.3em] hover:bg-blue-500 transition-all shadow-blue-600/20 shadow-lg sm:shadow-2xl flex items-center justify-center gap-1 sm:gap-3 touch-manipulation shrink-0">
             {t.hero.cta} 
-            <ArrowRight size={20} />
+            <ArrowRight size={12} className="sm:w-5 sm:h-5 shrink-0" />
           </Link>
-          <Link href="#steps" className="w-full sm:w-auto px-12 py-6 rounded-2xl text-xs font-black uppercase tracking-[0.3em] border border-slate-800 hover:bg-white/5 transition-all">
+          <Link href="#steps" className="w-auto sm:w-auto px-2 py-2 sm:px-12 sm:py-6 rounded-md sm:rounded-2xl text-[8px] sm:text-xs font-black uppercase tracking-[0.1em] sm:tracking-[0.3em] border border-slate-800 hover:bg-white/5 transition-all touch-manipulation shrink-0">
             {t.hero.seeHow}
           </Link>
         </motion.div>
@@ -301,17 +301,17 @@ export default function LandingPage() {
 
       {/* Pricing Section */}
       <motion.section 
-        className="max-w-7xl mx-auto px-6 py-20 md:py-28"
+        className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 md:py-28"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="text-center mb-20 md:mb-28 lg:mb-32">
+        <div className="text-center mb-12 sm:mb-20 md:mb-28 lg:mb-32">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase"
+            className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 sm:mb-6 uppercase"
           >
             Quanto vale ter{' '}
             <span className="text-blue-500 italic block md:inline">controlo total do teu dinheiro</span>?
@@ -320,7 +320,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-lg md:text-xl lg:text-2xl text-slate-400 mb-6 md:mb-8 max-w-2xl mx-auto"
+            className="text-sm sm:text-lg md:text-xl lg:text-2xl text-slate-400 mb-4 sm:mb-6 md:mb-8 max-w-2xl mx-auto"
           >
             A maioria das pessoas não sabe para onde o dinheiro vai.
           </motion.p>
@@ -328,13 +328,13 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-lg md:text-xl lg:text-2xl text-white font-semibold mb-8 md:mb-10 max-w-2xl mx-auto"
+            className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white font-semibold mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto"
           >
             Quem usa a FinLy sabe. E alguns ainda ganham com isso.
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 items-stretch">
           {[
             {
               id: 'basic',
@@ -386,57 +386,57 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className={`relative rounded-3xl p-8 md:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
+              className={`relative rounded-xl sm:rounded-3xl px-3 py-5 sm:p-8 md:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
                 plan.popular 
                   ? 'bg-slate-800/95 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] hover:border-blue-500/70' 
                   : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'
               } backdrop-blur-sm`}
             >
               {plan.popular && plan.popularLabel && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-6 py-2.5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2 z-30 whitespace-nowrap">
-                  <Trophy size={16} className="animate-pulse" />
+                <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-2 py-1 sm:px-6 sm:py-2.5 rounded-md sm:rounded-2xl text-[8px] sm:text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-lg flex items-center gap-1 sm:gap-2 z-30 whitespace-nowrap">
+                  <Trophy size={10} className="animate-pulse shrink-0 sm:w-4 sm:h-4" />
                   <span>{plan.popularLabel}</span>
                 </div>
               )}
               
               <div className="relative z-10 flex flex-col flex-1 min-h-0">
                 <div className="flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-5">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                <div className="flex items-center justify-between mb-3 sm:mb-5">
+                  <div className={`w-8 h-8 sm:w-16 sm:h-16 rounded-md sm:rounded-2xl flex items-center justify-center ${
                     plan.popular 
                       ? 'bg-blue-500/20 border-2 border-blue-500/40' 
                       : 'bg-slate-700/80 border border-slate-600/50'
                   }`}>
-                    <plan.icon size={32} style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
+                    <plan.icon size={16} className="sm:w-8 sm:h-8 shrink-0" style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-1">{plan.name}</p>
-                    <p className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                    <p className="text-[9px] sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-0.5 sm:mb-1">{plan.name}</p>
+                    <p className="text-lg sm:text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
                       {plan.price}
                     </p>
-                    <p className="text-sm text-slate-400 font-semibold mt-0.5">
+                    <p className="text-[9px] sm:text-sm text-slate-400 font-semibold mt-0.5">
                       {plan.priceSuffix}
                     </p>
                     {plan.priceSecondary && (
-                      <p className="text-base text-emerald-400 font-semibold mt-1.5">{plan.priceSecondary}</p>
+                      <p className="text-xs sm:text-base text-emerald-400 font-semibold mt-1 sm:mt-1.5">{plan.priceSecondary}</p>
                     )}
                   </div>
                 </div>
 
-                <p className="text-base md:text-lg text-slate-400 mb-2 font-medium">{plan.tagline}</p>
-                <p className="text-base text-slate-500 mb-6 italic">&quot;{plan.quote}&quot;</p>
+                <p className="text-[10px] sm:text-base md:text-lg text-slate-400 mb-2 sm:mb-2 font-medium">{plan.tagline}</p>
+                <p className="text-[10px] sm:text-base text-slate-500 mb-3 sm:mb-6 italic line-clamp-2 sm:line-clamp-none">&quot;{plan.quote}&quot;</p>
 
-                <div className="space-y-3 mb-6">
+                <div className="space-y-1.5 sm:space-y-3 mb-3 sm:mb-6">
                   {plan.features.map((feature: string, fIndex: number) => (
-                    <div key={fIndex} className="flex items-start gap-3">
-                      <Check size={22} className="text-emerald-400 mt-0.5 shrink-0" />
-                      <p className="text-base md:text-lg text-slate-200 font-medium">{feature}</p>
+                    <div key={fIndex} className="flex items-start gap-1 sm:gap-3">
+                      <Check size={12} className="text-emerald-400 mt-0.5 shrink-0 sm:w-[22px] sm:h-[22px]" />
+                      <p className="text-[10px] sm:text-base md:text-lg text-slate-200 font-medium">{feature}</p>
                     </div>
                   ))}
                 </div>
 
                 {plan.limitation && (
-                  <p className="text-base text-amber-400/90 mb-6 font-medium">🚫 {plan.limitation}</p>
+                  <p className="text-[10px] sm:text-base text-amber-400/90 mb-3 sm:mb-6 font-medium">🚫 {plan.limitation}</p>
                 )}
                 </div>
 
@@ -464,7 +464,7 @@ export default function LandingPage() {
                       router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
                     }
                   }}
-                  className={`mt-auto w-full block text-center px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
+                  className={`mt-auto w-full block text-center px-2 py-1.5 sm:px-6 sm:py-4 rounded-md sm:rounded-2xl text-[9px] sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-all cursor-pointer touch-manipulation ${
                     plan.popular
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
@@ -489,26 +489,26 @@ export default function LandingPage() {
           viewport={{ once: true }}
           className="max-w-3xl mx-auto text-center"
         >
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-base font-black uppercase tracking-[0.2em] mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-base font-black uppercase tracking-[0.2em] mb-6 sm:mb-8">
             💸 Programa de Afiliados FinLy
           </div>
-          <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
+          <h3 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight mb-4 sm:mb-6 leading-tight">
             Usa. Indica. Ganha.
           </h3>
-          <p className="text-slate-400 text-lg md:text-xl mb-10">
+          <p className="text-slate-400 text-sm sm:text-lg md:text-xl mb-6 sm:mb-10">
             Sempre que alguém entra na FinLy pelo teu link:
           </p>
-          <ul className="flex flex-col items-center text-slate-200 text-lg md:text-xl space-y-4 mb-12 font-medium">
+          <ul className="flex flex-col items-center text-slate-200 text-sm sm:text-lg md:text-xl space-y-3 sm:space-y-4 mb-8 sm:mb-12 font-medium">
             <li className="flex items-center justify-center gap-3">🔁 Recebes comissão todos os meses</li>
             <li className="flex items-center justify-center gap-3">💰 20% (Plus) ou 25% (Pro)</li>
             <li className="flex items-center justify-center gap-3">📊 Tudo transparente no dashboard</li>
             <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
           </ul>
-          <div className="bg-slate-800/90 border border-slate-600/60 rounded-3xl p-6 md:p-8 shadow-xl">
-            <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">📌 Exemplo simples:</p>
-            <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
-            <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">50 pessoas → ~100€ por mês</p>
-            <p className="text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
+          <div className="bg-slate-800/90 border border-slate-600/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl">
+            <p className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-3 sm:mb-4">📌 Exemplo simples:</p>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-4 sm:mb-5">50 pessoas → ~100€ por mês</p>
+            <p className="text-xs sm:text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
           </div>
         </motion.div>
 
@@ -517,24 +517,24 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 pt-16 border-t border-white/5"
+          className="mt-12 sm:mt-16 pt-12 sm:pt-16 border-t border-white/5"
         >
-          <div className="text-center mb-8">
-            <span className="inline-flex items-center gap-2 text-slate-500 text-sm font-black uppercase tracking-[0.2em]">
+          <div className="text-center mb-6 sm:mb-8">
+            <span className="inline-flex items-center gap-2 text-slate-500 text-xs sm:text-sm font-black uppercase tracking-[0.2em]">
               🔒 Sem risco, sem letras pequenas
             </span>
           </div>
-          <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
-            <div className="flex items-center gap-3 text-slate-400 text-base">
-              <Check size={20} className="text-emerald-400 shrink-0" />
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-12">
+            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
+              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
               Pagamento seguro
             </div>
-            <div className="flex items-center gap-3 text-slate-400 text-base">
-              <Check size={20} className="text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
+              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
               Cancela quando quiseres
             </div>
-            <div className="flex items-center gap-3 text-slate-400 text-base">
-              <Check size={20} className="text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
+              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
               Sem fidelização forçada
             </div>
           </div>
@@ -570,7 +570,7 @@ export default function LandingPage() {
               whileHover={{ scale: 1.1, y: -5 }}
             >
               <motion.p 
-                className="text-4xl font-black tracking-tighter mb-2"
+                className="text-3xl sm:text-4xl font-black tracking-tighter mb-2"
                 animate={{
                   textShadow: [
                     '0 0 10px rgba(59, 130, 246, 0.3)',
@@ -589,15 +589,15 @@ export default function LandingPage() {
       </motion.section>
 
       {/* Steps Section */}
-      <section id="steps" className="max-w-7xl mx-auto px-6 py-32">
-        <div className="text-center mb-24">
-          <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">
+      <section id="steps" className="max-w-7xl mx-auto px-6 py-20 sm:py-32">
+        <div className="text-center mb-16 sm:mb-24">
+          <h2 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 sm:mb-6 uppercase">
             {t.steps.title}
             <span className="text-blue-500 italic block md:inline"> {t.steps.titleAccent}</span>
           </h2>
         </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
             {t.steps.items.map((step: any, index: number) => (
               <motion.div 
                 key={index}
@@ -605,33 +605,33 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-slate-900/50 border border-slate-800 p-12 rounded-[32px] hover:border-blue-500/30 transition-colors group"
+                className="bg-slate-900/50 border border-slate-800 p-6 sm:p-12 rounded-2xl sm:rounded-[32px] hover:border-blue-500/30 transition-colors group"
               >
-                <div className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-blue-500 mb-8">
-                  {index === 0 ? <Phone size={32} /> : index === 1 ? <MessageSquare size={32} /> : <Zap size={32} />}
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 mb-5 sm:mb-8">
+                  {index === 0 ? <Phone size={24} className="sm:w-8 sm:h-8" /> : index === 1 ? <MessageSquare size={24} className="sm:w-8 sm:h-8" /> : <Zap size={24} className="sm:w-8 sm:h-8" />}
                 </div>
-                <h3 className="text-xl font-black tracking-tight mb-4 uppercase relative z-10">{step.t}</h3>
-                <p className="text-slate-400 font-medium italic leading-relaxed relative z-10">{step.d}</p>
+                <h3 className="text-base sm:text-xl font-black tracking-tight mb-3 sm:mb-4 uppercase relative z-10">{step.t}</h3>
+                <p className="text-sm sm:text-base text-slate-400 font-medium italic leading-relaxed relative z-10">{step.d}</p>
               </motion.div>
             ))}
           </div>
       </section>
 
       {/* Resources Grid */}
-      <section className="bg-[#03081c] py-32">
+      <section className="bg-[#03081c] py-20 sm:py-32">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-24">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8">
+          <div className="text-center mb-16 sm:mb-24">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 sm:mb-8">
               <Zap size={14} />
               {t.resources.badge}
             </div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">
+            <h2 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 sm:mb-6 uppercase">
               {t.resources.title}
               <span className="text-blue-500 italic block md:inline"> {t.resources.titleAccent}</span>
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {t.resources.items.map((resource: any, index: number) => (
               <motion.div
                 key={index}
@@ -639,13 +639,13 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="p-8 rounded-[32px] bg-slate-900/30 border border-slate-800/50 hover:bg-slate-900/50 transition-all cursor-default relative overflow-hidden group"
+                className="p-5 sm:p-8 rounded-2xl sm:rounded-[32px] bg-slate-900/30 border border-slate-800/50 hover:bg-slate-900/50 transition-all cursor-default relative overflow-hidden group"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 mb-4 sm:mb-6">
                   {index === 0 ? <Phone size={24} /> : index === 1 ? <BarChart3 size={24} /> : index === 2 ? <Globe size={24} /> : index === 3 ? <ShieldCheck size={24} /> : index === 4 ? <Trophy size={24} /> : <Star size={24} />}
                 </div>
-                <h4 className="text-sm font-black uppercase tracking-widest mb-3 relative z-10">{resource.t}</h4>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed italic relative z-10">{resource.d}</p>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 sm:mb-3 relative z-10">{resource.t}</h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-relaxed italic relative z-10">{resource.d}</p>
               </motion.div>
             ))}
           </div>
@@ -654,12 +654,12 @@ export default function LandingPage() {
 
       {/* Testimonials com animações */}
       <motion.section 
-        className="max-w-7xl mx-auto px-6 py-32"
+        className="max-w-7xl mx-auto px-6 py-20 sm:py-32"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
           {t.testimonials.items.map((item: any, index: number) => (
             <motion.div 
               key={item.id}
@@ -667,17 +667,17 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="relative p-12 bg-slate-950 border border-slate-800 rounded-[32px]"
+              className="relative p-6 sm:p-12 bg-slate-950 border border-slate-800 rounded-2xl sm:rounded-[32px]"
             >
-              <div className="absolute -top-6 left-12 w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
+              <div className="absolute -top-4 left-6 sm:-top-6 sm:left-12 w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl font-black shadow-xl">
                 {item.initial}
               </div>
-              <p className="text-lg font-medium italic text-slate-300 mb-8 leading-relaxed relative z-10">
+              <p className="text-sm sm:text-lg font-medium italic text-slate-300 mb-6 sm:mb-8 leading-relaxed relative z-10">
                 "{item.text}"
               </p>
               <div className="relative z-10">
-                <p className="text-xs font-black uppercase tracking-widest text-white">{item.name}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">{item.role}</p>
+                <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-white">{item.name}</p>
+                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-600">{item.role}</p>
               </div>
             </motion.div>
           ))}
@@ -686,18 +686,18 @@ export default function LandingPage() {
 
       {/* FAQ com animações */}
       <motion.section 
-        className="max-w-3xl mx-auto px-6 py-32"
+        className="max-w-3xl mx-auto px-6 py-20 sm:py-32"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
         <motion.div 
-          className="text-center mb-24"
+          className="text-center mb-16 sm:mb-24"
           initial={{ y: 30, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl font-black tracking-tighter mb-6 uppercase">
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tighter mb-4 sm:mb-6 uppercase">
             {t.faq.title}
             <motion.span 
               className="text-blue-500 italic block md:inline"
@@ -728,12 +728,12 @@ export default function LandingPage() {
                 scale: 1.02,
                 boxShadow: '0 20px 40px rgba(59, 130, 246, 0.15)'
               }}
-              className="p-8 bg-slate-900/30 border border-slate-800 rounded-[32px] relative overflow-hidden group cursor-pointer"
+              className="p-5 sm:p-8 bg-slate-900/30 border border-slate-800 rounded-2xl sm:rounded-[32px] relative overflow-hidden group cursor-pointer"
             >
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-500"
               />
-              <h4 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-3 relative z-10">
+              <h4 className="text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 relative z-10">
                 <motion.div 
                   className="w-1.5 h-1.5 rounded-full bg-blue-500"
                   animate={{
@@ -744,7 +744,7 @@ export default function LandingPage() {
                 />
                 {item.q}
               </h4>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed italic ml-4 relative z-10">{item.a}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium leading-relaxed italic ml-4 relative z-10">{item.a}</p>
             </motion.div>
           ))}
         </div>
@@ -764,7 +764,7 @@ export default function LandingPage() {
           }}
           transition={{ duration: 4, repeat: Infinity }}
         />
-        <div className="max-w-7xl mx-auto px-6 py-24 flex flex-col items-center text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-6 py-16 sm:py-24 flex flex-col items-center text-center relative z-10">
           <motion.div 
             className="flex items-center gap-3 mb-8"
             whileHover={{ scale: 1.1 }}

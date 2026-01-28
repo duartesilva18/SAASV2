@@ -504,11 +504,11 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full py-4 md:py-6 text-sm md:text-base bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl md:rounded-[24px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] active:scale-95 flex items-center justify-center gap-2 md:gap-3 cursor-pointer"
             >
-              {saving ? <Loader2 size={24} className="animate-spin" /> : (
+              {saving ? <Loader2 size={18} className="animate-spin" /> : (
                 <>
-                  {t.dashboard.settings.personalData.save} <Sparkles size={20} />
+                  {t.dashboard.settings.personalData.save} <Sparkles size={18} />
                 </>
               )}
             </button>

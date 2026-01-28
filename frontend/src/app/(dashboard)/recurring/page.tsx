@@ -310,38 +310,38 @@ export default function RecurringPage() {
               {t.dashboard.recurring.mySubscriptions} <span className="text-blue-500 italic">{t.dashboard.recurring.subscriptionsAccent}</span>
             </h1>
           </div>
-          <div className="flex flex-col lg:flex-row items-end gap-4">
-            <div className="flex flex-wrap md:flex-nowrap gap-4">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-end gap-4 w-full">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full lg:w-auto">
               <motion.div 
                 whileHover={{ y: -5 }}
-                className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-6 rounded-[32px] min-w-[220px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group"
+                className="w-full min-w-0 sm:min-w-[200px] lg:min-w-[220px] bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-3 mb-4 text-slate-500">
-                  <div className="w-8 h-8 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500">
+                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
+                  <div className="w-6 h-6 md:w-8 md:h-8 bg-emerald-500/10 rounded-lg md:rounded-xl flex items-center justify-center text-emerald-500 shrink-0">
                     <ArrowUpCircle size={18} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedIncome}</span>
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedIncome}</span>
                 </div>
-                <p className="text-4xl font-black text-white tracking-tighter">{formatCurrency(totalIncomes / 100)}</p>
-                <div className="mt-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalIncomes / 100)}</p>
+                <div className="mt-1.5 md:mt-2 h-0.5 md:h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-emerald-500/50" />
                 </div>
               </motion.div>
 
               <motion.div 
                 whileHover={{ y: -5 }}
-                className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-6 rounded-[32px] min-w-[220px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group"
+                className="w-full min-w-0 sm:min-w-[200px] lg:min-w-[220px] bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-3 mb-4 text-slate-500">
-                  <div className="w-8 h-8 bg-red-500/10 rounded-xl flex items-center justify-center text-red-500">
+                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
+                  <div className="w-6 h-6 md:w-8 md:h-8 bg-red-500/10 rounded-lg md:rounded-xl flex items-center justify-center text-red-500 shrink-0">
                     <ArrowDownCircle size={18} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedExpenses}</span>
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedExpenses}</span>
                 </div>
-                <p className="text-4xl font-black text-white tracking-tighter">{formatCurrency(totalExpenses / 100)}</p>
-                <div className="mt-2 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalExpenses / 100)}</p>
+                <div className="mt-1.5 md:mt-2 h-0.5 md:h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-red-500/50" />
                 </div>
               </motion.div>
@@ -349,20 +349,20 @@ export default function RecurringPage() {
 
             <motion.div 
               whileHover={{ scale: 1.02 }}
-              className="bg-blue-600/10 border border-blue-500/20 p-6 rounded-[32px] min-w-[240px] shadow-[0_20px_50px_rgba(59,130,246,0.15)] relative overflow-hidden group"
+              className="w-full min-w-0 lg:min-w-[240px] bg-blue-600/10 border border-blue-500/20 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(59,130,246,0.15)] relative overflow-hidden group"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full -mr-16 -mt-16" />
-              <div className="flex items-center gap-3 mb-4 text-blue-400">
-                <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-blue-400">
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-500/20 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
                   <Sparkles size={18} className="animate-pulse" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.netZenBalance}</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.netZenBalance}</span>
               </div>
-              <p className={`text-4xl font-black tracking-tighter ${netZen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <p className={`text-2xl md:text-4xl font-black tracking-tighter ${netZen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {formatCurrency(netZen / 100)}
               </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${netZen >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+              <div className="mt-2 md:mt-3 flex items-center gap-2">
+                <div className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full ${netZen >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                   {netZen >= 0 ? t.dashboard.recurring.zenEquilibrium : t.dashboard.recurring.criticalAttention}
                 </div>
               </div>
@@ -374,7 +374,7 @@ export default function RecurringPage() {
                 setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: false, type: activeTab });
                 setShowAddModal(true);
               }}
-              className="flex items-center gap-3 px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer h-fit"
+              className="self-start flex items-center gap-3 px-6 py-4 md:px-8 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer h-fit"
             >
               <Plus size={20} className="group-hover:rotate-90 transition-transform" />
               {activeTab === 'expense' ? t.dashboard.recurring.addNew : t.dashboard.recurring.newIncome}

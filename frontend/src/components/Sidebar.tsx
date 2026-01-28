@@ -48,6 +48,7 @@ const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => 
 };
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
+import { useNotifications } from '@/lib/NotificationsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 
@@ -72,59 +73,24 @@ export default function Sidebar({
   isCollapsed, 
   onToggle, 
   isMobileOpen, 
-  onMobileClose 
+  onMobileClose,
+  openNotificationsOnce: _openNotificationsOnce,
+  onConsumeOpenNotifications: _onConsumeOpenNotifications,
 }: { 
   isCollapsed: boolean, 
   onToggle: () => void,
   isMobileOpen: boolean,
-  onMobileClose: () => void
+  onMobileClose: () => void,
+  openNotificationsOnce?: boolean;
+  onConsumeOpenNotifications?: () => void;
 }) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { user, isPro, logout } = useUser();
+  const { showNotifications, setShowNotifications, notifications, hasCritical, handleMarkAsRead, handleClearAll } = useNotifications();
   const [mounted, setMounted] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [hasCritical, setHasCritical] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<{ label: string; variant: 'basic' | 'plus' | 'pro' } | null>(null);
   const router = useRouter();
-
-  const DISMISSED_KEY = 'sidebar_dismissed_notification_ids';
-  const DISMISSED_MAX = 200;
-
-  const getDismissedIds = (): string[] => {
-    try {
-      const raw = localStorage.getItem(DISMISSED_KEY);
-      if (!raw) return [];
-      const arr = JSON.parse(raw) as string[];
-      return Array.isArray(arr) ? arr.slice(-DISMISSED_MAX) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const addDismissedIds = (ids: string[]) => {
-    if (ids.length === 0) return;
-    const current = getDismissedIds();
-    const next = [...new Set([...current, ...ids])].slice(-DISMISSED_MAX);
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(next));
-  };
-
-  const handleMarkAsRead = (id: string) => {
-    addDismissedIds([id]);
-    setNotifications(prev => {
-      const next = prev.filter(n => n.id !== id);
-      setHasCritical(next.some((n: any) => n.type === 'danger'));
-      return next;
-    });
-  };
-
-  const handleClearAll = () => {
-    const ids = notifications.map(n => n.id).filter(Boolean);
-    addDismissedIds(ids);
-    setNotifications([]);
-    setHasCritical(false);
-  };
 
   useEffect(() => {
     if (!user || !isPro) {
@@ -146,155 +112,6 @@ export default function Sidebar({
     };
     fetchPlan();
   }, [user, isPro]);
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!user) return;
-      
-      // Verificar se há token antes de fazer chamadas
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      if (!token) {
-        return; // Sem token, não fazer chamadas
-      }
-      
-      try {
-        const [insightsRes, recurringRes, invoicesRes, goalsRes] = await Promise.all([
-          api.get('/insights/'),
-          api.get('/recurring/'),
-          api.get('/stripe/invoices'),
-          api.get('/goals/').catch(() => ({ data: [] })) // Se falhar, usar array vazio
-        ]);
-
-        const newNotifications: any[] = [];
-        let criticalFound = false;
-
-        // 1. Insights Reais -> dashboard (danger, warning e info)
-        insightsRes.data?.insights?.forEach((ins: any) => {
-          if (ins.type === 'danger' || ins.type === 'warning' || ins.type === 'info') {
-            if (ins.type === 'danger') criticalFound = true;
-            newNotifications.push({
-              id: `ins-${ins.title}-${ins.message?.slice(0, 8) || ''}`,
-              title: ins.title,
-              message: ins.message,
-              type: ins.type,
-              icon: ins.icon,
-              date: t.dashboard.sidebar.now,
-              section: '/dashboard'
-            });
-          }
-        });
-
-        // 2. Próximos Vencimentos -> transactions (janela 0–7 dias)
-        const today = new Date().getDate();
-        recurringRes.data?.forEach((rec: any) => {
-          const diff = rec.day_of_month - today;
-          if (diff >= 0 && diff <= 7) {
-            newNotifications.push({
-              id: `rec-${rec.id}`,
-              title: diff === 0 ? t.dashboard.sidebar.dueToday : t.dashboard.sidebar.dueInDays.replace('{days}', diff.toString()),
-              message: t.dashboard.sidebar.subscriptionDue.replace('{description}', rec.description).replace('{amount}', formatPrice(rec.amount_cents/100)),
-              type: diff <= 1 ? 'warning' : 'info',
-              icon: 'clock',
-              date: t.dashboard.sidebar.next,
-              section: '/transactions'
-            });
-          }
-        });
-
-        // 3. Faturas em Aberto -> settings
-        const hasUnpaid = invoicesRes.data?.some((inv: any) => 
-          inv.status.toLowerCase() === 'unpaid' || 
-          (inv.status.toLowerCase() === 'open' && inv.amount_due > 0)
-        ) || false;
-        if (hasUnpaid) {
-          criticalFound = true;
-          newNotifications.push({
-            id: 'stripe-unpaid',
-            title: t.dashboard.sidebar.paymentFailed,
-            message: t.dashboard.sidebar.unpaidInvoice,
-            type: 'danger',
-            icon: 'credit-card',
-            date: t.dashboard.sidebar.urgent,
-            section: '/settings'
-          });
-        }
-
-        // 4. Metas Concluídas -> vault
-        const completedGoals = goalsRes.data?.filter((goal: any) => 
-          goal.current_amount_cents >= goal.target_amount_cents && goal.target_amount_cents > 0
-        ) || [];
-        completedGoals.forEach((goal: any) => {
-          newNotifications.push({
-            id: `goal-completed-${goal.id}`,
-            title: '🎯 Meta Concluída!',
-            message: `Parabéns! Atingiste a meta "${goal.name}" de ${formatPrice(goal.target_amount_cents / 100)}`,
-            type: 'success',
-            icon: 'trophy',
-            date: t.dashboard.sidebar.now,
-            section: '/vault'
-          });
-        });
-
-        // 5. Metas quase atingidas (80%–99%) -> vault
-        const s = t.dashboard.sidebar;
-        (goalsRes.data || []).forEach((goal: any) => {
-          if (!goal.target_amount_cents || goal.target_amount_cents <= 0) return;
-          const pct = Math.round((goal.current_amount_cents / goal.target_amount_cents) * 100);
-          if (pct >= 80 && pct < 100 && !completedGoals?.some((g: any) => g.id === goal.id)) {
-            newNotifications.push({
-              id: `goal-almost-${goal.id}`,
-              title: s.goalAlmostReached || 'Meta quase atingida',
-              message: (s.goalAlmostReachedMessage || '{name} está a {pct}% do objetivo.')
-                .replace('{name}', goal.name || '')
-                .replace('{pct}', String(pct)),
-              type: 'info',
-              icon: 'target',
-              date: s.next,
-              section: '/vault'
-            });
-          }
-        });
-
-        // Filtrar as que o utilizador já dispensou (persistido em localStorage)
-        const dismissedIds = getDismissedIds();
-        const filtered = newNotifications.filter((n: any) => !dismissedIds.includes(n.id));
-
-        // Se não houver nada (ou todas dispensadas), adicionar boas-vindas (sem section = não mostra dot)
-        if (filtered.length === 0) {
-          const welcomeId = 'welcome';
-          if (!dismissedIds.includes(welcomeId)) {
-            filtered.push({
-              id: welcomeId,
-              title: t.dashboard.sidebar.systemOperational,
-              message: t.dashboard.sidebar.zenHarmony,
-              type: 'success',
-              icon: 'sparkles',
-              date: t.dashboard.sidebar.now
-            });
-          }
-        }
-
-        setNotifications(filtered);
-        setHasCritical(filtered.some((n: any) => n.type === 'danger'));
-      } catch (err: any) {
-        // Se for erro 401 (não autorizado), não fazer nada (token pode ter expirado)
-        if (err?.response?.status === 401) {
-          // Token expirado ou inválido - o interceptor do api.ts vai lidar com isso
-          return;
-        }
-        console.error("Erro ao carregar notificações:", err);
-      }
-    };
-
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Update every minute
-    return () => clearInterval(interval);
-  }, [user]);
-
-  // Helper para formatar preço
-  const formatPrice = (val: number) => {
-    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: user?.currency || 'EUR' }).format(val);
-  };
 
   useEffect(() => {
     setMounted(true);
@@ -485,18 +302,21 @@ export default function Sidebar({
                   <p className="text-[9px] max-[1300px]:text-[10px] xl:text-sm font-black text-white truncate tracking-tighter">
                     {user.full_name || user.email.split('@')[0]}
                   </p>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowNotifications(!showNotifications);
-                    }}
-                    className={`p-1.5 xl:p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer shrink-0 ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
-                  >
-                    <Bell size={18} className="xl:w-6 xl:h-6" />
-                    <div className={`absolute top-1.5 right-1.5 xl:top-2 xl:right-2 w-2 h-2 xl:w-2.5 xl:h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
-                  </button>
+                  {/* Bell ao lado do nome só em desktop (md+); no mobile fica ao lado do plano */}
+                  <div className="hidden md:block shrink-0">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNotifications(!showNotifications);
+                      }}
+                      className={`p-1.5 xl:p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
+                    >
+                      <Bell size={18} className="xl:w-6 xl:h-6" />
+                      <div className={`absolute top-1.5 right-1.5 xl:top-2 xl:right-2 w-2 h-2 xl:w-2.5 xl:h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2 md:gap-2">
                   <span className={`text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest ${
                     user.is_admin 
                       ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
@@ -506,18 +326,31 @@ export default function Sidebar({
                   }`}>
                     {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? (currentPlan?.label ?? t.dashboard.sidebar.planPro) : t.dashboard.sidebar.planFree}
                   </span>
+                  {/* No mobile (< md): sino ao lado do plano, um bocado à direita — sempre visível no viewport mobile */}
+                  <div className="md:hidden shrink-0 ml-1">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNotifications(!showNotifications);
+                      }}
+                      className={`p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
+                    >
+                      <Bell size={18} />
+                      <div className={`absolute top-1 right-1 w-2 h-2 rounded-full border-2 border-[#020617] ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Main Notification Card */}
+            {/* Main Notification Card — só no desktop (no mobile o card abre no header) */}
             <AnimatePresence>
               {showNotifications && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9, x: -20 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                  className="absolute bottom-0 left-full ml-4 w-[320px] max-w-[90vw] bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-5 notification-card"
+                  initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -8 }}
+                  className="hidden lg:block absolute top-auto left-full bottom-0 mt-0 ml-4 w-[320px] max-w-[90vw] bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-5 notification-card"
                   style={{ pointerEvents: 'auto' }}
                 >
                   <div className="flex items-center justify-between mb-4">

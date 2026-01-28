@@ -514,9 +514,103 @@ function TransactionsPageContent() {
 
       {/* Transactions List & Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-        {/* Left: Transactions Table */}
+        {/* Left: Transactions Table (desktop) / Cards (mobile) */}
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
+        {/* Mobile: card list */}
+        <div className="md:hidden px-4 py-4 space-y-3">
+          {filteredTransactions.length === 0 ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 border border-slate-800">
+                <SearchX size={28} className="text-slate-700 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-black text-white mb-2">{t.dashboard.transactions.noResultsTitle}</h3>
+              <p className="text-slate-500 text-xs font-medium italic max-w-xs mx-auto">
+                {t.dashboard.transactions.noResultsHint}
+              </p>
+            </div>
+          ) : (
+            <>
+              {paginatedTransactions.map((transaction) => {
+                const cat = categories.find(c => c.id === transaction.category_id);
+                const isIncome = cat && cat.vault_type !== 'none'
+                  ? transaction.amount_cents > 0
+                  : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
+                return (
+                  <button
+                    key={transaction.id}
+                    type="button"
+                    onClick={() => setSelectedTransaction(transaction)}
+                    className="w-full text-left bg-slate-800/50 hover:bg-slate-800/80 border border-slate-700/50 rounded-2xl p-4 active:scale-[0.99] transition-all touch-manipulation"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-white truncate">{transaction.description}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] font-black uppercase text-slate-500">
+                            {new Date(transaction.transaction_date).getDate()} {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
+                          </span>
+                          <span className="text-slate-600">·</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-black shrink-0 ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredTransactions.length > itemsPerPage && (
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
+                    {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer touch-manipulation"
+                    >
+                      <ChevronDown size={18} className="rotate-90" />
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
+                        .map((page, index, array) => (
+                          <div key={page} className="flex items-center gap-1">
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="text-slate-700 px-1">...</span>
+                            )}
+                            <button
+                              onClick={() => setCurrentPage(page)}
+                              className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all cursor-pointer touch-manipulation ${
+                                currentPage === page ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer touch-manipulation"
+                    >
+                      <ChevronDown size={18} className="-rotate-90" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Desktop: table or virtualized list */}
+        <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle px-4 sm:px-0">
             {filteredTransactions.length > VIRTUALIZE_THRESHOLD ? (
               <>
@@ -658,9 +752,9 @@ function TransactionsPageContent() {
           </div>
         </div>
 
-        {/* Pagination Controls — apenas quando não virtualizado e há mais de uma página */}
+        {/* Pagination Controls (desktop table) — apenas quando não virtualizado e há mais de uma página */}
         {filteredTransactions.length <= VIRTUALIZE_THRESHOLD && filteredTransactions.length > itemsPerPage && (
-          <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
+          <div className="hidden md:flex px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
               {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>
             </p>

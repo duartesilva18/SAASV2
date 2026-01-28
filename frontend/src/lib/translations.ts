@@ -738,7 +738,7 @@ export const translations = {
                 deleteError: "Erro ao eliminar a conta.",
                 marketingChannels: "Email • SMS • Telegram",
                 needHelp: "Precisas de ajuda?",
-                supportAvailable: "O nosso suporte está disponível 24/7 via Telegram.",
+                supportAvailable: "O nosso suporte está disponível 24/7 via Whatsapp.",
                 sessionExpired: {
                     title: "Sessão Expirada",
                     message: "A tua sessão expirou por segurança. Por favor, inicia sessão novamente.",
@@ -1174,7 +1174,7 @@ export const translations = {
     en: {
         nav: {
             login: "I already have an account",
-            loginButton: "Login",
+            loginButton: "Log in",
             register: "Start Free"
         },
         banner: "🚀 Special Offer: Get 3 months free on the annual plan",
@@ -2396,3 +2396,4 @@ export type TranslationLocale = typeof translations.pt;
 export type DashboardTransactionsT = TranslationLocale['dashboard']['transactions'];
 /** Tipo das chaves da secção dashboard.guide. */
 export type DashboardGuideT = TranslationLocale['dashboard']['guide'];
+
