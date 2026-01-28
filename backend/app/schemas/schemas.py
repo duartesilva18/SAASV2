@@ -447,4 +447,3 @@ class PromoteToAffiliateRequest(BaseModel):
 class AffiliateSettingsUpdate(BaseModel):
     """Atualizar percentagem de comissão"""
     commission_percentage: float = Field(..., ge=0, le=100)
-

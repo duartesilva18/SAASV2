@@ -305,4 +305,3 @@ class AffiliateCommission(Base):
     __table_args__ = (
         UniqueConstraint('affiliate_id', 'month', name='unique_affiliate_month'),
     )
-

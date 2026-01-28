@@ -2,6 +2,7 @@ export const translations = {
     pt: {
         nav: {
             login: "Já tenho conta",
+            loginButton: "Entrar",
             register: "Começar Grátis"
         },
         banner: "🚀 Oferta Especial: Ganhe 3 meses grátis no plano anual",
@@ -1173,6 +1174,7 @@ export const translations = {
     en: {
         nav: {
             login: "I already have an account",
+            loginButton: "Login",
             register: "Start Free"
         },
         banner: "🚀 Special Offer: Get 3 months free on the annual plan",
@@ -2394,4 +2396,3 @@ export type TranslationLocale = typeof translations.pt;
 export type DashboardTransactionsT = TranslationLocale['dashboard']['transactions'];
 /** Tipo das chaves da secção dashboard.guide. */
 export type DashboardGuideT = TranslationLocale['dashboard']['guide'];
-

@@ -121,105 +121,120 @@ export default function LandingPage() {
         </p>
       </motion.div>
 
-      {/* Navbar com animação */}
-      <motion.nav 
-        className="max-w-7xl mx-auto px-6 py-0 flex items-center justify-between border-b border-white/5 relative z-40"
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2, type: "spring" }}
+      {/* Navbar: logo, nome e botões numa linha, alinhados. Sem motion no header para evitar hydration mismatch. */}
+      <nav
+        className="max-w-7xl mx-auto px-4 sm:px-6 py-3 border-b border-white/5 relative z-40"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
       >
-        <motion.div 
-          className="flex items-center select-none p-0 m-0"
-          whileHover={{ scale: 1.05 }}
-        >
-          <motion.img
-            src="/images/logo/logo.png"
-            alt="Finly"
-            className="h-64 w-auto m-0 p-0 select-none pointer-events-none"
-            whileHover={{ scale: 1.1 }}
-            draggable="false"
-          />
-        </motion.div>
-        
-        <div className="flex items-center gap-4 md:gap-8">
-          {/* Language Selector */}
-          <div className="relative">
-            <motion.button
-              onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 transition-all text-slate-300 hover:text-white cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Globe size={18} />
-              <span className="text-xs font-bold hidden sm:inline">
-                {availableLanguages[language]?.flag} {availableLanguages[language]?.code.toUpperCase()}
-              </span>
-              <span className="text-xs font-bold sm:hidden">
-                {availableLanguages[language]?.flag}
-              </span>
-            </motion.button>
-
-            <AnimatePresence mode="wait">
-              {showLanguageMenu && (
-                <>
-                  <motion.div
-                    key="language-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowLanguageMenu(false)}
-                  />
-                  <motion.div
-                    key="language-menu"
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="absolute right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 min-w-[180px]"
-                  >
-                    {Object.values(availableLanguages)
-                      .filter((lang): lang is LanguageConfig => lang !== null && lang !== undefined && lang.code !== undefined)
-                      .map((lang) => (
-                        <button
-                          key={`lang-${lang.code}`}
-                          onClick={() => {
-                            setLanguage(lang.code as LanguageCode);
-                            setShowLanguageMenu(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer ${
-                            language === lang.code ? 'bg-blue-500/10 text-blue-400' : 'text-slate-300'
-                          }`}
-                        >
-                          <span className="text-lg">{lang.flag}</span>
-                          <div className="flex-1">
-                            <div className="text-sm font-bold">{lang.nativeName}</div>
-                            <div className="text-xs text-slate-500">{lang.name}</div>
-                          </div>
-                          {language === lang.code && (
-                            <CheckCircle2 size={16} className="text-blue-400" />
-                          )}
-                        </button>
-                      ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <Link href="/auth/login" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors hidden md:block">
-            {t.nav.login}
-          </Link>
-          <motion.div
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
+        <div className="flex flex-row items-center justify-between gap-3 sm:gap-4 min-h-[56px]">
+          <Link
+            href="/"
+            className="flex items-center gap-2 sm:gap-3 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0"
           >
-            <Link href="/auth/register" className="bg-white text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-50 transition-all shadow-xl">
+            <img
+              src="/images/logo/logo-semfundo.png"
+              alt="Finly"
+              className="h-10 w-10 sm:h-14 sm:w-14 shrink-0 select-none pointer-events-none object-contain"
+              draggable="false"
+            />
+            <span
+              className="text-white font-semibold tracking-tight text-xl sm:text-3xl leading-none whitespace-nowrap"
+              style={{ fontFamily: 'var(--font-brand), sans-serif' }}
+            >
+              Finly
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-8 shrink-0">
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 h-11 min-w-[44px] px-3 sm:px-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 active:scale-95 transition-all text-slate-300 hover:text-white cursor-pointer touch-manipulation"
+                aria-label={t.nav?.login ? "Idioma" : "Language"}
+              >
+                <Globe size={20} className="sm:w-5 sm:h-5" />
+                <span className="text-xs font-bold hidden sm:inline">
+                  {availableLanguages[language]?.flag} {availableLanguages[language]?.code.toUpperCase()}
+                </span>
+                <span className="text-xs font-bold sm:hidden">
+                  {availableLanguages[language]?.flag}
+                </span>
+              </button>
+
+              <AnimatePresence mode="wait">
+                {showLanguageMenu && (
+                  <>
+                    <motion.div
+                      key="language-overlay"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowLanguageMenu(false)}
+                    />
+                    <motion.div
+                      key="language-menu"
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      className="absolute right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 min-w-[180px]"
+                    >
+                      {Object.values(availableLanguages)
+                        .filter((lang): lang is LanguageConfig => lang !== null && lang !== undefined && lang.code !== undefined)
+                        .map((lang) => (
+                          <button
+                            key={`lang-${lang.code}`}
+                            onClick={() => {
+                              setLanguage(lang.code as LanguageCode);
+                              setShowLanguageMenu(false);
+                            }}
+                            className={`w-full px-4 py-3.5 min-h-[48px] text-left flex items-center gap-3 hover:bg-slate-800 active:bg-slate-700 transition-colors cursor-pointer touch-manipulation ${
+                              language === lang.code ? 'bg-blue-500/10 text-blue-400' : 'text-slate-300'
+                            }`}
+                          >
+                            <span className="text-lg">{lang.flag}</span>
+                            <div className="flex-1">
+                              <div className="text-sm font-bold">{lang.nativeName}</div>
+                              <div className="text-xs text-slate-500">{lang.name}</div>
+                            </div>
+                            {language === lang.code && (
+                              <CheckCircle2 size={16} className="text-blue-400 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Mobile: um só botão de login — mesma altura que o seletor de idioma para alinhar */}
+            <Link
+              href="/auth/login"
+              className="sm:hidden h-11 flex items-center justify-center bg-white px-5 rounded-2xl shadow-xl touch-manipulation shrink-0 hover:bg-blue-50 active:scale-[0.98] transition-all"
+            >
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">
+                {t.nav?.loginButton ?? 'Entrar'}
+              </span>
+            </Link>
+            {/* Desktop: Já tenho conta + Começar Grátis */}
+            <Link
+              href="/auth/login"
+              className="hidden sm:flex text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors min-h-[44px] items-center px-2 shrink-0"
+            >
+              {t.nav.login}
+            </Link>
+            <Link
+              href="/auth/register"
+              className="hidden sm:flex bg-white text-black px-4 sm:px-8 py-3 sm:py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-50 active:scale-[0.98] transition-all shadow-xl min-h-[44px] items-center justify-center touch-manipulation shrink-0"
+            >
               {t.nav.register}
             </Link>
-          </motion.div>
+          </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 pt-24 pb-32 text-center relative">
@@ -449,7 +464,7 @@ export default function LandingPage() {
                       router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
                     }
                   }}
-                  className={`mt-auto w-full block text-center px-6 py-4 rounded-2xl text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
+                  className={`mt-auto w-full block text-center px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
                     plan.popular
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'

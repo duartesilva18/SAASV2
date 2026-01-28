@@ -165,17 +165,13 @@ A variável `DATABASE_URL` será preenchida automaticamente.
 - O backend deve mostrar: `Application startup complete`
 - O frontend deve mostrar: `Ready on port XXXX`
 
-## 🔄 Passo 7: Migrações (Alembic)
+## 🔄 Passo 7: Base de dados
 
-O **Start Command** do backend já inclui as migrações:
+O backend usa `Base.metadata.create_all()` no arranque: as tabelas são criadas automaticamente se não existirem. O **Start Command** é:
 
 ```bash
-alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
-
-Assim, em cada deploy as migrations são aplicadas automaticamente antes de o servidor arrancar.
-
-Para o fluxo completo (alterar modelo → gerar migration → testar local → deploy), use o guia **backend/MIGRATIONS_RENDER.md**.
 
 ## 🌐 Passo 8: Configurar Domínio Personalizado (Opcional)
 

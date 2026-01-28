@@ -64,6 +64,12 @@ body {
   color: #ef4444;
 }
 
+/* Android / mobile: safe-area e touch targets */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer components {
   .field-error {
     @apply border-red-500/60 bg-red-500/5;
