@@ -17,7 +17,6 @@ export default function SupportButton() {
         if (res.data && res.data.support_phone) {
           // Remove tudo o que não seja dígito (remove +, espaços, traços, etc)
           const cleanNumber = res.data.support_phone.replace(/\D/g, '');
-          console.log('Suporte Telegram carregado:', cleanNumber);
           setTelegramNumber(cleanNumber);
         }
       } catch (err) {

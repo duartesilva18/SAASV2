@@ -67,7 +67,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const fetchUser = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    console.info('[auth] fetchUser token present:', !!token);
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -75,13 +74,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      console.info('[auth] fetchUser /auth/me with token len:', token.length);
       const res = await api.get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
     } catch (err) {
-      console.warn('[auth] fetchUser failed', err);
       // Token inválido ou expirado
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');

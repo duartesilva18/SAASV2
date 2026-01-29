@@ -9,11 +9,11 @@ import LoadingScreen from '@/components/LoadingScreen';
 import AlertModal from '@/components/AlertModal';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -199,6 +199,9 @@ export default function DashboardLayout({
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
                 </svg>
               </a>
+              <Link href="/add-to-home" className="p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-lg hover:bg-white/5 shrink-0" title="App no telemóvel" aria-label="App no telemóvel">
+                <Smartphone className="w-5 h-5" />
+              </Link>
               <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
                 <HelpCircle size={18} />
               </Link>
@@ -260,6 +263,18 @@ function MobileHeaderWithNotifications({
   onOpenMenu: () => void;
 }) {
   const { setShowNotifications, showNotifications } = useNotifications();
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
+    };
+    if (toolsOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [toolsOpen]);
 
   return (
     <>
@@ -275,14 +290,62 @@ function MobileHeaderWithNotifications({
             <span className="text-white font-semibold tracking-tight text-xl leading-none whitespace-nowrap" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>Finly</span>
           </Link>
           <div className="flex items-center gap-2 shrink-0">
-            <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
-                <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
-              </svg>
-            </a>
-            <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
-              <HelpCircle size={18} />
-            </Link>
+            <div className="relative" ref={toolsRef}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setToolsOpen((o) => !o); }}
+                className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-xl hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                title="Acesso rápido"
+                aria-label="Acesso rápido"
+                aria-expanded={toolsOpen}
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              <AnimatePresence>
+                {toolsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-800/98 backdrop-blur-xl border border-slate-600/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <a
+                        href="https://t.me/FinanZenApp_bot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] cursor-pointer active:scale-95 transition-transform"
+                        title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'}
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors rotate-[-4deg]">
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current rotate-[4deg]" aria-hidden>
+                            <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                          </svg>
+                        </span>
+                      </a>
+                      <Link
+                        href="/add-to-home"
+                        className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
+                        title="App no telemóvel"
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <Smartphone className="w-5 h-5" />
+                      </Link>
+                      <Link
+                        href="/guide"
+                        className="flex items-center justify-center w-11 h-11 rounded-xl text-amber-400 hover:bg-amber-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
+                        title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'}
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <HelpCircle className="w-5 h-5" />
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button
               onClick={() => setShowNotifications(true)}
               className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center relative notification-trigger"
