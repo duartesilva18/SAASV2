@@ -53,7 +53,7 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
     ],
-    apple: '/images/logo/icon.jpeg',
+    apple: '/images/logo/logo-semfundo.png',
     shortcut: '/favicon.ico',
   },
   alternates: {

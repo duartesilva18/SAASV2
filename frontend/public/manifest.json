@@ -14,14 +14,14 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/images/logo/icon.jpeg",
+      "src": "/images/logo/logo-semfundo.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
     },
     {
-      "src": "/images/logo/icon.jpeg",
+      "src": "/images/logo/logo-semfundo.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ],
   "categories": ["finance", "productivity", "utilities"],
