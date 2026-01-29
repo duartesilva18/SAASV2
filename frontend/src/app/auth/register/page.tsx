@@ -283,7 +283,7 @@ function RegisterPageContent() {
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[520px]">
           <div className="mb-8 lg:mb-12 text-center lg:text-left">
-            <div className="lg:hidden w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-6 overflow-hidden border border-slate-700 bg-slate-800/90 shadow-xl">
+            <div className="lg:hidden w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
               <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-4xl lg:text-5xl font-black tracking-tighter mb-3 lg:mb-4 text-white">

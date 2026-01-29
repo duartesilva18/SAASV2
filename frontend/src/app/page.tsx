@@ -255,8 +255,8 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Simulador de chat — interativo; em mobile altura limitada */}
-                <div className="w-full max-w-[min(100%,22rem)] sm:max-w-md lg:max-w-[420px] shrink-0">
+                {/* Simulador de chat — interativo; em mobile altura limitada e centrado */}
+                <div className="w-full max-w-[min(100%,22rem)] sm:max-w-md lg:max-w-[420px] shrink-0 mx-auto">
                   <div className="bg-slate-900 rounded-[20px] sm:rounded-[24px] md:rounded-[32px] border border-white/10 shadow-2xl overflow-hidden aspect-[9/16] max-h-[65vh] sm:max-h-[70vh] md:aspect-auto md:max-h-none md:h-[480px] lg:h-[520px] xl:h-[560px] flex flex-col">
                     <div className="bg-slate-800 border-b border-white/5 p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shrink-0">
