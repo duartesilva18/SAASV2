@@ -5,8 +5,9 @@ from fastapi.responses import JSONResponse, Response
 from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
-from .models.database import Base, SystemSetting
-from .core.dependencies import engine, get_db
+from .models.database import Base, SystemSetting, User, Workspace
+from .core.dependencies import engine, get_db, SessionLocal
+from .core import security
 from .core.limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -42,21 +43,25 @@ if sys.platform == 'win32':
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
+# Email e password do admin criado automaticamente ao arrancar o servidor (se não existir)
+DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@admin.pt')
+DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
+
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Configuração de CORS - apenas variáveis de ambiente (sem listas fixas no código)
-allowed_origins_str = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000')
+# Configuração de CORS - em produção sem variáveis usa https://app.finlybot.com como base
+environment = os.getenv('ENVIRONMENT', 'development')
+_default_origins = 'https://app.finlybot.com' if environment == 'production' else 'https://app.finlybot.com,http://localhost:3000,http://127.0.0.1:3000'
+allowed_origins_str = os.getenv('ALLOWED_ORIGINS', _default_origins)
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
 
-environment = os.getenv('ENVIRONMENT', 'development')
 if environment == 'production' and ('*' in allowed_origins or not allowed_origins):
     logger.warning(
-        "CORS em produção sem ALLOWED_ORIGINS válido. "
-        "Defina ALLOWED_ORIGINS no ambiente (ex: https://finanzen.pt,https://app.finanzen.pt)."
+        "CORS em produção sem ALLOWED_ORIGINS válido. A usar origem por defeito: https://app.finlybot.com"
     )
-    allowed_origins = []  # sem fallback; quem faz deploy define as origens no env
+    allowed_origins = ['https://app.finlybot.com']
 
 # Log das origens CORS configuradas
 logger.info(f"🌐 CORS configurado com {len(allowed_origins)} origens: {allowed_origins}")
@@ -121,6 +126,43 @@ try:
     setup_bot_info()
 except Exception as e:
     logger.warning(f"Não foi possível configurar bot Telegram: {e}")
+
+
+@app.on_event("startup")
+def create_default_admin():
+    """Cria utilizador admin (admin@admin.pt / admin) se não existir, ao arrancar o servidor."""
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.email == DEFAULT_ADMIN_EMAIL).first()
+        if existing:
+            if not existing.is_admin:
+                existing.is_admin = True
+                db.commit()
+                logger.info(f"Utilizador {DEFAULT_ADMIN_EMAIL} promovido a admin.")
+            return
+        password_hash = security.get_password_hash(DEFAULT_ADMIN_PASSWORD)
+        admin_user = User(
+            email=DEFAULT_ADMIN_EMAIL,
+            full_name="Admin",
+            password_hash=password_hash,
+            is_admin=True,
+            is_email_verified=True,
+            language="pt",
+            terms_accepted=True,
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+        workspace = Workspace(owner_id=admin_user.id, name="Meu Workspace")
+        db.add(workspace)
+        db.commit()
+        logger.info(f"Utilizador admin criado: {DEFAULT_ADMIN_EMAIL}. Altera a password após o primeiro login em produção.")
+    except Exception as e:
+        logger.exception(f"Erro ao criar admin por defeito: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
 
 # Novo endpoint público para as definições básicas do sistema
 @app.get('/api/settings/public')

@@ -27,7 +27,7 @@ VERIFICATION_EXPIRY_MINUTES = 30
 def _frontend_base_url() -> str:
     """Um único URL base para links em emails (evita lista separada por vírgulas)."""
     url = (getattr(settings, 'FRONTEND_URL', None) or '').strip()
-    return (url.split(',')[0].strip().rstrip('/') or 'http://localhost:3000')
+    return (url.split(',')[0].strip().rstrip('/') or 'https://app.finlybot.com')
 
 
 async def _send_verification_email_background(to_email: str, subject: str, body_html: str) -> None:

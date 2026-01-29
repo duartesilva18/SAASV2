@@ -1210,6 +1210,8 @@ export const fr = {
                   paidFromReferrals: "{paid} payés sur {total} parrainages",
                   referrals: "parrainages",
                   referralsLabel: "Parrainages",
+                  earningsLabel: "Gains",
+                  sinceLabel: "Depuis",
                   noData: "Aucune donnée disponible",
                   noAffiliatesFound: "Aucun affilié trouvé",
                   viewDetails: "Voir les détails",

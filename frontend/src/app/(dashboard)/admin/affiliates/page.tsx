@@ -691,7 +691,8 @@ export default function AdminAffiliatesPage() {
                           </code>
                           <button
                             onClick={() => {
-                              navigator.clipboard.writeText(aff.affiliate_code!);
+                              if (!aff.affiliate_code) return;
+                              navigator.clipboard.writeText(aff.affiliate_code);
                               setToast({
                                 isVisible: true,
                                 message: t.dashboard.admin.affiliates.codeCopied,
@@ -706,11 +707,15 @@ export default function AdminAffiliatesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <code className="text-xs font-mono text-blue-400 bg-slate-900/50 px-2 py-1 rounded flex-1 truncate border border-blue-500/20">
-                            {typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${aff.affiliate_code}` : ''}
+                            {typeof window !== 'undefined' && aff.affiliate_code
+                              ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com'}/auth/register?ref=${encodeURIComponent(aff.affiliate_code)}`
+                              : ''}
                           </code>
                           <button
                             onClick={() => {
-                              const fullLink = typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${aff.affiliate_code}` : '';
+                              if (!aff.affiliate_code) return;
+                              const baseUrl = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com') : 'https://app.finlybot.com';
+                              const fullLink = `${baseUrl}/auth/register?ref=${encodeURIComponent(aff.affiliate_code)}`;
                               navigator.clipboard.writeText(fullLink);
                               setToast({
                                 isVisible: true,
@@ -732,15 +737,15 @@ export default function AdminAffiliatesPage() {
                         <p className="font-black text-white">{aff.total_referrals}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Conversões</p>
+                        <p className="text-slate-500">{t.dashboard.admin.affiliates.conversionsLabel}</p>
                         <p className="font-black text-green-400">{aff.total_conversions}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Ganhos</p>
+                        <p className="text-slate-500">{t.dashboard.admin.affiliates.earningsLabel}</p>
                         <p className="font-black text-amber-400">{formatPrice(aff.total_earnings_cents)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Desde</p>
+                        <p className="text-slate-500">{t.dashboard.admin.affiliates.sinceLabel}</p>
                         <p className="font-black text-slate-400 text-xs">
                           {new Date(aff.created_at).toLocaleDateString('pt-PT')}
                         </p>

@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = os.getenv('GOOGLE_CLIENT_ID', '')
     # Um único URL base para links em emails e redirects (ex.: https://app.finlybot.com).
     # Se vier lista separada por vírgulas, usa o primeiro.
-    FRONTEND_URL: str = (os.getenv('FRONTEND_URL') or 'http://localhost:3000').split(',')[0].strip()
+    FRONTEND_URL: str = (os.getenv('FRONTEND_URL') or 'https://app.finlybot.com').split(',')[0].strip().rstrip('/')
     
     # Configuração de ambiente
     ENVIRONMENT: str = os.getenv('ENVIRONMENT', 'development')

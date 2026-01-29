@@ -1171,6 +1171,8 @@ export const pt = {
                   paidFromReferrals: "{paid} pagaram de {total} referências",
                   referrals: "referências",
                   referralsLabel: "Referências",
+                  earningsLabel: "Ganhos",
+                  sinceLabel: "Desde",
                   noData: "Sem dados disponíveis",
                   noAffiliatesFound: "Nenhum afiliado encontrado",
                   viewDetails: "Ver Detalhes",

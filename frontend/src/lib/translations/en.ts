@@ -1210,6 +1210,8 @@ export const en = {
                   paidFromReferrals: "{paid} paid from {total} referrals",
                   referrals: "referrals",
                   referralsLabel: "Referrals",
+                  earningsLabel: "Earnings",
+                  sinceLabel: "Since",
                   noData: "No data available",
                   noAffiliatesFound: "No affiliates found",
                   viewDetails: "View Details",
