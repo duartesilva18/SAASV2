@@ -111,7 +111,8 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#3b82f6",
+  // Barra de estado no topo (PWA/telemóvel): escuro para combinar com a app em vez de azul
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({

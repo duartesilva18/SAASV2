@@ -8,9 +8,14 @@ import { useTranslation } from '@/lib/LanguageContext';
 
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<{ outcome: string }> };
 
+/** Detecta iPhone, iPad ou iPod (inclui iPadOS 13+ que reporta como Mac com touch). */
 function isIOS(): boolean {
   if (typeof window === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ no Safari pode reportar platform "MacIntel" com multi-touch
+  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true;
+  return false;
 }
 
 function isStandalone(): boolean {
@@ -27,8 +32,14 @@ export default function AddToHomePage() {
   const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
-  const [ios] = useState(() => typeof window !== 'undefined' && isIOS());
-  const [standalone] = useState(() => typeof window !== 'undefined' && isStandalone());
+  const [ios, setIos] = useState(false);
+  const [standalone, setStandalone] = useState(false);
+
+  // Deteção no cliente após mount (evita SSR dar sempre false no iPhone)
+  useEffect(() => {
+    setIos(isIOS());
+    setStandalone(isStandalone());
+  }, []);
 
   const addToHome = t?.dashboard?.addToHome;
 
