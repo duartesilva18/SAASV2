@@ -86,20 +86,20 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-8">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-8 overflow-y-auto">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/90 backdrop-blur-sm"
       />
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-2xl bg-[#020617] border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
+        className="relative w-full max-w-2xl max-h-[100dvh] sm:max-h-[90vh] bg-[#020617] border border-slate-800 rounded-t-3xl sm:rounded-[32px] overflow-hidden shadow-2xl flex flex-col"
       >
         {/* Progress Bar */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-slate-900">
+        <div className="absolute top-0 left-0 w-full h-1 bg-slate-900 shrink-0">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: '100%' }}
@@ -108,12 +108,12 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           />
         </div>
 
-        <div className="p-8 lg:p-12">
-          <div className="mb-10 text-center">
-            <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mx-auto mb-6">
-              <Sparkles size={32} />
+        <div className="p-4 sm:p-6 lg:p-12 overflow-y-auto flex-1 min-h-0 pb-[env(safe-area-inset-bottom)]">
+          <div className="mb-6 sm:mb-10 text-center">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mx-auto mb-4 sm:mb-6">
+              <Sparkles className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
-            <h2 className="text-3xl lg:text-4xl font-black tracking-tighter text-white mb-3">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-white mb-2 sm:mb-3">
               Bem-vindo ao seu <span className="text-blue-500 italic">Novo Eu Financeiro</span>
             </h2>
             <p className="text-slate-400 font-medium italic">
@@ -121,8 +121,8 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Full Name */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
@@ -263,7 +263,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 text-sm group cursor-pointer"
+              className="w-full py-4 sm:py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl sm:rounded-[24px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 text-sm group cursor-pointer min-h-[48px]"
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />

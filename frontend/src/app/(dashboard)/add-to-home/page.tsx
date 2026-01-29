@@ -5,8 +5,7 @@ import { motion } from 'framer-motion';
 import { Smartphone, Share, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/lib/LanguageContext';
-
-type BeforeInstallPromptEvent = Event & { prompt: () => Promise<{ outcome: string }> };
+import { useInstallPrompt } from '@/lib/InstallPromptContext';
 
 /** Detecta iPhone, iPad ou iPod (inclui iPadOS 13+ que reporta como Mac com touch). */
 function isIOS(): boolean {
@@ -30,7 +29,7 @@ function isStandalone(): boolean {
 
 export default function AddToHomePage() {
   const { t } = useTranslation();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const { deferredPrompt, clearPrompt } = useInstallPrompt();
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
   const [standalone, setStandalone] = useState(false);
@@ -43,20 +42,11 @@ export default function AddToHomePage() {
 
   const addToHome = t?.dashboard?.addToHome;
 
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
   const handleInstall = async () => {
     if (!deferredPrompt) return;
     const { outcome } = await deferredPrompt.prompt();
     if (outcome === 'accepted') setInstalled(true);
-    setDeferredPrompt(null);
+    clearPrompt();
   };
 
   if (standalone) {

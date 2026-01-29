@@ -75,9 +75,9 @@ export default function CookieBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:max-w-md z-[200]"
+          className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-4 right-4 md:left-auto md:right-8 md:max-w-md z-[200]"
         >
-          <div className="bg-[#0f172a]/80 backdrop-blur-2xl border border-slate-800 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden relative">
+          <div className="bg-[#0f172a]/95 backdrop-blur-2xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden relative">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 blur-[50px] rounded-full -z-10" />
             <div className="flex items-start gap-4 mb-6">
               <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
@@ -99,26 +99,29 @@ export default function CookieBanner() {
             {!showSettings ? (
               <div className="flex flex-col gap-3">
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleAcceptAll}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
+                  className="w-full py-3.5 sm:py-4 min-h-[44px] bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
                 >
                   <ShieldCheck size={18} />
                   {t.cookies.acceptAll}
                 </motion.button>
                 <div className="grid grid-cols-2 gap-3">
                   <motion.button
+                    type="button"
                     whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                     onClick={handleAcceptEssential}
-                    className="py-3 px-4 border border-slate-800 text-slate-400 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all hover:text-white cursor-pointer"
+                    className="py-3 px-4 min-h-[44px] border border-slate-800 text-slate-400 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all hover:text-white cursor-pointer active:scale-[0.98]"
                   >
                     {t.cookies.declineAll}
                   </motion.button>
                   <motion.button
+                    type="button"
                     whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                     onClick={() => setShowSettings(true)}
-                    className="py-3 px-4 border border-slate-800 text-slate-400 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all hover:text-white flex items-center justify-center gap-1 cursor-pointer"
+                    className="py-3 px-4 min-h-[44px] border border-slate-800 text-slate-400 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all hover:text-white flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
                   >
                     {t.cookies.settings}
                     <ChevronRight size={14} />
@@ -130,8 +133,10 @@ export default function CookieBanner() {
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-white font-bold text-sm">Definições de Cookies</h4>
                   <button
+                    type="button"
                     onClick={() => setShowSettings(false)}
-                    className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    className="min-w-[44px] min-h-[44px] -m-2 p-2 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer rounded-xl active:scale-95"
+                    aria-label="Fechar definições"
                   >
                     <X size={18} />
                   </button>
@@ -164,17 +169,19 @@ export default function CookieBanner() {
                 
                 <div className="flex gap-3 pt-2">
                   <motion.button
+                    type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleAcceptAll}
-                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition-all cursor-pointer"
+                    className="flex-1 py-3 min-h-[44px] bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-[0.98]"
                   >
                     Guardar Preferências
                   </motion.button>
                   <motion.button
+                    type="button"
                     whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                     onClick={handleDeclineAll}
-                    className="flex-1 py-3 border border-slate-800 text-slate-400 rounded-xl font-bold text-xs transition-all hover:text-white cursor-pointer"
+                    className="flex-1 py-3 min-h-[44px] border border-slate-800 text-slate-400 rounded-xl font-bold text-xs transition-all hover:text-white cursor-pointer active:scale-[0.98]"
                   >
                     Apenas Essenciais
                   </motion.button>
@@ -183,8 +190,9 @@ export default function CookieBanner() {
             )}
             
             <button
+              type="button"
               onClick={handleClose}
-              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 min-w-[44px] min-h-[44px] -m-2 p-2 flex items-center justify-center text-slate-500 hover:text-white transition-colors cursor-pointer rounded-xl active:scale-95"
               aria-label="Fechar"
             >
               <X size={18} />

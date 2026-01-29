@@ -48,8 +48,8 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-slate-900/60 border border-red-500/20 rounded-[32px] p-8 text-center">
+        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="max-w-md w-full bg-slate-900/60 border border-red-500/20 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 text-center">
             <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <AlertCircle className="text-red-500" size={32} />
             </div>
@@ -73,18 +73,18 @@ export class ErrorBoundary extends Component<Props, State> {
               </details>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
+                type="button"
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer active:scale-[0.98]"
               >
                 <RefreshCw size={16} />
                 Tentar Novamente
               </button>
-              
               <Link
                 href="/dashboard"
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer active:scale-[0.98]"
               >
                 <Home size={16} />
                 Início

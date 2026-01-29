@@ -43,7 +43,10 @@ if sys.platform == 'win32':
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
-# Email e password do admin criado automaticamente ao arrancar o servidor (se não existir)
+# Admin criado ao arrancar (se CREATE_DEFAULT_ADMIN=true e não existir)
+# No Render: define DEFAULT_ADMIN_EMAIL e DEFAULT_ADMIN_PASSWORD e altera a password após 1º login.
+# Para não criar admin automaticamente: CREATE_DEFAULT_ADMIN=false
+CREATE_DEFAULT_ADMIN = os.getenv('CREATE_DEFAULT_ADMIN', 'true').lower() in ('1', 'true', 'yes')
 DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@admin.pt')
 DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
 
@@ -130,7 +133,10 @@ except Exception as e:
 
 @app.on_event("startup")
 def create_default_admin():
-    """Cria utilizador admin (admin@admin.pt / admin) se não existir, ao arrancar o servidor."""
+    """Cria utilizador admin se não existir, ao arrancar o servidor (quando CREATE_DEFAULT_ADMIN=true)."""
+    if not CREATE_DEFAULT_ADMIN:
+        logger.info("CREATE_DEFAULT_ADMIN está desativado; não será criado admin por defeito.")
+        return
     db = SessionLocal()
     try:
         existing = db.query(User).filter(User.email == DEFAULT_ADMIN_EMAIL).first()

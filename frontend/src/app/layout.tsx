@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { UserProvider } from "@/lib/UserContext";
+import { InstallPromptProvider } from "@/lib/InstallPromptContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/CookieBanner";
 
@@ -123,15 +124,17 @@ export default function RootLayout({
   return (
     <html lang="pt-PT" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased overflow-x-hidden`}
       >
         <ErrorBoundary>
-          <LanguageProvider>
-            <UserProvider>
-              {children}
-              <CookieBanner />
-            </UserProvider>
-          </LanguageProvider>
+          <InstallPromptProvider>
+            <LanguageProvider>
+              <UserProvider>
+                {children}
+                <CookieBanner />
+              </UserProvider>
+            </LanguageProvider>
+          </InstallPromptProvider>
         </ErrorBoundary>
         <script
           dangerouslySetInnerHTML={{

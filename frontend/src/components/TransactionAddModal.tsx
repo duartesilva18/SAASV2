@@ -120,30 +120,30 @@ export default function TransactionAddModal({
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            className="relative w-full max-w-lg max-h-[95dvh] sm:max-h-[90vh] bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-[32px] overflow-hidden shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
-            <div className="p-8 lg:p-12">
-              <div className="flex justify-between items-center mb-10">
-                <h2 className="text-3xl font-black text-white tracking-tighter">{t.dashboard.transactions.newRecord}</h2>
-                <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer" type="button">
+            <div className="p-4 sm:p-6 lg:p-12 overflow-y-auto flex-1 min-h-0 pb-[env(safe-area-inset-bottom)]">
+              <div className="flex justify-between items-center mb-6 sm:mb-10 gap-2">
+                <h2 className="text-xl sm:text-3xl font-black text-white tracking-tighter truncate">{t.dashboard.transactions.newRecord}</h2>
+                <button onClick={onClose} className="p-2.5 shrink-0 text-slate-500 hover:text-white transition-colors cursor-pointer rounded-xl -m-2.5" type="button" aria-label="Fechar">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} noValidate className="space-y-8">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5 sm:space-y-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.table.description}</label>
                   <div className="relative group">
@@ -158,7 +158,7 @@ export default function TransactionAddModal({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.value}</label>
                     <div className="relative group">
@@ -224,7 +224,7 @@ export default function TransactionAddModal({
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] cursor-pointer"
+                  className="w-full py-4 sm:py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl sm:rounded-[24px] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] cursor-pointer min-h-[48px]"
                 >
                   {t.dashboard.transactions.registerTransaction}
                 </button>

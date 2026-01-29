@@ -89,7 +89,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
   return (
     <AnimatePresence>
       {isVisible && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 lg:p-8 overflow-y-auto overflow-x-hidden max-w-full">
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-2 lg:p-4 overflow-y-auto overflow-x-hidden max-w-full">
           {/* Backdrop - Independent Full Screen */}
           <motion.div 
             initial={{ opacity: 0 }}
@@ -102,10 +102,10 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
 
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.98, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-full lg:max-w-[1600px] min-h-[92vh] max-h-[95vh] my-4 bg-[#0f172a] border border-white/10 rounded-[32px] overflow-hidden shadow-[0_0_150px_-20px_rgba(59,130,246,0.3)] flex flex-col lg:flex-row z-10 min-w-0"
+            exit={{ opacity: 0, scale: 0.98, y: 16 }}
+            className="relative w-full max-w-full lg:max-w-[1600px] min-h-[85dvh] sm:min-h-[92vh] max-h-[95dvh] sm:max-h-[95vh] my-0 sm:my-4 bg-[#0f172a] border border-white/10 rounded-t-3xl sm:rounded-[32px] overflow-hidden shadow-[0_0_150px_-20px_rgba(59,130,246,0.3)] flex flex-col lg:flex-row z-10 min-w-0"
           >
             {/* Left Side - Visual Marketing */}
             <div className="w-full lg:w-[35%] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 p-6 sm:p-12 md:p-16 lg:p-24 flex flex-col justify-between relative overflow-hidden shrink-0">
@@ -157,7 +157,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
             </div>
 
             {/* Right Side - Pricing Options */}
-            <div className="flex-1 w-full min-w-0 p-4 sm:p-8 md:p-12 lg:p-20 xl:p-32 flex flex-col overflow-y-auto no-scrollbar relative bg-[#020617]">
+            <div className="flex-1 w-full min-w-0 p-4 sm:p-8 md:p-12 lg:p-20 xl:p-32 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col overflow-y-auto no-scrollbar relative bg-[#020617]">
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 sm:top-8 sm:right-8 lg:top-12 lg:right-12 p-2 sm:p-4 hover:bg-white/5 rounded-full text-slate-500 transition-colors cursor-pointer z-20"

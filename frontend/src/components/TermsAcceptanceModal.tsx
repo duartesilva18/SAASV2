@@ -44,25 +44,25 @@ export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalP
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative"
+          className="bg-[#0f172a] border border-slate-800 rounded-t-3xl sm:rounded-[32px] p-4 sm:p-6 lg:p-8 max-w-2xl w-full max-h-[95dvh] sm:max-h-[90vh] overflow-y-auto shadow-2xl relative pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
           {/* Background Glow */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
           
           {/* Header */}
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-14 h-14 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
-              <FileText size={28} />
+          <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
+              <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-black text-white mb-2">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-black text-white mb-1 sm:mb-2">
                 Aceitar Termos e Condições
               </h2>
               <p className="text-slate-400 text-sm">
@@ -135,13 +135,13 @@ export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalP
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleAccept}
               disabled={loading || !accepted}
-              className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+              className="flex-1 py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 min-h-[48px]"
             >
               {loading ? (
                 <>

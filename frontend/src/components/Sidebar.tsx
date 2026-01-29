@@ -217,7 +217,7 @@ export default function Sidebar({
               <div
                 key={item.href}
                 onClick={() => router.push('/plans')}
-                className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+                className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
               >
                 <div className="relative shrink-0">
                   <Icon size={20} className="xl:w-5 xl:h-5 text-slate-600" />
@@ -240,7 +240,7 @@ export default function Sidebar({
               key={item.href}
               href={item.href}
               onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
-              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
             >
               <div className="relative shrink-0">
                 <Icon size={20} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
@@ -452,7 +452,7 @@ export default function Sidebar({
 
         <button
           onClick={logout}
-          className={`w-full flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 rounded-xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
+          className={`w-full flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
         >
           <div className="w-3.5 h-3.5 flex items-center justify-center group-hover:-translate-x-1 transition-transform shrink-0">
             <LogOut size={11} className="xl:w-3 xl:h-3" />
@@ -490,7 +490,7 @@ export default function Sidebar({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'tween', duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden shadow-2xl"
+            className="fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden shadow-2xl pb-[env(safe-area-inset-bottom)]"
             style={{ paddingTop: 'env(safe-area-inset-top)' }}
           >
             {sidebarContent}

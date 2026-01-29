@@ -36,15 +36,16 @@ export default function SupportButton() {
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label="Suporte por WhatsApp"
       initial={{ opacity: 0, scale: 0.5, x: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0 }}
       whileHover={{ scale: 1.1, x: -5 }}
       whileTap={{ scale: 0.9 }}
-      className="fixed bottom-6 right-6 z-[9999] flex flex-row-reverse items-center gap-3 group"
+      className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group"
     >
       <div className="relative">
         <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20 group-hover:opacity-40 transition-opacity" />
-        <div className="relative w-14 h-14 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(16,185,129,0.4)] transition-colors border border-emerald-400/20">
+        <div className="relative w-14 h-14 min-w-[56px] min-h-[56px] bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(16,185,129,0.4)] transition-colors border border-emerald-400/20 active:scale-95">
           <MessageCircle size={28} className="fill-white/10" />
         </div>
         <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-600 rounded-full border-2 border-slate-900 flex items-center justify-center shadow-lg">

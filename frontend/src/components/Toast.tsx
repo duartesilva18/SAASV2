@@ -31,12 +31,12 @@ export default function Toast({ message, type, isVisible, onClose, duration = 60
           initial={{ opacity: 0, y: 50, scale: 0.9, x: '-50%' }}
           animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
           exit={{ opacity: 0, scale: 0.9, y: 20, x: '-50%' }}
-          className="fixed bottom-10 left-1/2 z-[400]"
+          className="fixed left-1/2 z-[400] bottom-[calc(5rem+env(safe-area-inset-bottom,0px))]"
         >
           <div className={`
             relative overflow-hidden
-            flex items-center gap-4 px-6 py-4 rounded-[24px] 
-            backdrop-blur-xl border shadow-2xl min-w-[300px]
+            flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl sm:rounded-[24px] 
+            backdrop-blur-xl border shadow-2xl min-w-[280px] max-w-[calc(100vw-2rem)]
             ${type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-emerald-500/10' : 
               type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400 shadow-red-500/10' :
               type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 shadow-amber-500/10' :
@@ -67,10 +67,12 @@ export default function Toast({ message, type, isVisible, onClose, duration = 60
               </p>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] -m-2 p-2 flex items-center justify-center hover:bg-white/5 rounded-xl transition-colors cursor-pointer active:scale-95"
+              aria-label="Fechar"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         </motion.div>

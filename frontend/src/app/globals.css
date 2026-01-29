@@ -18,6 +18,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Bloquear deslizamento lateral em toda a app */
+html,
+body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  /* Em mobile: só permite scroll vertical (evita swipe horizontal acidental) */
+  touch-action: pan-y pinch-zoom;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
@@ -25,6 +34,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
+  /* Mobile: reduz delay de toque e evita zoom em inputs */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer base {
@@ -62,6 +74,20 @@ body {
 .required-label::after {
   content: " *";
   color: #ef4444;
+}
+
+/* iOS: evitar zoom ao focar inputs (font-size < 16px dispara zoom) */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Android / mobile: safe-area e touch targets */

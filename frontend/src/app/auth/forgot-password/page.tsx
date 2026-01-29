@@ -49,11 +49,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 sm:p-12">
-      <div className="absolute top-6 sm:top-8 left-6 sm:left-8">
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-6 lg:p-12 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="absolute top-6 sm:top-8 left-4 sm:left-6">
         <Link
           href="/auth/login"
-          className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer"
+          className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer min-h-[44px] min-w-[44px] -m-2 p-2 rounded-xl active:scale-[0.98]"
+          aria-label={t.auth.forgotPassword.backToLogin}
         >
           <ChevronLeft size={14} />
           {t.auth.forgotPassword.backToLogin}
@@ -75,7 +76,7 @@ export default function ForgotPasswordPage() {
 
         <motion.div
           animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-          className={`bg-slate-900/60 border p-8 sm:p-10 lg:p-12 rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+          className={`bg-slate-900/60 border p-5 sm:p-8 lg:p-12 rounded-2xl sm:rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
         >
           <AnimatePresence mode="wait">
             {error && (
@@ -130,7 +131,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-5 lg:py-7 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-4 flex items-center justify-center gap-3 text-xs lg:text-sm cursor-pointer"
+                className="w-full py-5 lg:py-7 min-h-[48px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-2xl lg:rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-4 flex items-center justify-center gap-3 text-xs lg:text-sm cursor-pointer"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />

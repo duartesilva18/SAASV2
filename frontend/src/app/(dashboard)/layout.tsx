@@ -227,7 +227,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className="flex-1 relative z-10 overflow-y-auto">
+        <main className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -235,7 +235,7 @@ export default function DashboardLayout({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8"
+              className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
               {children}
             </motion.div>

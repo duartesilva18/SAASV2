@@ -337,11 +337,12 @@ function LoginPageContent() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 lg:p-24 relative z-10 bg-[#020617]/95">
-          <div className="lg:hidden absolute top-6 sm:top-8 left-6 sm:left-8">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-12 xl:p-24 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="lg:hidden absolute top-6 sm:top-8 left-4 sm:left-6">
             <Link
               href="/"
-              className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer"
+              className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer min-h-[44px] min-w-[44px] -m-2 p-2 rounded-xl active:scale-[0.98]"
+              aria-label={t.auth.login.back}
             >
               <ChevronLeft size={14} />
               {t.auth.login.back}
@@ -483,7 +484,7 @@ function LoginPageContent() {
                 <MagneticButton
                   type="submit"
                   disabled={loading}
-                  className="w-full py-5 lg:py-7 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-4 flex items-center justify-center gap-3 lg:gap-4 text-xs lg:text-sm relative overflow-hidden cursor-pointer"
+                  className="w-full py-5 lg:py-7 min-h-[48px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-2xl lg:rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-4 flex items-center justify-center gap-3 lg:gap-4 text-xs lg:text-sm relative overflow-hidden cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />

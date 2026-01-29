@@ -63,11 +63,12 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 sm:p-12">
-      <div className="absolute top-6 sm:top-8 left-6 sm:left-8">
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 sm:p-6 lg:p-12 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="absolute top-6 sm:top-8 left-4 sm:left-6">
         <Link
           href="/auth/forgot-password"
-          className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer"
+          className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.3em] cursor-pointer min-h-[44px] min-w-[44px] -m-2 p-2 rounded-xl active:scale-[0.98]"
+          aria-label={t.auth.resetPassword.back}
         >
           <ChevronLeft size={14} />
           {t.auth.resetPassword.back}
