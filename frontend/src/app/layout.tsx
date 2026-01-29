@@ -47,6 +47,15 @@ export const metadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com'),
+  // Favicon em URL absoluta para evitar cache/redirecionamentos; browsers guardam ícone muito tempo
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+    ],
+    apple: '/images/logo/icon.jpeg',
+    shortcut: '/favicon.ico',
+  },
   alternates: {
     canonical: '/',
     languages: {
