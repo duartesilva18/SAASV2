@@ -26,9 +26,6 @@ export default function AdminDashboardPage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [supportPhone, setSupportPhone] = useState('');
-  const [savingPhone, setSavingPhone] = useState(false);
-  
   // Audit Logs States
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditPage, setAuditPage] = useState(1);
@@ -51,14 +48,12 @@ export default function AdminDashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes, settingsRes] = await Promise.all([
+      const [statsRes, usersRes] = await Promise.all([
         api.get('/admin/stats'),
-        api.get('/admin/users'),
-        api.get('/admin/settings')
+        api.get('/admin/users')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
-      setSupportPhone(settingsRes.data.support_phone || '351925989577');
       fetchAuditLogs(1, 'all');
     } catch (err) {
       console.error('Erro ao carregar dados de admin:', err);
@@ -108,18 +103,6 @@ export default function AdminDashboardPage() {
     setShowDeleteConfirm(true);
   };
 
-  const handleUpdateSupportPhone = async () => {
-    setSavingPhone(true);
-    try {
-      await api.post('/admin/settings', { support_phone: supportPhone });
-      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.supportUpdated, type: 'success' });
-    } catch (err) {
-      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.supportError, type: 'error' });
-    } finally {
-      setSavingPhone(false);
-    }
-  };
-
   const filteredUsers = users.filter(u => 
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (u.full_name && u.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -166,35 +149,6 @@ export default function AdminDashboardPage() {
           </div>
         ))}
       </div>
-
-      {/* Telegram Support Config */}
-      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[32px] p-8 md:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[100px] rounded-full -z-10" />
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-widest text-[11px] opacity-60 mb-1">Configuração de Suporte</h2>
-            <p className="text-xs text-slate-500 italic">Define o número de telemóvel para o botão de Telegram</p>
-          </div>
-          <div className="flex gap-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <input 
-                type="text"
-                value={supportPhone}
-                onChange={(e) => setSupportPhone(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 px-6 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
-                placeholder="Ex: 351925989577"
-              />
-            </div>
-            <button
-              onClick={handleUpdateSupportPhone}
-              disabled={savingPhone}
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
-            >
-              {savingPhone ? <Loader2 size={16} className="animate-spin" /> : t.dashboard.admin.dashboard.save}
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* User Management Section */}
       <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[32px] p-8 md:p-10 relative overflow-hidden">

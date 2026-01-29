@@ -51,7 +51,7 @@ async def _send_verification_email_background(to_email: str, subject: str, body_
         MAIL_SSL_TLS=False,
         USE_CREDENTIALS=True,
         VALIDATE_CERTS=True,
-        MAIL_FROM_NAME='Finly Portugal'
+        MAIL_FROM_NAME=getattr(settings, 'MAIL_FROM_NAME', 'Finly') or 'Finly',
     )
     msg = MessageSchema(subject=subject.strip(), recipients=[to_email.strip()], body=body_html, subtype=MessageType.html)
     fm = FastMail(conf)
@@ -234,7 +234,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
             MAIL_SSL_TLS=False,
             USE_CREDENTIALS=True,
             VALIDATE_CERTS=True,
-            MAIL_FROM_NAME='Finly Portugal'
+            MAIL_FROM_NAME=getattr(settings, 'MAIL_FROM_NAME', 'Finly') or 'Finly',
         )
         msg = MessageSchema(subject=t['subject'], recipients=[email_normalized], body=html, subtype=MessageType.html)
         fm = FastMail(conf)
@@ -947,7 +947,7 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
         MAIL_SSL_TLS=False,
         USE_CREDENTIALS=True,
         VALIDATE_CERTS=True,
-        MAIL_FROM_NAME='Finly Portugal'
+        MAIL_FROM_NAME=getattr(settings, 'MAIL_FROM_NAME', 'Finly') or 'Finly',
     )
     
     message = MessageSchema(

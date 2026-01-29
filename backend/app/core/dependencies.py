@@ -18,7 +18,7 @@ conf = ConnectionConfig(
     MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
     USE_CREDENTIALS=settings.USE_CREDENTIALS,
     VALIDATE_CERTS=True,
-    MAIL_FROM_NAME=settings.PROJECT_NAME
+    MAIL_FROM_NAME=getattr(settings, 'MAIL_FROM_NAME', None) or settings.PROJECT_NAME,
 )
 
 def get_db():
