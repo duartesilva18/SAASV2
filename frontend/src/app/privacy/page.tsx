@@ -6,10 +6,11 @@ import { ShieldCheck, Mail, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 
 export default function PrivacyPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const router = useRouter();
   const lastUpdated = '2026-01-15';
   const privacy = t.legal.privacy;
+  const dateLocale = language === 'pt' ? 'pt-PT' : language === 'fr' ? 'fr-FR' : 'en-US';
 
   return (
     <div className="min-h-screen bg-[#020617] text-white">
@@ -35,7 +36,7 @@ export default function PrivacyPage() {
             {privacy.title.split(' ')[0]} de <span className="text-blue-500 italic">{privacy.titleAccent}</span>
           </h1>
           <p className="text-slate-400 text-sm font-medium">
-            {privacy.lastUpdated} {new Date(lastUpdated).toLocaleDateString(t.language === 'pt' ? 'pt-PT' : 'en-US', { 
+            {privacy.lastUpdated} {new Date(lastUpdated).toLocaleDateString(dateLocale, { 
               day: 'numeric', 
               month: 'long', 
               year: 'numeric' 
