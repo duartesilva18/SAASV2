@@ -152,8 +152,10 @@ def handle_transfer_created(transfer: dict, db: Session):
         if commission:
             commission.stripe_transfer_id = transfer_id
             commission.payment_reference = transfer_id
+            commission.is_paid = True
+            commission.paid_at = datetime.now()
             db.commit()
-            logger.info(f'✅ Transfer ID capturado: {transfer_id} para comissão {commission.id}')
+            logger.info(f'✅ Transfer ID capturado: {transfer_id} para comissão {commission.id} (marcada como paga)')
         else:
             logger.warning(f'Comissão não encontrada para atualizar transfer_id {transfer_id}')
         

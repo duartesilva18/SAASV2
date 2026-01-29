@@ -265,7 +265,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 except Exception as e:
                     logger.error(f'Erro ao verificar subscrição após pagamento: {str(e)}')
             
-            # Marcar conversão de afiliado se aplicável (garantir que está marcado mesmo se outros webhooks falharam)
+            # Marcar conversão de afiliado e criar/atualizar comissão (subscrições)
             if user.referrer_id:
                 referral = db.query(models.AffiliateReferral).filter(
                     models.AffiliateReferral.referred_user_id == user.id
@@ -275,11 +275,54 @@ def handle_invoice_paid(invoice: dict, db: Session):
                     referral.subscription_date = datetime.now()
                     logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
                 elif referral and user.subscription_status in ['active', 'trialing']:
-                    # Garantir que está marcado se a subscrição está ativa
                     if not referral.has_subscribed:
                         referral.has_subscribed = True
                         referral.subscription_date = datetime.now()
                         logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
-            
+
+                # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)
+                # Assim as comissões ficam registadas mesmo quando payment_intent.succeeded não traz user_id
+                if referral:
+                    try:
+                        amount_paid = invoice.get('amount_paid') or 0  # cêntimos
+                        period_start = invoice.get('period_start')
+                        if period_start is not None:
+                            period_dt = datetime.fromtimestamp(period_start)
+                            commission_month = period_dt.replace(day=1).date()
+                        else:
+                            commission_month = date.today().replace(day=1)
+
+                        commission_setting = db.query(models.SystemSetting).filter(
+                            models.SystemSetting.key == 'affiliate_commission_percentage'
+                        ).first()
+                        commission_pct = float(commission_setting.value) if commission_setting else 20.0
+                        commission_amount_cents = int(amount_paid * (commission_pct / 100))
+
+                        existing = db.query(models.AffiliateCommission).filter(
+                            models.AffiliateCommission.affiliate_id == referral.referrer_id,
+                            models.AffiliateCommission.month == commission_month
+                        ).first()
+
+                        if existing:
+                            existing.total_revenue_cents += amount_paid
+                            existing.commission_amount_cents += commission_amount_cents
+                            existing.conversions_count += 1
+                            logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{amount_paid} cêntimos')
+                        else:
+                            new_commission = models.AffiliateCommission(
+                                affiliate_id=referral.referrer_id,
+                                month=commission_month,
+                                total_revenue_cents=amount_paid,
+                                commission_percentage=commission_pct,
+                                commission_amount_cents=commission_amount_cents,
+                                conversions_count=1,
+                                referrals_count=1,
+                                is_paid=False,
+                            )
+                            db.add(new_commission)
+                            logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {amount_paid} cêntimos')
+                    except Exception as e:
+                        logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
+
             db.commit()
 

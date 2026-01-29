@@ -451,6 +451,11 @@ async def get_affiliate_stats(
                     subscription = None
                 
                 if subscription and settings.STRIPE_API_KEY:
+                    # Acesso seguro a subscription.items.data (pode ser vazio ou inexistente)
+                    items_obj = getattr(subscription, 'items', None)
+                    items_data = (getattr(items_obj, 'data', None) or []) if items_obj else []
+                    plan_info = items_data[0].price if len(items_data) > 0 else None
+
                     # Buscar última invoice paga
                     invoices = stripe.Invoice.list(
                         subscription=subscription.id,
@@ -459,7 +464,6 @@ async def get_affiliate_stats(
                     )
                     if invoices.data:
                         invoice = invoices.data[0]
-                        plan_info = subscription.items.data[0].price if subscription.items.data else None
                         amount_paid_cents = invoice.amount_paid
                         commission_cents = int(amount_paid_cents * (commission_percentage / 100))
                         payment_info = {
@@ -469,23 +473,22 @@ async def get_affiliate_stats(
                             'currency': invoice.currency,
                             'paid_at': datetime.fromtimestamp(invoice.created).isoformat() if invoice.created else None,
                             'subscription_status': subscription.status,
-                            'plan_name': plan_info.nickname if plan_info and plan_info.nickname else (plan_info.product if plan_info else None),
-                            'plan_interval': plan_info.recurring.interval if plan_info and plan_info.recurring else None
+                            'plan_name': plan_info.nickname if plan_info and getattr(plan_info, 'nickname', None) else (getattr(plan_info, 'product', None) if plan_info else None),
+                            'plan_interval': getattr(getattr(plan_info, 'recurring', None), 'interval', None) if plan_info else None
                         }
                     else:
                         # Se não houver invoice paga, usar informações da subscription
-                        plan_info = subscription.items.data[0].price if subscription.items.data else None
-                        amount_paid_cents = plan_info.unit_amount if plan_info else 999
+                        amount_paid_cents = getattr(plan_info, 'unit_amount', 999) if plan_info else 999
                         commission_cents = int(amount_paid_cents * (commission_percentage / 100))
                         payment_info = {
                             'amount_paid_cents': amount_paid_cents,
                             'commission_cents': commission_cents,
                             'commission_percentage': commission_percentage,
-                            'currency': plan_info.currency if plan_info else 'eur',
+                            'currency': getattr(plan_info, 'currency', 'eur') if plan_info else 'eur',
                             'paid_at': ref.subscription_date.isoformat() if ref.subscription_date else None,
                             'subscription_status': subscription.status,
-                            'plan_name': plan_info.nickname if plan_info and plan_info.nickname else (plan_info.product if plan_info else None),
-                            'plan_interval': plan_info.recurring.interval if plan_info and plan_info.recurring else None
+                            'plan_name': plan_info.nickname if plan_info and getattr(plan_info, 'nickname', None) else (getattr(plan_info, 'product', None) if plan_info else None),
+                            'plan_interval': getattr(getattr(plan_info, 'recurring', None), 'interval', None) if plan_info else None
                         }
             except Exception as e:
                 logger.warning(f'Erro ao buscar informações do Stripe para {referred_user.email if referred_user else "N/A"}: {str(e)}')
