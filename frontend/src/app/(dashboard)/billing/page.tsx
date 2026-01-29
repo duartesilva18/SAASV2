@@ -81,14 +81,14 @@ export default function BillingPage() {
 
   const handlePortal = async () => {
     if (isSimulated) {
-      setAlertModal({ isOpen: true, title: 'Modo Simulação', message: b.simulationMode, type: 'info' });
+      setAlertModal({ isOpen: true, title: t.dashboard.settings.simulationModeTitle, message: b.simulationMode, type: 'info' });
       return;
     }
     try {
       const res = await api.post('/stripe/portal');
       window.location.href = res.data.url;
     } catch (err) {
-      setAlertModal({ isOpen: true, title: 'Erro', message: b.portalError, type: 'error' });
+      setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: b.portalError, type: 'error' });
     }
   };
 

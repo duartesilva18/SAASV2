@@ -26,7 +26,7 @@ export default function PricingPage() {
       sessionStorage.removeItem('pro_activated_success');
       setToast({
         isVisible: true,
-        message: 'Parabéns! O Pro foi ativado com sucesso! 🎉',
+        message: t.dashboard.pricing.proActivated,
         type: 'success'
       });
     }
@@ -62,7 +62,7 @@ export default function PricingPage() {
             setIsProcessingPayment(false);
             setToast({
               isVisible: true,
-              message: 'O pagamento está a ser processado. A subscrição será ativada em breve.',
+              message: t.dashboard.pricing.paymentProcessing,
               type: 'success'
             });
             window.history.replaceState({}, '', '/pricing');
@@ -74,7 +74,7 @@ export default function PricingPage() {
             setIsProcessingPayment(false);
             setToast({
               isVisible: true,
-              message: 'Erro ao verificar pagamento. Por favor, recarrega a página.',
+              message: t.dashboard.pricing.paymentVerifyError,
               type: 'error'
             });
             window.history.replaceState({}, '', '/pricing');
@@ -97,7 +97,7 @@ export default function PricingPage() {
       console.error(err);
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao processar pagamento',
+        message: err?.response?.data?.detail || t.dashboard.pricing.paymentError,
         type: 'error'
       });
     } finally {
@@ -299,25 +299,24 @@ export default function PricingPage() {
         className="max-w-3xl mx-auto text-center mt-16 mb-16"
       >
         <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-base font-black uppercase tracking-[0.2em] mb-8">
-          💸 Programa de Afiliados FinLy
+          {(t as any).pricingSection?.affiliate?.badge}
         </div>
         <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
-          Usa. Indica. Ganha.
+          {(t as any).pricingSection?.affiliate?.title}
         </h3>
         <p className="text-slate-400 text-lg md:text-xl mb-10">
-          Sempre que alguém entra na FinLy pelo teu link:
+          {(t as any).pricingSection?.affiliate?.description}
         </p>
         <ul className="flex flex-col items-center text-slate-200 text-lg md:text-xl space-y-4 mb-12 font-medium">
-          <li className="flex items-center justify-center gap-3">🔁 Recebes comissão todos os meses</li>
-          <li className="flex items-center justify-center gap-3">💰 20% (Plus) ou 25% (Pro)</li>
-          <li className="flex items-center justify-center gap-3">📊 Tudo transparente no dashboard</li>
-          <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
+          {((t as any).pricingSection?.affiliate?.benefits || []).map((benefit: string, idx: number) => (
+            <li key={idx} className="flex items-center justify-center gap-3">{benefit}</li>
+          ))}
         </ul>
         <div className="bg-slate-800/90 border border-slate-600/60 rounded-3xl p-6 md:p-8 shadow-xl">
-          <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">📌 Exemplo simples:</p>
-          <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
-          <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">50 pessoas → ~100€ por mês</p>
-          <p className="text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
+          <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">{(t as any).pricingSection?.affiliate?.example?.title}</p>
+          <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">{(t as any).pricingSection?.affiliate?.example?.line1}</p>
+          <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">{(t as any).pricingSection?.affiliate?.example?.line2}</p>
+          <p className="text-base text-slate-500">{(t as any).pricingSection?.affiliate?.example?.footer}</p>
         </div>
       </motion.section>
 

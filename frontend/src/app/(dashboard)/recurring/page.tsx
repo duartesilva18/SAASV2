@@ -143,13 +143,13 @@ export default function RecurringPage() {
       let response: { data: any };
       if (editingId) {
         response = await api.patch(`/recurring/${editingId}`, payload);
-        setToastInfo({ message: "Ciclo atualizado!", type: "success", isVisible: true });
+        setToastInfo({ message: t.dashboard.recurring.cycleUpdated, type: "success", isVisible: true });
         
         // Atualizar item existente no estado sem reload
         setRecurring(prev => prev.map(item => item.id === editingId ? response.data : item));
       } else {
         response = await api.post('/recurring/', payload);
-        setToastInfo({ message: "Registo concluído!", type: "success", isVisible: true });
+        setToastInfo({ message: t.dashboard.recurring.successMessage, type: "success", isVisible: true });
         
         // Adicionar novo item ao estado sem reload
         setRecurring(prev => [...prev, response.data]);
@@ -170,7 +170,7 @@ export default function RecurringPage() {
       fetchData(false).catch(err => console.error('Erro ao atualizar dados em background:', err));
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.response?.data?.detail || 'Erro ao salvar ciclo.';
+      const errorMessage = err.response?.data?.detail || t.dashboard.recurring.saveError;
       setToastInfo({ message: errorMessage, type: "error", isVisible: true });
     }
   };
@@ -179,11 +179,11 @@ export default function RecurringPage() {
     e.stopPropagation();
     try {
       await api.delete(`/recurring/${id}`);
-      setToastInfo({ message: "Ciclo removido.", type: "success", isVisible: true });
+      setToastInfo({ message: t.dashboard.recurring.cycleRemoved, type: "success", isVisible: true });
       fetchData();
     } catch (err: any) {
       console.error(err);
-      const errorMessage = err.response?.data?.detail || 'Erro ao remover ciclo.';
+      const errorMessage = err.response?.data?.detail || t.dashboard.recurring.removeError;
       setToastInfo({ message: errorMessage, type: "error", isVisible: true });
     }
   };
@@ -249,7 +249,7 @@ export default function RecurringPage() {
   const categoryData: any = {};
   [...recurringIncomes, ...recurringExpenses].forEach((item) => {
     const cat = allCategories.find(c => c.id === item.category_id);
-    const categoryName = cat?.name || 'Sem categoria';
+    const categoryName = cat?.name || t.dashboard.recurring.noCategory;
     if (!categoryData[categoryName]) {
       categoryData[categoryName] = 0;
     }
@@ -608,7 +608,7 @@ export default function RecurringPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] p-12">
               <div className="flex justify-between mb-10">
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{editingId ? 'Editar' : 'Nova'} Subscrição</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{editingId ? t.dashboard.recurring.editSubscription : t.dashboard.recurring.newSubscription} {t.dashboard.recurring.subscriptionLabel}</h2>
                 <button onClick={() => setShowAddModal(false)} className="text-slate-500 cursor-pointer"><X size={24} /></button>
               </div>
               <form onSubmit={handleSubmit} noValidate className="space-y-6">

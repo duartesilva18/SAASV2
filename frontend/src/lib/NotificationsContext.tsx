@@ -133,13 +133,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           (g: any) => g.target_amount_cents > 0 && g.current_amount_cents >= g.target_amount_cents
         );
         completedGoals.forEach((goal: any) => {
+          const goalAmount = formatPrice(goal.target_amount_cents / 100);
           newNotifications.push({
             id: `goal-completed-${goal.id}`,
-            title: '🎯 Meta Concluída!',
-            message: `Parabéns! Atingiste a meta "${goal.name}" de ${formatPrice(goal.target_amount_cents / 100)}`,
+            title: t.dashboard.goals.notificationTitle || '🎯 Meta Concluída!',
+            message: (t.dashboard.goals.notificationMessage || 'Parabéns! Atingiste a meta "{name}" de {amount}')
+              .replace('{name}', goal.name)
+              .replace('{amount}', goalAmount),
             type: 'success',
             icon: 'trophy',
-            date: s?.now || 'Agora',
+            date: s?.now || (t.dashboard?.page?.now || 'Agora'),
             section: '/vault',
           });
         });

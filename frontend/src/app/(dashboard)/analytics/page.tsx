@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
           const { data, timestamp } = JSON.parse(cached);
           const isFresh = Date.now() - timestamp < 30000; // 30 segundos de cache "fresca"
           
-          const isProUser = ['active', 'trialing', 'cancel_at_period_end'].includes(data.subscription_status);
+          const isProUser = data.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(data.subscription_status);
           setIsPro(isProUser);
           
           // Se não for Pro, garantir que tem dados mock
@@ -89,7 +89,8 @@ export default function AnalyticsPage() {
 
       const user = profileRes.data;
       // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
-      const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
+      // Admins têm sempre acesso Pro
+      const hasActiveSub = user.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
       
       // Se a subscrição mudou desde a última cache, ignoramos a cache e atualizamos
       const cached = localStorage.getItem('analytics_cache');
@@ -138,7 +139,8 @@ export default function AnalyticsPage() {
       try {
         const profileRes = await api.get('/auth/me');
         const user = profileRes.data;
-        const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
+        // Admins têm sempre acesso Pro
+        const hasActiveSub = user.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
         setIsPro(hasActiveSub);
         
         if (!hasActiveSub) {
@@ -261,8 +263,8 @@ export default function AnalyticsPage() {
           const available = (currentBalance / 100).toFixed(2);
           setAlertModal({
             isOpen: true,
-            title: 'Saldo Insuficiente',
-            message: `Saldo insuficiente!\n\nDisponível: ${formatCurrency(parseFloat(available))}\nTentativa: ${formatCurrency(parseFloat(vaultAmount))}\n\nNão é possível deixar o cofre com saldo negativo.`,
+            title: t.dashboard.analytics.insufficientBalanceTitle,
+            message: `${t.dashboard.vault.insufficientBalance}\n\n${t.dashboard.vault.available} ${formatCurrency(parseFloat(available))}\n${t.dashboard.vault.attempt} ${formatCurrency(parseFloat(vaultAmount))}\n\n${t.dashboard.vault.cannotBeNegative}`,
             type: 'error'
           });
           setVaultLoading(false);
@@ -284,10 +286,10 @@ export default function AnalyticsPage() {
       await fetchAnalytics(true);
     } catch (err: any) {
       console.error('Erro ao processar transação do cofre:', err);
-      const errorMessage = err.response?.data?.detail || 'Erro ao processar transação.';
+      const errorMessage = err.response?.data?.detail || (t.dashboard.analytics as any).processVaultTransactionError;
       setAlertModal({
         isOpen: true,
-        title: 'Erro',
+        title: t.dashboard.sidebar.toastTypes.error,
         message: errorMessage,
         type: 'error'
       });
@@ -668,8 +670,8 @@ export default function AnalyticsPage() {
     const recurringTotal = recurringMonthly.reduce((a: number, x: { value: number }) => a + x.value, 0);
     const variableTotal = Math.max(0, periodExpenses - recurringTotal);
     const recurringVsVariable = [
-      { name: 'Recorrentes', value: recurringTotal },
-      { name: 'Variáveis', value: variableTotal }
+      { name: t.dashboard.analytics.recurringLabel, value: recurringTotal },
+      { name: t.dashboard.analytics.variableLabel, value: variableTotal }
     ].filter((x) => x.value > 0);
 
     const periodComparison = {
@@ -747,7 +749,7 @@ export default function AnalyticsPage() {
       : healthScoreValue >= 60
         ? { label: 'Saudavel', color: 'text-blue-400', badge: 'bg-blue-500/10 border-blue-500/20' }
         : healthScoreValue >= 40
-          ? { label: 'Atenção', color: 'text-amber-400', badge: 'bg-amber-500/10 border-amber-500/20' }
+          ? { label: t.dashboard.analytics.attentionLabel, color: 'text-amber-400', badge: 'bg-amber-500/10 border-amber-500/20' }
           : { label: 'Critico', color: 'text-red-400', badge: 'bg-red-500/10 border-red-500/20' };
 
   const healthDelta =
@@ -855,7 +857,7 @@ export default function AnalyticsPage() {
               <p className="text-sm text-slate-400 font-medium italic">
                 {t.dashboard.analytics.lowConfidenceDescription}
                 <br />
-                Tens atualmente <span className="text-amber-400 font-black">{realTransactions.length} transações</span>. Recomendamos pelo menos <span className="text-white font-black">10 transações</span> para análises mais fiáveis.
+                {t.dashboard.analytics.lowConfidenceTransactions.replace('{count}', String(realTransactions.length))}
               </p>
             </div>
           </div>
@@ -959,14 +961,14 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={(v) => v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : ''} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
-                  <Area type="monotone" dataKey="balance" name="Saldo" stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
+                  <Area type="monotone" dataKey="balance" name={t.dashboard.analytics.balanceLabel} stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Ritmo mensal</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Despesas por dia da semana</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.monthlyRhythm}</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.expensesByWeekday}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.weekly || []} margin={{ top: 8, right: 8, bottom: 8 }}>
@@ -998,30 +1000,30 @@ export default function AnalyticsPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-500 italic mb-4">Nenhuma categoria em risco identificada.</p>
+              <p className="text-xs text-slate-500 italic mb-4">{t.dashboard.analytics.noCategoryAtRisk}</p>
             )}
-            <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || 'Resumo automático com base nos teus dados.'}</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Comparação período atual vs anterior</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Tendência: para onde estás a ir</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.comparisonPeriodSubtitle}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={(() => {
                   const pc = processedData.periodComparison;
                   if (!pc) return [];
                   return [
-                    { name: 'Receitas', atual: pc.current.income, anterior: pc.previous?.income ?? 0 },
-                    { name: 'Despesas', atual: pc.current.expenses, anterior: pc.previous?.expenses ?? 0 },
-                    { name: 'Saldo', atual: pc.current.balance, anterior: pc.previous?.balance ?? 0 }
+                    { name: t.dashboard.analytics.income, atual: pc.current.income, anterior: pc.previous?.income ?? 0 },
+                    { name: t.dashboard.analytics.expenses, atual: pc.current.expenses, anterior: pc.previous?.expenses ?? 0 },
+                    { name: t.dashboard.analytics.balanceLabel, atual: pc.current.balance, anterior: pc.previous?.balance ?? 0 }
                   ];
                 })()} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
-                  <Line type="monotone" dataKey="atual" name="Período atual" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
-                  <Line type="monotone" dataKey="anterior" name="Período anterior" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
+                  <Line type="monotone" dataKey="atual" name={t.dashboard.analytics.currentPeriodLabel} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
+                  <Line type="monotone" dataKey="anterior" name={t.dashboard.analytics.previousPeriodLabel} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1031,14 +1033,14 @@ export default function AnalyticsPage() {
         {/* Linha 3: 3/3 Volume por mês */}
         <div className="grid grid-cols-1 gap-6">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Volume por mês</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Nº de transações por mês</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.volumeByMonthTitle}</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.volumeByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value ?? 0, 'Transações']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
                   <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1049,8 +1051,8 @@ export default function AnalyticsPage() {
         {/* Linha 4: 2/3 Despesas por mês | 1/3 Progresso das metas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Despesas por mês</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Em que dias gastas mais (1–31)</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{(t.dashboard.analytics as any).expensesByMonth}</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">{(t.dashboard.analytics as any).expensesByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={processedData.expensesByDayOfMonth || []} margin={{ top: 4, right: 4, bottom: 4 }}>
@@ -1058,13 +1060,13 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="day" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={4} />
                   <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
-                  <Line type="monotone" dataKey="value" name="Despesas" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 2 }} />
+                  <Line type="monotone" dataKey="value" name={t.dashboard.analytics.expenses} stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">Progresso das metas</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">{t.dashboard.analytics.goalsProgressTitle}</h3>
             {goals.length > 0 ? (
               <div className="space-y-4">
                 {goals.slice(0, 4).map((g: any, idx: number) => {
@@ -1251,7 +1253,7 @@ export default function AnalyticsPage() {
                   <span className="text-sm font-black text-white">-{formatCurrency(p.amount_cents / 100)}</span>
                   {p.type === 'recurring' && (
                     p.process_automatically ? (
-                      <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl" title="Processamento Automático">
+                      <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl" title={t.dashboard.analytics.processingAutomatic}>
                         <Zap size={16} className="animate-pulse" />
                       </div>
                     ) : (

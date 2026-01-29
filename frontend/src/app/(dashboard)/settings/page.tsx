@@ -45,24 +45,23 @@ export default function SettingsPage() {
     message: '',
     type: 'info'
   });
-  const [showEnglishAlert, setShowEnglishAlert] = useState(false);
   const [hasPassword, setHasPassword] = useState(true); // false = entrou só por Gmail/Google
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [savingPassword, setSavingPassword] = useState(false);
 
   const countries = [
-    { code: '+351', flag: '🇵🇹', name: 'Portugal' },
-    { code: '+34', flag: '🇪🇸', name: 'Espanha' },
-    { code: '+33', flag: '🇫🇷', name: 'França' },
+    { code: '+351', flag: '🇵🇹', name: language === 'pt' ? 'Portugal' : 'Portugal' },
+    { code: '+34', flag: '🇪🇸', name: language === 'pt' ? 'Espanha' : 'Spain' },
+    { code: '+33', flag: '🇫🇷', name: language === 'pt' ? 'França' : 'France' },
     { code: '+44', flag: '🇬🇧', name: 'UK' },
     { code: '+1', flag: '🇺🇸', name: 'USA' },
-    { code: '+55', flag: '🇧🇷', name: 'Brasil' },
-    { code: '+49', flag: '🇩🇪', name: 'Alemanha' },
-    { code: '+41', flag: '🇨🇭', name: 'Suíça' },
-    { code: '+352', flag: '🇱🇺', name: 'Luxemburgo' },
-    { code: '+244', flag: '🇦🇴', name: 'Angola' },
-    { code: '+238', flag: '🇨🇻', name: 'Cabo Verde' },
-    { code: '+258', flag: '🇲🇿', name: 'Moçambique' },
+    { code: '+55', flag: '🇧🇷', name: language === 'pt' ? 'Brasil' : 'Brazil' },
+    { code: '+49', flag: '🇩🇪', name: language === 'pt' ? 'Alemanha' : 'Germany' },
+    { code: '+41', flag: '🇨🇭', name: language === 'pt' ? 'Suíça' : 'Switzerland' },
+    { code: '+352', flag: '🇱🇺', name: language === 'pt' ? 'Luxemburgo' : 'Luxembourg' },
+    { code: '+244', flag: '🇦🇴', name: language === 'pt' ? 'Angola' : 'Angola' },
+    { code: '+238', flag: '🇨🇻', name: language === 'pt' ? 'Cabo Verde' : 'Cape Verde' },
+    { code: '+258', flag: '🇲🇿', name: language === 'pt' ? 'Moçambique' : 'Mozambique' },
   ];
 
   useEffect(() => {
@@ -140,7 +139,7 @@ export default function SettingsPage() {
     e?.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setToast({
-        message: 'As passwords não coincidem.',
+        message: (t.dashboard.settings as any).passwordMismatch || 'As passwords não coincidem.',
         type: 'error',
         isVisible: true
       });
@@ -172,7 +171,7 @@ export default function SettingsPage() {
 
   const handlePortal = async () => {
     if (isSimulated) {
-      setAlertModal({ isOpen: true, title: 'Modo Simulação', message: t.dashboard.settings.simulationMode, type: 'info' });
+      setAlertModal({ isOpen: true, title: t.dashboard.settings.simulationModeTitle, message: t.dashboard.settings.simulationMode, type: 'info' });
       return;
     }
     try {
@@ -185,7 +184,7 @@ export default function SettingsPage() {
     } catch (err: any) {
       console.error('Erro ao abrir portal Stripe:', err);
       const errorMsg = err.response?.data?.detail || err.message || 'Erro ao abrir portal de faturação.';
-      setAlertModal({ isOpen: true, title: 'Erro', message: errorMsg || t.dashboard.settings.portalError, type: 'error' });
+      setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: errorMsg || t.dashboard.settings.portalError, type: 'error' });
     }
   };
 
@@ -219,7 +218,7 @@ export default function SettingsPage() {
       window.location.href = '/';
     } catch (err) {
       console.error(err);
-      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.deleteError, type: 'error' });
+      setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: t.dashboard.settings.deleteError, type: 'error' });
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -238,7 +237,7 @@ export default function SettingsPage() {
       window.location.href = '/dashboard';
     } catch (err) {
       console.error(err);
-      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.dangerZone.purgeError, type: 'error' });
+      setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: t.dashboard.settings.dangerZone.purgeError, type: 'error' });
       setPurging(false);
       setShowPurgeConfirm(false);
     }
@@ -390,10 +389,6 @@ export default function SettingsPage() {
                       <select 
                         value={language}
                         onChange={e => {
-                          if (e.target.value === 'en') {
-                            setShowEnglishAlert(true);
-                            return;
-                          }
                           setLanguage(e.target.value as any);
                         }}
                         className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-10 text-sm focus:outline-none focus:border-indigo-500 transition-all text-white font-medium appearance-none cursor-pointer"
@@ -403,10 +398,8 @@ export default function SettingsPage() {
                             key={lang.code} 
                             value={lang.code} 
                             className="bg-slate-900"
-                            disabled={lang.code === 'en'}
-                            style={lang.code === 'en' ? { opacity: 0.5 } : {}}
                           >
-                            {lang.flag} {lang.nativeName} {lang.code === 'en' ? '(Under Development)' : `(${lang.locale})`}
+                            {lang.flag} {lang.nativeName} ({lang.locale})
                           </option>
                         ))}
                       </select>
@@ -645,15 +638,6 @@ export default function SettingsPage() {
         title={alertModal.title}
         message={alertModal.message}
         type={alertModal.type}
-      />
-
-      {/* English Language Alert */}
-      <AlertModal
-        isOpen={showEnglishAlert}
-        onClose={() => setShowEnglishAlert(false)}
-        title="Under Development"
-        message="English language support is currently under development. Please use Portuguese for now."
-        type="info"
       />
 
       {/* Global Toast */}

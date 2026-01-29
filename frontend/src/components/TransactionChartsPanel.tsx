@@ -12,6 +12,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
+import { useTranslation } from '@/lib/LanguageContext';
 
 interface Transaction {
   id: string;
@@ -53,6 +54,7 @@ export default function TransactionChartsPanel({
   incomeLabel,
   expensesLabel,
 }: TransactionChartsPanelProps) {
+  const { t } = useTranslation();
   const categoryData = transactions.reduce((acc: Record<string, { name: string; value: number; color: string }>, t) => {
     const cat = categories.find(c => c.id === t.category_id);
     if (!cat || cat.vault_type !== 'none' || cat.type !== 'expense') return acc;
@@ -163,7 +165,7 @@ export default function TransactionChartsPanel({
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Evolução</p>
             <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
-              {evolutionPeriod === 'weekly' ? 'Semanal' : 'Diária'}
+              {evolutionPeriod === 'weekly' ? t.dashboard.analytics.periods.weekly : t.dashboard.analytics.periods.daily}
             </h3>
           </div>
           <div className="flex items-center gap-2 bg-slate-950/50 border border-slate-800 rounded-xl p-1 w-full sm:w-auto">

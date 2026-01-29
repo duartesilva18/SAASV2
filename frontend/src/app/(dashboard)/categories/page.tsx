@@ -396,7 +396,7 @@ export default function CategoriesPage() {
               ) : (
                 <div className="h-[300px] flex flex-col items-center justify-center text-slate-600">
                   <Filter size={48} className="mb-4 opacity-20" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">Sem dados este mês</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest">{t.dashboard.categories.noDataThisMonth}</p>
                 </div>
             )}
           </div>
@@ -427,7 +427,7 @@ export default function CategoriesPage() {
                 }`}
               >
                 {isSelectionMode ? <X size={14} /> : <Check size={14} />}
-                {isSelectionMode ? 'Cancelar Seleção' : 'Selecionar Categorias'}
+                {isSelectionMode ? t.dashboard.categories.cancelSelection : t.dashboard.categories.selectCategories}
               </button>
             </div>
           </div>
@@ -496,7 +496,7 @@ export default function CategoriesPage() {
                           )}
                           {cat.vault_type !== 'none' && (
                             <span className="text-[8px] font-black uppercase px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md">
-                              {cat.vault_type === 'investment' ? 'Investimento' : 'Fundo de Emergência'}
+                              {cat.vault_type === 'investment' ? t.dashboard.categories.investment : t.dashboard.categories.emergencyFundLabel}
                             </span>
                           )}
                         </div>
@@ -548,7 +548,7 @@ export default function CategoriesPage() {
                             <div className="flex items-center gap-1.5">
                               {isDanger && <AlertCircle size={10} className="text-red-500 animate-pulse" />}
                               <span className={isDanger ? 'text-red-400' : isWarning ? 'text-orange-400' : 'text-slate-600'}>
-                                {Math.round(progress)}% {isExceeded ? 'Limite Excedido' : isAtLimit ? 'Limite Atingido' : t.dashboard.categories.ofLimit}
+                                {Math.round(progress)}% {isExceeded ? t.dashboard.categories.limitExceeded : isAtLimit ? t.dashboard.categories.limitReached : t.dashboard.categories.ofLimit}
                               </span>
                             </div>
                             <span className="text-slate-400 font-bold">{formatCurrency(cat.monthly_limit_cents / 100)}</span>
@@ -560,7 +560,7 @@ export default function CategoriesPage() {
                               animate={{ opacity: 1, y: 0 }}
                               className="text-[10px] font-bold text-red-500 italic mt-2 border-t border-red-500/10 pt-2 flex justify-between items-center"
                             >
-                              <span>{isExceeded ? 'Estás fora do orçamento em:' : 'Atingiste o orçamento limite.'}</span>
+                              <span>{isExceeded ? t.dashboard.categories.budgetExceeded : t.dashboard.categories.budgetReached}</span>
                               {isExceeded && <span className="text-sm font-black">{formatCurrency(overAmount / 100)}</span>}
                             </motion.p>
                           )}
@@ -691,7 +691,7 @@ export default function CategoriesPage() {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium"
-                        placeholder="Ex: Refeições, Lazer..."
+                        placeholder={t.dashboard.categories.namePlaceholder || "Category name"}
                       />
                     </div>
 
@@ -807,8 +807,8 @@ export default function CategoriesPage() {
             <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
           </>
         }
-        confirmText="Confirmar Eliminação"
-        cancelText="Cancelar"
+        confirmText={t.dashboard.categories.confirmDeleteText}
+        cancelText={t.dashboard.categories.cancel}
         variant="danger"
         isLoading={isDeleting}
       />
@@ -825,8 +825,8 @@ export default function CategoriesPage() {
             <span className="text-red-400/80 text-xs">{t.dashboard.categories.deleteWarning}</span>
           </>
         }
-        confirmText="Confirmar Eliminação em Massa"
-        cancelText="Cancelar"
+        confirmText={t.dashboard.categories.confirmBulkDeleteText}
+        cancelText={t.dashboard.categories.cancel}
         variant="danger"
         isLoading={isBulkDeleting}
       />

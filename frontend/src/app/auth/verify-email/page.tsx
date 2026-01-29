@@ -7,17 +7,20 @@ import { Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import confetti from 'canvas-confetti';
 import { useUser } from '@/lib/UserContext';
+import { useTranslation } from '@/lib/LanguageContext';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { refreshUser } = useUser();
+  const { t } = useTranslation();
   const token = searchParams.get('token');
   const ref = searchParams.get('ref');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('A validar o seu acesso...');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
+    setMessage(t.auth.verifyEmail?.processing ?? 'A validar o seu acesso...');
     const verify = async () => {
       const existingToken = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (existingToken) {
@@ -40,7 +43,7 @@ function VerifyEmailContent() {
 
         if (!accessToken) {
           setStatus('error');
-          setMessage('Erro ao iniciar sessão após a verificação. Tenta novamente.');
+          setMessage(t.auth.verifyEmail?.loginError ?? 'Erro ao iniciar sessão após a verificação. Tenta novamente.');
           return;
         }
 
@@ -68,14 +71,14 @@ function VerifyEmailContent() {
           });
         } catch (err: any) {
           setStatus('error');
-          setMessage(err.response?.data?.detail || 'Erro ao validar a sessão após a verificação.');
+          setMessage(err.response?.data?.detail || (t.auth as any).verifyEmail?.loginError || 'Erro ao iniciar sessão após a verificação.');
           return;
         }
 
         await refreshUser();
 
         setStatus('success');
-        setMessage('Email verificado com sucesso!');
+        setMessage(t.auth.verifyEmail?.successMessage ?? 'Email verificado com sucesso!');
         
         confetti({
           particleCount: 150,
@@ -91,7 +94,7 @@ function VerifyEmailContent() {
       } catch (err: any) {
         setStatus('error');
         const d = err.response?.data?.detail;
-        const msg = typeof d === 'string' ? d : Array.isArray(d) ? (d[0]?.msg || String(d)) : 'Erro ao verificar o email.';
+        const msg = typeof d === 'string' ? d : Array.isArray(d) ? (d[0]?.msg || String(d)) : ((t.auth as any).verifyEmail?.verifyError || 'Erro ao verificar o email.');
         setMessage(msg);
       }
     };
@@ -120,9 +123,9 @@ function VerifyEmailContent() {
         </div>
 
         <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white mb-4">
-          {status === 'loading' ? 'A Processar...' :
-           status === 'success' ? 'Email Verificado' :
-           'Erro na Verificação'}
+          {status === 'loading' ? (t.auth.verifyEmail?.processing ?? 'A Processar...') :
+           status === 'success' ? (t.auth.verifyEmail?.emailVerified ?? 'Email Verificado') :
+           (t.auth.verifyEmail?.verificationError ?? 'Erro na Verificação')}
         </h1>
 
         <p className="text-slate-400 text-lg lg:text-xl font-medium leading-relaxed italic mb-8">

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { useTranslation } from '@/lib/LanguageContext';
 
 interface ToastProps {
   message: string;
@@ -13,6 +14,7 @@ interface ToastProps {
 }
 
 export default function Toast({ message, type, isVisible, onClose, duration = 6000 }: ToastProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (isVisible) {
       const timer = setTimeout(() => {
@@ -55,10 +57,10 @@ export default function Toast({ message, type, isVisible, onClose, duration = 60
             </div>
             <div className="flex-1">
               <p className="text-sm font-black uppercase tracking-widest leading-none mb-1">
-                {type === 'success' ? 'Sucesso' : 
-                 type === 'error' ? 'Erro' :
-                 type === 'warning' ? 'Aviso' :
-                 'Informação'}
+                {type === 'success' ? t.dashboard.sidebar.toastTypes.success : 
+                 type === 'error' ? t.dashboard.sidebar.toastTypes.error :
+                 type === 'warning' ? t.dashboard.sidebar.toastTypes.warning :
+                 t.dashboard.sidebar.toastTypes.info}
               </p>
               <p className="text-xs font-medium opacity-80 italic">
                 {message}

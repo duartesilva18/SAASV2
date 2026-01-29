@@ -60,13 +60,13 @@ export default function LandingPage() {
       "ratingValue": "4.8",
       "ratingCount": "2800"
     },
-    "description": "Registe despesas no Telegram em 3 segundos. O Finly elimina a confusão das contas e ajuda-te a alcançar a paz financeira.",
+    "description": t.hero.description,
     "featureList": [
-      "Registo de despesas via Telegram",
-      "Gráficos inteligentes",
-      "Categorização automática",
-      "Insights de IA",
-      "Gestão de orçamento"
+      t.resources.items[0].d.split('.')[0],
+      t.resources.items[1].d.split('.')[0],
+      t.resources.items[2].d.split('.')[0],
+      t.resources.items[3].d.split('.')[0],
+      t.resources.items[4].d.split('.')[0]
     ]
   };
 
@@ -313,8 +313,8 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 sm:mb-6 uppercase"
           >
-            Quanto vale ter{' '}
-            <span className="text-blue-500 italic block md:inline">controlo total do teu dinheiro</span>?
+            {t.pricingSection.title}
+            <span className="text-blue-500 italic block md:inline">{' '}{t.pricingSection.titleAccent}</span>?
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -322,7 +322,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-sm sm:text-lg md:text-xl lg:text-2xl text-slate-400 mb-4 sm:mb-6 md:mb-8 max-w-2xl mx-auto"
           >
-            A maioria das pessoas não sabe para onde o dinheiro vai.
+            {t.pricingSection.subtitle1}
           </motion.p>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -330,7 +330,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white font-semibold mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto"
           >
-            Quem usa a FinLy sabe. E alguns ainda ganham com isso.
+            {t.pricingSection.subtitle2}
           </motion.p>
         </div>
 
@@ -338,48 +338,25 @@ export default function LandingPage() {
           {[
             {
               id: 'basic',
-              name: 'FinLy Basic',
-              tagline: 'Começa hoje. Sem complicações.',
-              price: '9,99€',
-              priceSuffix: '/ mês',
-              priceSecondary: null,
-              quote: 'Quero organizar o meu dinheiro antes de pensar em ganhar com isso.',
-              features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
-              limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
-              buttonText: 'Começar agora',
+              planData: t.pricingSection.plans.basic,
               icon: Zap,
               popular: false,
             },
             {
               id: 'plus',
-              name: 'FinLy Plus',
-              tagline: 'O plano de quem pensa mais à frente',
-              price: '49,99€',
-              priceSuffix: '/ 6 meses',
-              priceSecondary: '≈ 8,33€ / mês',
-              quote: 'Já uso a FinLy e quero que ela comece a trabalhar para mim.',
-              features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
-              limitation: null,
-              buttonText: 'Quero começar a ganhar com a FinLy',
+              planData: t.pricingSection.plans.plus,
               icon: Trophy,
               popular: true,
-              popularLabel: '🔥 MAIS ESCOLHIDO',
             },
             {
               id: 'pro',
-              name: 'FinLy Pro',
-              tagline: 'Para quem quer pagar menos, ganhar mais e ficar à frente',
-              price: '89,99€',
-              priceSuffix: '/ ano',
-              priceSecondary: '≈ 7,49€ / mês',
-              quote: 'Quero tudo. O menor preço e o maior retorno.',
-              features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
-              limitation: null,
-              buttonText: 'Quero o plano mais completo',
+              planData: t.pricingSection.plans.pro,
               icon: Crown,
               popular: false,
             }
-          ].map((plan: any, index: number) => (
+          ].map((plan: any, index: number) => {
+            const planData = plan.planData;
+            return (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
@@ -392,10 +369,10 @@ export default function LandingPage() {
                   : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'
               } backdrop-blur-sm`}
             >
-              {plan.popular && plan.popularLabel && (
+              {plan.popular && planData.popularLabel && (
                 <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-2 py-1 sm:px-6 sm:py-2.5 rounded-md sm:rounded-2xl text-[8px] sm:text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-lg flex items-center gap-1 sm:gap-2 z-30 whitespace-nowrap">
                   <Trophy size={10} className="animate-pulse shrink-0 sm:w-4 sm:h-4" />
-                  <span>{plan.popularLabel}</span>
+                  <span>{planData.popularLabel}</span>
                 </div>
               )}
               
@@ -410,24 +387,24 @@ export default function LandingPage() {
                     <plan.icon size={16} className="sm:w-8 sm:h-8 shrink-0" style={{ color: plan.popular ? '#60a5fa' : '#94a3b8' }} />
                   </div>
                   <div className="text-right">
-                    <p className="text-[9px] sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-0.5 sm:mb-1">{plan.name}</p>
+                    <p className="text-[9px] sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-0.5 sm:mb-1">{planData.name}</p>
                     <p className="text-lg sm:text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
-                      {plan.price}
+                      {planData.price}
                     </p>
                     <p className="text-[9px] sm:text-sm text-slate-400 font-semibold mt-0.5">
-                      {plan.priceSuffix}
+                      {planData.priceSuffix}
                     </p>
-                    {plan.priceSecondary && (
-                      <p className="text-xs sm:text-base text-emerald-400 font-semibold mt-1 sm:mt-1.5">{plan.priceSecondary}</p>
+                    {planData.priceSecondary && (
+                      <p className="text-xs sm:text-base text-emerald-400 font-semibold mt-1 sm:mt-1.5">{planData.priceSecondary}</p>
                     )}
                   </div>
                 </div>
 
-                <p className="text-[10px] sm:text-base md:text-lg text-slate-400 mb-2 sm:mb-2 font-medium">{plan.tagline}</p>
-                <p className="text-[10px] sm:text-base text-slate-500 mb-3 sm:mb-6 italic line-clamp-2 sm:line-clamp-none">&quot;{plan.quote}&quot;</p>
+                <p className="text-[10px] sm:text-base md:text-lg text-slate-400 mb-2 sm:mb-2 font-medium">{planData.tagline}</p>
+                <p className="text-[10px] sm:text-base text-slate-500 mb-3 sm:mb-6 italic line-clamp-2 sm:line-clamp-none">&quot;{planData.quote}&quot;</p>
 
                 <div className="space-y-1.5 sm:space-y-3 mb-3 sm:mb-6">
-                  {plan.features.map((feature: string, fIndex: number) => (
+                  {planData.features.map((feature: string, fIndex: number) => (
                     <div key={fIndex} className="flex items-start gap-1 sm:gap-3">
                       <Check size={12} className="text-emerald-400 mt-0.5 shrink-0 sm:w-[22px] sm:h-[22px]" />
                       <p className="text-[10px] sm:text-base md:text-lg text-slate-200 font-medium">{feature}</p>
@@ -435,8 +412,8 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                {plan.limitation && (
-                  <p className="text-[10px] sm:text-base text-amber-400/90 mb-3 sm:mb-6 font-medium">🚫 {plan.limitation}</p>
+                {planData.limitation && (
+                  <p className="text-[10px] sm:text-base text-amber-400/90 mb-3 sm:mb-6 font-medium">🚫 {planData.limitation}</p>
                 )}
                 </div>
 
@@ -457,7 +434,7 @@ export default function LandingPage() {
                           window.location.href = res.data.url;
                         }
                       } catch (err: any) {
-                        console.error('Erro ao criar sessão Stripe:', err);
+                        console.error('Error creating Stripe session:', err);
                         router.push(`/pricing?plan=${plan.id}`);
                       }
                     } else {
@@ -470,11 +447,12 @@ export default function LandingPage() {
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                   }`}
                 >
-                  {plan.buttonText}
+                  {planData.buttonText}
                 </button>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Linha separadora antes do Programa de Afiliados */}
@@ -490,25 +468,24 @@ export default function LandingPage() {
           className="max-w-3xl mx-auto text-center"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-base font-black uppercase tracking-[0.2em] mb-6 sm:mb-8">
-            💸 Programa de Afiliados FinLy
+            {t.pricingSection.affiliate.badge}
           </div>
           <h3 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight mb-4 sm:mb-6 leading-tight">
-            Usa. Indica. Ganha.
+            {t.pricingSection.affiliate.title}
           </h3>
           <p className="text-slate-400 text-sm sm:text-lg md:text-xl mb-6 sm:mb-10">
-            Sempre que alguém entra na FinLy pelo teu link:
+            {t.pricingSection.affiliate.description}
           </p>
           <ul className="flex flex-col items-center text-slate-200 text-sm sm:text-lg md:text-xl space-y-3 sm:space-y-4 mb-8 sm:mb-12 font-medium">
-            <li className="flex items-center justify-center gap-3">🔁 Recebes comissão todos os meses</li>
-            <li className="flex items-center justify-center gap-3">💰 20% (Plus) ou 25% (Pro)</li>
-            <li className="flex items-center justify-center gap-3">📊 Tudo transparente no dashboard</li>
-            <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
+            {t.pricingSection.affiliate.benefits.map((benefit: string, index: number) => (
+              <li key={index} className="flex items-center justify-center gap-3">{benefit}</li>
+            ))}
           </ul>
           <div className="bg-slate-800/90 border border-slate-600/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl">
-            <p className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-3 sm:mb-4">📌 Exemplo simples:</p>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
-            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-4 sm:mb-5">50 pessoas → ~100€ por mês</p>
-            <p className="text-xs sm:text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
+            <p className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-400 mb-3 sm:mb-4">{t.pricingSection.affiliate.example.title}</p>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-1">{t.pricingSection.affiliate.example.line1}</p>
+            <p className="text-sm sm:text-lg md:text-xl text-slate-200 font-medium mb-4 sm:mb-5">{t.pricingSection.affiliate.example.line2}</p>
+            <p className="text-xs sm:text-base text-slate-500">{t.pricingSection.affiliate.example.footer}</p>
           </div>
         </motion.div>
 
@@ -521,22 +498,16 @@ export default function LandingPage() {
         >
           <div className="text-center mb-6 sm:mb-8">
             <span className="inline-flex items-center gap-2 text-slate-500 text-xs sm:text-sm font-black uppercase tracking-[0.2em]">
-              🔒 Sem risco, sem letras pequenas
+              {t.pricingSection.guarantee.title}
             </span>
           </div>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-12">
-            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
-              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
-              Pagamento seguro
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
-              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
-              Cancela quando quiseres
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
-              <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
-              Sem fidelização forçada
-            </div>
+            {t.pricingSection.guarantee.items.map((item: string, index: number) => (
+              <div key={index} className="flex items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-base">
+                <Check size={16} className="text-emerald-400 shrink-0 sm:w-5 sm:h-5" />
+                {item}
+              </div>
+            ))}
           </div>
         </motion.div>
       </motion.section>
@@ -798,15 +769,24 @@ export default function LandingPage() {
           </motion.p>
 
           <div className="flex flex-wrap justify-center gap-8 md:gap-16 mb-16">
-            <Link href="/terms" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
-              Termos
-            </Link>
-            <Link href="/privacy" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
-              Privacidade
-            </Link>
-            <Link href="#" className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors">
-              Cookies
-            </Link>
+            {t.footer.links.map((link: string, index: number) => {
+              const hrefMap: { [key: string]: string } = {
+                'Termos': '/terms',
+                'Terms': '/terms',
+                'Privacidade': '/privacy',
+                'Privacy': '/privacy',
+                'Cookies': '#'
+              };
+              return (
+                <Link 
+                  key={index}
+                  href={hrefMap[link] || '#'} 
+                  className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-white transition-colors"
+                >
+                  {link}
+                </Link>
+              );
+            })}
           </div>
 
           <motion.div 

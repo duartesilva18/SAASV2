@@ -94,19 +94,19 @@ function RegisterPageContent() {
 
   const validatePassword = (password: string): { valid: boolean; error: string } => {
     if (password.length > 72) {
-      return { valid: false, error: "A senha não pode ter mais de 72 caracteres" };
+      return { valid: false, error: t.auth.register.passwordTooLong || "Password cannot exceed 72 characters" };
     }
     if (password.length < 8) {
-      return { valid: false, error: "A senha deve ter pelo menos 8 caracteres" };
+      return { valid: false, error: t.auth.register.passwordMinLength };
     }
     if (!/[A-Z]/.test(password)) {
-      return { valid: false, error: "A senha deve conter pelo menos uma letra maiúscula" };
+      return { valid: false, error: t.auth.register.passwordUppercase };
     }
     if (!/[a-z]/.test(password)) {
-      return { valid: false, error: "A senha deve conter pelo menos uma letra minúscula" };
+      return { valid: false, error: t.auth.register.passwordLowercase };
     }
     if (!/\d/.test(password)) {
-      return { valid: false, error: "A senha deve conter pelo menos um número" };
+      return { valid: false, error: t.auth.register.passwordNumber };
     }
     return { valid: true, error: "" };
   };

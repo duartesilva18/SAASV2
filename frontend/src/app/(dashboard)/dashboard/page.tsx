@@ -45,11 +45,42 @@ export default function DashboardPage() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detectar se é mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  // Guardar último valor válido das percentagens para evitar que desapareçam quando dados recalculam
+  const lastValidPercentages = useRef<{ vsIncome: any; vsExpenses: any; vsBalance: any } | null>(null);
 
   // Usar SWR para cache inteligente; viewMonth filtra snapshot por mês (backend month 1-12)
   const { snapshot, collections, isLoading: snapshotLoading, mutate: mutateSnapshot } = useDashboardSnapshot(
     viewMonth.year,
     viewMonth.month + 1
+  );
+  
+  // Buscar snapshot do mês anterior para comparação
+  const prevMonth = useMemo(() => {
+    if (viewMonth.month === 0) {
+      // Se estamos em janeiro (month 0), mês anterior é dezembro do ano anterior
+      return { year: viewMonth.year - 1, month: 12 };
+    }
+    // Caso contrário, mês anterior é o mês atual - 1
+    // viewMonth.month é 0-11, então mês anterior é viewMonth.month - 1 (ainda em formato 0-11)
+    const prevMonthIndex = viewMonth.month - 1; // 0-11
+    return { year: viewMonth.year, month: prevMonthIndex };
+  }, [viewMonth]);
+  
+  const { snapshot: prevSnapshot } = useDashboardSnapshot(
+    prevMonth.year,
+    prevMonth.month === 12 ? 12 : prevMonth.month + 1 // Converter de 0-11 para 1-12, exceto dezembro que já é 12
   );
   
   // Buscar invoices separadamente (não está no snapshot)
@@ -65,8 +96,9 @@ export default function DashboardPage() {
   });
 
   // Dados para gráficos (Evolução 6 meses + Despesas por categoria) e "vs. mês anterior"
+  // Admins têm sempre acesso Pro
   const hasActiveSub = useMemo(() => {
-    return userData ? ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status) : false;
+    return userData ? (userData.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status)) : false;
   }, [userData]);
   const { data: compositeData } = useSWR(hasActiveSub ? '/insights/composite' : null, fetcher, {
     revalidateOnFocus: false,
@@ -126,7 +158,7 @@ export default function DashboardPage() {
         if (hasUnpaid) {
           setToast({
             show: true,
-            message: 'Atenção: Tens pagamentos em atraso. Verifica a tua faturação.',
+            message: t.dashboard.page.unpaidPaymentsAlert,
             type: 'error'
           });
         }
@@ -186,8 +218,8 @@ export default function DashboardPage() {
             } else if (progress >= 80) {
               return {
                 type: 'warning',
-                title: 'Atenção ao Limite',
-                message: `Estás a ${Math.max(1, Math.round(100 - progress))}% de atingir o limite em ${cat.name}.`,
+                title: t.dashboard.page.attentionToLimit,
+                message: t.dashboard.page.limitProgressMessage.replace('{pct}', String(Math.max(1, Math.round(100 - progress)))).replace('{name}', cat.name),
                 category: cat.name,
                 icon: 'Zap'
               };
@@ -269,7 +301,7 @@ export default function DashboardPage() {
             setIsProcessingUpgrade(false);
             setToast({
               show: true,
-              message: 'O pagamento está a ser processado. A subscrição será ativada em breve.',
+              message: t.dashboard.page.paymentProcessing,
               type: 'success'
             });
             window.history.replaceState({}, '', '/dashboard');
@@ -284,7 +316,7 @@ export default function DashboardPage() {
             setIsProcessingUpgrade(false);
             setToast({
               show: true,
-              message: 'Erro ao verificar pagamento. Por favor, recarrega a página.',
+              message: t.dashboard.page.paymentVerifyError,
               type: 'error'
             });
             window.history.replaceState({}, '', '/dashboard');
@@ -365,9 +397,19 @@ export default function DashboardPage() {
 
   // Dados para gráficos e "vs. mês anterior" (flow últimos 6 meses + distribution)
   const chartProcessed = useMemo(() => {
-    const raw = hasActiveSub && compositeData
+    // Se for Pro, só usar dados reais quando compositeData estiver disponível
+    // Se não for Pro ou compositeData ainda não chegou, usar dados demo
+    // Evita mostrar dados demo temporários que depois mudam para dados reais quando for Pro
+    const isProWaitingForData = hasActiveSub && !compositeData;
+    const shouldUseRealData = hasActiveSub && compositeData && !snapshotLoading && snapshot && collections;
+    
+    // Se for Pro mas ainda não tem compositeData, usar array vazio para não mostrar dados demo temporários
+    // Se não for Pro, usar dados demo normalmente
+    const raw = shouldUseRealData
       ? { transactions: compositeData.transactions || [], categories: compositeData.categories || [] }
-      : { transactions: DEMO_TRANSACTIONS, categories: DEMO_CATEGORIES };
+      : isProWaitingForData
+        ? { transactions: [], categories: [] } // Pro aguardando dados - não mostrar demo temporário que depois muda
+        : { transactions: DEMO_TRANSACTIONS, categories: DEMO_CATEGORIES }; // Não Pro - dados demo são intencionais
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0, 0);
@@ -427,22 +469,107 @@ export default function DashboardPage() {
       return { name: m.name, Emergência: cumE, Investimentos: cumI };
     });
 
-    const prev = flow6.length >= 2 ? flow6[flow6.length - 2] : null;
-    const vsIncome = prev != null && prev.income !== 0
-      ? { pct: ((stats.income - prev.income) / prev.income) * 100, label: (stats.income - prev.income) / prev.income >= 0 ? '+' + (((stats.income - prev.income) / prev.income) * 100).toFixed(1) + '%' : (((stats.income - prev.income) / prev.income) * 100).toFixed(1) + '%' }
-      : { pct: null, label: '—' };
-    const vsExpenses = prev != null && prev.expenses !== 0
-      ? { pct: ((stats.expenses - prev.expenses) / prev.expenses) * 100, label: (stats.expenses - prev.expenses) / prev.expenses >= 0 ? '+' + (((stats.expenses - prev.expenses) / prev.expenses) * 100).toFixed(1) + '%' : (((stats.expenses - prev.expenses) / prev.expenses) * 100).toFixed(1) + '%' }
-      : { pct: null, label: '—' };
-    const prevBalance = prev ? prev.income - prev.expenses : null;
-    const vsBalance = prevBalance != null
-      ? { pct: prevBalance !== 0 ? ((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100 : 0, label: prevBalance !== 0 ? ((stats.balance - prevBalance) / Math.abs(prevBalance)) >= 0 ? '+' + (((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100).toFixed(1) + '%' : (((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100).toFixed(1) + '%' : '0%' }
-      : { pct: null, label: '—' };
+    // Calcular percentagens comparando mês atual com mês anterior
+    // Usar snapshot do mês anterior se disponível, senão usar dados do flow6
+    // Não mostrar durante loading inicial para evitar valores incorretos temporários
+    // Guardar último valor válido para não desaparecer quando dados recalculam temporariamente
+    const hasCurrentData = !loading && !snapshotLoading && snapshot && collections;
+    
+    // Tentar usar snapshot do mês anterior primeiro (mais preciso)
+    const prevIncomeFromSnapshot = prevSnapshot?.income ?? null;
+    const prevExpensesFromSnapshot = prevSnapshot?.expenses ?? null;
+    const prevBalanceFromSnapshot = prevIncomeFromSnapshot !== null && prevExpensesFromSnapshot !== null 
+      ? prevIncomeFromSnapshot - prevExpensesFromSnapshot 
+      : null;
+    
+    // Se não tiver snapshot anterior, tentar usar dados do flow6
+    const prevFromFlow6 = flow6.length >= 2 ? flow6[flow6.length - 2] : null;
+    const prevIncome = prevIncomeFromSnapshot !== null ? prevIncomeFromSnapshot : (prevFromFlow6?.income ?? null);
+    const prevExpenses = prevExpensesFromSnapshot !== null ? prevExpensesFromSnapshot : (prevFromFlow6?.expenses ?? null);
+    const prevBalance = prevBalanceFromSnapshot !== null ? prevBalanceFromSnapshot : (prevFromFlow6 ? prevFromFlow6.income - prevFromFlow6.expenses : null);
+    
+    // Sempre calcular percentagens quando temos dados do mês atual
+    // Se não tivermos dados do mês anterior, comparar com 0 (primeiro mês)
+    const canCalculatePercentages = hasCurrentData;
+    
+    let vsIncome, vsExpenses, vsBalance;
+    
+    if (canCalculatePercentages) {
+      // Calcular novas percentagens comparando mês atual com anterior
+      // Só calcular se tivermos dados do mês anterior (não usar 0 como fallback)
+      
+      // Para receitas e despesas, verificar se temos dados anteriores
+      if (prevIncome === null) {
+        vsIncome = { pct: null, label: '—' };
+      } else if (prevIncome === 0) {
+        vsIncome = stats.income > 0 
+          ? { pct: Infinity, label: 'Novo' }
+          : { pct: 0, label: '0%' };
+      } else {
+        const incomeChange = ((stats.income - prevIncome) / prevIncome) * 100;
+        vsIncome = { 
+          pct: incomeChange, 
+          label: incomeChange >= 0 ? `+${incomeChange.toFixed(1)}%` : `${incomeChange.toFixed(1)}%` 
+        };
+      }
+      
+      if (prevExpenses === null) {
+        vsExpenses = { pct: null, label: '—' };
+      } else if (prevExpenses === 0) {
+        vsExpenses = stats.expenses > 0 
+          ? { pct: Infinity, label: 'Novo' }
+          : { pct: 0, label: '0%' };
+      } else {
+        const expensesChange = ((stats.expenses - prevExpenses) / prevExpenses) * 100;
+        vsExpenses = { 
+          pct: expensesChange, 
+          label: expensesChange >= 0 ? `+${expensesChange.toFixed(1)}%` : `${expensesChange.toFixed(1)}%` 
+        };
+      }
+      
+      // Para balance, verificar se temos dados válidos do mês anterior
+      if (prevBalance === null) {
+        vsBalance = { pct: null, label: '—' };
+      } else if (prevBalance === 0) {
+        // Se o saldo anterior era realmente 0, calcular percentagem corretamente
+        // Se o saldo atual é positivo, é um aumento infinito (de 0 para X)
+        // Se o saldo atual é negativo, é uma diminuição infinita (de 0 para -X)
+        vsBalance = stats.balance !== 0
+          ? { pct: stats.balance > 0 ? Infinity : -Infinity, label: 'Novo' }
+          : { pct: 0, label: '0%' };
+      } else {
+        // Calcular percentagem normalmente quando temos valores válidos
+        const balanceChange = ((stats.balance - prevBalance) / Math.abs(prevBalance)) * 100;
+        vsBalance = { 
+          pct: balanceChange, 
+          label: balanceChange >= 0 ? `+${balanceChange.toFixed(1)}%` : `${balanceChange.toFixed(1)}%` 
+        };
+      }
+      
+      // Guardar valores válidos apenas se calculámos percentagens válidas
+      if (vsIncome.pct !== null || vsExpenses.pct !== null || vsBalance.pct !== null) {
+        lastValidPercentages.current = { vsIncome, vsExpenses, vsBalance };
+      }
+    } else {
+      // Usar último valor válido se existir, senão mostrar '—'
+      if (lastValidPercentages.current) {
+        vsIncome = lastValidPercentages.current.vsIncome;
+        vsExpenses = lastValidPercentages.current.vsExpenses;
+        vsBalance = lastValidPercentages.current.vsBalance;
+      } else {
+        vsIncome = { pct: null, label: '—' };
+        vsExpenses = { pct: null, label: '—' };
+        vsBalance = { pct: null, label: '—' };
+      }
+    }
 
     return { flow6, distribution, vsIncome, vsExpenses, vsBalance, vaultByMonth };
-  }, [hasActiveSub, compositeData, stats.income, stats.expenses, stats.balance]);
+  }, [hasActiveSub, compositeData, stats.income, stats.expenses, stats.balance, snapshotLoading, snapshot, collections, loading, prevSnapshot, prevMonth]);
 
-  const userName = (userData?.full_name || (userData?.email || '').split('@')[0] || 'Utilizador').trim() || 'Utilizador';
+  const defaultName = t.dashboard.page.defaultUserName;
+  const userName = (userData?.full_name || (userData?.email || '').split('@')[0] || defaultName).trim() || defaultName;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t.dashboard.page.greetingMorning : hour < 18 ? t.dashboard.page.greetingAfternoon : t.dashboard.page.greetingEvening;
   const filterMonthLabel = new Date(viewMonth.year, viewMonth.month, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 
   const visibleAlerts = alerts.slice(0, 2);
@@ -450,20 +577,20 @@ export default function DashboardPage() {
   const budgetUsage = stats.totalBudget > 0 ? (stats.expenses / stats.totalBudget) * 100 : 0;
   const quickInsights = hasLowData
     ? [
-        'Estás a começar bem. Cada pequena ação conta para criar bons hábitos.',
-        'Ainda tens poucos registos, por isso as leituras podem variar bastante.',
-        'Dica rápida: adiciona pelo menos 10 transações para teres insights mais fiáveis.'
+        t.dashboard.page.insightStartWell,
+        t.dashboard.page.insightFewRecords,
+        t.dashboard.page.insightTip
       ]
     : [
         stats.dailyAllowance > 0
-          ? `Podes gastar cerca de ${formatCurrency(stats.dailyAllowance)} por dia sem ultrapassar o orçamento.`
-          : 'Ainda não tens um orçamento diário definido para este mês.',
+          ? t.dashboard.page.insightDailyAllowance.replace('{amount}', formatCurrency(stats.dailyAllowance))
+          : t.dashboard.page.insightNoBudget,
         stats.balance >= 0
-          ? 'Saldo mensal positivo. Estás a gastar abaixo das receitas.'
-          : 'Saldo mensal negativo. Atenção ao ritmo de despesas.',
+          ? t.dashboard.page.positiveBalance
+          : t.dashboard.page.negativeBalance,
         stats.totalBudget > 0
-          ? `Já usaste ${Math.min(100, Math.round(budgetUsage))}% do orçamento deste mês.`
-          : 'Sem orçamento mensal definido nas categorias.'
+          ? t.dashboard.page.insightBudgetUsed.replace('{pct}', String(Math.min(100, Math.round(budgetUsage))))
+          : t.dashboard.page.insightNoMonthlyBudget
       ];
 
   if (loading) {
@@ -480,15 +607,15 @@ export default function DashboardPage() {
       {/* Cabeçalho: saudação + resumo */}
       <div className="mb-6">
         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-          Bom dia, {userName}
+          {greeting}, {userName}
         </h1>
-        <p className="text-slate-400 font-medium mt-1">Aqui está um resumo das suas finanças</p>
+        <p className="text-slate-400 font-medium mt-1">{t.dashboard.page.headerSubtitle}</p>
       </div>
 
       {/* Filtros (esquerda) | Nova transação (direita) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Filtros</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.filters}</span>
           <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2">
             <Calendar size={16} className="text-slate-400 shrink-0" />
             <button
@@ -496,7 +623,7 @@ export default function DashboardPage() {
               disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 0 ? { year: p.year - 1, month: 11 } : { year: p.year, month: p.month - 1 }))}
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Mês anterior"
+              aria-label={t.dashboard.page.previousMonth}
             >
               <ChevronLeft size={18} />
             </button>
@@ -509,7 +636,7 @@ export default function DashboardPage() {
               disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 11 ? { year: p.year + 1, month: 0 } : { year: p.year, month: p.month + 1 }))}
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Mês seguinte"
+              aria-label={t.dashboard.page.nextMonth}
             >
               <ChevronRight size={18} />
             </button>
@@ -523,7 +650,7 @@ export default function DashboardPage() {
                   onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
                   className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 transition-colors cursor-pointer"
                 >
-                  Mês atual
+                  {t.dashboard.page.currentMonth}
                 </button>
               );
             })()}
@@ -544,7 +671,7 @@ export default function DashboardPage() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer"
           >
             <Plus size={18} />
-            Nova transação
+            {t.dashboard.page.newTransaction}
           </button>
         </div>
       </div>
@@ -630,11 +757,11 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2"
           >
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução Financeira</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">Últimos 6 meses · Receitas vs Despesas</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
+            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.page.last6Months}</p>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartProcessed.flow6}>
+                <AreaChart data={chartProcessed.flow6} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 5 : 0 }}>
                   <defs>
                     <linearGradient id="dashIncome" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
@@ -646,11 +773,20 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                  <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="bold" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#475569" 
+                    fontSize={isMobile ? 9 : 10} 
+                    fontWeight="bold" 
+                    interval={0}
+                    angle={isMobile ? -45 : 0}
+                    textAnchor={isMobile ? "end" : "middle"}
+                    height={isMobile ? 50 : 30}
+                  />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={72} />
                   <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
-                  <Area type="monotone" dataKey="income" name="Receitas" stroke="#10b981" fill="url(#dashIncome)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="expenses" name="Despesas" stroke="#ef4444" fill="url(#dashExpenses)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="income" name={t.dashboard.page.income} stroke="#10b981" fill="url(#dashIncome)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="expenses" name={t.dashboard.page.expenses} stroke="#ef4444" fill="url(#dashExpenses)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -761,7 +897,7 @@ export default function DashboardPage() {
               transition={{ delay: 0.08 }}
               className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-1"
             >
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Fundos · Investimentos e Emergência</h3>
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
               <div className="space-y-3 flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -769,7 +905,7 @@ export default function DashboardPage() {
                       <ShieldCheck size={16} />
                     </div>
                     <div className="min-w-0 overflow-hidden">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">Fundo de Emergência</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.vault.emergencyFund}</p>
                       <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultEmergency)}</p>
                     </div>
                   </div>
@@ -788,7 +924,7 @@ export default function DashboardPage() {
                       <Target size={16} />
                     </div>
                     <div className="min-w-0 overflow-hidden">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">Investimentos</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.vault.investments}</p>
                       <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultInvestment)}</p>
                     </div>
                   </div>
@@ -802,13 +938,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="py-2 px-3 rounded-xl bg-slate-800/30 border border-white/5 flex items-center justify-between">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Total fundos</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.totalFunds}</span>
                   <span className="text-sm font-black text-white">{formatCurrency(stats.vaultEmergency + stats.vaultInvestment)}</span>
                 </div>
               </div>
               {isPro && (
                 <Link href="/vault" className="mt-3 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1">
-                  Ver cofres <ChevronRight size={12} />
+                  {t.dashboard.page.viewVaults} <ChevronRight size={12} />
                 </Link>
               )}
             </motion.div>
@@ -820,27 +956,36 @@ export default function DashboardPage() {
               transition={{ delay: 0.1 }}
               className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-2"
             >
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Distribuição de fundos por mês</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
             <div className="flex-1 min-h-[180px] flex items-center justify-center">
               {chartProcessed.vaultByMonth.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartProcessed.vaultByMonth}>
+                  <LineChart data={chartProcessed.vaultByMonth} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 5 : 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                    <XAxis dataKey="name" stroke="#475569" fontSize={10} fontWeight="bold" />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="#475569" 
+                      fontSize={isMobile ? 9 : 10} 
+                      fontWeight="bold" 
+                      interval={0}
+                      angle={isMobile ? -45 : 0}
+                      textAnchor={isMobile ? "end" : "middle"}
+                      height={isMobile ? 50 : 30}
+                    />
                     <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} />
                     <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
-                    <Line type="monotone" dataKey="Emergência" name="Emergência" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
-                    <Line type="monotone" dataKey="Investimentos" name="Investimentos" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
+                    <Line type="monotone" dataKey="Emergência" name={t.dashboard.page.emergency} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+                    <Line type="monotone" dataKey="Investimentos" name={t.dashboard.page.investments} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-slate-500 text-sm italic text-center">Sem dados nos cofres (últimos 6 meses)</p>
+                <p className="text-slate-500 text-sm italic text-center">{t.dashboard.page.noVaultData}</p>
               )}
             </div>
             {chartProcessed.vaultByMonth.length > 0 && (
               <div className="flex items-center justify-end gap-4 mt-2 text-[10px] font-bold uppercase tracking-wider">
-                <span className="text-amber-400">— Emergência</span>
-                <span className="text-blue-400">— Investimentos</span>
+                <span className="text-amber-400">— {t.dashboard.page.emergency}</span>
+                <span className="text-blue-400">— {t.dashboard.page.investments}</span>
               </div>
             )}
           </motion.div>
@@ -850,13 +995,13 @@ export default function DashboardPage() {
 
       <section className="mb-12">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Insights rápidos</h2>
+          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.quickInsightsTitle}</h2>
           {isPro && (
             <Link
               href="/analytics"
               className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
             >
-              Ver detalhes
+              {t.dashboard.page.viewDetails}
             </Link>
           )}
         </div>
@@ -933,7 +1078,7 @@ export default function DashboardPage() {
                   href="/categories"
                   className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors"
                 >
-                  Ver mais alertas
+                  {t.dashboard.page.viewMoreAlerts}
                 </Link>
               </div>
             )}

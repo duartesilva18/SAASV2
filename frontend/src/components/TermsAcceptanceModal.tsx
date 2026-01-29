@@ -6,12 +6,14 @@ import { FileText, Check, X, ExternalLink, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useUser } from '@/lib/UserContext';
+import { useTranslation } from '@/lib/LanguageContext';
 
 interface TermsAcceptanceModalProps {
   onAccept: () => void;
 }
 
 export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -19,7 +21,7 @@ export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalP
 
   const handleAccept = async () => {
     if (!accepted) {
-      setError('Por favor, aceita os Termos e Condições para continuar.');
+      setError(t.auth.login.acceptTermsRequired || 'Please accept the Terms and Conditions to continue.');
       return;
     }
 
@@ -31,7 +33,7 @@ export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalP
       await refreshUser();
       onAccept();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Erro ao aceitar os termos. Tenta novamente.');
+      setError(err.response?.data?.detail || (t.auth.login.acceptTermsError || 'Erro ao aceitar os termos. Tenta novamente.'));
       setLoading(false);
     }
   };
@@ -157,7 +159,7 @@ export default function TermsAcceptanceModal({ onAccept }: TermsAcceptanceModalP
 
           {/* Footer Note */}
           <p className="text-center text-xs text-slate-500 mt-6">
-            Ao clicar em "Aceitar e Continuar", concordas com todos os termos acima.
+            {t.auth.termsAccept}
           </p>
         </motion.div>
       </motion.div>

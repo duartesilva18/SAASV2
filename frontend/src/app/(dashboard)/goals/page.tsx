@@ -177,7 +177,7 @@ export default function GoalsPage() {
       fetchGoals();
     } catch (err: any) {
       console.error('Erro ao completar meta:', err);
-      setToast({ show: true, message: err.response?.data?.detail || 'Erro ao completar meta', type: 'error' });
+      setToast({ show: true, message: err.response?.data?.detail || t.dashboard.goals.completeError, type: 'error' });
     } finally {
       setCompletingGoal(null);
     }
@@ -617,8 +617,8 @@ export default function GoalsPage() {
         onConfirm={handleDelete}
         title={t.dashboard.goals.deleteConfirm}
         message={t.dashboard.goals.deleteConfirmText || 'Tens a certeza que desejas eliminar esta meta? Esta ação não pode ser desfeita.'}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        confirmText={t.dashboard.goals.confirmDelete}
+        cancelText={t.dashboard.goals.cancel}
         variant="danger"
       />
 

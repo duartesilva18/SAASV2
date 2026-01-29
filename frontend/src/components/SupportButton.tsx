@@ -21,7 +21,7 @@ export default function SupportButton() {
           setTelegramNumber(cleanNumber);
         }
       } catch (err) {
-        console.error('Erro ao carregar número de suporte:', err);
+        console.error('Error loading support number:', err);
       }
     };
     fetchSettings();

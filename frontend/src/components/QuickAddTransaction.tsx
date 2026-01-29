@@ -59,7 +59,7 @@ export default function QuickAddTransaction() {
         }));
       }
     } catch (err: any) {
-      console.error("Erro ao carregar categorias:", err);
+      console.error(t.dashboard.transactions.loadCategoriesError || "Error loading categories:", err);
       if (err.response?.status === 401) {
         logout();
       }
@@ -73,7 +73,7 @@ export default function QuickAddTransaction() {
     today.setHours(0, 0, 0, 0);
     
     if (selectedDate > today) {
-      setToastMsg("A jornada Zen só regista o presente ou o passado. Escolha uma data válida.");
+      setToastMsg(t.dashboard.transactions.invalidDateMessage || "Invalid date");
       setToastType('error');
       setShowToast(true);
       return;
@@ -87,7 +87,7 @@ export default function QuickAddTransaction() {
         category_id: formData.category_id,
         transaction_date: formData.transaction_date
       });
-      setToastMsg("Transação registada com sucesso!");
+      setToastMsg(t.dashboard.transactions.registerSuccess || "Transaction registered successfully!");
       setToastType('success');
       setShowToast(true);
       setIsOpen(false);
@@ -100,7 +100,7 @@ export default function QuickAddTransaction() {
       });
       window.dispatchEvent(new Event('transaction-added'));
     } catch (err) {
-      setToastMsg("Erro ao registar transação.");
+      setToastMsg(t.dashboard.transactions.registerError || "Error registering transaction.");
       setToastType('error');
       setShowToast(true);
     } finally {
@@ -200,7 +200,7 @@ export default function QuickAddTransaction() {
                     <input
                       required
                       type="text"
-                      placeholder="Descrição (ex: Almoço Zen)"
+                      placeholder={t.dashboard.transactions.descriptionPlaceholder || "Description"}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full bg-slate-950/50 border border-slate-700 focus:border-blue-500 rounded-2xl px-6 py-4 text-sm font-medium text-white focus:outline-none transition-all"
@@ -242,7 +242,7 @@ export default function QuickAddTransaction() {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Confirmar Registo
+                        {t.dashboard.transactions.confirmRegister}
                         <Plus size={18} />
                       </>
                     )}

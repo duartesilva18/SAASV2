@@ -286,7 +286,7 @@ function TransactionsPageContent() {
 
       // Validar que amount_cents não é zero
       if (amount_cents === 0) {
-        setToastInfo({ message: "O valor da transação não pode ser zero.", type: 'error', isVisible: true });
+        setToastInfo({ message: t.dashboard.transactions.zeroAmount, type: 'error', isVisible: true });
         return;
       }
 
@@ -308,7 +308,7 @@ function TransactionsPageContent() {
 
       if (editingTransaction) {
         await api.patch(`/transactions/${editingTransaction.id}`, payload);
-        setToastInfo({ message: "Transação atualizada!", type: 'success', isVisible: true });
+        setToastInfo({ message: t.dashboard.transactions.updateSuccess, type: 'success', isVisible: true });
       } else {
         await api.post('/transactions/', payload);
         setToastInfo({ message: t.dashboard.transactions.success, type: 'success', isVisible: true });

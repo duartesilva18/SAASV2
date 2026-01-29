@@ -1,21 +1,30 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ShieldCheck, FileText, Calendar, Mail } from 'lucide-react';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Termos e Condições',
-  description: 'Termos e Condições de utilização do Finly - Gestão Financeira Pessoal',
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { FileText, Mail, ArrowLeft } from 'lucide-react';
+import { useTranslation } from '@/lib/LanguageContext';
 
 export default function TermsPage() {
+  const { t } = useTranslation();
+  const router = useRouter();
   const lastUpdated = '2026-01-15';
+  const terms = t.legal.terms;
 
   return (
     <div className="min-h-screen bg-[#020617] text-white">
+      {/* Back button - mobile only */}
+      <div className="md:hidden fixed top-4 left-4 z-10">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 text-white hover:bg-slate-700/80 transition-colors"
+          aria-label={t.auth?.login?.backToHome ?? 'Voltar'}
+        >
+          <ArrowLeft size={20} />
+        </button>
+      </div>
+
       <div className="max-w-4xl mx-auto px-6 py-16 md:py-24">
         {/* Header */}
         <div className="mb-12 text-center">
@@ -23,10 +32,10 @@ export default function TermsPage() {
             <FileText size={32} className="text-blue-500" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 uppercase">
-            Termos e <span className="text-blue-500 italic">Condições</span>
+            {terms.title.split(' ')[0]} <span className="text-blue-500 italic">{terms.titleAccent}</span>
           </h1>
           <p className="text-slate-400 text-sm font-medium">
-            Última atualização: {new Date(lastUpdated).toLocaleDateString('pt-PT', { 
+            {terms.lastUpdated} {new Date(lastUpdated).toLocaleDateString(t.language === 'pt' ? 'pt-PT' : 'en-US', { 
               day: 'numeric', 
               month: 'long', 
               year: 'numeric' 
@@ -39,9 +48,7 @@ export default function TermsPage() {
           {/* Introdução */}
           <section className="bg-slate-900/30 border border-slate-800 rounded-[32px] p-8">
             <p className="text-base leading-relaxed">
-              Bem-vindo ao <strong className="text-white">Finly</strong>. Ao acederes e utilizares a nossa plataforma, 
-              concordas em cumprir e estar vinculado aos seguintes Termos e Condições. Se não concordares com 
-              qualquer parte destes termos, não deves utilizar os nossos serviços.
+              {terms.introduction}
             </p>
           </section>
 
@@ -49,28 +56,28 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">1.</span>
-              Definições
+              {terms.sections.definitions.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-4">
               <div>
-                <p className="font-semibold text-white mb-2">1.1. "Serviço" ou "Plataforma"</p>
-                <p>Refere-se ao Finly, incluindo o website, aplicação web, bot do Telegram e todos os serviços relacionados.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.definitions.service.title}</p>
+                <p>{terms.sections.definitions.service.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">1.2. "Utilizador" ou "Tu"</p>
-                <p>Refere-se à pessoa que acede ou utiliza o Serviço.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.definitions.user.title}</p>
+                <p>{terms.sections.definitions.user.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">1.3. "Nós", "Nosso" ou "Finly"</p>
-                <p>Refere-se à entidade que fornece o Serviço.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.definitions.we.title}</p>
+                <p>{terms.sections.definitions.we.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">1.4. "Conta"</p>
-                <p>Refere-se à conta criada pelo Utilizador para aceder ao Serviço.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.definitions.account.title}</p>
+                <p>{terms.sections.definitions.account.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">1.5. "Conteúdo"</p>
-                <p>Refere-se a todos os dados, informações, textos, gráficos e outros materiais fornecidos através do Serviço.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.definitions.content.title}</p>
+                <p>{terms.sections.definitions.content.text}</p>
               </div>
             </div>
           </section>
@@ -79,16 +86,14 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">2.</span>
-              Aceitação dos Termos
+              {terms.sections.acceptance.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>2.1. Ao criar uma conta, aceder ou utilizar o Finly, confirmas que:</p>
+              <p>{terms.sections.acceptance.text}</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Tens pelo menos 18 anos de idade ou tens autorização de um responsável legal;</li>
-                <li>Tens capacidade legal para celebrar contratos vinculativos;</li>
-                <li>Vais fornecer informações precisas, atuais e completas durante o registo;</li>
-                <li>Vais manter a segurança da tua conta e palavra-passe;</li>
-                <li>És responsável por todas as atividades que ocorram sob a tua conta.</li>
+                {terms.sections.acceptance.items.map((item: string, index: number) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </div>
           </section>
@@ -97,18 +102,16 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">3.</span>
-              Descrição do Serviço
+              {terms.sections.service.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>3.1. O Finly é uma plataforma de gestão financeira pessoal que permite:</p>
+              <p>{terms.sections.service.text}</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Registar despesas e receitas através do Telegram ou interface web;</li>
-                <li>Visualizar gráficos e análises dos teus dados financeiros;</li>
-                <li>Categorizar transações automaticamente;</li>
-                <li>Gerir orçamentos e metas de poupança;</li>
-                <li>Exportar dados financeiros.</li>
+                {terms.sections.service.items.map((item: string, index: number) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-              <p className="mt-4">3.2. O Finly não é um serviço bancário, não processa pagamentos e não tem acesso às tuas contas bancárias.</p>
+              <p className="mt-4">{terms.sections.service.note}</p>
             </div>
           </section>
 
@@ -116,32 +119,32 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">4.</span>
-              Planos e Pagamentos
+              {terms.sections.plans.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-4">
               <div>
-                <p className="font-semibold text-white mb-2">4.1. Planos Disponíveis</p>
-                <p>O Finly oferece planos gratuitos e pagos. Os detalhes dos planos, preços e funcionalidades estão disponíveis na página de preços.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.available.title}</p>
+                <p>{terms.sections.plans.available.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">4.2. Pagamentos</p>
-                <p>Os pagamentos são processados através do Stripe. Ao subscreveres um plano pago, autorizas-nos a cobrar o valor na periodicidade escolhida (mensal ou anual).</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.payments.title}</p>
+                <p>{terms.sections.plans.payments.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">4.3. Renovação Automática</p>
-                <p>As subscrições renovam-se automaticamente no final de cada período, a menos que canceles antes da data de renovação.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.renewal.title}</p>
+                <p>{terms.sections.plans.renewal.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">4.4. Cancelamento</p>
-                <p>Podes cancelar a tua subscrição a qualquer momento através das definições da conta. O cancelamento entra em vigor no final do período pago atual.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.cancellation.title}</p>
+                <p>{terms.sections.plans.cancellation.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">4.5. Reembolsos</p>
-                <p>Oferecemos uma garantia de reembolso de 7 dias a partir da data de subscrição inicial. Após este período, não são oferecidos reembolsos, exceto quando exigido por lei.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.refunds.title}</p>
+                <p>{terms.sections.plans.refunds.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">4.6. Alterações de Preço</p>
-                <p>Reservamo-nos o direito de alterar os preços a qualquer momento. As alterações não afetam subscrições já ativas durante o período pago.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.plans.priceChanges.title}</p>
+                <p>{terms.sections.plans.priceChanges.text}</p>
               </div>
             </div>
           </section>
@@ -150,13 +153,13 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">5.</span>
-              Privacidade e Proteção de Dados
+              {terms.sections.privacy.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>5.1. O tratamento dos teus dados pessoais é regido pela nossa <Link href="/privacy" className="text-blue-500 hover:text-blue-400 underline">Política de Privacidade</Link>.</p>
-              <p>5.2. Utilizamos encriptação de ponta a ponta para proteger os teus dados financeiros.</p>
-              <p>5.3. Nunca solicitamos ou armazenamos palavras-passe bancárias ou dados de cartões de crédito (exceto através do Stripe para pagamentos).</p>
-              <p>5.4. Os teus dados financeiros são privados e não são partilhados com terceiros, exceto conforme descrito na Política de Privacidade.</p>
+              <p>{terms.sections.privacy.text1} <Link href="/privacy" className="text-blue-500 hover:text-blue-400 underline">{terms.sections.privacy.privacyLink}</Link>.</p>
+              <p>{terms.sections.privacy.text2}</p>
+              <p>{terms.sections.privacy.text3}</p>
+              <p>{terms.sections.privacy.text4}</p>
             </div>
           </section>
 
@@ -164,27 +167,25 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">6.</span>
-              Responsabilidades do Utilizador
+              {terms.sections.responsibilities.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-4">
               <div>
-                <p className="font-semibold text-white mb-2">6.1. Uso Adequado</p>
-                <p>Concordas em utilizar o Serviço apenas para fins legais e de acordo com estes Termos. Não deves:</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.responsibilities.properUse.title}</p>
+                <p>{terms.sections.responsibilities.properUse.text}</p>
                 <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
-                  <li>Utilizar o Serviço de forma fraudulenta ou ilegal;</li>
-                  <li>Tentar aceder não autorizado a contas de outros utilizadores;</li>
-                  <li>Interferir ou perturbar o funcionamento do Serviço;</li>
-                  <li>Transmitir vírus, malware ou código malicioso;</li>
-                  <li>Copiar, modificar ou criar trabalhos derivados do Serviço sem autorização.</li>
+                  {terms.sections.responsibilities.properUse.items.map((item: string, index: number) => (
+                    <li key={index}>{item}</li>
+                  ))}
                 </ul>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">6.2. Precisão dos Dados</p>
-                <p>És responsável pela precisão e integridade dos dados que introduzes no Finly. Não nos responsabilizamos por decisões tomadas com base em dados incorretos ou incompletos.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.responsibilities.accuracy.title}</p>
+                <p>{terms.sections.responsibilities.accuracy.text}</p>
               </div>
               <div>
-                <p className="font-semibold text-white mb-2">6.3. Segurança da Conta</p>
-                <p>És responsável por manter a confidencialidade da tua palavra-passe e por todas as atividades que ocorram sob a tua conta.</p>
+                <p className="font-semibold text-white mb-2">{terms.sections.responsibilities.security.title}</p>
+                <p>{terms.sections.responsibilities.security.text}</p>
               </div>
             </div>
           </section>
@@ -193,12 +194,12 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">7.</span>
-              Propriedade Intelectual
+              {terms.sections.intellectual.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>7.1. Todo o conteúdo do Finly, incluindo mas não limitado a texto, gráficos, logos, ícones, imagens, software e código, é propriedade do Finly ou dos seus fornecedores de conteúdo e está protegido por leis de direitos autorais.</p>
-              <p>7.2. És concedido uma licença limitada, não exclusiva e não transferível para aceder e utilizar o Serviço para uso pessoal e não comercial.</p>
-              <p>7.3. Os teus dados financeiros são da tua propriedade. Concedes-nos uma licença para utilizar, processar e armazenar estes dados apenas para fornecer o Serviço.</p>
+              <p>{terms.sections.intellectual.text1}</p>
+              <p>{terms.sections.intellectual.text2}</p>
+              <p>{terms.sections.intellectual.text3}</p>
             </div>
           </section>
 
@@ -206,18 +207,17 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">8.</span>
-              Limitação de Responsabilidade
+              {terms.sections.liability.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>8.1. O Finly é fornecido "como está" e "conforme disponível". Não garantimos que o Serviço será ininterrupto, livre de erros ou completamente seguro.</p>
-              <p>8.2. Não nos responsabilizamos por:</p>
+              <p>{terms.sections.liability.text1}</p>
+              <p>{terms.sections.liability.text2}</p>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>Perda de dados resultante de falhas técnicas ou de segurança;</li>
-                <li>Decisões financeiras tomadas com base nos dados do Finly;</li>
-                <li>Danos indiretos, incidentais ou consequenciais;</li>
-                <li>Interrupções temporárias do Serviço devido a manutenção ou atualizações.</li>
+                {terms.sections.liability.items.map((item: string, index: number) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-              <p className="mt-4">8.3. A nossa responsabilidade total não excederá o valor pago por ti nos últimos 12 meses.</p>
+              <p className="mt-4">{terms.sections.liability.text3}</p>
             </div>
           </section>
 
@@ -225,12 +225,12 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">9.</span>
-              Modificações do Serviço e Termos
+              {terms.sections.modifications.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>9.1. Reservamo-nos o direito de modificar, suspender ou descontinuar qualquer parte do Serviço a qualquer momento, com ou sem aviso prévio.</p>
-              <p>9.2. Podemos atualizar estes Termos periodicamente. As alterações significativas serão comunicadas através do email associado à tua conta ou através de um aviso no Serviço.</p>
-              <p>9.3. O uso continuado do Serviço após alterações constitui aceitação dos novos Termos.</p>
+              <p>{terms.sections.modifications.text1}</p>
+              <p>{terms.sections.modifications.text2}</p>
+              <p>{terms.sections.modifications.text3}</p>
             </div>
           </section>
 
@@ -238,13 +238,13 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">10.</span>
-              Rescisão
+              {terms.sections.termination.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6 space-y-3">
-              <p>10.1. Podes encerrar a tua conta a qualquer momento através das definições da conta.</p>
-              <p>10.2. Podemos suspender ou encerrar a tua conta imediatamente se violares estes Termos ou se utilizares o Serviço de forma ilegal ou fraudulenta.</p>
-              <p>10.3. Após a rescisão, o teu acesso ao Serviço será imediatamente revogado. Podes solicitar uma cópia dos teus dados antes do encerramento da conta.</p>
-              <p>10.4. As secções que por natureza devem sobreviver (incluindo Propriedade Intelectual, Limitação de Responsabilidade) continuarão em vigor após a rescisão.</p>
+              <p>{terms.sections.termination.text1}</p>
+              <p>{terms.sections.termination.text2}</p>
+              <p>{terms.sections.termination.text3}</p>
+              <p>{terms.sections.termination.text4}</p>
             </div>
           </section>
 
@@ -252,11 +252,11 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">11.</span>
-              Lei Aplicável e Jurisdição
+              {terms.sections.law.title}
             </h2>
             <div className="bg-slate-900/30 border border-slate-800 rounded-[24px] p-6">
-              <p>11.1. Estes Termos são regidos pelas leis de Portugal.</p>
-              <p>11.2. Qualquer disputa relacionada com estes Termos será resolvida nos tribunais competentes de Portugal.</p>
+              <p>{terms.sections.law.text1}</p>
+              <p>{terms.sections.law.text2}</p>
             </div>
           </section>
 
@@ -264,15 +264,15 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight flex items-center gap-3">
               <span className="text-blue-500">12.</span>
-              Contacto
+              {terms.sections.contact.title}
             </h2>
             <div className="bg-blue-600/10 border border-blue-500/20 rounded-[24px] p-6">
-              <p className="mb-4">Para questões sobre estes Termos e Condições, podes contactar-nos:</p>
+              <p className="mb-4">{terms.sections.contact.text}</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <Mail size={18} className="text-blue-500" />
-                  <a href="mailto:legal@finly.pt" className="text-blue-400 hover:text-blue-300 underline">
-                    legal@finly.pt
+                  <a href={`mailto:${terms.sections.contact.email}`} className="text-blue-400 hover:text-blue-300 underline">
+                    {terms.sections.contact.email}
                   </a>
                 </div>
               </div>
@@ -281,13 +281,13 @@ export default function TermsPage() {
 
           {/* Footer */}
           <div className="pt-8 border-t border-slate-800 text-center text-sm text-slate-500">
-            <p>© {new Date().getFullYear()} Finly. Todos os direitos reservados.</p>
+            <p>{terms.footer.copyright.replace('{year}', new Date().getFullYear().toString())}</p>
             <div className="flex justify-center gap-6 mt-4">
               <Link href="/privacy" className="text-blue-500 hover:text-blue-400 underline">
-                Política de Privacidade
+                {terms.footer.privacyLink}
               </Link>
               <Link href="/terms" className="text-blue-500 hover:text-blue-400 underline">
-                Termos e Condições
+                {terms.footer.termsLink}
               </Link>
             </div>
           </div>

@@ -53,7 +53,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
       console.error(err);
       setAlertModal({
         isOpen: true,
-        title: 'Erro',
+        title: t.dashboard.sidebar.toastTypes.error,
         message: t.dashboard.pricing.monthlyPlan.error,
         type: 'error'
       });
@@ -121,7 +121,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
                 </motion.div>
                 <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black tracking-tighter mb-6 sm:mb-10 leading-[0.8]">
                   A tua <br />
-                  <span className="text-blue-200 italic">Nova Era</span> <br />
+                  <span className="text-blue-200 italic">{t.pricing.newEra}</span> <br />
                   Financeira.
                 </h2>
                 <p className="text-blue-100 font-medium italic text-lg sm:text-xl md:text-2xl leading-relaxed mb-8 sm:mb-16 max-w-lg">
@@ -219,7 +219,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
                         <p className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tighter break-words">
                           {formatCurrency(billingCycle === 'yearly' && plan.id === 'yearly' ? plan.price : (plan.id === 'yearly' ? 9.99 : plan.price))}
                         </p>
-                        <p className="text-[9px] sm:text-[10px] text-slate-600 font-bold uppercase mt-1">/ {billingCycle === 'monthly' ? 'Mês' : 'Ano'}</p>
+                        <p className="text-[9px] sm:text-[10px] text-slate-600 font-bold uppercase mt-1">/ {billingCycle === 'monthly' ? t.pricing.yearly.periodMonth : t.pricing.yearly.periodYear}</p>
                       </div>
                     </div>
 
@@ -250,7 +250,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
               </div>
 
               <p className="mt-10 text-center text-[10px] text-slate-600 font-medium italic">
-                Podes cancelar a tua subscrição a qualquer momento no portal de faturação.
+                {t.pricing.cancelSubscription}
               </p>
             </div>
           </motion.div>

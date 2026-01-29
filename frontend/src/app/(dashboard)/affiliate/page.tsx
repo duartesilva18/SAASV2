@@ -111,7 +111,7 @@ export default function AffiliatePage() {
         console.error('Erro ao carregar dados de afiliado:', err);
         setToast({
           isVisible: true,
-          message: err?.response?.data?.detail || 'Erro ao carregar dados',
+          message: err?.response?.data?.detail || (t.dashboard.affiliate as any).loadError,
           type: 'error'
         });
       } finally {
@@ -149,18 +149,18 @@ export default function AffiliatePage() {
         
         setToast({
           isVisible: true,
-          message: 'Parabéns! Agora és afiliado!',
+          message: t.dashboard.affiliate.congratulations,
           type: 'success'
         });
       } else {
         setToast({
           isVisible: true,
-          message: 'Solicitação enviada! Aguarda aprovação do administrador.',
+          message: t.dashboard.affiliate.requestSent,
           type: 'success'
         });
       }
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.detail || 'Erro ao solicitar afiliação';
+      const errorMessage = err?.response?.data?.detail || (t.dashboard.affiliate as any).requestError;
       
       // Extrair informações sobre meses se disponível (para plano básico)
       // Procura por "Tens X mês(es) pago(s)" ou "Tens X mês(es) consecutivo(s) pago(s)"
@@ -247,9 +247,9 @@ export default function AffiliatePage() {
             {/* Features */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto my-8">
               {[
-                { icon: Users, text: 'Comissões Mensais', colorClass: 'text-blue-400' },
-                { icon: TrendingUp, text: 'Sem Limites', colorClass: 'text-emerald-400' },
-                { icon: DollarSign, text: 'Pagamentos Rápidos', colorClass: 'text-amber-400' }
+                { icon: Users, text: t.dashboard.affiliate.monthlyCommissionsLabel, colorClass: 'text-blue-400' },
+                { icon: TrendingUp, text: t.dashboard.affiliate.noLimits, colorClass: 'text-emerald-400' },
+                { icon: DollarSign, text: t.dashboard.affiliate.fastPayments, colorClass: 'text-amber-400' }
               ].map((feature, idx) => (
                 <motion.div
                   key={idx}
@@ -318,13 +318,17 @@ export default function AffiliatePage() {
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-sm font-black text-amber-400 uppercase tracking-wider">
-                    Ainda não tens acesso aos afiliados
+                    {t.dashboard.affiliate.noAccessTitle}
                   </p>
                   <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                    Tens <span className="text-amber-400 font-black">{errorInfo.months}</span> {errorInfo.months === 1 ? 'mês' : 'meses'} {errorInfo.months === 1 ? 'pago' : 'pagos'} no plano básico. 
-                    Precisas de <span className="text-amber-400 font-black">{errorInfo.monthsNeeded}</span> meses consecutivos pagos para teres acesso ao programa de afiliados.
+                    {t.dashboard.affiliate.noAccessMessage
+                      .replace('{months}', String(errorInfo.months))
+                      .replace('{monthsLabel}', errorInfo.months === 1 ? t.dashboard.affiliate.monthsPaid : t.dashboard.affiliate.monthsPaidPlural)
+                      .replace('{needed}', String(errorInfo.monthsNeeded))}
                     {errorInfo.monthsNeeded - errorInfo.months > 0 && (
-                      <> Faltam <span className="text-amber-400 font-black">{errorInfo.monthsNeeded - errorInfo.months}</span> {errorInfo.monthsNeeded - errorInfo.months === 1 ? 'mês' : 'meses'}.</>
+                      <> {t.dashboard.affiliate.monthsRemaining
+                        .replace('{remaining}', String(errorInfo.monthsNeeded - errorInfo.months))
+                        .replace('{remainingLabel}', (errorInfo.monthsNeeded - errorInfo.months === 1 ? t.dashboard.affiliate.month : t.dashboard.affiliate.months))}.</>
                     )}
                   </p>
                   <p className="text-xs text-amber-400/80 font-medium leading-relaxed mt-2">
@@ -554,7 +558,7 @@ export default function AffiliatePage() {
                     {trend === 'up' && <TrendingUp className="w-4 h-4" />}
                     {trend === 'down' && <TrendingUp className="w-4 h-4 rotate-180" />}
                     {trend === 'stable' && <TrendingUp className="w-4 h-4 rotate-90" />}
-                    {trend === 'up' ? 'Aumentando' : trend === 'down' ? 'Diminuindo' : 'Estável'}
+                    {trend === 'up' ? t.dashboard.affiliate.trendUp : trend === 'down' ? t.dashboard.affiliate.trendDown : t.dashboard.affiliate.trendStable}
                   </div>
                 )}
               </div>
@@ -892,7 +896,7 @@ export default function AffiliatePage() {
                 } catch (err: any) {
                   setToast({
                     isVisible: true,
-                    message: err?.response?.data?.detail || 'Erro ao aceder ao Stripe',
+                    message: err?.response?.data?.detail || (t.dashboard.affiliate as any).stripeError,
                     type: 'error'
                   });
                 }

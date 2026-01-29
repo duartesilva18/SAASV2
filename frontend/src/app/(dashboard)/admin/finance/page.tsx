@@ -39,7 +39,7 @@ export default function AdminFinancePage() {
       setFinanceStats(res.data);
     } catch (err) {
       console.error('Erro ao carregar dados financeiros:', err);
-      setToast({ isVisible: true, message: 'Erro ao aceder aos dados da Stripe.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.admin.finance.loadError, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -179,8 +179,8 @@ export default function AdminFinancePage() {
                   }}
                   formatter={(value: number | undefined, name: string | undefined) => {
                     if (value === undefined) return ['', name || ''];
-                    if (name === 'average') return [formatEUR(value), 'Média'];
-                    return [formatEUR(value), 'Receita'];
+                    if (name === 'average') return [formatEUR(value), t.dashboard.admin.finance.average];
+                    return [formatEUR(value), t.dashboard.admin.finance.revenue];
                   }}
                 />
                 {/* Área com gradiente (shadow) */}
@@ -207,7 +207,7 @@ export default function AdminFinancePage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <BarChart3 size={48} className="text-slate-700 mb-4 opacity-20" />
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">Sem dados de faturamento</p>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">{t.dashboard.admin.finance.noBillingData}</p>
           </div>
         )}
       </section>
@@ -227,10 +227,10 @@ export default function AdminFinancePage() {
 
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="text-4xl font-black text-white mb-2">{financeStats?.pending_invoices_count || 0}</div>
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">Faturas em Aberto</p>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">{t.dashboard.admin.finance.pendingInvoices}</p>
             {financeStats?.pending_invoices_count > 0 && (
               <div className="mt-6 flex items-center gap-2 text-amber-500 bg-amber-500/10 px-4 py-2 rounded-xl border border-amber-500/20 text-[10px] font-black uppercase tracking-widest">
-                <AlertCircle size={14} /> Requer Atenção
+                <AlertCircle size={14} /> {t.dashboard.admin.finance.requiresAttention}
               </div>
             )}
           </div>
@@ -250,9 +250,9 @@ export default function AdminFinancePage() {
 
           <div className="space-y-6">
             {[
-              { label: 'Stripe API Connection', status: 'Operacional' },
-              { label: 'Webhook Endpoints', status: 'Ativo' },
-              { label: 'Customer Portal', status: 'Operacional' }
+              { label: 'Stripe API Connection', status: t.dashboard.admin.finance.statusOperational },
+              { label: 'Webhook Endpoints', status: t.dashboard.admin.finance.statusActive },
+              { label: 'Customer Portal', status: t.dashboard.admin.finance.statusOperational }
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>

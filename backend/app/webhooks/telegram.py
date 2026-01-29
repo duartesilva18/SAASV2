@@ -20,6 +20,12 @@ from ..core.limiter import limiter
 from ..core.telegram_translations import get_telegram_t
 
 logger = logging.getLogger("telegram_webhook")
+
+
+def _telegram_lang(from_user: Optional[dict]) -> str:
+    """Infer bot language from Telegram user (when app user has no language set)."""
+    code = (from_user or {}).get("language_code") or "pt"
+    return "en" if (code and code.lower().startswith("en")) else "pt"
 # Não adicionar handlers aqui - usar os do logging root para evitar duplicação
 
 router = APIRouter(prefix='/telegram', tags=['webhooks'])
@@ -780,9 +786,8 @@ async def telegram_webhook(
             
             # Verificar rate limit
             if not check_rate_limit(str(chat_id)):
-                # Buscar utilizador para obter linguagem (fallback para pt se não encontrar)
                 user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-                language = user.language if user and user.language else 'pt'
+                language = (user.language if user and user.language else None) or _telegram_lang(callback_query.get("from"))
                 t = get_telegram_t(language)
                 send_telegram_msg(chat_id, t('rate_limit'))
                 return {'status': 'rate_limited'}
@@ -790,7 +795,8 @@ async def telegram_webhook(
             # Buscar utilizador
             user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
             if not user:
-                t = get_telegram_t('pt')  # Default para pt se não encontrar user
+                lang_cb = _telegram_lang(callback_query.get("from"))
+                t = get_telegram_t(lang_cb)
                 send_telegram_msg(chat_id, t('session_expired'))
                 return {'status': 'unauthorized'}
             
@@ -925,9 +931,9 @@ async def telegram_webhook(
         text = message.get('text', '').strip()
         logger.info(f"Mensagem recebida: chat_id={chat_id}, text='{text[:100]}'")
         
-        # Buscar utilizador para obter linguagem (se existir)
+        # Buscar utilizador para obter linguagem (se existir); senão usar idioma do Telegram
         user_temp = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-        language = user_temp.language if user_temp and user_temp.language else 'pt'
+        language = (user_temp.language if user_temp and user_temp.language else None) or _telegram_lang(message.get("from"))
         t = get_telegram_t(language)
         
         # Verificar rate limit
@@ -942,8 +948,9 @@ async def telegram_webhook(
             logger.info(f"User encontrado: {user is not None}")
             
             if not user:
-                # Primeira vez, pedir email (usar pt como default)
-                t_start = get_telegram_t('pt')
+                # Primeira vez, pedir email (usar idioma do Telegram)
+                lang_start = _telegram_lang(message.get("from"))
+                t_start = get_telegram_t(lang_start)
                 send_telegram_msg(chat_id, t_start('welcome_new'))
                 return {'status': 'email_required'}
             else:
@@ -998,8 +1005,9 @@ async def telegram_webhook(
             email_limpo = text.lower().replace(" ", "").strip()
             logger.info(f"Email limpo: {email_limpo[:10]}***")
             
-            # Validar formato (usar pt como default para mensagens de erro antes de encontrar user)
-            t_email = get_telegram_t('pt')
+            # Validar formato (usar idioma do Telegram antes de encontrar user)
+            lang_email = _telegram_lang(message.get("from"))
+            t_email = get_telegram_t(lang_email)
             if not validate_email(email_limpo):
                 logger.warning(f"Email inválido: {email_limpo}")
                 send_telegram_msg(chat_id, t_email('invalid_email'))

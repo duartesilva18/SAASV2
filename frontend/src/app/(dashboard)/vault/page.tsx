@@ -96,7 +96,7 @@ export default function VaultPage() {
           const available = (currentBalance / 100).toFixed(2);
           setAlertModal({
             isOpen: true,
-            title: 'Saldo Insuficiente',
+            title: t.dashboard.vault.insufficientBalanceTitle,
             message: `${t.dashboard.vault.insufficientBalance}\n\n${t.dashboard.vault.available} ${formatCurrency(parseFloat(available))}\n${t.dashboard.vault.attempt} ${formatCurrency(parseFloat(vaultAmount))}\n\n${t.dashboard.vault.cannotBeNegative}`,
             type: 'error'
           });

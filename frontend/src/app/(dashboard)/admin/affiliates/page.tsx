@@ -110,10 +110,10 @@ export default function AdminAffiliatesPage() {
         setCommissionPercentage(commissionRes.data.percentage);
       }
     } catch (err: any) {
-      console.error('Erro ao carregar afiliados:', err);
+      console.error('Error loading affiliates:', err);
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao carregar afiliados',
+        message: err?.response?.data?.detail || t.dashboard.admin.affiliates.loadError,
         type: 'error'
       });
     } finally {
@@ -125,7 +125,7 @@ export default function AdminAffiliatesPage() {
     if (commissionPercentage < 0 || commissionPercentage > 100) {
       setToast({
         isVisible: true,
-        message: 'A percentagem deve estar entre 0 e 100',
+        message: t.dashboard.admin.affiliates.percentageRangeError,
         type: 'error'
       });
       return;
@@ -139,13 +139,13 @@ export default function AdminAffiliatesPage() {
       setEditingCommission(false);
       setToast({
         isVisible: true,
-        message: `Percentagem de comissão atualizada para ${commissionPercentage}%`,
+        message: t.dashboard.admin.affiliates.percentageUpdated.replace('{percentage}', commissionPercentage.toString()),
         type: 'success'
       });
     } catch (err: any) {
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao atualizar percentagem',
+        message: err?.response?.data?.detail || t.dashboard.admin.affiliates.updatePercentageError,
         type: 'error'
       });
     } finally {
@@ -163,7 +163,7 @@ export default function AdminAffiliatesPage() {
     } catch (err: any) {
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao carregar utilizadores',
+        message: err?.response?.data?.detail || t.dashboard.admin.affiliates.loadUsersError,
         type: 'error'
       });
     } finally {
@@ -187,7 +187,7 @@ export default function AdminAffiliatesPage() {
     } catch (err: any) {
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao carregar detalhes',
+        message: err?.response?.data?.detail || t.dashboard.admin.affiliates.loadDetailsError,
         type: 'error'
       });
     } finally {
@@ -202,7 +202,7 @@ export default function AdminAffiliatesPage() {
       await api.post('/admin/affiliates/promote', { user_id: promoting });
       setToast({
         isVisible: true,
-        message: 'Utilizador promovido a afiliado com sucesso!',
+        message: t.dashboard.admin.affiliates.promoteSuccess,
         type: 'success'
       });
       setShowPromoteModal(false);
@@ -213,7 +213,7 @@ export default function AdminAffiliatesPage() {
     } catch (err: any) {
       setToast({
         isVisible: true,
-        message: err?.response?.data?.detail || 'Erro ao promover utilizador',
+        message: err?.response?.data?.detail || t.dashboard.admin.affiliates.promoteError,
         type: 'error'
       });
       setShowPromoteConfirm(false);
@@ -255,7 +255,7 @@ export default function AdminAffiliatesPage() {
   const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
   if (loading) {
-    return <PageLoading message="Carregando afiliados..." />;
+    return <PageLoading message={t.dashboard.admin.affiliates.loadingAffiliates} />;
   }
 
   return (
@@ -267,11 +267,11 @@ export default function AdminAffiliatesPage() {
       {/* Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase flex items-center gap-3">
+            <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase flex items-center gap-3">
             <Trophy className="w-8 h-8 text-amber-400" />
-            Gestão de <span className="text-amber-400 italic">Afiliados</span>
+            {t.dashboard.admin.affiliates.manageTitle.split(' ')[0]} de <span className="text-amber-400 italic">{t.dashboard.admin.affiliates.manageTitle.split(' ').slice(1).join(' ')}</span>
           </h1>
-          <p className="text-slate-500 font-medium italic text-sm">Gerir e monitorizar o programa de afiliados</p>
+          <p className="text-slate-500 font-medium italic text-sm">{t.dashboard.admin.affiliates.manageSubtitle}</p>
         </div>
         <button
           onClick={() => setShowPromoteModal(true)}
@@ -290,7 +290,7 @@ export default function AdminAffiliatesPage() {
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1">
-            <div className="text-xs font-black uppercase tracking-widest text-slate-500">Percentagem de Comissão</div>
+            <div className="text-xs font-black uppercase tracking-widest text-slate-500">{t.dashboard.admin.affiliates.commissionPercentage}</div>
             {editingCommission ? (
               <div className="flex items-center gap-2">
                 <input
@@ -314,7 +314,7 @@ export default function AdminAffiliatesPage() {
                   ) : (
                     <CheckCircle className="w-3 h-3" />
                   )}
-                  Guardar
+                  {t.dashboard.admin.affiliates.save}
                 </button>
                 <button
                   onClick={() => {
@@ -338,7 +338,7 @@ export default function AdminAffiliatesPage() {
               </div>
             )}
             <div className="text-[10px] text-slate-500 italic ml-auto">
-              Aplica-se apenas a comissões futuras
+              {t.dashboard.admin.affiliates.appliesToFuture}
             </div>
           </div>
         </div>
@@ -358,7 +358,7 @@ export default function AdminAffiliatesPage() {
               <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
             <p className="text-3xl font-black text-white mb-1">{stats.total_affiliates}</p>
-            <p className="text-sm text-slate-400">Total de Afiliados</p>
+            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.totalAffiliates}</p>
           </motion.div>
 
           <motion.div
@@ -373,7 +373,7 @@ export default function AdminAffiliatesPage() {
               <Activity className="w-5 h-5 text-green-400" />
             </div>
             <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_revenue_cents || 0)}</p>
-            <p className="text-sm text-slate-400">Receita Total</p>
+            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.totalRevenueLabel}</p>
           </motion.div>
 
           <motion.div
@@ -388,8 +388,8 @@ export default function AdminAffiliatesPage() {
               <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
             <p className="text-3xl font-black text-white mb-1">{stats.total_conversions}</p>
-            <p className="text-sm text-slate-400">Conversões</p>
-            <p className="text-xs text-slate-500 mt-2">Taxa: {stats.conversion_rate?.toFixed(1) || 0}%</p>
+            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.conversionsLabel}</p>
+            <p className="text-xs text-slate-500 mt-2">{t.dashboard.admin.affiliates.rate}: {stats.conversion_rate?.toFixed(1) || 0}%</p>
           </motion.div>
 
           <motion.div
@@ -404,7 +404,7 @@ export default function AdminAffiliatesPage() {
               <TrendingUp className="w-5 h-5 text-green-400" />
             </div>
             <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_paid_earnings_cents || stats.total_earnings_cents || 0)}</p>
-            <p className="text-sm text-slate-400">Comissões Pagas</p>
+            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.paidCommissions}</p>
           </motion.div>
         </div>
       )}
@@ -457,7 +457,7 @@ export default function AdminAffiliatesPage() {
             </ResponsiveContainer>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-slate-500">
-              <p>Sem dados disponíveis</p>
+              <p>{t.dashboard.admin.affiliates.noData}</p>
             </div>
           )}
         </motion.div>
@@ -581,7 +581,7 @@ export default function AdminAffiliatesPage() {
             </div>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-slate-500">
-              <p>Sem dados disponíveis</p>
+              <p>{t.dashboard.admin.affiliates.noData}</p>
             </div>
           )}
         </motion.div>
@@ -597,17 +597,17 @@ export default function AdminAffiliatesPage() {
         >
           <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-amber-400" />
-            Receita por Afiliado
+            {t.dashboard.admin.affiliates.revenuePerAffiliate}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Afiliado</th>
+                  <th className="text-left py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">{t.dashboard.admin.affiliates.affiliate}</th>
                   <th className="text-right py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Receita Total</th>
-                  <th className="text-right py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Comissão</th>
-                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Meses Ativos</th>
-                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">Último Mês</th>
+                  <th className="text-right py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">{t.dashboard.admin.affiliates.commission}</th>
+                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">{t.dashboard.admin.affiliates.activeMonths}</th>
+                  <th className="text-center py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">{t.dashboard.admin.affiliates.lastMonth}</th>
                 </tr>
               </thead>
               <tbody>
@@ -645,7 +645,7 @@ export default function AdminAffiliatesPage() {
           <Search className="w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Pesquisar por email, nome ou código..."
+            placeholder={t.dashboard.admin.affiliates.searchPlaceholder || "Search by email, name or code..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none focus:text-white transition-colors"
@@ -662,7 +662,7 @@ export default function AdminAffiliatesPage() {
           {filteredAffiliates.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-500 font-medium">Nenhum afiliado encontrado</p>
+              <p className="text-slate-500 font-medium">{t.dashboard.admin.affiliates.noAffiliatesFound}</p>
             </div>
           ) : (
             filteredAffiliates.map((aff) => (
@@ -694,12 +694,12 @@ export default function AdminAffiliatesPage() {
                               navigator.clipboard.writeText(aff.affiliate_code!);
                               setToast({
                                 isVisible: true,
-                                message: 'Código copiado!',
+                                message: t.dashboard.admin.affiliates.codeCopied,
                                 type: 'success'
                               });
                             }}
                             className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
-                            title="Copiar código"
+                            title={t.dashboard.admin.affiliates.copyCode || "Copy code"}
                           >
                             <Copy className="w-4 h-4 text-slate-400 hover:text-amber-400 transition-colors" />
                           </button>
@@ -714,12 +714,12 @@ export default function AdminAffiliatesPage() {
                               navigator.clipboard.writeText(fullLink);
                               setToast({
                                 isVisible: true,
-                                message: 'Link completo copiado!',
+                                message: t.dashboard.admin.affiliates.linkCopied,
                                 type: 'success'
                               });
                             }}
                             className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
-                            title="Copiar link completo"
+                            title={t.dashboard.admin.affiliates.copyFullLinkTitle}
                           >
                             <Copy className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors" />
                           </button>
@@ -728,7 +728,7 @@ export default function AdminAffiliatesPage() {
                     )}
                     <div className="flex items-center gap-6 text-sm">
                       <div>
-                        <p className="text-slate-500">Referências</p>
+                        <p className="text-slate-500">{t.dashboard.admin.affiliates.referralsLabel}</p>
                         <p className="font-black text-white">{aff.total_referrals}</p>
                       </div>
                       <div>
@@ -815,7 +815,7 @@ export default function AdminAffiliatesPage() {
                   </div>
                 ) : usersToPromote.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
-                    <p>Nenhum utilizador encontrado</p>
+                    <p>{t.dashboard.admin.affiliates.noUsersFound}</p>
                   </div>
                 ) : (
                   usersToPromote.map((u) => (
@@ -921,9 +921,9 @@ export default function AdminAffiliatesPage() {
                     return (
                       <div className="bg-slate-900/50 rounded-2xl p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-black text-white">Quem Pagou com o Link</h3>
+                          <h3 className="text-lg font-black text-white">{t.dashboard.admin.affiliates.whoPaidWithLink}</h3>
                           <span className="text-xs text-slate-500">
-                            {paidCount} pagaram de {totalReferrals} referências
+                            {t.dashboard.admin.affiliates.paidFromReferrals.replace('{paid}', paidCount.toString()).replace('{total}', totalReferrals.toString())}
                           </span>
                         </div>
                         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -953,7 +953,7 @@ export default function AdminAffiliatesPage() {
                                 <p className="text-xs text-slate-400 mb-2">{ref.referred_user_email}</p>
                                 <div className="flex items-center gap-4 text-xs">
                                   <div>
-                                    <p className="text-slate-500">Registado</p>
+                                    <p className="text-slate-500">{t.dashboard.admin.affiliates.registered}</p>
                                     <p className="text-slate-300 font-medium">
                                       {new Date(ref.created_at).toLocaleDateString('pt-PT', { 
                                         day: 'numeric', 
@@ -964,7 +964,7 @@ export default function AdminAffiliatesPage() {
                                   </div>
                                   {ref.subscription_date && (
                                     <div>
-                                      <p className="text-slate-500">Pagou em</p>
+                                      <p className="text-slate-500">{t.dashboard.admin.affiliates.paidOn}</p>
                                       <p className="text-green-400 font-black">
                                         {new Date(ref.subscription_date).toLocaleDateString('pt-PT', { 
                                           day: 'numeric', 
@@ -1016,7 +1016,7 @@ export default function AdminAffiliatesPage() {
                                   ) : (
                                     <>
                                       <p className="text-sm font-black text-green-400 mb-1">
-                                        Pagou
+                                        {t.dashboard.admin.affiliates.paidLabel}
                                       </p>
                                       {ref.subscription_date && (
                                         <p className="text-xs text-slate-400">
@@ -1063,7 +1063,7 @@ export default function AdminAffiliatesPage() {
                   {/* Commissions */}
                   {detailData.commissions && detailData.commissions.length > 0 && (
                     <div className="bg-slate-900/50 rounded-2xl p-6">
-                      <h3 className="text-lg font-black text-white mb-4">Comissões</h3>
+                      <h3 className="text-lg font-black text-white mb-4">{t.dashboard.admin.affiliates.commissions || "Comissões"}</h3>
                       <div className="space-y-3">
                         {detailData.commissions.map((comm: any) => (
                           <div
@@ -1073,7 +1073,7 @@ export default function AdminAffiliatesPage() {
                             <div>
                               <p className="font-black text-white">{comm.month}</p>
                               <p className="text-sm text-slate-400">
-                                {comm.conversions_count} conversões • {formatPrice(comm.total_revenue_cents)} receita
+                                {comm.conversions_count} {t.dashboard.admin.affiliates.conversions} • {formatPrice(comm.total_revenue_cents)} {t.dashboard.admin.affiliates.revenue}
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
@@ -1107,10 +1107,10 @@ export default function AdminAffiliatesPage() {
           setPromoting(null);
         }}
         onConfirm={handlePromoteToAffiliate}
-        title="Promover a Afiliado"
-        message="Tem a certeza que deseja promover este utilizador a afiliado?"
-        confirmText="Promover"
-        cancelText="Cancelar"
+        title={t.dashboard.admin.affiliates.promoteTitle}
+        message={t.dashboard.admin.affiliates.promoteConfirmMessage}
+        confirmText={t.dashboard.admin.affiliates.promoteConfirm}
+        cancelText={t.dashboard.admin.affiliates.cancel}
         variant="info"
       />
 

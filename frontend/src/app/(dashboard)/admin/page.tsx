@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
       fetchAuditLogs(1, 'all');
     } catch (err) {
       console.error('Erro ao carregar dados de admin:', err);
-      setToast({ isVisible: true, message: 'Erro ao carregar dados administrativos.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.loadError, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -81,10 +81,10 @@ export default function AdminDashboardPage() {
   const handleToggleAdmin = async (userId: string) => {
     try {
       await api.post(`/admin/users/${userId}/toggle-admin`);
-      setToast({ isVisible: true, message: 'Status de admin atualizado.', type: 'success' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.adminStatusUpdated, type: 'success' });
       fetchData();
     } catch (err) {
-      setToast({ isVisible: true, message: 'Erro ao atualizar status.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.adminStatusError, type: 'error' });
     }
   };
 
@@ -92,12 +92,12 @@ export default function AdminDashboardPage() {
     if (!userToDelete) return;
     try {
       await api.delete(`/admin/users/${userToDelete}`);
-      setToast({ isVisible: true, message: 'Utilizador eliminado com sucesso.', type: 'success' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.userDeleted, type: 'success' });
       setShowDeleteConfirm(false);
       setUserToDelete(null);
       fetchData();
     } catch (err) {
-      setToast({ isVisible: true, message: 'Erro ao eliminar utilizador.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.deleteUserError, type: 'error' });
       setShowDeleteConfirm(false);
       setUserToDelete(null);
     }
@@ -112,9 +112,9 @@ export default function AdminDashboardPage() {
     setSavingPhone(true);
     try {
       await api.post('/admin/settings', { support_phone: supportPhone });
-      setToast({ isVisible: true, message: 'Número de suporte atualizado.', type: 'success' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.supportUpdated, type: 'success' });
     } catch (err) {
-      setToast({ isVisible: true, message: 'Erro ao atualizar suporte.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.supportError, type: 'error' });
     } finally {
       setSavingPhone(false);
     }
@@ -151,10 +151,10 @@ export default function AdminDashboardPage() {
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: 'Utilizadores Totais', value: stats?.total_users, icon: Users, color: 'blue' },
-          { label: 'Subscrições Ativas', value: stats?.active_subscriptions, icon: ShieldCheck, color: 'emerald' },
-          { label: 'Total de Visitas', value: stats?.total_visits, icon: Activity, color: 'indigo' },
-          { label: 'Transações no Sistema', value: stats?.total_transactions, icon: Zap, color: 'amber' }
+          { label: t.dashboard.admin.dashboard.totalUsers, value: stats?.total_users, icon: Users, color: 'blue' },
+          { label: t.dashboard.admin.dashboard.activeSubscriptions, value: stats?.active_subscriptions, icon: ShieldCheck, color: 'emerald' },
+          { label: t.dashboard.admin.dashboard.totalVisits, value: stats?.total_visits, icon: Activity, color: 'indigo' },
+          { label: t.dashboard.admin.dashboard.transactionsInSystem, value: stats?.total_transactions, icon: Zap, color: 'amber' }
         ].map((item, i) => (
           <div key={i} className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-6 rounded-[32px] group hover:border-blue-500/20 transition-all flex-1">
             <div className="flex items-center justify-between mb-4">
@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
               disabled={savingPhone}
               className="px-8 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
             >
-              {savingPhone ? <Loader2 size={16} className="animate-spin" /> : 'Guardar'}
+              {savingPhone ? <Loader2 size={16} className="animate-spin" /> : t.dashboard.admin.dashboard.save}
             </button>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function AdminDashboardPage() {
                         {u.email[0].toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-white">{u.full_name || 'Utilizador Anon'}</p>
+                        <p className="text-sm font-black text-white">{u.full_name || t.dashboard.admin.dashboard.userAnon}</p>
                         <p className="text-[10px] text-slate-500 font-medium">{u.email}</p>
                       </div>
                     </div>
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
                       <button 
                         onClick={() => handleDeleteClick(u.id)}
                         className="p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
-                        title="Eliminar Utilizador"
+                        title={t.dashboard.admin.dashboard.deleteUser}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -416,7 +416,7 @@ export default function AdminDashboardPage() {
           setUserToDelete(null);
         }}
         onConfirm={handleDeleteUser}
-        title="Eliminar Utilizador"
+        title={t.dashboard.admin.dashboard.deleteUser}
         message="Tem a certeza que deseja eliminar este utilizador permanentemente? Esta ação não pode ser desfeita."
         confirmText="Eliminar"
         cancelText="Cancelar"

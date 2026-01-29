@@ -94,7 +94,7 @@ export default function TransactionAddModal({
       }
 
       if (amount_cents === 0) {
-        setToast({ message: "O valor da transação não pode ser zero.", type: 'error', visible: true });
+        setToast({ message: t.dashboard.transactions.validation.zeroAmount, type: 'error', visible: true });
         return;
       }
 
@@ -111,7 +111,7 @@ export default function TransactionAddModal({
       onClose();
     } catch (err: any) {
       const msg = err.response?.data?.detail || err.message || t.dashboard.transactions.error;
-      setToast({ message: typeof msg === 'string' ? msg : 'Erro ao registar transação.', type: 'error', visible: true });
+      setToast({ message: typeof msg === 'string' ? msg : t.dashboard.transactions.registerError, type: 'error', visible: true });
     }
   };
 

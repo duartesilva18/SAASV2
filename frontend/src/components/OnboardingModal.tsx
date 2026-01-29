@@ -25,18 +25,18 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   });
 
   const countries = [
-    { code: '+351', flag: '🇵🇹', name: 'Portugal' },
-    { code: '+34', flag: '🇪🇸', name: 'Espanha' },
-    { code: '+33', flag: '🇫🇷', name: 'França' },
-    { code: '+44', flag: '🇬🇧', name: 'UK' },
-    { code: '+1', flag: '🇺🇸', name: 'USA' },
-    { code: '+55', flag: '🇧🇷', name: 'Brasil' },
-    { code: '+49', flag: '🇩🇪', name: 'Alemanha' },
-    { code: '+41', flag: '🇨🇭', name: 'Suíça' },
-    { code: '+352', flag: '🇱🇺', name: 'Luxemburgo' },
-    { code: '+244', flag: '🇦🇴', name: 'Angola' },
-    { code: '+238', flag: '🇨🇻', name: 'Cabo Verde' },
-    { code: '+258', flag: '🇲🇿', name: 'Moçambique' },
+    { code: '+351', flag: '🇵🇹', name: t.dashboard.onboarding.countries.portugal },
+    { code: '+34', flag: '🇪🇸', name: t.dashboard.onboarding.countries.spain },
+    { code: '+33', flag: '🇫🇷', name: t.dashboard.onboarding.countries.france },
+    { code: '+44', flag: '🇬🇧', name: t.dashboard.onboarding.countries.uk },
+    { code: '+1', flag: '🇺🇸', name: t.dashboard.onboarding.countries.usa },
+    { code: '+55', flag: '🇧🇷', name: t.dashboard.onboarding.countries.brazil },
+    { code: '+49', flag: '🇩🇪', name: t.dashboard.onboarding.countries.germany },
+    { code: '+41', flag: '🇨🇭', name: t.dashboard.onboarding.countries.switzerland },
+    { code: '+352', flag: '🇱🇺', name: t.dashboard.onboarding.countries.luxembourg },
+    { code: '+244', flag: '🇦🇴', name: t.dashboard.onboarding.countries.angola },
+    { code: '+238', flag: '🇨🇻', name: t.dashboard.onboarding.countries.capeVerde },
+    { code: '+258', flag: '🇲🇿', name: t.dashboard.onboarding.countries.mozambique },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,14 +46,14 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     // Validação de Nome (Pelo menos dois nomes)
     const nameParts = formData.full_name.trim().split(/\s+/);
     if (nameParts.length < 2) {
-      setError('Por favor, introduz o teu primeiro e último nome.');
+      setError(t.dashboard.onboarding.validation.fullNameRequired);
       return;
     }
 
     // Validação de Telefone (Mínimo de 7 dígitos além do código do país)
     const cleanPhone = formData.phone_number.replace(/\D/g, '');
     if (cleanPhone.length < 7) {
-      setError('Por favor, introduz um número de telefone válido.');
+      setError(t.dashboard.onboarding.validation.phoneRequired);
       return;
     }
 

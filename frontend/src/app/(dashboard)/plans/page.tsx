@@ -335,7 +335,7 @@ export default function PlansPage() {
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                   }`}
                 >
-                  {isCurrentPlan(plan.priceId) ? 'Plano ativo' : plan.buttonText}
+                  {isCurrentPlan(plan.priceId) ? t.dashboard.pricing.activePlan : plan.buttonText}
                 </button>
               </div>
             </motion.div>

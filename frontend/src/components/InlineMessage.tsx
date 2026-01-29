@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { useTranslation } from '@/lib/LanguageContext';
 
 interface InlineMessageProps {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -47,11 +48,12 @@ export default function InlineMessage({
   };
 
   const styles = typeStyles[type];
+  const { t } = useTranslation();
   const defaultTitle = {
-    success: 'Sucesso',
-    error: 'Erro',
-    warning: 'Aviso',
-    info: 'Informação'
+    success: t.dashboard.sidebar.toastTypes.success,
+    error: t.dashboard.sidebar.toastTypes.error,
+    warning: t.dashboard.sidebar.toastTypes.warning,
+    info: t.dashboard.sidebar.toastTypes.info
   };
 
   return (
