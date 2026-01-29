@@ -326,8 +326,8 @@ export default function Sidebar({
                   }`}>
                     {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? (currentPlan?.label ?? t.dashboard.sidebar.planPro) : t.dashboard.sidebar.planFree}
                   </span>
-                  {/* No mobile (< md): sino ao lado do plano, um bocado à direita — sempre visível no viewport mobile */}
-                  <div className="md:hidden shrink-0 ml-1">
+                  {/* Notificações: escondido no mobile (sino fica só no header) */}
+                  <div className="hidden md:hidden shrink-0 ml-1">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
