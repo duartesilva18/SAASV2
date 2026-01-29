@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Globe, Check } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
+import { LanguageCode, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { useUser } from '@/lib/UserContext';
@@ -63,11 +64,9 @@ export default function LanguageSelector() {
         disabled={isSaving}
       >
         <Globe size={16} />
+        <img src={FLAG_IMAGE_URLS[language as LanguageCode]} alt="" className="w-6 h-4 object-cover rounded-sm shrink-0" width={24} height={16} />
         <span className="text-xs font-medium hidden sm:inline">
           {currentLanguage?.nativeName || language.toUpperCase()}
-        </span>
-        <span className="text-xs font-medium sm:hidden">
-          {currentLanguage?.flag || '🌐'}
         </span>
       </button>
 
@@ -93,7 +92,7 @@ export default function LanguageSelector() {
                     }`}
                     disabled={isSaving}
                   >
-                    <span className="text-lg">{lang.flag}</span>
+                    <img src={FLAG_IMAGE_URLS[lang.code]} alt="" className="w-6 h-4 object-cover rounded-sm shrink-0" width={24} height={16} />
                     <div className="flex-1">
                       <div className="text-sm font-medium">
                         {lang.nativeName}

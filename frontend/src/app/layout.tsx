@@ -59,13 +59,15 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
     languages: {
-      'pt-PT': '/pt',
-      'en': '/en',
+      'pt-PT': '/',
+      'en': '/',
+      'fr': '/',
     },
   },
   openGraph: {
     type: 'website',
     locale: 'pt_PT',
+    alternateLocale: ['en_US', 'fr_FR'],
     url: '/',
     siteName: 'Finly',
     title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
@@ -98,15 +100,6 @@ export const metadata: Metadata = {
     },
   },
   manifest: "/manifest.json",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/images/logo/icon.jpeg", sizes: "192x192", type: "image/jpeg" },
-      { url: "/images/logo/icon.jpeg", sizes: "512x512", type: "image/jpeg" },
-    ],
-    apple: "/images/logo/icon.jpeg",
-    shortcut: "/favicon.ico",
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

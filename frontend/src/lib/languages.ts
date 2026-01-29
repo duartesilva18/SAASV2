@@ -11,6 +11,14 @@ export const SUPPORTED_CURRENCIES: CurrencyCode[] = ['EUR', 'USD', 'BRL', 'GBP']
 // Idioma padrão
 export const DEFAULT_LANGUAGE: LanguageCode = 'pt';
 
+// URLs de bandeiras (imagens) — emoji de bandeira não aparece em muitos Windows
+const FLAG_CDN = 'https://flagcdn.com';
+export const FLAG_IMAGE_URLS: Record<LanguageCode, string> = {
+  pt: `${FLAG_CDN}/w80/pt.png`,
+  en: `${FLAG_CDN}/w80/gb.png`,
+  fr: `${FLAG_CDN}/w80/fr.png`,
+};
+
 // Configuração de idiomas
 export interface LanguageConfig {
   code: LanguageCode;

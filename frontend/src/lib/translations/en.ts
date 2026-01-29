@@ -151,6 +151,9 @@ export const en = {
       ]
   },
   testimonials: {
+      badge: "Reviews",
+      title: "What our ",
+      titleAccent: "customers say.",
       items: [
           {
               id: 1,
@@ -192,9 +195,10 @@ export const en = {
       settings: "Settings"
   },
   resources: {
-      badge: "⚡ Premium Resources",
+      badge: "Premium Resources",
       title: "Technology that ",
       titleAccent: "works for you.",
+      subtitle: "Everything you need to master your finances, in one place.",
       items: [
           {
               t: "Telegram Fin",
@@ -223,8 +227,10 @@ export const en = {
       ]
   },
   faq: {
+      badge: "FAQ",
       title: "Common ",
       titleAccent: "questions.",
+      subtitle: "Find the most frequent answers here. Something missing? Get in touch.",
       cta: "Start Risk-Free",
       guarantee: "Total peace guaranteed for 7 days",
       items: [
@@ -1440,6 +1446,8 @@ export const en = {
           onlineAlwaysReady: "Online • Always ready",
           confirm: "✓ Confirm",
           cancel: "✗ Cancel",
+          added: "✓ Added!",
+          cancelled: "Cancelled.",
           writeExample: "Write 'Cookies 10€' or 'Yogurt - Food 5€'...",
           otherFeatures: "Other Features",
           exploreFeature: "Explore feature",

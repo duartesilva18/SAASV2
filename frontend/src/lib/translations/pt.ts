@@ -151,6 +151,9 @@ export const pt = {
       ]
   },
   testimonials: {
+      badge: "Opiniões",
+      title: "O que dizem ",
+      titleAccent: "os nossos clientes.",
       items: [
           {
               id: 1,
@@ -192,9 +195,10 @@ export const pt = {
       settings: "Definições"
   },
   resources: {
-      badge: "⚡ Recursos Premium",
+      badge: "Recursos Premium",
       title: "Tecnologia que ",
       titleAccent: "trabalha para si.",
+      subtitle: "Tudo o que precisas para dominar as tuas finanças, num só sítio.",
       items: [
           {
               t: "Telegram Fin",
@@ -223,8 +227,10 @@ export const pt = {
       ]
   },
   faq: {
+      badge: "FAQ",
       title: "Perguntas ",
       titleAccent: "comuns.",
+      subtitle: "Encontra aqui as respostas mais frequentes. Algo em falta? Fala connosco.",
       cta: "Começar sem Risco",
       guarantee: "Paz total garantida por 7 dias",
       items: [
@@ -1460,6 +1466,8 @@ export const pt = {
           onlineAlwaysReady: "Online • Sempre pronto",
           confirm: "✓ Confirmar",
           cancel: "✗ Cancelar",
+          added: "✓ Adicionada!",
+          cancelled: "Cancelada.",
           writeExample: "Escreve 'Biscoitos 10€' ou 'Iogurte - Alimentação 5€'...",
           otherFeatures: "Outras Funcionalidades",
           exploreFeature: "Explorar funcionalidade",
