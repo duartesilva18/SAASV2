@@ -554,6 +554,23 @@ export const fr = {
           loading: "Méditation sur vos données...",
           empty: "Pas assez de données pour générer des insights. Enregistrez votre première dépense !"
       },
+      addToHome: {
+          title: "Finly sur votre téléphone",
+          subtitle: "Ajoutez l'icône à l'écran d'accueil et ouvrez Finly comme une app en un tap.",
+          infoStrip: "Android : le bouton ci-dessous ouvre la boîte de dialogue du système. iPhone : Partager → Ajouter à l'écran d'accueil.",
+          button: "Ajouter à l'écran d'accueil",
+          alreadyInApp: "Vous êtes déjà dans l'app",
+          alreadyInAppDesc: "Vous avez ouvert Finly depuis l'icône sur votre téléphone.",
+          goToDashboard: "Aller au tableau de bord",
+          stepsSafari: "Étapes dans Safari",
+          step1: "Appuyez sur le bouton Partager (carré avec flèche vers le haut).",
+          step2: "Choisissez Ajouter à l'écran d'accueil.",
+          step3: "Appuyez sur Ajouter.",
+          openOnMobile: "Ouvrez cette page sur votre téléphone (Chrome sur Android ou Safari sur iPhone) pour ajouter Finly à l'écran d'accueil.",
+          androidManual: "Android : Menu (⋮) → \"Ajouter à l'écran d'accueil\" ou \"Installer l'app\".",
+          installed: "Icône ajoutée. Cherchez Finly sur votre écran d'accueil.",
+          backToDashboard: "Retour au tableau de bord"
+      },
       sidebar: {
           overview: "Vue d'ensemble",
           savings: "Épargne et investissement",

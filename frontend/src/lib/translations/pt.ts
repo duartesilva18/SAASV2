@@ -554,6 +554,23 @@ export const pt = {
           loading: "A meditar sobre os teus dados...",
           empty: "Ainda não tens dados suficientes para gerar insights. Regista a tua primeira despesa!"
       },
+      addToHome: {
+          title: "Finly no telemóvel",
+          subtitle: "Adiciona o ícone ao ecrã inicial e abre o Finly como app num toque.",
+          infoStrip: "Android: o botão em baixo abre o diálogo do sistema. iPhone: Partilhar → Adicionar ao Ecrã Inicial.",
+          button: "Adicionar ao ecrã inicial",
+          alreadyInApp: "Já estás na app",
+          alreadyInAppDesc: "Abriste o Finly a partir do ícone no telemóvel.",
+          goToDashboard: "Ir para o dashboard",
+          stepsSafari: "Passos no Safari",
+          step1: "Carrega no botão Partilhar (quadrado com seta para cima).",
+          step2: "Escolhe Adicionar ao Ecrã Inicial.",
+          step3: "Carrega em Adicionar.",
+          openOnMobile: "Abre esta página no telemóvel (Chrome no Android ou Safari no iPhone) para adicionar o Finly ao ecrã inicial.",
+          androidManual: "Android: Menu (⋮) → \"Adicionar ao ecrã inicial\" ou \"Instalar app\".",
+          installed: "Ícone adicionado. Procura o Finly no ecrã inicial.",
+          backToDashboard: "Voltar ao dashboard"
+      },
       sidebar: {
           overview: "Visão Geral",
           savings: "Poupança & Investimento",

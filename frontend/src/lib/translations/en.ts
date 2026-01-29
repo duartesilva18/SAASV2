@@ -554,6 +554,23 @@ export const en = {
           loading: "Meditating on your data...",
           empty: "Not enough data to generate insights yet. Record your first expense!"
       },
+      addToHome: {
+          title: "Finly on your phone",
+          subtitle: "Add the icon to your home screen and open Finly as an app in one tap.",
+          infoStrip: "Android: the button below opens the system dialog. iPhone: Share → Add to Home Screen.",
+          button: "Add to home screen",
+          alreadyInApp: "You're already in the app",
+          alreadyInAppDesc: "You opened Finly from the icon on your phone.",
+          goToDashboard: "Go to dashboard",
+          stepsSafari: "Steps in Safari",
+          step1: "Tap the Share button (square with arrow pointing up).",
+          step2: "Choose Add to Home Screen.",
+          step3: "Tap Add.",
+          openOnMobile: "Open this page on your phone (Chrome on Android or Safari on iPhone) to add Finly to your home screen.",
+          androidManual: "Android: Menu (⋮) → \"Add to home screen\" or \"Install app\".",
+          installed: "Icon added. Look for Finly on your home screen.",
+          backToDashboard: "Back to dashboard"
+      },
       sidebar: {
           overview: "Overview",
           savings: "Savings & Investment",
