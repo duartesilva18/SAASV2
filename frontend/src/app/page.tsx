@@ -67,6 +67,14 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Interceptar o botão "voltar" nativo do telemóvel: manter na página principal em vez de ir para login.
+  // Duas entradas iguais no history fazem com que o primeiro "voltar" fique na mesma página.
+  useEffect(() => {
+    const url = window.location.pathname + window.location.search;
+    history.pushState({ landing: true }, '', url);
+    history.pushState({ landing: true }, '', url);
+  }, []);
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  // Evita aviso "multiple lockfiles" no Render: usa só esta pasta como raiz do tracing
+  outputFileTracingRoot: path.join(process.cwd()),
   async redirects() {
     return [
       {
