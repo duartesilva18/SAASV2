@@ -10,7 +10,6 @@ const MAX_FILE_SIZE_MB = 5;
 const MAX_FILES = 3;
 const POSITION_KEY = 'supportButtonPosition';
 export const SUPPORT_HIDDEN_KEY = 'supportButtonHidden';
-const HOLD_MS = 600; // segurar este tempo para entrar em modo arrastar
 
 /** Tipo da secção support nas traduções (evita erro de union em t.dashboard.support). */
 type SupportT = {
@@ -55,13 +54,11 @@ export default function SupportButton() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [hidden, setHidden] = useState(loadHidden);
-  const [dragMode, setDragMode] = useState(false);
   const [showRemoveX, setShowRemoveX] = useState(false);
   const [initialPos] = useState(loadPosition);
   const x = useMotionValue(initialPos.x);
   const y = useMotionValue(initialPos.y);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didLongPress = useRef(false);
+  const didDragRef = useRef(false);
 
   useEffect(() => {
     setHidden(loadHidden());
@@ -69,8 +66,8 @@ export default function SupportButton() {
 
   useEffect(() => {
     const onOpen = () => {
+      didDragRef.current = false;
       setHidden(false);
-      setDragMode(false);
       setShowRemoveX(false);
       setOpen(true);
     };
@@ -81,7 +78,6 @@ export default function SupportButton() {
       x.set(0);
       y.set(0);
       setHidden(false);
-      setDragMode(false);
       setShowRemoveX(false);
     };
     window.addEventListener('open-support', onOpen);
@@ -101,7 +97,6 @@ export default function SupportButton() {
 
   const hideButton = () => {
     setShowRemoveX(false);
-    setDragMode(false);
     setHidden(true);
     try {
       localStorage.setItem(SUPPORT_HIDDEN_KEY, '1');
@@ -116,37 +111,22 @@ export default function SupportButton() {
     } catch (_) {}
   };
 
-  const handlePointerDown = () => {
-    didLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      didLongPress.current = true;
-      setDragMode(true);
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-    }, HOLD_MS);
-  };
-
-  const handlePointerUp = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
   const handleClick = (e?: React.MouseEvent) => {
     if (e?.target && (e.target as HTMLElement).closest('[data-support-remove]')) return;
-    if (dragMode || didLongPress.current) {
-      didLongPress.current = false;
+    if (didDragRef.current) {
+      didDragRef.current = false;
       return;
     }
     setOpen((prev) => !prev);
   };
 
+  const handleDragStart = () => {
+    didDragRef.current = true;
+  };
+
   const handleDragEnd = () => {
     savePosition();
-    if (dragMode) setShowRemoveX(true);
+    setShowRemoveX(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,23 +177,21 @@ export default function SupportButton() {
     <>
       <motion.button
         type="button"
-        drag={dragMode}
+        drag
         dragMomentum={false}
         dragElastic={0.05}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ x, y }}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
         onClick={() => handleClick()}
-        aria-label={(t.dashboard?.support as SupportT | undefined)?.tooltip ?? 'Contactar suporte (segurar para poder arrastar; depois do arraste aparece X para esconder)'}
+        aria-label={(t.dashboard?.support as SupportT | undefined)?.tooltip ?? 'Contactar suporte (arrastar para mover; depois do arraste aparece X para esconder)'}
         aria-expanded={open}
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ scale: dragMode ? 1 : 1.1 }}
+        whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-        className={`fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group touch-none ${dragMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group cursor-grab active:cursor-grabbing touch-none"
       >
         {showRemoveX && (
           <button
