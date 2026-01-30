@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { 
@@ -91,6 +91,7 @@ export default function CategoriesPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const retriedOnce = useRef(false);
 
   // Filtrar stats para remover fundos de emergência e investimentos
   const filteredStats = stats.filter((stat) => {
@@ -104,6 +105,36 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Refetch quando o separador fica visível (resolve dados em branco no mobile ao navegar)
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchData();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  // Refetch quando se navega para esta página pelo header/sidebar (corrige conteúdo em branco)
+  useEffect(() => {
+    const onRouteChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { pathname?: string };
+      if (detail?.pathname === '/categories') fetchData();
+    };
+    window.addEventListener('dashboard-route-change', onRouteChange);
+    return () => window.removeEventListener('dashboard-route-change', onRouteChange);
+  }, []);
+
+  // Se ainda não temos dados e não estamos a carregar (ex.: primeiro paint atrasado no mobile), tentar refetch uma vez
+  useEffect(() => {
+    if (!loading && categories.length === 0 && stats.length === 0 && !retriedOnce.current) {
+      retriedOnce.current = true;
+      const t = setTimeout(() => fetchData(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [loading, categories.length, stats.length]);
 
   const fetchData = async () => {
     try {

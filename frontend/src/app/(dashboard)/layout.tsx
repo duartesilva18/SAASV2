@@ -32,6 +32,7 @@ export default function DashboardLayout({
     () => typeof window !== 'undefined' && localStorage.getItem(SUPPORT_HIDDEN_KEY) === '1'
   );
   const pathname = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
 
   const supportRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supportDidRestoreRef = useRef(false);
@@ -99,6 +100,14 @@ export default function DashboardLayout({
     }
     return null;
   })();
+
+  // Ao mudar de rota (nav do header/sidebar): scroll ao topo e evento para páginas refetcharem
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.dispatchEvent(new CustomEvent('dashboard-route-change', { detail: { pathname } }));
+  }, [pathname]);
 
   // Listener para token expirado
   useEffect(() => {
@@ -297,7 +306,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

@@ -97,6 +97,16 @@ function TransactionsPageContent() {
     return () => clearInterval(interval);
   }, [refetchData]);
 
+  // Refetch quando se navega para esta página pelo header/sidebar (corrige conteúdo em branco)
+  useEffect(() => {
+    const onRouteChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { pathname?: string };
+      if (detail?.pathname === '/transactions') refetchData();
+    };
+    window.addEventListener('dashboard-route-change', onRouteChange);
+    return () => window.removeEventListener('dashboard-route-change', onRouteChange);
+  }, [refetchData]);
+
   // Verificar parâmetros de URL: ?add=1 abre o modal de inserção (ex.: vindo do dashboard "Nova transação")
   useEffect(() => {
     if (searchParams.get('add') === '1') {
@@ -421,23 +431,23 @@ function TransactionsPageContent() {
             </h1>
           </div>
 
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full sm:w-auto">
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-[32px] w-full sm:min-w-[200px] sm:w-auto shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
-              <div className="flex items-center gap-3 mb-2 text-slate-500">
-                <ArrowUpRight size={16} className="text-emerald-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.totalIncome}</span>
+          <div className="grid grid-cols-2 sm:flex sm:flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-3 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
+              <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
+                <ArrowUpRight size={14} className="text-emerald-500 shrink-0 sm:w-4 sm:h-4" />
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.transactions.totalIncome}</span>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-white">{formatCurrency(stats.income)}</p>
+              <p className="text-lg sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-[32px] w-full sm:min-w-[200px] sm:w-auto shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-[40px] rounded-full" />
-              <div className="flex items-center gap-3 mb-2 text-slate-500">
-                <ArrowDownRight size={16} className="text-red-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.totalExpenses}</span>
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-3 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-red-500/5 blur-[40px] rounded-full" />
+              <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
+                <ArrowDownRight size={14} className="text-red-500 shrink-0 sm:w-4 sm:h-4" />
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.transactions.totalExpenses}</span>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-white">{formatCurrency(stats.expenses)}</p>
+              <p className="text-lg sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
             </div>
             
             <button
