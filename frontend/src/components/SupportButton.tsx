@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Mail, HelpCircle, Loader2, X, Paperclip } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILES = 3;
+const POSITION_KEY = 'supportButtonPosition';
+const HIDDEN_KEY = 'supportButtonHidden';
+const LONG_PRESS_MS = 600;
 
 /** Tipo da secção support nas traduções (evita erro de union em t.dashboard.support). */
 type SupportT = {
@@ -22,6 +25,26 @@ type SupportT = {
   contactError?: string;
 };
 
+function loadPosition(): { x: number; y: number } {
+  if (typeof window === 'undefined') return { x: 0, y: 0 };
+  try {
+    const s = localStorage.getItem(POSITION_KEY);
+    if (s) {
+      const p = JSON.parse(s) as { x: number; y: number };
+      if (Number.isFinite(p.x) && Number.isFinite(p.y)) return p;
+    }
+  } catch (_) {}
+  return { x: 0, y: 0 };
+}
+
+function loadHidden(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(HIDDEN_KEY) === '1';
+  } catch (_) {}
+  return false;
+}
+
 export default function SupportButton() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -30,6 +53,59 @@ export default function SupportButton() {
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [hidden, setHidden] = useState(loadHidden);
+  const [initialPos] = useState(loadPosition);
+  const x = useMotionValue(initialPos.x);
+  const y = useMotionValue(initialPos.y);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  useEffect(() => {
+    setHidden(loadHidden());
+  }, []);
+
+  const savePosition = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(POSITION_KEY, JSON.stringify({ x: x.get(), y: y.get() }));
+    } catch (_) {}
+  };
+
+  const hideButton = () => {
+    didLongPress.current = true;
+    setHidden(true);
+    try {
+      localStorage.setItem(HIDDEN_KEY, '1');
+    } catch (_) {}
+  };
+
+  const showButton = () => {
+    setHidden(false);
+    try {
+      localStorage.removeItem(HIDDEN_KEY);
+    } catch (_) {}
+  };
+
+  const handlePointerDown = () => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => hideButton(), LONG_PRESS_MS);
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleClick = () => {
+    if (didLongPress.current) {
+      didLongPress.current = false;
+      return;
+    }
+    setOpen((prev) => !prev);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
@@ -73,22 +149,47 @@ export default function SupportButton() {
     }
   };
 
+  if (hidden) {
+    return (
+      <motion.button
+        type="button"
+        onClick={showButton}
+        aria-label="Mostrar suporte"
+        initial={{ opacity: 0, x: 8 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-0 z-[9999] flex items-center gap-2 py-2 pl-3 pr-2 rounded-l-xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-300 text-xs font-medium border border-r-0 border-slate-600 cursor-pointer shadow-lg"
+      >
+        <Mail size={18} />
+        <span>Suporte</span>
+      </motion.button>
+    );
+  }
+
   return (
     <>
       <motion.button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label={(t.dashboard?.support as SupportT | undefined)?.tooltip ?? 'Contactar suporte'}
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        onDragEnd={savePosition}
+        style={{ x, y }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onClick={handleClick}
+        aria-label={(t.dashboard?.support as SupportT | undefined)?.tooltip ?? 'Contactar suporte (arrastar para mover; manter premido para esconder)'}
         aria-expanded={open}
-        initial={{ opacity: 0, scale: 0.5, x: 20 }}
-        animate={{ opacity: 1, scale: 1, x: 0 }}
-        whileHover={{ scale: 1.1, x: -5 }}
-        whileTap={{ scale: 0.9 }}
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group cursor-pointer"
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group cursor-grab active:cursor-grabbing touch-none"
       >
-        <div className="relative">
+        <div className="relative pointer-events-none">
           <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20 group-hover:opacity-40 transition-opacity" />
-          <div className="relative w-14 h-14 min-w-[56px] min-h-[56px] bg-blue-500 hover:bg-blue-400 text-white rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(59,130,246,0.4)] transition-colors border border-blue-400/20 active:scale-95">
+          <div className="relative w-14 h-14 min-w-[56px] min-h-[56px] bg-blue-500 hover:bg-blue-400 text-white rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(59,130,246,0.4)] transition-colors border border-blue-400/20">
             <Mail size={28} className="fill-white/10" />
           </div>
           <div className="absolute -top-2 -left-2 w-6 h-6 bg-slate-700 rounded-full border-2 border-slate-900 flex items-center justify-center shadow-lg">
