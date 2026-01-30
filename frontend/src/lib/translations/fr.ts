@@ -1098,6 +1098,7 @@ export const fr = {
       },
       support: {
           tooltip: "Contacter le support",
+          supportMovedToMenu: "Le bouton support a été déplacé dans ce menu.",
           message: "Bonjour ! J'ai besoin d'aide avec Finly.",
           contactTitle: "Envoyer un message au support",
           contactPlaceholder: "Écrivez votre message...",

@@ -1061,6 +1061,7 @@ export const pt = {
       },
       support: {
           tooltip: "Contactar suporte",
+          supportMovedToMenu: "O botão de suporte foi movido para este menu.",
           message: "Olá! Preciso de ajuda com o Finly.",
           contactTitle: "Enviar mensagem ao suporte",
           contactPlaceholder: "Escreve a tua mensagem...",

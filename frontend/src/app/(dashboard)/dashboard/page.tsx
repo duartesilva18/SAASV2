@@ -677,63 +677,63 @@ export default function DashboardPage() {
       </div>
 
       {/* 3 cards: Receitas | Despesas | Saldo */}
-      <section className="mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="mb-8 sm:mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                <ArrowUpCircle size={22} />
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-400 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <ArrowUpCircle size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
               {chartProcessed.vsIncome.label && chartProcessed.vsIncome.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsIncome.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-[10px] sm:text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsIncome.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {(chartProcessed.vsIncome.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                   {chartProcessed.vsIncome.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
-            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.income)}</p>
+            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
+            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.income)}</p>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-10 h-10 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                <ArrowDownCircle size={22} />
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500/10 text-red-400 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                <ArrowDownCircle size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
               {chartProcessed.vsExpenses.label && chartProcessed.vsExpenses.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-[10px] sm:text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
                   {chartProcessed.vsExpenses.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
-            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.expenses)}</p>
+            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
+            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.expenses)}</p>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                <Wallet size={22} />
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                <Wallet size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
               {chartProcessed.vsBalance.label && chartProcessed.vsBalance.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsBalance.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-[10px] sm:text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsBalance.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {(chartProcessed.vsBalance.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                   {chartProcessed.vsBalance.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
-            <p className={`text-2xl font-black tracking-tighter ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
+            <p className={`text-xl sm:text-2xl font-black tracking-tighter ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(stats.balance)}
             </p>
           </motion.div>
