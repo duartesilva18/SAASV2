@@ -124,8 +124,8 @@ def _parse_statement_with_gemini(
     mime_type: str,
     text_payload: Optional[str] = None,
     existing_categories: Optional[List[Tuple[str, str]]] = None,
-) -> Optional[List[Dict]]:
-    """Analisa extrato/recibo com Gemini e devolve lista de itens.
+) -> Tuple[Optional[List[Dict]], Optional[str]]:
+    """Analisa extrato/recibo com Gemini e devolve (lista de itens, None) ou (None, 'insufficient_quality').
     existing_categories: lista de (nome, type) com categorias do workspace para o Gemini preferir.
     """
     if not settings.GEMINI_API_KEY:
@@ -134,6 +134,8 @@ def _parse_statement_with_gemini(
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
+
+        today_iso = datetime.now().strftime('%Y-%m-%d')
 
         categories_instruction = ""
         if existing_categories:
@@ -147,24 +149,50 @@ def _parse_statement_with_gemini(
                 parts.append("Receitas (type=income): " + ", ".join(sorted(by_type["income"])))
             if parts:
                 categories_instruction = (
-                    "\n\nCATEGORIAS EXISTENTES DO UTILIZADOR (OBRIGATÓRIO: usa SEMPRE uma destas quando possível):\n"
+                    "\n\n=== CATEGORIAS EXISTENTES (usa SEMPRE uma destas — nome exato) ===\n"
                     + "\n".join(parts)
-                    + "\n\nIMPORTANTE - category_suggestion:\n"
-                    "- TEM MUITA PREFERÊNCIA pelas categorias listadas acima. Escolhe UMA delas pelo nome exato sempre que a transação encaixe minimamente (ex: supermercado -> Alimentação, gasolina -> Transportes).\n"
-                    "- Só sugira uma categoria NOVA (que não esteja na lista) se for REALMENTE inevitável e não houver nenhuma existente que faça sentido."
+                    + """
+
+REGRAS DE CATEGORIAS (obrigatório):
+1. Escolhe SEMPRE uma categoria da lista acima pelo nome EXATO se a transação encaixar (mesmo que seja aproximado: supermercado→Alimentação, Uber→Transportes, restaurante→Alimentação ou Lazer).
+2. Transportes = APENAS: combustível, portagens, bilhetes comboio/autocarro/avião, Uber/Bolt/taxi, reparações do carro. NUNCA: hotel, Booking.com, Airbnb, alojamento (isso é Viagens/Lazer/Alojamento).
+3. Só sugira uma categoria NOVA (fora da lista) se não existir NENHUMA que faça sentido — em dúvida, escolhe a existente mais próxima.
+"""
                 )
 
-        prompt = f"""
-És um especialista em contabilidade. Analisa este extrato/recibo e devolve uma lista de transações.
-DATA ATUAL: {datetime.now().strftime('%Y-%m-%d')}
+        prompt = f"""Tu és um extrator de transações financeiras. A tua ÚNICA tarefa é analisar o extrato/recibo/imagem e devolver uma lista JSON de transações. Nada mais.
 
-REGRAS:
-- Responde APENAS com um JSON puro (lista).
-- Cada item deve ter: description, amount, date (YYYY-MM-DD), type (expense|income), category_suggestion.
-- amount deve ser número (ex: 12.5).
-- Se não encontrares data, usa a DATA ATUAL.
-- category_suggestion: usa SEMPRE uma categoria existente da lista abaixo quando fizer algum sentido; só inventa uma categoria nova se for mesmo inevitável.
+DATA DE HOJE (usa se faltar data): {today_iso}
+
+=== FORMATO DE SAÍDA (obrigatório) ===
+Responde APENAS com um array JSON. Cada objeto tem exatamente estes 5 campos (nomes em inglês):
+- "description": string curta e clara (ex: "Supermercado Continente", "Hotel Booking.com")
+- "amount": número positivo, valor absoluto (ex: 25.90). O campo "type" indica se é despesa ou receita
+- "date": string YYYY-MM-DD (ex: "2025-01-15"). Se não houver data, usa {today_iso}
+- "type": "expense" ou "income" (não mais nada)
+- "category_suggestion": string com o nome EXATO de uma categoria da lista abaixo, ou uma nova só se for inevitável
+
+Exemplo de resposta válida (sem texto antes ou depois):
+[
+  {{"description": "Supermercado", "amount": 45.20, "date": "2025-01-14", "type": "expense", "category_suggestion": "Alimentação"}},
+  {{"description": "Salário", "amount": 1500, "date": "2025-01-01", "type": "income", "category_suggestion": "Salário"}}
+]
+
+=== QUALIDADE DA IMAGEM/DOCUMENTO ===
+Se a imagem ou o documento tiver qualidade INSUFICIENTE para ler transações (ex.: imagem desfocada, muito escura, resolução muito baixa, texto ilegível, foto de ecrã pixelada), NÃO inventes dados. Responde com exatamente:
+{{"insufficient_quality": true}}
+
+=== REGRAS GERAIS ===
+1. Extrai APENAS transações que apareçam claramente no documento. Não inventes linhas.
+2. amount: sempre número (inteiro ou decimal). Remove símbolos de moeda e vírgulas (ex: "1.234,56€" → 1234.56).
+3. Se o documento estiver vazio ou ilegível (mas com qualidade ok), responde: []
+4. Se a qualidade for má (desfocado, ilegível), responde: {{"insufficient_quality": true}}
+5. description: máximo ~80 caracteres, sem quebras de linha.
+6. type: "expense" para saídas/pagamentos, "income" para entradas/salário/reembolsos.
 {categories_instruction}
+
+=== FIM DAS INSTRUÇÕES ===
+Responde APENAS com o array JSON ou com {{"insufficient_quality": true}}. Sem explicações, sem markdown, sem \\`\\`\\`json.
 """
         content_parts: List = []
         if text_payload is not None:
@@ -186,10 +214,12 @@ REGRAS:
                 continue
         
         parsed = _extract_json_list(text_response)
-        return parsed
+        if parsed and len(parsed) == 1 and isinstance(parsed[0], dict) and parsed[0].get("insufficient_quality") is True:
+            return (None, "insufficient_quality")
+        return (parsed, None)
     except Exception as e:
         logger.error(f"Erro ao analisar extrato com Gemini: {str(e)}")
-        return None
+        return (None, None)
 
 def normalize_text(text: str) -> str:
     """Normaliza texto removendo acentos e símbolos"""
@@ -936,8 +966,24 @@ def setup_bot_commands():
             "description": "❓ Ver ajuda e comandos disponíveis"
         },
         {
+            "command": "categorias",
+            "description": "🏷️ Ver as minhas categorias (despesas/receitas)"
+        },
+        {
+            "command": "resumo",
+            "description": "📊 Totais do mês + últimas 5 transações"
+        },
+        {
             "command": "clear",
             "description": "🧹 Limpar transações pendentes"
+        },
+        {
+            "command": "desfazer",
+            "description": "↩️ Apagar a última transação"
+        },
+        {
+            "command": "unlink",
+            "description": "🔓 Desassociar esta conta do Telegram"
         }
     ]
     
@@ -1408,6 +1454,121 @@ async def telegram_webhook(
                 send_telegram_msg(chat_id, t_clear('clear_empty'))
             
             return {'status': 'ok'}
+
+        # Comando /unlink - Desassociar conta
+        if text.startswith('/unlink'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('unlink_not_linked'))
+                return {'status': 'ok'}
+            language = user.language if user.language else 'pt'
+            t_unlink = get_telegram_t(language)
+            user.phone_number = None
+            db.commit()
+            send_telegram_msg(chat_id, t_unlink('unlink_success'))
+            return {'status': 'ok'}
+
+        # Comando /categorias - Listar categorias do utilizador
+        if text.startswith('/categorias') or text.startswith('/categories'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('session_expired'))
+                return {'status': 'unauthorized'}
+            language = user.language if user.language else 'pt'
+            t_cat = get_telegram_t(language)
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t_cat('workspace_not_found'))
+                return {'status': 'error'}
+            categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
+            if not categories:
+                send_telegram_msg(chat_id, t_cat('categories_empty'))
+                return {'status': 'ok'}
+            expenses = [c.name for c in categories if c.type == 'expense']
+            incomes = [c.name for c in categories if c.type == 'income']
+            expenses_str = ", ".join(sorted(expenses)) if expenses else "—"
+            incomes_str = ", ".join(sorted(incomes)) if incomes else "—"
+            send_telegram_msg(chat_id, t_cat('categories_list').format(expenses=expenses_str, incomes=incomes_str))
+            return {'status': 'ok'}
+
+        # Comando /resumo ou /saldo - Totais do mês + últimas N transações
+        if text.startswith('/resumo') or text.startswith('/saldo') or text.startswith('/summary'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('session_expired'))
+                return {'status': 'unauthorized'}
+            language = user.language if user.language else 'pt'
+            t_res = get_telegram_t(language)
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t_res('workspace_not_found'))
+                return {'status': 'error'}
+            first_day = date.today().replace(day=1)
+            end = date.today()
+            month_year = first_day.strftime("%m/%Y")
+            trans_month = db.query(models.Transaction).filter(
+                models.Transaction.workspace_id == workspace.id,
+                models.Transaction.transaction_date >= first_day,
+                models.Transaction.transaction_date <= end,
+            ).all()
+            if not trans_month:
+                send_telegram_msg(chat_id, t_res('resumo_header').format(month_year=month_year) + "\n\n" + t_res('resumo_empty'))
+                return {'status': 'ok'}
+            expenses_cents = sum(t.amount_cents for t in trans_month if t.amount_cents < 0)
+            income_cents = sum(t.amount_cents for t in trans_month if t.amount_cents > 0)
+            balance_cents = expenses_cents + income_cents
+            expenses_abs = abs(expenses_cents) / 100.0
+            receitas_val = income_cents / 100.0
+            balance_val = balance_cents / 100.0
+            msg = t_res('resumo_header').format(month_year=month_year) + "\n\n" + t_res('resumo_totals').format(
+                expenses=f"-{expenses_abs:.2f}", receitas=f"+{receitas_val:.2f}", balance=f"{balance_val:+.2f}"
+            )
+            last_n = 5
+            last_trans = db.query(models.Transaction).filter(
+                models.Transaction.workspace_id == workspace.id
+            ).order_by(models.Transaction.created_at.desc()).limit(last_n).all()
+            if last_trans:
+                msg += t_res('resumo_last').format(n=len(last_trans))
+                for t in last_trans:
+                    amt = t.amount_cents / 100.0
+                    amt_str = f"-{abs(amt):.2f}" if t.amount_cents < 0 else f"+{amt:.2f}"
+                    msg += "\n" + t_res('resumo_line').format(
+                        date=t.transaction_date.strftime("%d/%m"),
+                        description=(t.description or "—")[:40],
+                        amount=amt_str
+                    )
+            send_telegram_msg(chat_id, msg)
+            return {'status': 'ok'}
+
+        # Comando /desfazer ou /undo - Apagar a última transação
+        if text.startswith('/desfazer') or text.startswith('/undo') or text.startswith('/apagar_ultima'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('session_expired'))
+                return {'status': 'unauthorized'}
+            language = user.language if user.language else 'pt'
+            t_undo = get_telegram_t(language)
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t_undo('workspace_not_found'))
+                return {'status': 'error'}
+            last_t = (
+                db.query(models.Transaction)
+                .filter(models.Transaction.workspace_id == workspace.id)
+                .order_by(models.Transaction.created_at.desc())
+                .limit(1)
+                .first()
+            )
+            if not last_t:
+                send_telegram_msg(chat_id, t_undo('desfazer_none'))
+                return {'status': 'ok'}
+            desc = (last_t.description or "—")[:50]
+            amt = last_t.amount_cents / 100.0
+            amt_str = f"-{abs(amt):.2f}" if last_t.amount_cents < 0 else f"+{amt:.2f}"
+            db.delete(last_t)
+            db.commit()
+            send_telegram_msg(chat_id, t_undo('desfazer_success').format(description=desc, amount=amt_str))
+            return {'status': 'ok'}
         
         # Processar email (associação)
         if "@" in text and "." in text:
@@ -1539,13 +1700,16 @@ async def telegram_webhook(
                 (c.name, c.type)
                 for c in db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
             ]
-            parsed_raw = _parse_statement_with_gemini(
+            parsed_raw, quality_reason = _parse_statement_with_gemini(
                 file_bytes, mime_type, text_payload=text_payload, existing_categories=existing_cats
             )
+            if quality_reason == "insufficient_quality":
+                send_telegram_msg(chat_id, t('media_insufficient_quality'))
+                return {'status': 'insufficient_quality'}
             if not parsed_raw:
                 send_telegram_msg(chat_id, t('media_parse_error'))
                 return {'status': 'parse_error'}
-            
+
             items = _build_items_from_gemini(parsed_raw, workspace, db)
             if not items:
                 send_telegram_msg(chat_id, t('media_parse_error'))

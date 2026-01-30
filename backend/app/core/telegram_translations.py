@@ -127,6 +127,11 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ <b>Limite diário atingido</b>\n\n"
             "Já usaste as 2 imagens/ficheiros de hoje."
         ),
+        'media_insufficient_quality': (
+            "⚠️ <b>Qualidade insuficiente</b>\n\n"
+            "A imagem ou o documento não têm qualidade suficiente para ler as transações (ex.: desfocada, muito escura ou ilegível).\n\n"
+            "Tira outra foto mais nítida, com boa luz, ou envia o extrato em PDF/CSV."
+        ),
         'media_summary_header': (
             "📄 <b>Resumo do extrato</b>\n\n"
         ),
@@ -230,6 +235,32 @@ TELEGRAM_TRANSLATIONS = {
             "💎 Não há transações pendentes para limpar.\n\n"
             "🧘‍♂️ <i>O teu ecossistema Zen está organizado.</i>"
         ),
+        'unlink_success': (
+            "✅ <b>Conta desassociada</b>\n\n"
+            "Este Telegram já não está ligado à tua conta Finly.\n\n"
+            "Usa /start para associar outra conta."
+        ),
+        'unlink_not_linked': (
+            "ℹ️ Não tens nenhuma conta associada a este Telegram.\n\n"
+            "Usa /start para associar a tua conta."
+        ),
+        'categories_list': (
+            "🏷️ <b>As tuas categorias</b>\n\n"
+            "<b>Despesas:</b> {expenses}\n\n"
+            "<b>Receitas:</b> {incomes}\n\n"
+            "<i>Usa estes nomes ao escrever transações ou ao enviar extratos.</i>"
+        ),
+        'categories_empty': (
+            "🏷️ Ainda não tens categorias.\n\n"
+            "Cria-as na app Finly (Definições ou ao adicionar transações)."
+        ),
+        'resumo_header': "📊 <b>Resumo de {month_year}</b>",
+        'resumo_totals': "💸 Despesas: {expenses}€\n💰 Receitas: {receitas}€\n📌 Saldo do mês: {balance}€",
+        'resumo_last': "\n\n📝 <b>Últimas {n} transações:</b>",
+        'resumo_line': "• {date} — {description} — {amount}€",
+        'resumo_empty': "Ainda não há transações este mês.",
+        'desfazer_success': "✅ Última transação apagada:\n{description} ({amount}€)",
+        'desfazer_none': "Não há transações para desfazer.",
         'clear_unauthorized': (
             "⚠️ <b>Não autorizado</b>\n\n"
             "💡 Envia <code>/start</code> para começar."
@@ -368,6 +399,11 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ <b>Daily limit reached</b>\n\n"
             "You've already used today's 2 images/files."
         ),
+        'media_insufficient_quality': (
+            "⚠️ <b>Insufficient quality</b>\n\n"
+            "The image or document doesn't have enough quality to read transactions (e.g. blurry, too dark or unreadable).\n\n"
+            "Take another clearer photo with good lighting, or send the statement as PDF/CSV."
+        ),
         'media_summary_header': (
             "📄 <b>Statement summary</b>\n\n"
         ),
@@ -471,6 +507,32 @@ TELEGRAM_TRANSLATIONS = {
             "💎 There are no pending transactions to clear.\n\n"
             "🧘‍♂️ <i>Your Zen ecosystem is organized.</i>"
         ),
+        'unlink_success': (
+            "✅ <b>Account unlinked</b>\n\n"
+            "This Telegram is no longer linked to your Finly account.\n\n"
+            "Use /start to link another account."
+        ),
+        'unlink_not_linked': (
+            "ℹ️ No account is linked to this Telegram.\n\n"
+            "Use /start to link your account."
+        ),
+        'categories_list': (
+            "🏷️ <b>Your categories</b>\n\n"
+            "<b>Expenses:</b> {expenses}\n\n"
+            "<b>Income:</b> {incomes}\n\n"
+            "<i>Use these names when typing transactions or sending statements.</i>"
+        ),
+        'categories_empty': (
+            "🏷️ You don't have any categories yet.\n\n"
+            "Create them in the Finly app (Settings or when adding transactions)."
+        ),
+        'resumo_header': "📊 <b>Summary for {month_year}</b>",
+        'resumo_totals': "💸 Expenses: {expenses}€\n💰 Income: {receitas}€\n📌 Month balance: {balance}€",
+        'resumo_last': "\n\n📝 <b>Last {n} transactions:</b>",
+        'resumo_line': "• {date} — {description} — {amount}€",
+        'resumo_empty': "No transactions this month yet.",
+        'desfazer_success': "✅ Last transaction deleted:\n{description} ({amount}€)",
+        'desfazer_none': "No transactions to undo.",
         'clear_unauthorized': (
             "⚠️ <b>Not authorized</b>\n\n"
             "💡 Send <code>/start</code> to begin."
@@ -609,6 +671,11 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ <b>Limite quotidienne atteinte</b>\n\n"
             "Tu as déjà utilisé tes 2 images/fichiers du jour."
         ),
+        'media_insufficient_quality': (
+            "⚠️ <b>Qualité insuffisante</b>\n\n"
+            "L'image ou le document n'ont pas assez de qualité pour lire les transactions (ex. flou, trop sombre ou illisible).\n\n"
+            "Prends une autre photo plus nette, avec une bonne lumière, ou envoie le relevé en PDF/CSV."
+        ),
         'media_summary_header': (
             "📄 <b>Résumé du relevé</b>\n\n"
         ),
@@ -712,6 +779,32 @@ TELEGRAM_TRANSLATIONS = {
             "💎 Aucune transaction en attente à supprimer.\n\n"
             "🧘‍♂️ <i>Ton écosystème Zen est organisé.</i>"
         ),
+        'unlink_success': (
+            "✅ <b>Compte dissocié</b>\n\n"
+            "Ce Telegram n'est plus lié à ton compte Finly.\n\n"
+            "Utilise /start pour associer un autre compte."
+        ),
+        'unlink_not_linked': (
+            "ℹ️ Aucun compte n'est associé à ce Telegram.\n\n"
+            "Utilise /start pour associer ton compte."
+        ),
+        'categories_list': (
+            "🏷️ <b>Tes catégories</b>\n\n"
+            "<b>Dépenses:</b> {expenses}\n\n"
+            "<b>Revenus:</b> {incomes}\n\n"
+            "<i>Utilise ces noms en écrivant des transactions ou en envoyant des relevés.</i>"
+        ),
+        'categories_empty': (
+            "🏷️ Tu n'as pas encore de catégories.\n\n"
+            "Crée-les dans l'app Finly (Paramètres ou en ajoutant des transactions)."
+        ),
+        'resumo_header': "📊 <b>Résumé de {month_year}</b>",
+        'resumo_totals': "💸 Dépenses: {expenses}€\n💰 Revenus: {receitas}€\n📌 Solde du mois: {balance}€",
+        'resumo_last': "\n\n📝 <b>Dernières {n} transactions:</b>",
+        'resumo_line': "• {date} — {description} — {amount}€",
+        'resumo_empty': "Aucune transaction ce mois-ci pour l'instant.",
+        'desfazer_success': "✅ Dernière transaction supprimée:\n{description} ({amount}€)",
+        'desfazer_none': "Aucune transaction à annuler.",
         'clear_unauthorized': (
             "⚠️ <b>Non autorisé</b>\n\n"
             "💡 Envoie <code>/start</code> pour commencer."
