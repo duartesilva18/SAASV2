@@ -120,4 +120,3 @@ export function useStripePlans() {
     mutate,
   };
 }
-
