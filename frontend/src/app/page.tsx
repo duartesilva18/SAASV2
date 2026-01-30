@@ -195,12 +195,12 @@ export default function LandingPage() {
                 <React.Fragment key={i}>{part}{i < arr.length - 1 && <AnimatedTelegram />}</React.Fragment>
               ))}
             </motion.p>
-            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 min-h-[44px] rounded-2xl text-base font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 sm:gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-5 sm:px-8 py-3 sm:py-4 min-h-[40px] sm:min-h-[44px] rounded-xl sm:rounded-2xl text-sm sm:text-base font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
                 {t.hero.cta}
-                <ArrowRight size={20} className="group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform sm:w-5 sm:h-5" />
               </Link>
-              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 min-h-[44px] rounded-2xl text-base font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
+              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-8 py-3 sm:py-4 min-h-[40px] sm:min-h-[44px] rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
                 {t.hero.seeHow}
               </Link>
             </motion.div>
