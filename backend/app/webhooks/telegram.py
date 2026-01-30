@@ -147,9 +147,11 @@ def _parse_statement_with_gemini(
                 parts.append("Receitas (type=income): " + ", ".join(sorted(by_type["income"])))
             if parts:
                 categories_instruction = (
-                    "\n\nCATEGORIAS EXISTENTES DO UTILIZADOR (usa preferencialmente o nome exato destas):\n"
+                    "\n\nCATEGORIAS EXISTENTES DO UTILIZADOR (OBRIGATÓRIO: usa SEMPRE uma destas quando possível):\n"
                     + "\n".join(parts)
-                    + "\n- Para cada transação, escolhe uma destas categorias se encaixar; caso contrário sugere uma categoria curta e comum."
+                    + "\n\nIMPORTANTE - category_suggestion:\n"
+                    "- TEM MUITA PREFERÊNCIA pelas categorias listadas acima. Escolhe UMA delas pelo nome exato sempre que a transação encaixe minimamente (ex: supermercado -> Alimentação, gasolina -> Transportes).\n"
+                    "- Só sugira uma categoria NOVA (que não esteja na lista) se for REALMENTE inevitável e não houver nenhuma existente que faça sentido."
                 )
 
         prompt = f"""
@@ -161,7 +163,7 @@ REGRAS:
 - Cada item deve ter: description, amount, date (YYYY-MM-DD), type (expense|income), category_suggestion.
 - amount deve ser número (ex: 12.5).
 - Se não encontrares data, usa a DATA ATUAL.
-- category_suggestion: usa uma das categorias existentes abaixo se fizer sentido; senão sugere uma categoria curta e comum.
+- category_suggestion: usa SEMPRE uma categoria existente da lista abaixo quando fizer algum sentido; só inventa uma categoria nova se for mesmo inevitável.
 {categories_instruction}
 """
         content_parts: List = []
