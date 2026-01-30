@@ -41,7 +41,7 @@ function GoogleRegisterButton({ onLoginSuccess, referralCode }: { onLoginSuccess
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-4 py-5 px-10 bg-slate-950 border border-slate-800 rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
+      className="flex items-center justify-center gap-3 sm:gap-4 py-3.5 sm:py-5 px-6 sm:px-10 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[300px]"
     >
       <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
@@ -425,7 +425,7 @@ function RegisterPageContent() {
               <MagneticButton
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 sm:py-4 lg:py-7 min-h-[44px] sm:min-h-[48px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-xl sm:rounded-[24px] font-black uppercase tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-2 sm:mt-4 flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 text-xs lg:text-sm relative overflow-hidden cursor-pointer"
+                className="w-full py-3 sm:py-4 lg:py-7 min-h-[40px] sm:min-h-[48px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-xl sm:rounded-[24px] font-black uppercase tracking-[0.3em] text-[11px] sm:text-xs lg:text-sm transition-all shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-2 sm:mt-4 flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 relative overflow-hidden cursor-pointer"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
@@ -482,7 +482,7 @@ function RegisterPageContent() {
             </p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-2 sm:gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-5 sm:px-8 lg:px-12 py-3 sm:py-4 lg:py-6 rounded-xl sm:rounded-[24px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+              className="inline-flex items-center gap-2 sm:gap-3 lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-4 sm:px-8 lg:px-12 py-2.5 sm:py-4 lg:py-6 rounded-xl sm:rounded-[24px] font-black uppercase tracking-[0.2em] text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
             >
               {t.auth.register.loginCta}
               <ArrowRight size={18} className="text-emerald-500 group-hover:translate-x-1 transition-transform lg:size-[20px]" />
