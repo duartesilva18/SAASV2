@@ -328,6 +328,7 @@ function MobileHeaderWithNotifications({
   onOpenMenu,
   supportHidden,
   onOpenSupport,
+  onRestoreSupport,
 }: {
   t: any;
   pathname: string | null;
