@@ -14,6 +14,23 @@ STRIPE_WEBHOOK_SECRET = settings.STRIPE_WEBHOOK_SECRET
 
 logger = logging.getLogger(__name__)
 
+
+@router.get('/plans')
+async def get_plans():
+    """
+    Retorna os price IDs dos planos conforme STRIPE_MODE (test/live).
+    O frontend usa isto para checkout e para mapear price_id -> plano.
+    """
+    return {
+        'plans': [
+            {'id': 'basic', 'price_id': settings.STRIPE_PRICE_BASIC, 'name': 'Finly Basic'},
+            {'id': 'plus', 'price_id': settings.STRIPE_PRICE_PLUS, 'name': 'Finly Plus'},
+            {'id': 'pro', 'price_id': settings.STRIPE_PRICE_YEARLY, 'name': 'Finly Pro'},
+        ],
+        'mode': settings.STRIPE_MODE,
+    }
+
+
 @router.post('/create-checkout-session')
 async def create_checkout_session(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:

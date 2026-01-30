@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Check, Zap, Crown, Trophy } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
+import { useStripePlans } from '@/lib/hooks';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 
@@ -18,6 +19,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const { priceIdByPlanId } = useStripePlans();
 
   // Verificar se há mensagem de sucesso após refresh
   useEffect(() => {
@@ -154,21 +156,24 @@ export default function PricingPage() {
     }
   ];
 
+  const getPriceId = (planId: string) => priceIdByPlanId[planId] ?? plans.find(p => p.id === planId)?.priceId ?? '';
+
   // Verificar se há parâmetro plan na URL e iniciar checkout automaticamente
   useEffect(() => {
     const planParam = searchParams?.get('plan');
     if (planParam && !loading && !isProcessingPayment && !isPro) {
       const selectedPlan = plans.find(p => p.id === planParam);
       if (selectedPlan) {
-        // Pequeno delay para garantir que a página carregou completamente
+        const priceId = getPriceId(selectedPlan.id);
+        if (!priceId) return;
         const timer = setTimeout(() => {
-          handleSubscribe(selectedPlan.priceId);
+          handleSubscribe(priceId);
         }, 500);
         return () => clearTimeout(timer);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isPro, loading, isProcessingPayment]);
+  }, [searchParams, isPro, loading, isProcessingPayment, priceIdByPlanId]);
 
   return (
     <div className="space-y-20 pb-20 px-4 md:px-8 pt-10 max-w-7xl mx-auto">
@@ -263,7 +268,7 @@ export default function PricingPage() {
 
                 <button
                   type="button"
-                  onClick={() => handleSubscribe(plan.priceId)}
+                  onClick={() => handleSubscribe(getPriceId(plan.id))}
                   disabled={loading !== null || isPro}
                   className={`mt-auto w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
                     isPro

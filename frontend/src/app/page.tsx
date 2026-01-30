@@ -11,6 +11,7 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { useUser } from '@/lib/UserContext';
+import { useStripePlans } from '@/lib/hooks';
 import api from '@/lib/api';
 
 function AnimatedTelegram() {
@@ -20,9 +21,12 @@ function AnimatedTelegram() {
 const fadeUp = { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 } };
 const stagger = (i: number) => ({ transition: { delay: i * 0.08 } });
 
+const FALLBACK_PRICE_IDS: Record<string, string> = { basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf', plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS', pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve' };
+
 export default function LandingPage() {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
   const { user } = useUser();
+  const { priceIdByPlanId } = useStripePlans();
   const router = useRouter();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -421,8 +425,12 @@ export default function LandingPage() {
                       onClick={async () => {
                         if (user) {
                           try {
-                            const priceIdMap: Record<string, string> = { basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf', plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS', pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve' };
-                            const res = await api.post('/stripe/create-checkout-session', null, { params: { price_id: priceIdMap[plan.id] } });
+                            const priceId = priceIdByPlanId[plan.id] || FALLBACK_PRICE_IDS[plan.id];
+                            if (!priceId) {
+                              router.push(`/pricing?plan=${plan.id}`);
+                              return;
+                            }
+                            const res = await api.post('/stripe/create-checkout-session', null, { params: { price_id: priceId } });
                             window.location.href = res.data.url;
                           } catch {
                             router.push(`/pricing?plan=${plan.id}`);

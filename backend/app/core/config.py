@@ -12,6 +12,14 @@ _stripe_webhook_secret_legacy = os.getenv('STRIPE_WEBHOOK_SECRET', '').strip()
 _stripe_webhook_secret_test = os.getenv('STRIPE_WEBHOOK_SECRET_TEST', '').strip()
 _stripe_webhook_secret_live = os.getenv('STRIPE_WEBHOOK_SECRET_LIVE', '').strip()
 
+# Price IDs (test = Stripe Test mode, live = Stripe Live). Em produção: define STRIPE_PRICE_*_LIVE e STRIPE_MODE=live.
+_stripe_price_basic_test = os.getenv('STRIPE_PRICE_BASIC_TEST', 'price_1SuIypLtWlVpaXrbD7ph1fhf').strip()
+_stripe_price_plus_test = os.getenv('STRIPE_PRICE_PLUS_TEST', 'price_1SuIzcLtWlVpaXrbLkHE0QbS').strip()
+_stripe_price_yearly_test = os.getenv('STRIPE_PRICE_YEARLY_TEST', 'price_1SuJ0GLtWlVpaXrb8BH9HIve').strip()
+_stripe_price_basic_live = os.getenv('STRIPE_PRICE_BASIC_LIVE', '').strip()
+_stripe_price_plus_live = os.getenv('STRIPE_PRICE_PLUS_LIVE', '').strip()
+_stripe_price_yearly_live = os.getenv('STRIPE_PRICE_YEARLY_LIVE', '').strip()
+
 def _pick_stripe_value(mode: str, test_val: str, live_val: str, legacy_val: str) -> str:
     if mode == 'live':
         return live_val or legacy_val or ''
@@ -60,7 +68,16 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = _pick_stripe_value(
         _stripe_mode, _stripe_webhook_secret_test, _stripe_webhook_secret_live, _stripe_webhook_secret_legacy
     )
-    
+    STRIPE_PRICE_BASIC: str = _pick_stripe_value(
+        _stripe_mode, _stripe_price_basic_test, _stripe_price_basic_live, _stripe_price_basic_test
+    )
+    STRIPE_PRICE_PLUS: str = _pick_stripe_value(
+        _stripe_mode, _stripe_price_plus_test, _stripe_price_plus_live, _stripe_price_plus_test
+    )
+    STRIPE_PRICE_YEARLY: str = _pick_stripe_value(
+        _stripe_mode, _stripe_price_yearly_test, _stripe_price_yearly_live, _stripe_price_yearly_test
+    )
+
     WHATSAPP_TOKEN: str = os.getenv('WHATSAPP_TOKEN', '').strip().strip('"')
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '').strip().strip('"')
     WHATSAPP_VERIFY_TOKEN: str = os.getenv('WHATSAPP_VERIFY_TOKEN', 'zen_secret_token').strip().strip('"')

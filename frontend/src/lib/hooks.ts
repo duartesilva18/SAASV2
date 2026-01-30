@@ -90,3 +90,34 @@ export function useInsights() {
   };
 }
 
+/** Planos Stripe (price IDs conforme STRIPE_MODE test/live no backend) */
+export interface StripePlan {
+  id: string;
+  price_id: string;
+  name: string;
+}
+
+export function useStripePlans() {
+  const { data, error, isLoading, mutate } = useSWR<{ plans: StripePlan[]; mode?: string }>(
+    '/stripe/plans',
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60 * 60 * 1000 }
+  );
+  const plans = data?.plans ?? [];
+  const priceIdByPlanId: Record<string, string> = {};
+  const planByPriceId: Record<string, { id: string; name: string }> = {};
+  plans.forEach((p) => {
+    priceIdByPlanId[p.id] = p.price_id;
+    planByPriceId[p.price_id] = { id: p.id, name: p.name };
+  });
+  return {
+    plans,
+    priceIdByPlanId,
+    planByPriceId,
+    mode: data?.mode,
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+
