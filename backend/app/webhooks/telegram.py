@@ -119,15 +119,39 @@ def _extract_json_list(text: str) -> Optional[List[Dict]]:
     except Exception:
         return None
 
-def _parse_statement_with_gemini(content: bytes, mime_type: str, text_payload: Optional[str] = None) -> Optional[List[Dict]]:
-    """Analisa extrato/recibo com Gemini e devolve lista de itens."""
+def _parse_statement_with_gemini(
+    content: bytes,
+    mime_type: str,
+    text_payload: Optional[str] = None,
+    existing_categories: Optional[List[Tuple[str, str]]] = None,
+) -> Optional[List[Dict]]:
+    """Analisa extrato/recibo com Gemini e devolve lista de itens.
+    existing_categories: lista de (nome, type) com categorias do workspace para o Gemini preferir.
+    """
     if not settings.GEMINI_API_KEY:
         logger.warning("GEMINI_API_KEY não configurada. Não é possível analisar extratos.")
         return None
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        
+
+        categories_instruction = ""
+        if existing_categories:
+            by_type: Dict[str, List[str]] = defaultdict(list)
+            for name, cat_type in existing_categories:
+                by_type[cat_type].append(name)
+            parts = []
+            if by_type.get("expense"):
+                parts.append("Despesas (type=expense): " + ", ".join(sorted(by_type["expense"])))
+            if by_type.get("income"):
+                parts.append("Receitas (type=income): " + ", ".join(sorted(by_type["income"])))
+            if parts:
+                categories_instruction = (
+                    "\n\nCATEGORIAS EXISTENTES DO UTILIZADOR (usa preferencialmente o nome exato destas):\n"
+                    + "\n".join(parts)
+                    + "\n- Para cada transação, escolhe uma destas categorias se encaixar; caso contrário sugere uma categoria curta e comum."
+                )
+
         prompt = f"""
 És um especialista em contabilidade. Analisa este extrato/recibo e devolve uma lista de transações.
 DATA ATUAL: {datetime.now().strftime('%Y-%m-%d')}
@@ -137,7 +161,8 @@ REGRAS:
 - Cada item deve ter: description, amount, date (YYYY-MM-DD), type (expense|income), category_suggestion.
 - amount deve ser número (ex: 12.5).
 - Se não encontrares data, usa a DATA ATUAL.
-- category_suggestion deve ser uma categoria curta e comum.
+- category_suggestion: usa uma das categorias existentes abaixo se fizer sentido; senão sugere uma categoria curta e comum.
+{categories_instruction}
 """
         content_parts: List = []
         if text_payload is not None:
@@ -1507,8 +1532,14 @@ async def telegram_webhook(
                     text_payload = file_bytes.decode('utf-8', errors='ignore')
                 except Exception:
                     text_payload = None
-            
-            parsed_raw = _parse_statement_with_gemini(file_bytes, mime_type, text_payload=text_payload)
+
+            existing_cats = [
+                (c.name, c.type)
+                for c in db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
+            ]
+            parsed_raw = _parse_statement_with_gemini(
+                file_bytes, mime_type, text_payload=text_payload, existing_categories=existing_cats
+            )
             if not parsed_raw:
                 send_telegram_msg(chat_id, t('media_parse_error'))
                 return {'status': 'parse_error'}
