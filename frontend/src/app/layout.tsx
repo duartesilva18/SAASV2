@@ -140,37 +140,30 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Handler para ChunkLoadError - recarrega automaticamente
-              window.addEventListener('error', (event) => {
-                if (event.message && event.message.includes('ChunkLoadError')) {
-                  console.warn('ChunkLoadError detectado, a recarregar página...');
-                  // Limpar cache e recarregar
-                  if ('caches' in window) {
-                    caches.keys().then(names => {
-                      names.forEach(name => caches.delete(name));
-                    });
-                  }
-                  window.location.reload();
+              (function() {
+                function isChunkLoadError(msg) {
+                  if (!msg || typeof msg !== 'string') return false;
+                  var s = msg.toLowerCase();
+                  return s.indexOf('chunkloaderror') !== -1 || s.indexOf('loading chunk') !== -1 && s.indexOf('failed') !== -1 || s.indexOf('failed to fetch dynamically imported module') !== -1;
                 }
-              });
-              
-              // Handler para erros de importação de módulos
-              window.addEventListener('unhandledrejection', (event) => {
-                if (event.reason && event.reason.message && event.reason.message.includes('Failed to fetch dynamically imported module')) {
-                  console.warn('Erro de importação dinâmica detectado, a recarregar página...');
-                  if ('caches' in window) {
-                    caches.keys().then(names => {
-                      names.forEach(name => caches.delete(name));
-                    });
-                  }
-                  window.location.reload();
+                function recoverChunkError() {
+                  var url = window.location.href.split('?')[0] + '?_t=' + Date.now();
+                  function go() { window.location.replace(url); }
+                  var p = Promise.resolve();
+                  if ('caches' in window) { p = p.then(function() { return caches.keys().then(function(ns) { ns.forEach(function(n) { caches.delete(n); }); }); }); }
+                  if ('serviceWorker' in navigator) { p = p.then(function() { return navigator.serviceWorker.getRegistrations().then(function(regs) { regs.forEach(function(r) { r.unregister(); }); }); }); }
+                  p.then(go).catch(go);
                 }
-              });
-              
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                window.addEventListener('error', function(event) {
+                  if (isChunkLoadError(event.message)) { event.preventDefault(); recoverChunkError(); return true; }
+                }, true);
+                window.addEventListener('unhandledrejection', function(event) {
+                  var msg = event.reason && (event.reason.message || event.reason);
+                  if (isChunkLoadError(typeof msg === 'string' ? msg : (msg && msg.message) || '')) { event.preventDefault(); recoverChunkError(); }
                 });
+              })();
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').catch(function() {}); });
               }
             `,
           }}
