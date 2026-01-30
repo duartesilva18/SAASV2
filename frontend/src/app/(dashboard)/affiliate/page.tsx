@@ -86,6 +86,8 @@ export default function AffiliatePage() {
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
+  const totalEarningsCents = stats?.total_earnings_cents ?? status?.total_earnings_cents ?? 0;
+
   useEffect(() => {
     // Garantir que só carrega uma vez, mesmo com React Strict Mode
     if (hasLoadedData.current) {
@@ -468,7 +470,7 @@ export default function AffiliatePage() {
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Total Ganho</p>
-          <p className="text-3xl font-black text-white tracking-tighter">{formatPrice(status.total_earnings_cents)}</p>
+          <p className="text-3xl font-black text-white tracking-tighter">{formatPrice(totalEarningsCents)}</p>
           {stats && (
             <p className="text-xs text-slate-400 mt-2">Pago: {formatPrice(stats.paid_earnings_cents)}</p>
           )}

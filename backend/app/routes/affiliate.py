@@ -524,6 +524,16 @@ async def get_affiliate_stats(
             created_at=ref.created_at,
             payment_info=payment_info
         ))
+
+    # Fallback: se não houver comissões registadas, estimar comissões via Stripe
+    # (evita "Total ganho" sempre 0 quando faltam registos em affiliate_commissions)
+    fallback_total_earnings = sum(
+        int((ref.payment_info or {}).get('commission_cents', 0)) for ref in referrals_data
+    )
+    if total_earnings == 0 and pending_earnings == 0 and paid_earnings == 0 and fallback_total_earnings > 0:
+        total_earnings = fallback_total_earnings
+        paid_earnings = fallback_total_earnings
+        pending_earnings = 0
     
     # Comissões mensais
     commissions = db.query(models.AffiliateCommission).filter(
