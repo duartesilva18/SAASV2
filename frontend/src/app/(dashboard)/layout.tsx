@@ -131,7 +131,7 @@ export default function DashboardLayout({
 
   return (
     <NotificationsProvider>
-    <div className="flex bg-[#020617] min-h-screen relative overflow-hidden selection:bg-blue-500/30">
+    <div className="flex bg-[#020617] min-h-screen min-h-[100dvh] relative overflow-x-hidden selection:bg-blue-500/30">
       {/* Background Glows */}
       <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -169,7 +169,7 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 min-h-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
         <MobileHeaderWithNotifications
           t={t}
@@ -227,11 +227,11 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 min-h-0 relative z-10 overflow-y-auto overflow-x-hidden ios-scroll-touch">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}

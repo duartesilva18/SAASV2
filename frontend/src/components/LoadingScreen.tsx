@@ -45,25 +45,29 @@ export default function LoadingScreen() {
   }, []);
 
   const currentQuote = motivationalQuotes[quoteIndex];
-  const Icon = currentQuote.icon;
 
   return (
     <div className="fixed inset-0 bg-[#020617] z-[9999] flex items-center justify-center overflow-hidden p-4" role="status" aria-live="polite" aria-label="A carregar">
-      {/* Background Glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      {/* Fundo com cores do site: azul/índigo */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-slate-900/80 to-[#020617]" />
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-600/15 blur-[140px] rounded-full pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-indigo-600/15 blur-[140px] rounded-full pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center justify-center max-w-2xl px-8 text-center">
-        {/* Logo/Icon */}
+        {/* Logo Finly */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 12 }}
-          className="mb-12"
+          transition={{ type: "spring", stiffness: 200, damping: 14 }}
+          className="mb-10"
         >
-          <div className={`w-24 h-24 bg-gradient-to-br ${currentQuote.color} rounded-[32px] flex items-center justify-center text-white shadow-2xl shadow-blue-600/30 rotate-3 ring-4 ring-blue-500/10`}>
-            <Icon size={48} className="animate-pulse" />
-          </div>
+          <img
+            src="/images/logo/logo-semfundo.png"
+            alt="Finly"
+            className="w-28 h-28 sm:w-32 sm:h-32 object-contain drop-shadow-2xl"
+            draggable={false}
+          />
         </motion.div>
 
         {/* Loading Spinner */}
