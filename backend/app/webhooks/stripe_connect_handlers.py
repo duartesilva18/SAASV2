@@ -5,6 +5,7 @@ from datetime import datetime, date
 from ..models import database as models
 import logging
 import stripe
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,16 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
     try:
         # Verificar se tem transfer_data (divisão automática)
         transfer_data = payment_intent.get('transfer_data')
+        if not transfer_data:
+            # Tentar obter transfer_data a partir do charge
+            charges = payment_intent.get('charges', {})
+            charge = None
+            if isinstance(charges, dict):
+                charge_data = charges.get('data') or []
+                if charge_data:
+                    charge = charge_data[0]
+            if charge:
+                transfer_data = charge.get('transfer_data')
         if not transfer_data:
             return  # Não é uma divisão automática
         
@@ -31,8 +42,19 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
             return
         
         # Buscar metadata para identificar o cliente que pagou
-        metadata = payment_intent.get('metadata', {})
+        metadata = payment_intent.get('metadata', {}) or {}
         user_id_str = metadata.get('user_id')
+        if not user_id_str:
+            # Tentar obter user_id a partir do charge (caso metadata não esteja no PaymentIntent)
+            charges = payment_intent.get('charges', {})
+            charge = None
+            if isinstance(charges, dict):
+                charge_data = charges.get('data') or []
+                if charge_data:
+                    charge = charge_data[0]
+            if charge:
+                charge_metadata = charge.get('metadata', {}) or {}
+                user_id_str = charge_metadata.get('user_id')
         if not user_id_str:
             # Tentar buscar pelo customer
             customer_id = payment_intent.get('customer')
@@ -42,6 +64,22 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
                 ).first()
                 if user:
                     user_id_str = str(user.id)
+        if not user_id_str:
+            # Tentar buscar pelo invoice (útil em pagamentos de subscrição)
+            invoice_id = payment_intent.get('invoice')
+            if invoice_id and settings.STRIPE_API_KEY:
+                try:
+                    stripe.api_key = settings.STRIPE_API_KEY
+                    invoice = stripe.Invoice.retrieve(invoice_id)
+                    customer_id = invoice.get('customer')
+                    if customer_id:
+                        user = db.query(models.User).filter(
+                            models.User.stripe_customer_id == customer_id
+                        ).first()
+                        if user:
+                            user_id_str = str(user.id)
+                except Exception as e:
+                    logger.warning(f'Erro ao buscar invoice {invoice_id} para resolver user_id: {str(e)}')
         
         if not user_id_str:
             logger.warning(f'Não foi possível identificar o user_id do payment_intent {payment_intent.get("id")}')
@@ -140,7 +178,7 @@ def handle_transfer_created(transfer: dict, db: Session):
             logger.warning(f'Afiliado não encontrado para conta Stripe Connect: {destination}')
             return
         
-        # Buscar comissão relacionada (mês atual)
+        # Buscar comissão relacionada (priorizar mês atual, com fallback para última pendente)
         current_month = date.today().replace(day=1)
         
         commission = db.query(models.AffiliateCommission).filter(
@@ -148,6 +186,12 @@ def handle_transfer_created(transfer: dict, db: Session):
             models.AffiliateCommission.month == current_month,
             models.AffiliateCommission.stripe_transfer_id.is_(None)  # Ainda não tem transfer_id
         ).order_by(models.AffiliateCommission.created_at.desc()).first()
+
+        if not commission:
+            commission = db.query(models.AffiliateCommission).filter(
+                models.AffiliateCommission.affiliate_id == affiliate.id,
+                models.AffiliateCommission.stripe_transfer_id.is_(None)
+            ).order_by(models.AffiliateCommission.created_at.desc()).first()
         
         if commission:
             commission.stripe_transfer_id = transfer_id

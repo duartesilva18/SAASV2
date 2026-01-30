@@ -809,7 +809,7 @@ export default function AffiliatePage() {
                   </div>
                 </div>
 
-                {status.affiliate_link && (
+                {status.affiliate_link ? (
                   <div className="w-full max-w-lg space-y-3">
                     <div className="bg-slate-800/60 backdrop-blur-sm border border-white/5 rounded-xl p-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">{t.dashboard?.affiliate?.yourAffiliateLink || "O Teu Link de Afiliado"}</p>
@@ -832,7 +832,13 @@ export default function AffiliatePage() {
                       )}
                     </button>
                   </div>
-                )}
+                ) : status.is_affiliate && !status.stripe_connect_configured ? (
+                  <div className="w-full max-w-lg p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <p className="text-sm text-amber-200 font-medium">
+                      {t.dashboard?.affiliate?.configureStripeToGetLink || "Configura o Stripe Connect (à direita) para obter o teu link de afiliado e começar a partilhar."}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </motion.div>
           )}
@@ -877,6 +883,12 @@ export default function AffiliatePage() {
                 ? (t.dashboard?.affiliate?.stripeConnected || "A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.")
                 : (t.dashboard?.affiliate?.stripeNotConnected || "Conecta a tua conta Stripe para receberes comissões automaticamente.")}
             </p>
+            {status?.stripe_connect_configured && (
+              <div className="w-full px-3 py-2 rounded-lg bg-green-500/15 border border-green-500/30 text-green-300 text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                {t.dashboard?.affiliate?.stripeFullyFunctional || "Stripe Connect 100% funcional"}
+              </div>
+            )}
             <button
               onClick={async () => {
                 try {

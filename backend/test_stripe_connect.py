@@ -184,10 +184,10 @@ print("\n[5] Criando checkout session com divisao automatica...")
 print(f"   Comissão: 20% (200 cêntimos)")
 print(f"   Transfer para: {connect_account_id}")
 try:
-    # Calcular comissão (20%)
+    # Comissão do afiliado = 20%; plataforma retém 80% (application_fee_percent = percentagem da plataforma)
     total_amount = 999  # 9.99€
     commission_percentage = 20.0
-    application_fee_percent = commission_percentage
+    platform_fee_percent = 100 - commission_percentage  # 80% fica na plataforma, 20% vai para o afiliado
     
     session = stripe.checkout.Session.create(
         customer=customer_id,
@@ -198,7 +198,7 @@ try:
         }],
         mode='subscription',
         subscription_data={
-            'application_fee_percent': application_fee_percent,
+            'application_fee_percent': platform_fee_percent,
             'transfer_data': {
                 'destination': connect_account_id,
             },
