@@ -3,17 +3,17 @@
 import Sidebar from '@/components/Sidebar';
 import OnboardingModal from '@/components/OnboardingModal';
 import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
-import SupportButton from '@/components/SupportButton';
+import SupportButton, { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import LoadingScreen from '@/components/LoadingScreen';
 import AlertModal from '@/components/AlertModal';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -28,7 +28,37 @@ export default function DashboardLayout({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [supportHidden, setSupportHidden] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(SUPPORT_HIDDEN_KEY) === '1'
+  );
   const pathname = usePathname();
+
+  const supportRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supportDidRestoreRef = useRef(false);
+  const SUPPORT_HOLD_MS = 600;
+
+  useEffect(() => {
+    setSupportHidden(localStorage.getItem(SUPPORT_HIDDEN_KEY) === '1');
+    const onHidden = () => setSupportHidden(true);
+    window.addEventListener('support-hidden', onHidden);
+    return () => window.removeEventListener('support-hidden', onHidden);
+  }, []);
+
+  const openSupport = useCallback(() => {
+    try {
+      localStorage.removeItem(SUPPORT_HIDDEN_KEY);
+    } catch (_) {}
+    setSupportHidden(false);
+    window.dispatchEvent(new CustomEvent('open-support'));
+  }, []);
+
+  const restoreSupport = useCallback(() => {
+    try {
+      localStorage.removeItem(SUPPORT_HIDDEN_KEY);
+    } catch (_) {}
+    setSupportHidden(false);
+    window.dispatchEvent(new CustomEvent('support-restore'));
+  }, []);
   const { t, setCurrency, setLanguage } = useTranslation();
   const { user, loading, refreshUser } = useUser();
   const router = useRouter();
@@ -176,6 +206,9 @@ export default function DashboardLayout({
           pathname={pathname}
           secondaryTabs={secondaryTabs}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
+          supportHidden={supportHidden}
+          onOpenSupport={openSupport}
+          onRestoreSupport={restoreSupport}
         />
 
         {/* Desktop Header – menu secundário (tabs) ao centro; Bot Telegram, Guia, idioma à direita */}
@@ -194,6 +227,43 @@ export default function DashboardLayout({
               ))}
             </nav>
             <div className="flex-1 flex justify-end items-center gap-2 shrink-0">
+              {supportHidden && (
+                <button
+                  type="button"
+                  onPointerDown={() => {
+                    supportDidRestoreRef.current = false;
+                    supportRestoreTimerRef.current = setTimeout(() => {
+                      supportDidRestoreRef.current = true;
+                      restoreSupport();
+                      supportRestoreTimerRef.current = null;
+                    }, SUPPORT_HOLD_MS);
+                  }}
+                  onPointerUp={() => {
+                    if (supportRestoreTimerRef.current) {
+                      clearTimeout(supportRestoreTimerRef.current);
+                      supportRestoreTimerRef.current = null;
+                    }
+                  }}
+                  onPointerLeave={() => {
+                    if (supportRestoreTimerRef.current) {
+                      clearTimeout(supportRestoreTimerRef.current);
+                      supportRestoreTimerRef.current = null;
+                    }
+                  }}
+                  onClick={() => {
+                    if (supportDidRestoreRef.current) {
+                      supportDidRestoreRef.current = false;
+                      return;
+                    }
+                    openSupport();
+                  }}
+                  className="p-2 text-blue-400 hover:text-blue-300 transition-colors rounded-lg hover:bg-white/5 shrink-0"
+                  title="Suporte (clique abre; segurar devolve o ícone ao canto)"
+                  aria-label="Suporte"
+                >
+                  <Mail size={18} />
+                </button>
+              )}
               <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
@@ -256,15 +326,23 @@ function MobileHeaderWithNotifications({
   pathname,
   secondaryTabs,
   onOpenMenu,
+  supportHidden,
+  onOpenSupport,
 }: {
   t: any;
   pathname: string | null;
   secondaryTabs: { label: string; href: string }[] | null;
   onOpenMenu: () => void;
+  supportHidden?: boolean;
+  onOpenSupport?: () => void;
+  onRestoreSupport?: () => void;
 }) {
   const { setShowNotifications, showNotifications } = useNotifications();
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const supportHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supportDidRestoreRef = useRef(false);
+  const SUPPORT_HOLD_MS = 600;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -311,6 +389,45 @@ function MobileHeaderWithNotifications({
                     className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-800/98 backdrop-blur-xl border border-slate-600/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
                   >
                     <div className="flex items-center gap-0.5">
+                      {supportHidden && onOpenSupport && (
+                        <button
+                          type="button"
+                          onPointerDown={() => {
+                            supportDidRestoreRef.current = false;
+                            supportHoldTimerRef.current = setTimeout(() => {
+                              supportDidRestoreRef.current = true;
+                              onRestoreSupport?.();
+                              setToolsOpen(false);
+                              supportHoldTimerRef.current = null;
+                            }, SUPPORT_HOLD_MS);
+                          }}
+                          onPointerUp={() => {
+                            if (supportHoldTimerRef.current) {
+                              clearTimeout(supportHoldTimerRef.current);
+                              supportHoldTimerRef.current = null;
+                            }
+                          }}
+                          onPointerLeave={() => {
+                            if (supportHoldTimerRef.current) {
+                              clearTimeout(supportHoldTimerRef.current);
+                              supportHoldTimerRef.current = null;
+                            }
+                          }}
+                          onClick={() => {
+                            if (supportDidRestoreRef.current) {
+                              supportDidRestoreRef.current = false;
+                              return;
+                            }
+                            onOpenSupport();
+                            setToolsOpen(false);
+                          }}
+                          className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
+                          title="Suporte (clique abre; segurar devolve o ícone ao canto)"
+                          aria-label="Suporte"
+                        >
+                          <Mail className="w-5 h-5" />
+                        </button>
+                      )}
                       <a
                         href="https://t.me/FinanZenApp_bot"
                         target="_blank"
