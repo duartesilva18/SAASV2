@@ -9,6 +9,19 @@ import api from '@/lib/api';
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILES = 3;
 
+/** Tipo da secção support nas traduções (evita erro de union em t.dashboard.support). */
+type SupportT = {
+  tooltip?: string;
+  message?: string;
+  contactTitle?: string;
+  contactPlaceholder?: string;
+  contactAttach?: string;
+  contactRemoveFile?: string;
+  contactSend?: string;
+  contactSuccess?: string;
+  contactError?: string;
+};
+
 export default function SupportButton() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -45,7 +58,8 @@ export default function SupportButton() {
       formData.append('message', trimmed);
       files.forEach((f) => formData.append('files', f));
       await api.post('/api/support/contact', formData);
-      setToast({ type: 'success', text: t.dashboard?.support?.contactSuccess ?? 'Mensagem enviada. Obrigado!' });
+      const support = t.dashboard?.support as SupportT | undefined;
+      setToast({ type: 'success', text: support?.contactSuccess ?? 'Mensagem enviada. Obrigado!' });
       setMessage('');
       setFiles([]);
       setTimeout(() => {
@@ -53,7 +67,8 @@ export default function SupportButton() {
         setToast(null);
       }, 1500);
     } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? t.dashboard?.support?.contactError ?? 'Não foi possível enviar. Tenta novamente.';
+      const support = t.dashboard?.support as SupportT | undefined;
+      const msg = err?.response?.data?.detail ?? support?.contactError ?? 'Não foi possível enviar. Tenta novamente.';
       setToast({ type: 'error', text: typeof msg === 'string' ? msg : 'Erro ao enviar.' });
     } finally {
       setSending(false);
@@ -65,7 +80,7 @@ export default function SupportButton() {
       <motion.button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label={t.dashboard?.support?.tooltip ?? 'Contactar suporte'}
+        aria-label={(t.dashboard?.support as SupportT | undefined)?.tooltip ?? 'Contactar suporte'}
         aria-expanded={open}
         initial={{ opacity: 0, scale: 0.5, x: 20 }}
         animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -100,7 +115,7 @@ export default function SupportButton() {
               <div className="p-4 sm:p-5 md:p-6 overflow-y-auto flex-1 min-h-0">
                 <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
                   <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-white opacity-90 truncate pr-2">
-                    {t.dashboard?.support?.contactTitle ?? 'Enviar mensagem ao suporte'}
+                    {(t.dashboard?.support as SupportT | undefined)?.contactTitle ?? 'Enviar mensagem ao suporte'}
                   </h3>
                   <button
                     type="button"
@@ -115,7 +130,7 @@ export default function SupportButton() {
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder={t.dashboard?.support?.contactPlaceholder ?? 'Escreve a tua mensagem...'}
+                    placeholder={(t.dashboard?.support as SupportT | undefined)?.contactPlaceholder ?? 'Escreve a tua mensagem...'}
                     rows={5}
                     className="w-full bg-slate-950/50 border border-slate-700 rounded-xl md:rounded-2xl py-3 px-4 sm:py-4 text-base text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 resize-none min-h-[140px] sm:min-h-[180px] md:min-h-[200px] touch-manipulation"
                     disabled={sending}
@@ -136,7 +151,7 @@ export default function SupportButton() {
                       className="inline-flex items-center gap-2 px-4 py-3 min-h-[44px] rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 text-sm font-medium border border-slate-600 cursor-pointer touch-manipulation"
                     >
                       <Paperclip size={18} className="shrink-0" />
-                      {t.dashboard?.support?.contactAttach ?? 'Anexar ficheiro'}
+                      {(t.dashboard?.support as SupportT | undefined)?.contactAttach ?? 'Anexar ficheiro'}
                     </button>
                     {files.length > 0 && (
                       <span className="text-xs text-slate-500">
@@ -154,7 +169,7 @@ export default function SupportButton() {
                             onClick={() => removeFile(i)}
                             disabled={sending}
                             className="shrink-0 text-slate-500 hover:text-red-400 cursor-pointer disabled:opacity-50 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation -mr-1"
-                            aria-label={t.dashboard?.support?.contactRemoveFile ?? 'Remover'}
+                            aria-label={(t.dashboard?.support as SupportT | undefined)?.contactRemoveFile ?? 'Remover'}
                           >
                             <X size={16} />
                           </button>
@@ -172,7 +187,7 @@ export default function SupportButton() {
                     disabled={sending || !message.trim()}
                     className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl md:rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[52px] cursor-pointer touch-manipulation"
                   >
-                    {sending ? <Loader2 size={20} className="animate-spin" /> : (t.dashboard?.support?.contactSend ?? 'Enviar')}
+                    {sending ? <Loader2 size={20} className="animate-spin" /> : ((t.dashboard?.support as SupportT | undefined)?.contactSend ?? 'Enviar')}
                   </button>
                 </form>
               </div>
