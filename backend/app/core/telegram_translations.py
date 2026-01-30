@@ -68,9 +68,10 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Exemplo: o-teu-email@exemplo.com</i>"
         ),
         'email_not_found': (
-            "✨ <b>Email recebido</b> ✨\n\n"
-            "💎 Se estiveres associado a uma conta <b>Pro</b>, já podes começar a usar o bot.\n\n"
-            "🧘‍♂️ <i>O teu ecossistema financeiro está quase pronto.</i>"
+            "⚠️ <b>Não existe conta com este email</b>\n\n"
+            "📧 Não encontrámos nenhuma conta Finly com o email que enviaste.\n\n"
+            "💡 Cria primeiro uma conta na app (registo) e depois associa o Telegram com o mesmo email.\n\n"
+            "🧘‍♂️ <i>Assim que tiveres conta, envia o teu email aqui para ligar o bot.</i>"
         ),
         'pro_required': (
             "💎 <b>Conta Pro Necessária</b>\n\n"
@@ -340,9 +341,10 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Example: your-email@example.com</i>"
         ),
         'email_not_found': (
-            "✨ <b>Email received</b> ✨\n\n"
-            "💎 If you're associated with a <b>Pro</b> account, you can start using the bot.\n\n"
-            "🧘‍♂️ <i>Your financial ecosystem is almost ready.</i>"
+            "⚠️ <b>No account with this email</b>\n\n"
+            "📧 We didn't find any Finly account with the email you sent.\n\n"
+            "💡 Create an account in the app (sign up) first, then link Telegram using the same email.\n\n"
+            "🧘‍♂️ <i>Once you have an account, send your email here to connect the bot.</i>"
         ),
         'pro_required': (
             "💎 <b>Pro Account Required</b>\n\n"
@@ -612,9 +614,10 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Exemple : ton-email@exemple.com</i>"
         ),
         'email_not_found': (
-            "✨ <b>Email reçu</b> ✨\n\n"
-            "💎 Si tu as un compte <b>Pro</b>, tu peux commencer à utiliser le bot.\n\n"
-            "🧘‍♂️ <i>Ton écosystème financier est presque prêt.</i>"
+            "⚠️ <b>Aucun compte avec cet email</b>\n\n"
+            "📧 Nous n'avons trouvé aucun compte Finly avec l'email envoyé.\n\n"
+            "💡 Crée d'abord un compte dans l'app (inscription), puis associe Telegram avec le même email.\n\n"
+            "🧘‍♂️ <i>Une fois le compte créé, envoie ton email ici pour connecter le bot.</i>"
         ),
         'pro_required': (
             "💎 <b>Compte Pro requis</b>\n\n"
