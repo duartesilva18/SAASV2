@@ -59,6 +59,10 @@ def test_user(db_session):
 
 
 @pytest.fixture
-def test_user_token(test_user):
+def test_user_token(db_session, test_user):
     """Token de acesso para test_user (evita rate limit do login nos testes)."""
-    return security.create_access_token(subject=test_user.email)
+    token, jti = security.create_access_token(subject=test_user.email)
+    session_row = models.UserSession(user_id=test_user.id, jti=jti)
+    db_session.add(session_row)
+    db_session.commit()
+    return token

@@ -8,10 +8,12 @@ from dotenv import load_dotenv
 # Carregar variáveis do .env
 load_dotenv()
 
-# Obter token e secret do .env
+# Obter token, secret e URL do .env (URL = backend público onde o webhook será chamado)
 BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '').strip().strip('"')
 WEBHOOK_SECRET = os.getenv('TELEGRAM_WEBHOOK_SECRET', '').strip().strip('"')
-WEBHOOK_URL = "https://finanzen-backend.onrender.com/telegram/webhook"
+# TELEGRAM_WEBHOOK_URL ou BACKEND_URL: ex. https://finanzen-backend.onrender.com ou https://api.finlybot.com
+_base = (os.getenv('TELEGRAM_WEBHOOK_URL') or os.getenv('BACKEND_URL') or '').strip().strip('/')
+WEBHOOK_URL = f"{_base}/telegram/webhook" if _base else "https://finanzen-backend.onrender.com/telegram/webhook"
 
 if not BOT_TOKEN:
     print("ERRO: TELEGRAM_BOT_TOKEN nao encontrado no .env")

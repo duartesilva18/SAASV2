@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -46,11 +46,25 @@ class User(Base):
     referrer = relationship('User', remote_side=[id], foreign_keys=[referrer_id])
     referrals = relationship('AffiliateReferral', foreign_keys='AffiliateReferral.referrer_id', back_populates='referrer')
     commissions = relationship('AffiliateCommission', back_populates='affiliate')
+    sessions = relationship('UserSession', back_populates='user', cascade='all, delete-orphan')
 
     @property
     def has_password(self) -> bool:
         """True se a conta foi criada com email/password; False se entrou só por Google/social."""
         return self.password_hash is not None
+
+
+class UserSession(Base):
+    """Sessões ativas por utilizador. Máximo 2 por conta (controlado na lógica de login)."""
+    __tablename__ = 'user_sessions'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    jti = Column(String(64), nullable=False, unique=True, index=True)  # JWT ID do access token
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship('User', back_populates='sessions')
+
 
 class Workspace(Base):
     __tablename__ = 'workspaces'
@@ -233,6 +247,28 @@ class TelegramPendingTransaction(Base):
     
     workspace = relationship('Workspace')
     category = relationship('Category')
+
+class TelegramMediaUsage(Base):
+    __tablename__ = 'telegram_media_usage'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chat_id = Column(String, nullable=False, index=True)
+    day = Column(Date, nullable=False, index=True)
+    count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    __table_args__ = (
+        UniqueConstraint('chat_id', 'day', name='unique_telegram_media_usage_day'),
+    )
+
+class TelegramPendingBatchImport(Base):
+    __tablename__ = 'telegram_pending_batch_imports'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chat_id = Column(String, nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False)
+    items_json = Column(Text, nullable=False)  # Lista JSON de itens extraídos
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    workspace = relationship('Workspace')
 
 class CategoryMappingCache(Base):
     """

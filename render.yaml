@@ -24,6 +24,17 @@ services:
         sync: false  # Será configurado manualmente após criar o frontend
       - key: ALLOWED_ORIGINS
         sync: false  # Será configurado manualmente após criar o frontend
+      - key: STRIPE_MODE
+        sync: false  # "test" ou "live"
+      - key: STRIPE_API_KEY_TEST
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET_TEST
+        sync: false
+      - key: STRIPE_API_KEY_LIVE
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET_LIVE
+        sync: false
+      # Legado (opcional): se STRIPE_MODE não for usado, usa estas
       - key: STRIPE_API_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
