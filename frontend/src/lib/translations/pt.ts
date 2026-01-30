@@ -1058,8 +1058,16 @@ export const pt = {
           copyFullLinkTitle: "Copiar link completo"
       },
       support: {
-          tooltip: "Apoio 24/7",
-          message: "Olá! Preciso de ajuda com o Finly."
+          tooltip: "Contactar suporte",
+          supportMovedToMenu: "O botão de suporte foi movido para este menu.",
+          message: "Olá! Preciso de ajuda com o Finly.",
+          contactTitle: "Enviar mensagem ao suporte",
+          contactPlaceholder: "Escreve a tua mensagem...",
+          contactAttach: "Anexar ficheiro",
+          contactRemoveFile: "Remover",
+          contactSend: "Enviar",
+          contactSuccess: "Mensagem enviada. Obrigado!",
+          contactError: "Não foi possível enviar. Tenta novamente."
       },
       categories: {
           title: "Ecossistema de Categorias",

@@ -103,6 +103,11 @@ TELEGRAM_TRANSLATIONS = {
             "📖 Envia <code>/info</code> para ver todos os formatos.\n\n"
             "🧘‍♂️ <i>Simplicidade é a chave.</i>"
         ),
+        'ai_unavailable': (
+            "⚠️ <b>Neste momento não consigo processar</b>\n\n"
+            "A categorização automática está temporariamente indisponível.\n"
+            "Tenta novamente daqui a uns minutos."
+        ),
         'transaction_pending': (
             "✨ <b>Nova Transação</b> ✨\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
@@ -274,6 +279,11 @@ TELEGRAM_TRANSLATIONS = {
             "• 🍽️ <code>Lunch - Food 25€</code>\n\n"
             "📖 Send <code>/info</code> to see all formats.\n\n"
             "🧘‍♂️ <i>Simplicity is the key.</i>"
+        ),
+        'ai_unavailable': (
+            "⚠️ <b>I can't process right now</b>\n\n"
+            "Automatic categorization is temporarily unavailable.\n"
+            "Please try again in a few minutes."
         ),
         'transaction_pending': (
             "✨ <b>New Transaction</b> ✨\n"

@@ -1097,8 +1097,16 @@ export const fr = {
           }
       },
       support: {
-          tooltip: "Support 24/7",
-          message: "Bonjour ! J'ai besoin d'aide avec Finly."
+          tooltip: "Contacter le support",
+          supportMovedToMenu: "Le bouton support a été déplacé dans ce menu.",
+          message: "Bonjour ! J'ai besoin d'aide avec Finly.",
+          contactTitle: "Envoyer un message au support",
+          contactPlaceholder: "Écrivez votre message...",
+          contactAttach: "Joindre un fichier",
+          contactRemoveFile: "Supprimer",
+          contactSend: "Envoyer",
+          contactSuccess: "Message envoyé. Merci !",
+          contactError: "Impossible d'envoyer. Réessayez."
       },
       categories: {
           title: "Écosystème des catégories",

@@ -1097,8 +1097,16 @@ export const en = {
           }
       },
       support: {
-          tooltip: "24/7 Support",
-          message: "Hello! I need help with Finly."
+          tooltip: "Contact support",
+          supportMovedToMenu: "The support button was moved to this menu.",
+          message: "Hello! I need help with Finly.",
+          contactTitle: "Send message to support",
+          contactPlaceholder: "Write your message...",
+          contactAttach: "Attach file",
+          contactRemoveFile: "Remove",
+          contactSend: "Send",
+          contactSuccess: "Message sent. Thank you!",
+          contactError: "Could not send. Please try again."
       },
       categories: {
           title: "Category Ecosystem",

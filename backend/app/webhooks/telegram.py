@@ -23,6 +23,11 @@ from ..core.telegram_translations import get_telegram_t
 logger = logging.getLogger("telegram_webhook")
 
 
+class GeminiUnavailableError(Exception):
+    """Levantada quando o Gemini não está disponível (quota/plano esgotado)."""
+    pass
+
+
 def _telegram_lang(from_user: Optional[dict]) -> str:
     """Infer bot language from Telegram user (when app user has no language set)."""
     code = (from_user or {}).get("language_code") or "pt"
@@ -592,12 +597,23 @@ Responde APENAS com o nome exato da categoria:"""
                 return None
                         
         except Exception as e:
+            err_str = (str(e) or "").lower()
+            # Quota / plano esgotado / rate limit (429, ResourceExhausted, etc.)
+            if (
+                "429" in err_str or "quota" in err_str or "resource exhausted" in err_str
+                or "resource_exhausted" in err_str or "rate limit" in err_str
+                or "rate_limit" in err_str or "exceeded" in err_str
+            ):
+                logger.warning(f"Gemini indisponível (quota/limite): {str(e)}")
+                raise GeminiUnavailableError(str(e)) from e
             logger.error(f"Erro ao usar Gemini: {str(e)}")
             return None
         
     except ImportError:
         logger.warning("google-generativeai não instalado. Instale com: pip install google-generativeai")
         return None
+    except GeminiUnavailableError:
+        raise
     except Exception as e:
         logger.error(f"Erro na categorização IA: {str(e)}")
         return None
@@ -1085,7 +1101,11 @@ async def telegram_webhook(
         # Processar texto
         if text:
             logger.info(f"Processando texto como transação: '{text}'")
-            parsed = parse_transaction(text, workspace, db)
+            try:
+                parsed = parse_transaction(text, workspace, db)
+            except GeminiUnavailableError:
+                send_telegram_msg(chat_id, t('ai_unavailable'))
+                return {'status': 'error'}
             logger.info(f"Resultado do parsing: {parsed}")
             
             if not parsed:
