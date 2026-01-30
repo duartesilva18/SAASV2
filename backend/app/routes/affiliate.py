@@ -19,17 +19,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/affiliate', tags=['affiliate'])
 
-# Price IDs dos planos (vêm de config: STRIPE_PRICE_*_TEST / STRIPE_PRICE_*_LIVE conforme STRIPE_MODE)
-def _plan_basic():
-    return settings.STRIPE_PRICE_BASIC
-
-
-def _plan_plus():
-    return settings.STRIPE_PRICE_PLUS
-
-
-def _plan_yearly():
-    return settings.STRIPE_PRICE_YEARLY
+# Price IDs dos planos
+PLAN_BASIC_MONTHLY = 'price_1SuIypLtWlVpaXrbD7ph1fhf'  # Finly Basic
+PLAN_PLUS = 'price_1SuIzcLtWlVpaXrbLkHE0QbS'  # Finly Plus
+PLAN_YEARLY = 'price_1SuJ0GLtWlVpaXrb8BH9HIve'  # Finly Pro (1 ano)
 
 def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[bool, str]:
     """
@@ -38,10 +31,13 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
     Retorna: (has_access: bool, reason: str)
     
     Lógica:
+    - Admin: sempre tem acesso
     - Plano 3 meses: Tem acesso
     - Plano 1 ano: Tem acesso
     - Plano básico (1 mês): Precisa de 3 meses consecutivos pagos
     """
+    if user.is_admin:
+        return (True, 'Admin')
     if not settings.STRIPE_API_KEY or not user.stripe_customer_id:
         return (False, 'Sem subscrição ativa')
     
@@ -83,11 +79,11 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
             return (False, 'Plano inválido')
         
         # Planos que dão acesso direto a afiliados
-        if current_price_id in [_plan_plus(), _plan_yearly()]:
+        if current_price_id in [PLAN_PLUS, PLAN_YEARLY]:
             return (True, 'Plano com acesso a afiliados')
         
         # Plano básico (1 mês) - verificar se tem 3 meses consecutivos pagos
-        if current_price_id == _plan_basic():
+        if current_price_id == PLAN_BASIC_MONTHLY:
             # Buscar todas as invoices pagas do customer
             invoices = stripe.Invoice.list(
                 customer=user.stripe_customer_id,
@@ -100,7 +96,7 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
             for inv in invoices.data:
                 # Verificar se a invoice tem o price_id do plano básico
                 for line_item in inv.lines.data:
-                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == _plan_basic():
+                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == PLAN_BASIC_MONTHLY:
                         basic_invoices.append(inv)
                         break
             
@@ -169,8 +165,7 @@ def check_stripe_connect_status(user: models.User, db: Session) -> bool:
         return (
             user.stripe_connect_account_id is not None and
             user.stripe_connect_onboarding_completed and
-            user.stripe_connect_account_status == 'active' and
-            user.affiliate_payout_enabled
+            user.stripe_connect_account_status == 'active'
         )
     
     try:
@@ -180,29 +175,25 @@ def check_stripe_connect_status(user: models.User, db: Session) -> bool:
         payouts_enabled = account.get('payouts_enabled', False)
         
         # Atualizar campos locais com status real do Stripe
-        new_onboarding_completed = details_submitted and charges_enabled
-        new_account_status = 'active' if (details_submitted and charges_enabled and payouts_enabled) else 'pending'
-        new_payout_enabled = payouts_enabled and details_submitted and charges_enabled
-
-        if (
-            user.stripe_connect_onboarding_completed != new_onboarding_completed or
-            user.stripe_connect_account_status != new_account_status or
-            user.affiliate_payout_enabled != new_payout_enabled
-        ):
-            user.stripe_connect_onboarding_completed = new_onboarding_completed
-            user.stripe_connect_account_status = new_account_status
-            user.affiliate_payout_enabled = new_payout_enabled
+        if details_submitted and charges_enabled:
+            user.stripe_connect_onboarding_completed = True
+            user.stripe_connect_account_status = 'active' if payouts_enabled else 'pending'
+            user.affiliate_payout_enabled = payouts_enabled
+            # Considerar configurado se onboarding está completo e charges estão ativos
             db.commit()
-
-        # Considerar configurado apenas quando payouts estão ativos
-        return new_onboarding_completed and new_payout_enabled
+            return True
+        else:
+            user.stripe_connect_onboarding_completed = False
+            user.stripe_connect_account_status = 'pending'
+            user.affiliate_payout_enabled = False
+            db.commit()
+            return False
     except stripe.error.StripeError as e:
         logger.warning(f"Erro ao verificar status Stripe Connect: {str(e)}. Usando status local.")
         # Em caso de erro, usar status local
         return (
             user.stripe_connect_onboarding_completed and
-            user.stripe_connect_account_status == 'active' and
-            user.affiliate_payout_enabled
+            user.stripe_connect_account_status == 'active'
         )
 
 def generate_affiliate_code() -> str:
@@ -260,12 +251,10 @@ async def get_affiliate_status(
         )
     ).scalar() or 0
     
+    affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}" if current_user.affiliate_code else None
+    
     # Verificar se tem Stripe Connect configurado e ativo (em tempo real)
     stripe_connect_configured = check_stripe_connect_status(current_user, db)
-    # Só gerar o link de afiliado quando o Stripe Connect estiver configurado
-    affiliate_link = None
-    if current_user.affiliate_code and stripe_connect_configured:
-        affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}"
     
     logger.info(f"   → Status: is_affiliate={current_user.is_affiliate}, "
                 f"stripe_connect_configured={stripe_connect_configured}, "
@@ -295,12 +284,8 @@ async def request_affiliate_status(
     
     # Verificar se já é afiliado
     if current_user.is_affiliate:
-        # Verificar Stripe Connect (em tempo real) para decidir se mostramos o link
-        stripe_connect_configured = check_stripe_connect_status(current_user, db)
-        affiliate_link = None
-        if current_user.affiliate_code and stripe_connect_configured:
-            affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}"
         # Se já é afiliado, retornar status atual
+        affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}" if current_user.affiliate_code else None
         total_referrals = db.query(func.count(models.AffiliateReferral.id)).filter(
             models.AffiliateReferral.referrer_id == current_user.id
         ).scalar() or 0
@@ -319,6 +304,9 @@ async def request_affiliate_status(
                 models.AffiliateCommission.is_paid == False
             )
         ).scalar() or 0
+        
+        # Verificar Stripe Connect (em tempo real)
+        stripe_connect_configured = check_stripe_connect_status(current_user, db)
         
         return schemas.AffiliateResponse(
             is_affiliate=True,
@@ -364,11 +352,11 @@ async def request_affiliate_status(
         request=request
     )
     
-    # Verificar Stripe Connect (em tempo real) - link só é devolvido quando configurado
+    # Retornar status atualizado
+    affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}"
+    
+    # Verificar Stripe Connect (em tempo real)
     stripe_connect_configured = check_stripe_connect_status(current_user, db)
-    affiliate_link = None
-    if current_user.affiliate_code and stripe_connect_configured:
-        affiliate_link = f"{settings.FRONTEND_URL}/auth/register?ref={current_user.affiliate_code}"
     
     return schemas.AffiliateResponse(
         is_affiliate=True,
@@ -531,16 +519,6 @@ async def get_affiliate_stats(
             created_at=ref.created_at,
             payment_info=payment_info
         ))
-
-    # Fallback: se não houver comissões registadas, estimar comissões via Stripe
-    # (evita "Total ganho" sempre 0 quando faltam registos em affiliate_commissions)
-    fallback_total_earnings = sum(
-        int((ref.payment_info or {}).get('commission_cents', 0)) for ref in referrals_data
-    )
-    if total_earnings == 0 and pending_earnings == 0 and paid_earnings == 0 and fallback_total_earnings > 0:
-        total_earnings = fallback_total_earnings
-        paid_earnings = fallback_total_earnings
-        pending_earnings = 0
     
     # Comissões mensais
     commissions = db.query(models.AffiliateCommission).filter(

@@ -1013,10 +1013,8 @@ export const pt = {
           notConfigured: "Não Configurado",
           stripeConnected: "A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.",
           stripeNotConnected: "Conecta a tua conta Stripe para receberes comissões automaticamente.",
-          stripeFullyFunctional: "Stripe Connect 100% funcional",
           openStripeDashboard: "Abrir Dashboard Stripe",
           configureStripeConnect: "Configurar Stripe Connect",
-          configureStripeToGetLink: "Configura o Stripe Connect (à direita) para obter o teu link de afiliado e começar a partilhar.",
           affiliateLink: "Link de Afiliado",
           monthlyCommissions: "Comissões Mensais",
           paid: "Pago",
@@ -1060,16 +1058,8 @@ export const pt = {
           copyFullLinkTitle: "Copiar link completo"
       },
       support: {
-          tooltip: "Contactar suporte",
-          supportMovedToMenu: "O botão de suporte foi movido para este menu.",
-          message: "Olá! Preciso de ajuda com o Finly.",
-          contactTitle: "Enviar mensagem ao suporte",
-          contactPlaceholder: "Escreve a tua mensagem...",
-          contactAttach: "Anexar ficheiro",
-          contactRemoveFile: "Remover",
-          contactSend: "Enviar",
-          contactSuccess: "Mensagem enviada. Obrigado!",
-          contactError: "Não foi possível enviar. Tenta novamente."
+          tooltip: "Apoio 24/7",
+          message: "Olá! Preciso de ajuda com o Finly."
       },
       categories: {
           title: "Ecossistema de Categorias",

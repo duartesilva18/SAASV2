@@ -27,19 +27,6 @@ body {
   touch-action: pan-y pinch-zoom;
 }
 
-/* iOS Safari: viewport correto (evita barra de endereço a cortar conteúdo) */
-@supports (min-height: 100dvh) {
-  html, body {
-    min-height: 100dvh;
-  }
-}
-
-/* iOS Safari: scroll suave em áreas com overflow-y-auto (evita conteúdo que não aparece) */
-.ios-scroll-touch {
-  -webkit-overflow-scrolling: touch;
-  min-height: 0;
-}
-
 body {
   background-color: var(--background);
   color: var(--foreground);

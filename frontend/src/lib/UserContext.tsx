@@ -38,22 +38,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(async () => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) {
-      try {
-        await api.post('/auth/logout', {}, { headers: { Authorization: `Bearer ${token}` } });
-      } catch {
-        // Ignore (token pode já estar expirado)
-      }
-    }
+  const logout = useCallback(() => {
     // Preservar consentimento de cookies antes de limpar
     const cookieConsent = localStorage.getItem('cookie-consent');
     const cookieConsentDate = localStorage.getItem('cookie-consent-date');
-
+    
     localStorage.clear();
     sessionStorage.clear();
-
+    
     // Restaurar consentimento de cookies após limpar
     if (cookieConsent) {
       localStorage.setItem('cookie-consent', cookieConsent);
@@ -61,7 +53,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('cookie-consent-date', cookieConsentDate);
       }
     }
-
+    
     // Limpar cookies comuns de auth se existirem
     document.cookie.split(";").forEach((c) => {
       document.cookie = c

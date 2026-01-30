@@ -14,30 +14,9 @@ STRIPE_WEBHOOK_SECRET = settings.STRIPE_WEBHOOK_SECRET
 
 logger = logging.getLogger(__name__)
 
-
-@router.get('/plans')
-async def get_plans():
-    """
-    Retorna os price IDs dos planos conforme STRIPE_MODE (test/live).
-    O frontend usa isto para checkout e para mapear price_id -> plano.
-    """
-    return {
-        'plans': [
-            {'id': 'basic', 'price_id': settings.STRIPE_PRICE_BASIC, 'name': 'Finly Basic'},
-            {'id': 'plus', 'price_id': settings.STRIPE_PRICE_PLUS, 'name': 'Finly Plus'},
-            {'id': 'pro', 'price_id': settings.STRIPE_PRICE_YEARLY, 'name': 'Finly Pro'},
-        ],
-        'mode': settings.STRIPE_MODE,
-    }
-
-
 @router.post('/create-checkout-session')
 async def create_checkout_session(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
-        if not settings.STRIPE_API_KEY:
-            raise HTTPException(status_code=500, detail='Stripe não está configurado.')
-        stripe.api_key = settings.STRIPE_API_KEY
-
         customer_id = current_user.stripe_customer_id
         
         if not customer_id:
@@ -52,8 +31,6 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         # Buscar preço para calcular total
         price = stripe.Price.retrieve(price_id)
         total_amount_cents = price.unit_amount  # Valor total em cêntimos
-        if total_amount_cents is None:
-            logger.warning(f'Preço sem unit_amount (price_id={price_id}). Não será aplicada comissão de afiliado.')
         
         # Verificar se cliente tem referrer_id e se referrer tem Stripe Connect ativo
         application_fee_amount = None
@@ -74,37 +51,32 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                         details_submitted = account.get('details_submitted', False)
                         charges_enabled = account.get('charges_enabled', False)
                         payouts_enabled = account.get('payouts_enabled', False)
-                        # Considerar ativo apenas quando payouts estão habilitados (evita transfer falhar)
-                        is_connect_active = details_submitted and charges_enabled and payouts_enabled
+                        is_connect_active = details_submitted and charges_enabled
                         logger.info(f'📊 Status Stripe Connect do afiliado {referrer.email}: details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}, is_connect_active={is_connect_active}')
                     else:
                         # Se Stripe não está configurado, usar status local
-                        is_connect_active = referrer.stripe_connect_onboarding_completed and referrer.affiliate_payout_enabled
+                        is_connect_active = referrer.stripe_connect_onboarding_completed
                         logger.info(f'⚠️ Stripe API não configurada, usando status local: is_connect_active={is_connect_active}')
                 except Exception as e:
                     logger.warning(f'Erro ao verificar status Stripe Connect do afiliado: {str(e)}. Usando status local.')
-                    is_connect_active = referrer.stripe_connect_onboarding_completed and referrer.affiliate_payout_enabled
+                    is_connect_active = referrer.stripe_connect_onboarding_completed
                 
-                if is_connect_active and total_amount_cents:
+                if is_connect_active:
                     # Buscar percentagem de comissão
                     commission_setting = db.query(models.SystemSetting).filter(
                         models.SystemSetting.key == 'affiliate_commission_percentage'
                     ).first()
                     commission_percentage = float(commission_setting.value) if commission_setting else 20.0
-                    if commission_percentage <= 0 or commission_percentage >= 100:
-                        logger.warning(f'Percentagem de comissão inválida ({commission_percentage}). Ignorando divisão automática.')
-                        commission_percentage = None
                     
-                    if commission_percentage:
-                        # Calcular comissão
-                        application_fee_amount = int(total_amount_cents * (commission_percentage / 100))
-                        referrer_id = str(referrer.id)
-                        
-                        transfer_data = {
-                            'destination': referrer.stripe_connect_account_id,
-                        }
-                        
-                        logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
+                    # Calcular comissão
+                    application_fee_amount = int(total_amount_cents * (commission_percentage / 100))
+                    referrer_id = str(referrer.id)
+                    
+                    transfer_data = {
+                        'destination': referrer.stripe_connect_account_id,
+                    }
+                    
+                    logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
         
         # Criar checkout session
         subscription_data = {
@@ -115,16 +87,15 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         }
         
         # Adicionar divisão automática se aplicável
-        # Para subscriptions: application_fee_percent = percentagem que a PLATAFORMA retém (Stripe docs).
-        # O destino (afiliado) recebe o resto. Queremos afiliado com commission_percentage (ex: 20%), plataforma com (100 - 20)%.
+        # Para subscriptions, usar subscription_data com application_fee_percent
         if application_fee_amount and transfer_data:
-            # Percentagem que fica na plataforma = 100 - comissão do afiliado
-            platform_fee_percent = round(100 - commission_percentage, 2)
-            subscription_data['application_fee_percent'] = platform_fee_percent
+            # Calcular percentagem da comissão e arredondar para 2 casas decimais (máximo do Stripe)
+            application_fee_percent = round((application_fee_amount / total_amount_cents) * 100, 2)
+            
+            subscription_data['application_fee_percent'] = application_fee_percent
             subscription_data['transfer_data'] = transfer_data
             subscription_data['metadata']['commission_percentage'] = str(commission_percentage)
             subscription_data['metadata']['commission_amount_cents'] = str(application_fee_amount)
-            subscription_data['metadata']['affiliate_connect_account_id'] = transfer_data.get('destination', '')
         
         session_params = {
             'customer': customer_id,

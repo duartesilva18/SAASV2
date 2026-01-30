@@ -8,6 +8,7 @@ Create Date: 2026-01-22 21:00:00.000000
 from typing import Sequence, Union
 
 from alembic import op
+import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'add_language_users'
@@ -17,10 +18,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Coluna language já existe na BD do Render (criada por script SQL).
-    pass
+    # Add language column to users table with default value 'pt'
+    op.add_column('users', sa.Column('language', sa.String(length=5), nullable=False, server_default='pt'))
 
 
 def downgrade() -> None:
-    pass
+    # Remove language column from users table
+    op.drop_column('users', 'language')
 

@@ -512,10 +512,10 @@ function TransactionsPageContent() {
         </div>
       </section>
 
-      {/* Transactions List & Charts: 2/3 transações, 1/3 gráficos no desktop; em ecrã pequeno transações a full e gráficos abaixo */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-        {/* Transações: 2/3 no xl, largura total em mobile */}
-        <section className="xl:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
+      {/* Transactions List & Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+        {/* Left: Transactions Table (desktop) / Cards (mobile) */}
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
         {/* Mobile: card list */}
         <div className="md:hidden px-4 py-4 space-y-3">
           {filteredTransactions.length === 0 ? (
@@ -805,8 +805,7 @@ function TransactionsPageContent() {
         )}
         </section>
 
-        {/* Gráficos: 1/3 no xl; em ecrã pequeno desce para baixo */}
-        <div className="xl:col-span-1">
+        {/* Right: Charts — lazy-loaded para reduzir bundle inicial */}
         <TransactionChartsPanel
           transactions={transactions}
           categories={categories}
@@ -818,7 +817,6 @@ function TransactionsPageContent() {
           incomeLabel={t.dashboard.analytics.income}
           expensesLabel={t.dashboard.analytics.expenses}
         />
-        </div>
       </div>
 
       {/* Add/Edit Modal */}

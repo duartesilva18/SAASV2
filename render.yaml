@@ -7,8 +7,7 @@ services:
     region: frankfurt
     rootDir: backend
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    # Migrations primeiro, depois o servidor (evita BD no Render desatualizada)
-    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -25,24 +24,6 @@ services:
         sync: false  # Será configurado manualmente após criar o frontend
       - key: ALLOWED_ORIGINS
         sync: false  # Será configurado manualmente após criar o frontend
-      - key: STRIPE_MODE
-        sync: false  # "test" ou "live"
-      - key: STRIPE_API_KEY_TEST
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET_TEST
-        sync: false
-      - key: STRIPE_API_KEY_LIVE
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET_LIVE
-        sync: false
-      # Price IDs Live (obrigatório se STRIPE_MODE=live)
-      - key: STRIPE_PRICE_BASIC_LIVE
-        sync: false
-      - key: STRIPE_PRICE_PLUS_LIVE
-        sync: false
-      - key: STRIPE_PRICE_YEARLY_LIVE
-        sync: false
-      # Legado (opcional): se STRIPE_MODE não for usado, usa estas
       - key: STRIPE_API_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

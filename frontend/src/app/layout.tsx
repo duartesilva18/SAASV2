@@ -6,7 +6,6 @@ import { UserProvider } from "@/lib/UserContext";
 import { InstallPromptProvider } from "@/lib/InstallPromptContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/CookieBanner";
-import BackButtonGuard from "@/components/BackButtonGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,8 +54,7 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
     ],
-    // iOS não lida bem com ícones transparentes; usar versão com fundo
-    apple: '/images/logo/icon.jpeg',
+    apple: '/images/logo/logo-semfundo.png',
     shortcut: '/favicon.ico',
   },
   alternates: {
@@ -132,7 +130,6 @@ export default function RootLayout({
           <InstallPromptProvider>
             <LanguageProvider>
               <UserProvider>
-                <BackButtonGuard />
                 {children}
                 <CookieBanner />
               </UserProvider>
@@ -142,30 +139,37 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                function isChunkLoadError(msg) {
-                  if (!msg || typeof msg !== 'string') return false;
-                  var s = msg.toLowerCase();
-                  return s.indexOf('chunkloaderror') !== -1 || s.indexOf('loading chunk') !== -1 && s.indexOf('failed') !== -1 || s.indexOf('failed to fetch dynamically imported module') !== -1;
+              // Handler para ChunkLoadError - recarrega automaticamente
+              window.addEventListener('error', (event) => {
+                if (event.message && event.message.includes('ChunkLoadError')) {
+                  console.warn('ChunkLoadError detectado, a recarregar página...');
+                  // Limpar cache e recarregar
+                  if ('caches' in window) {
+                    caches.keys().then(names => {
+                      names.forEach(name => caches.delete(name));
+                    });
+                  }
+                  window.location.reload();
                 }
-                function recoverChunkError() {
-                  var url = window.location.href.split('?')[0] + '?_t=' + Date.now();
-                  function go() { window.location.replace(url); }
-                  var p = Promise.resolve();
-                  if ('caches' in window) { p = p.then(function() { return caches.keys().then(function(ns) { ns.forEach(function(n) { caches.delete(n); }); }); }); }
-                  if ('serviceWorker' in navigator) { p = p.then(function() { return navigator.serviceWorker.getRegistrations().then(function(regs) { regs.forEach(function(r) { r.unregister(); }); }); }); }
-                  p.then(go).catch(go);
+              });
+              
+              // Handler para erros de importação de módulos
+              window.addEventListener('unhandledrejection', (event) => {
+                if (event.reason && event.reason.message && event.reason.message.includes('Failed to fetch dynamically imported module')) {
+                  console.warn('Erro de importação dinâmica detectado, a recarregar página...');
+                  if ('caches' in window) {
+                    caches.keys().then(names => {
+                      names.forEach(name => caches.delete(name));
+                    });
+                  }
+                  window.location.reload();
                 }
-                window.addEventListener('error', function(event) {
-                  if (isChunkLoadError(event.message)) { event.preventDefault(); recoverChunkError(); return true; }
-                }, true);
-                window.addEventListener('unhandledrejection', function(event) {
-                  var msg = event.reason && (event.reason.message || event.reason);
-                  if (isChunkLoadError(typeof msg === 'string' ? msg : (msg && msg.message) || '')) { event.preventDefault(); recoverChunkError(); }
-                });
-              })();
+              });
+              
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').catch(function() {}); });
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
               }
             `,
           }}

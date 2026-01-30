@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from datetime import datetime, timedelta, timezone, date
 import secrets
 import re
@@ -22,33 +22,6 @@ from ..core.email_translations import get_email_translation
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/auth', tags=['auth'])
 VERIFICATION_EXPIRY_MINUTES = 30
-MAX_SESSIONS_PER_USER = 2
-
-
-def _ensure_session_slots(db: Session, user_id, max_sessions: int = MAX_SESSIONS_PER_USER) -> None:
-    """Remove as sessões mais antigas (por last_used_at) se o utilizador já tiver max_sessions."""
-    count = db.query(models.UserSession).filter(models.UserSession.user_id == user_id).count()
-    if count >= max_sessions:
-        # Ordenar por last_used_at asc e apagar as mais antigas até ficar com max_sessions - 1
-        to_remove = count - max_sessions + 1
-        oldest = (
-            db.query(models.UserSession)
-            .filter(models.UserSession.user_id == user_id)
-            .order_by(models.UserSession.last_used_at.asc())
-            .limit(to_remove)
-            .all()
-        )
-        for s in oldest:
-            db.delete(s)
-        db.commit()
-        logger.info(f'Sessões antigas removidas para user_id={user_id} (ficam no máx. {max_sessions})')
-
-
-def _register_session(db: Session, user_id, jti: str) -> None:
-    """Regista uma nova sessão para o utilizador."""
-    session = models.UserSession(user_id=user_id, jti=jti)
-    db.add(session)
-    db.commit()
 
 
 def _frontend_base_url() -> str:
@@ -141,29 +114,16 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
         email: str = payload.get('sub')
         if email is None:
             raise credentials_exception
-        jti = payload.get('jti')
     except JWTError as e:
         logger.warning(f'❌ JWTError ao validar token: {str(e)}')
         raise credentials_exception
-
-    user = db.query(models.User).filter(models.User.email == email).first()
+    
+    # Lookup por email insensível a maiúsculas (evita contas duplicadas Telegram vs Google)
+    email_normalized = (email or "").strip().lower()
+    user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
     if user is None:
         logger.warning(f'❌ Token válido mas utilizador não encontrado: {email}')
         raise credentials_exception
-
-    # Se o token tem jti (sessão), validar que a sessão existe e está ativa
-    if jti:
-        session_row = (
-            db.query(models.UserSession)
-            .filter(models.UserSession.user_id == user.id, models.UserSession.jti == jti)
-            .first()
-        )
-        if not session_row:
-            logger.warning(f'❌ Sessão inválida ou terminada: jti={jti[:8]}... user={email}')
-            raise credentials_exception
-        session_row.last_used_at = datetime.now(timezone.utc)
-        db.commit()
-
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
@@ -374,9 +334,7 @@ async def register_confirm(request: Request, data: schemas.RegisterConfirmReques
     db.commit()
 
     await log_action(db, action='register', user_id=user.id, details=f'Registo confirmado: {user.email}', request=request)
-    _ensure_session_slots(db, user.id)
-    access_token, jti = security.create_access_token(subject=user.email)
-    _register_session(db, user.id, jti)
+    access_token = security.create_access_token(subject=user.email)
     refresh_token = security.create_refresh_token(subject=user.email)
     return {
         'access_token': access_token,
@@ -669,13 +627,11 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
     
     verification.is_used = True
     db.commit()
-
-    _ensure_session_slots(db, user.id)
-    access_token, jti = security.create_access_token(subject=user.email)
-    _register_session(db, user.id, jti)
+    
+    access_token = security.create_access_token(subject=user.email)
     refresh_token = security.create_refresh_token(subject=user.email)
     logger.info(f'🔑 Tokens gerados para {user.email} (access_len={len(access_token)}, refresh_len={len(refresh_token)})')
-
+    
     return {
         'message': 'Email verificado com sucesso!',
         'access_token': access_token,
@@ -904,38 +860,16 @@ async def login(request: Request, db: Session = Depends(get_db), form_data: OAut
     db.commit()
     
     await log_action(db, action='login', user_id=user.id, details=f'Login bem-sucedido: {user.email}', request=request)
-
-    _ensure_session_slots(db, user.id)
-    access_token, jti = security.create_access_token(subject=user.email)
-    _register_session(db, user.id, jti)
+    
+    access_token = security.create_access_token(subject=user.email)
     refresh_token = security.create_refresh_token(subject=user.email)
-
+    
     logger.info(f'Login bem-sucedido: {user.email}')
     return {
         'access_token': access_token,
         'refresh_token': refresh_token,
         'token_type': 'bearer'
     }
-
-
-@router.post('/logout')
-async def logout(
-    request: Request,
-    db: Session = Depends(get_db),
-    token: str = Depends(security.oauth2_scheme),
-):
-    """Remove a sessão atual (token deixa de ser válido para get_current_user)."""
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        jti = payload.get('jti')
-        if jti:
-            db.query(models.UserSession).filter(models.UserSession.jti == jti).delete()
-            db.commit()
-            logger.info(f'Logout: sessão jti={jti[:8]}... removida')
-    except JWTError:
-        pass
-    return {'message': 'Logged out'}
-
 
 @router.post('/password-reset/request')
 @limiter.limit('3/hour')
@@ -1104,7 +1038,9 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
         if not email:
             raise HTTPException(status_code=400, detail='Não foi possível obter o email do provedor social')
         
-        user = db.query(models.User).filter(models.User.email == email).first()
+        # Lookup insensível a maiúsculas: mesma conta Telegram (ex: Joao@...) e Google (joao@...)
+        email_normalized = (email or "").strip().lower()
+        user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
         
         # Se o usuário já existe, não criar referência (referências só para contas novas)
         if user:
@@ -1135,7 +1071,7 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
                     logger.warning(f'Código de referência inválido no social login: {referral_code}')
             
             user = models.User(
-                email=email,
+                email=email_normalized,
                 google_id=social_id if data.provider == 'google' else None,
                 is_email_verified=True,
                 language=user_language,
@@ -1202,14 +1138,12 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
             await log_action(db, action='login_social', user_id=user.id, details=f'Login via {data.provider}: {user.email}', request=request)
         except Exception as e:
             logger.warning(f'Erro ao logar ação (não crítico): {str(e)}')
-
-        _ensure_session_slots(db, user.id)
-        access_token, jti = security.create_access_token(subject=user.email)
-        _register_session(db, user.id, jti)
+        
+        access_token = security.create_access_token(subject=user.email)
         refresh_token = security.create_refresh_token(subject=user.email)
-
+        
         logger.info(f"Login social bem-sucedido para {user.email}. Token gerado.")
-
+        
         return {
             'access_token': access_token,
             'refresh_token': refresh_token,

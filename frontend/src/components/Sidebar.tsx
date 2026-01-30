@@ -48,7 +48,6 @@ const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => 
 };
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
-import { useStripePlans } from '@/lib/hooks';
 import { useNotifications } from '@/lib/NotificationsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
@@ -64,7 +63,7 @@ const getMainMenu = (t: any) => [
   { name: t.dashboard.sidebar.admin, href: '/admin', icon: Shield, adminOnly: true, activePaths: ['/admin'] },
 ];
 
-const FALLBACK_PLAN_BY_PRICE_ID: Record<string, { label: string; variant: 'basic' | 'plus' | 'pro' }> = {
+const PLAN_BY_PRICE_ID: Record<string, { label: string; variant: 'basic' | 'plus' | 'pro' }> = {
   'price_1SuIypLtWlVpaXrbD7ph1fhf': { label: 'FinLy Basic', variant: 'basic' },
   'price_1SuIzcLtWlVpaXrbLkHE0QbS': { label: 'FinLy Plus', variant: 'plus' },
   'price_1SuJ0GLtWlVpaXrb8BH9HIve': { label: 'FinLy Pro', variant: 'pro' },
@@ -88,7 +87,6 @@ export default function Sidebar({
   const pathname = usePathname();
   const { t } = useTranslation();
   const { user, isPro, logout } = useUser();
-  const { planByPriceId } = useStripePlans();
   const { showNotifications, setShowNotifications, notifications, hasCritical, handleMarkAsRead, handleClearAll } = useNotifications();
   const [mounted, setMounted] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<{ label: string; variant: 'basic' | 'plus' | 'pro' } | null>(null);
@@ -103,10 +101,8 @@ export default function Sidebar({
       try {
         const res = await api.get('/stripe/subscription-details');
         const priceId = res.data?.price_id;
-        if (priceId && planByPriceId[priceId]) {
-          setCurrentPlan({ label: planByPriceId[priceId].name, variant: planByPriceId[priceId].id as 'basic' | 'plus' | 'pro' });
-        } else if (priceId && FALLBACK_PLAN_BY_PRICE_ID[priceId]) {
-          setCurrentPlan(FALLBACK_PLAN_BY_PRICE_ID[priceId]);
+        if (priceId && PLAN_BY_PRICE_ID[priceId]) {
+          setCurrentPlan(PLAN_BY_PRICE_ID[priceId]);
         } else {
           setCurrentPlan({ label: 'FinLy Pro', variant: 'pro' });
         }
@@ -115,7 +111,7 @@ export default function Sidebar({
       }
     };
     fetchPlan();
-  }, [user, isPro, planByPriceId]);
+  }, [user, isPro]);
 
   useEffect(() => {
     setMounted(true);

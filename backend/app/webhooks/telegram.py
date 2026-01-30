@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import requests
 import json
 import logging
@@ -9,7 +10,7 @@ import hashlib
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, date, timezone
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 import unicodedata
 from difflib import SequenceMatcher
 
@@ -25,12 +26,7 @@ logger = logging.getLogger("telegram_webhook")
 def _telegram_lang(from_user: Optional[dict]) -> str:
     """Infer bot language from Telegram user (when app user has no language set)."""
     code = (from_user or {}).get("language_code") or "pt"
-    c = (code or "").lower()
-    if c.startswith("en"):
-        return "en"
-    if c.startswith("fr"):
-        return "fr"
-    return "pt"
+    return "en" if (code and code.lower().startswith("en")) else "pt"
 # Não adicionar handlers aqui - usar os do logging root para evitar duplicação
 
 router = APIRouter(prefix='/telegram', tags=['webhooks'])
@@ -39,19 +35,6 @@ router = APIRouter(prefix='/telegram', tags=['webhooks'])
 _rate_limit_store = defaultdict(list)  # chat_id -> [timestamps]
 _rate_limit_window = timedelta(minutes=1)
 _rate_limit_max_messages = 10  # Máximo 10 mensagens por minuto
-
-# Media limits
-_max_media_per_day = 2
-_max_media_size_bytes = 10 * 1024 * 1024  # 10MB
-_supported_media_mime_types = {
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'application/pdf',
-    'text/csv',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-}
 
 def check_rate_limit(chat_id: str) -> bool:
     """Verifica se o chat_id está dentro do limite de rate"""
@@ -68,158 +51,6 @@ def check_rate_limit(chat_id: str) -> bool:
     
     _rate_limit_store[chat_id].append(now)
     return True
-
-def check_and_increment_media_limit(chat_id: str, db: Session) -> bool:
-    """Limite diário de media por chat_id (para controlar custos)."""
-    today = date.today()
-    usage = db.query(models.TelegramMediaUsage).filter(
-        models.TelegramMediaUsage.chat_id == chat_id,
-        models.TelegramMediaUsage.day == today
-    ).first()
-    if not usage:
-        usage = models.TelegramMediaUsage(chat_id=chat_id, day=today, count=0)
-        db.add(usage)
-        db.flush()
-    if usage.count >= _max_media_per_day:
-        return False
-    usage.count += 1
-    db.commit()
-    return True
-
-def _get_telegram_file_bytes(file_id: str) -> Tuple[bytes, Optional[str]]:
-    """Busca um ficheiro do Telegram e devolve (bytes, file_path)."""
-    file_info = requests.get(
-        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getFile",
-        params={'file_id': file_id},
-        timeout=10
-    ).json()
-    file_path = file_info.get('result', {}).get('file_path')
-    if not file_path:
-        return b'', None
-    file_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
-    file_bytes = requests.get(file_url, timeout=20).content
-    return file_bytes, file_path
-
-def _extract_json_list(text: str) -> Optional[List[Dict]]:
-    """Extrai e parseia um JSON list ou object da resposta da IA."""
-    if not text:
-        return None
-    list_match = re.search(r'\[[\s\S]*\]', text)
-    obj_match = re.search(r'\{[\s\S]*\}', text)
-    raw = list_match.group(0) if list_match else (obj_match.group(0) if obj_match else None)
-    if not raw:
-        return None
-    try:
-        data = json.loads(raw)
-        if isinstance(data, dict):
-            return [data]
-        if isinstance(data, list):
-            return data
-        return None
-    except Exception:
-        return None
-
-def _parse_statement_with_gemini(
-    content: bytes,
-    mime_type: str,
-    text_payload: Optional[str] = None,
-    existing_categories: Optional[List[Tuple[str, str]]] = None,
-) -> Tuple[Optional[List[Dict]], Optional[str]]:
-    """Analisa extrato/recibo com Gemini e devolve (lista de itens, None) ou (None, 'insufficient_quality').
-    existing_categories: lista de (nome, type) com categorias do workspace para o Gemini preferir.
-    """
-    if not settings.GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY não configurada. Não é possível analisar extratos.")
-        return None
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-
-        today_iso = datetime.now().strftime('%Y-%m-%d')
-
-        categories_instruction = ""
-        if existing_categories:
-            by_type: Dict[str, List[str]] = defaultdict(list)
-            for name, cat_type in existing_categories:
-                by_type[cat_type].append(name)
-            parts = []
-            if by_type.get("expense"):
-                parts.append("Despesas (type=expense): " + ", ".join(sorted(by_type["expense"])))
-            if by_type.get("income"):
-                parts.append("Receitas (type=income): " + ", ".join(sorted(by_type["income"])))
-            if parts:
-                categories_instruction = (
-                    "\n\n=== CATEGORIAS EXISTENTES (usa SEMPRE uma destas — nome exato) ===\n"
-                    + "\n".join(parts)
-                    + """
-
-REGRAS DE CATEGORIAS (obrigatório):
-1. Escolhe SEMPRE uma categoria da lista acima pelo nome EXATO se a transação encaixar (mesmo que seja aproximado: supermercado→Alimentação, Uber→Transportes, restaurante→Alimentação ou Lazer).
-2. Transportes = APENAS: combustível, portagens, bilhetes comboio/autocarro/avião, Uber/Bolt/taxi, reparações do carro. NUNCA: hotel, Booking.com, Airbnb, alojamento (isso é Viagens/Lazer/Alojamento).
-3. Só sugira uma categoria NOVA (fora da lista) se não existir NENHUMA que faça sentido — em dúvida, escolhe a existente mais próxima.
-"""
-                )
-
-        prompt = f"""Tu és um extrator de transações financeiras. A tua ÚNICA tarefa é analisar o extrato/recibo/imagem e devolver uma lista JSON de transações. Nada mais.
-
-DATA DE HOJE (usa se faltar data): {today_iso}
-
-=== FORMATO DE SAÍDA (obrigatório) ===
-Responde APENAS com um array JSON. Cada objeto tem exatamente estes 5 campos (nomes em inglês):
-- "description": string curta e clara (ex: "Supermercado Continente", "Hotel Booking.com")
-- "amount": número positivo, valor absoluto (ex: 25.90). O campo "type" indica se é despesa ou receita
-- "date": string YYYY-MM-DD (ex: "2025-01-15"). Se não houver data, usa {today_iso}
-- "type": "expense" ou "income" (não mais nada)
-- "category_suggestion": string com o nome EXATO de uma categoria da lista abaixo, ou uma nova só se for inevitável
-
-Exemplo de resposta válida (sem texto antes ou depois):
-[
-  {{"description": "Supermercado", "amount": 45.20, "date": "2025-01-14", "type": "expense", "category_suggestion": "Alimentação"}},
-  {{"description": "Salário", "amount": 1500, "date": "2025-01-01", "type": "income", "category_suggestion": "Salário"}}
-]
-
-=== QUALIDADE DA IMAGEM/DOCUMENTO ===
-Se a imagem ou o documento tiver qualidade INSUFICIENTE para ler transações (ex.: imagem desfocada, muito escura, resolução muito baixa, texto ilegível, foto de ecrã pixelada), NÃO inventes dados. Responde com exatamente:
-{{"insufficient_quality": true}}
-
-=== REGRAS GERAIS ===
-1. Extrai APENAS transações que apareçam claramente no documento. Não inventes linhas.
-2. amount: sempre número (inteiro ou decimal). Remove símbolos de moeda e vírgulas (ex: "1.234,56€" → 1234.56).
-3. Se o documento estiver vazio ou ilegível (mas com qualidade ok), responde: []
-4. Se a qualidade for má (desfocado, ilegível), responde: {{"insufficient_quality": true}}
-5. description: máximo ~80 caracteres, sem quebras de linha.
-6. type: "expense" para saídas/pagamentos, "income" para entradas/salário/reembolsos.
-{categories_instruction}
-
-=== FIM DAS INSTRUÇÕES ===
-Responde APENAS com o array JSON ou com {{"insufficient_quality": true}}. Sem explicações, sem markdown, sem \\`\\`\\`json.
-"""
-        content_parts: List = []
-        if text_payload is not None:
-            content_parts = [prompt + "\n\nDADOS:\n" + text_payload]
-        else:
-            content_parts = [prompt, {"mime_type": mime_type, "data": content}]
-        
-        models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
-        text_response = ""
-        for model_name in models_to_try:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(content_parts)
-                if response and response.text:
-                    text_response = response.text.strip()
-                    break
-            except Exception as e:
-                logger.warning(f"Falha com {model_name}: {str(e)}")
-                continue
-        
-        parsed = _extract_json_list(text_response)
-        if parsed and len(parsed) == 1 and isinstance(parsed[0], dict) and parsed[0].get("insufficient_quality") is True:
-            return (None, "insufficient_quality")
-        return (parsed, None)
-    except Exception as e:
-        logger.error(f"Erro ao analisar extrato com Gemini: {str(e)}")
-        return (None, None)
 
 def normalize_text(text: str) -> str:
     """Normaliza texto removendo acentos e símbolos"""
@@ -771,123 +602,6 @@ Responde APENAS com o nome exato da categoria:"""
         logger.error(f"Erro na categorização IA: {str(e)}")
         return None
 
-def _parse_amount(value: object) -> Optional[float]:
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        cleaned = value.replace('€', '').replace('eur', '').replace(' ', '').replace(',', '.')
-        try:
-            return float(cleaned)
-        except Exception:
-            return None
-    return None
-
-def _parse_date(value: object) -> str:
-    """Converte para YYYY-MM-DD. Se inválido, usa data atual."""
-    if isinstance(value, str):
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
-            try:
-                return datetime.strptime(value.strip(), fmt).date().isoformat()
-            except Exception:
-                continue
-    return date.today().isoformat()
-
-def _get_default_category(categories: List[models.Category], tipo: str) -> Optional[models.Category]:
-    for cat in categories:
-        if cat.type == tipo and cat.name.lower() == 'outros':
-            return cat
-    for cat in categories:
-        if cat.type == tipo:
-            return cat
-    return None
-
-def _get_or_create_category(name: str, tipo: str, workspace: models.Workspace, db: Session) -> models.Category:
-    existing = db.query(models.Category).filter(
-        models.Category.workspace_id == workspace.id,
-        models.Category.type == tipo,
-        models.Category.name.ilike(name)
-    ).first()
-    if existing:
-        return existing
-    new_category = models.Category(
-        workspace_id=workspace.id,
-        name=name.strip()[:100],
-        type=tipo,
-        vault_type='none',
-        color_hex='#3B82F6',
-        icon='Tag'
-    )
-    db.add(new_category)
-    db.commit()
-    db.refresh(new_category)
-    return new_category
-
-def _build_items_from_gemini(raw_items: List[Dict], workspace: models.Workspace, db: Session) -> List[Dict]:
-    categories = db.query(models.Category).filter(
-        models.Category.workspace_id == workspace.id
-    ).all()
-    items: List[Dict] = []
-    for item in raw_items:
-        description = str(item.get('description') or '').strip()
-        amount = _parse_amount(item.get('amount'))
-        if not description or amount is None:
-            continue
-        tipo = str(item.get('type') or 'expense').lower()
-        if tipo not in ('expense', 'income'):
-            tipo = 'expense'
-        date_str = _parse_date(item.get('date'))
-        suggestion = str(item.get('category_suggestion') or '').strip()
-        matched_category = None
-        if suggestion:
-            matched_category = find_best_category_match(suggestion, categories)
-        if matched_category and matched_category.type == tipo:
-            category_id = str(matched_category.id)
-        else:
-            category_id = None
-        items.append({
-            'description': description,
-            'amount': amount,
-            'date': date_str,
-            'type': tipo,
-            'category_suggestion': suggestion,
-            'category_id': category_id
-        })
-    return items
-
-def _find_pending_batch_by_hex(chat_id: str, batch_id_hex: str, db: Session) -> Optional[models.TelegramPendingBatchImport]:
-    batches = db.query(models.TelegramPendingBatchImport).filter(
-        models.TelegramPendingBatchImport.chat_id == chat_id
-    ).all()
-    for b in batches:
-        if b.id.hex.startswith(batch_id_hex):
-            return b
-    return None
-
-def _next_unresolved_index(items: List[Dict]) -> Optional[int]:
-    for idx, item in enumerate(items):
-        if not item.get('category_id'):
-            return idx
-    return None
-
-def _build_batch_summary(items: List[Dict], categories_by_id: Dict[str, str], t) -> str:
-    lines = []
-    totals: Dict[str, float] = {}
-    for item in items:
-        category_name = categories_by_id.get(item.get('category_id') or '', 'Outros')
-        amount = float(item['amount'])
-        sign = '-' if item.get('type') == 'expense' else '+'
-        lines.append(f"• {item.get('date')} — {item.get('description')} — {sign}{abs(amount):.2f}€ ({category_name})")
-        totals[category_name] = totals.get(category_name, 0.0) + (amount if item.get('type') == 'income' else -abs(amount))
-    totals_lines = [f"{name}: {total:.2f}€" for name, total in totals.items()]
-    summary = t('media_summary_header') + "\n" + "\n".join(lines)
-    if totals_lines:
-        summary += "\n\n" + t('media_summary_totals') + "\n" + "\n".join(totals_lines)
-    if len(summary) > 3500:
-        summary = summary[:3400] + "\n\n" + t('media_summary_truncated')
-    return summary
-
 def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = None, pin_message: bool = False):
     """Envia mensagem para o Telegram"""
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -966,24 +680,8 @@ def setup_bot_commands():
             "description": "❓ Ver ajuda e comandos disponíveis"
         },
         {
-            "command": "categorias",
-            "description": "🏷️ Ver as minhas categorias (despesas/receitas)"
-        },
-        {
-            "command": "resumo",
-            "description": "📊 Totais do mês + últimas 5 transações"
-        },
-        {
             "command": "clear",
             "description": "🧹 Limpar transações pendentes"
-        },
-        {
-            "command": "desfazer",
-            "description": "↩️ Apagar a última transação"
-        },
-        {
-            "command": "unlink",
-            "description": "🔓 Desassociar esta conta do Telegram"
         }
     ]
     
@@ -1052,34 +750,6 @@ def setup_bot_info():
     except Exception as e:
         logger.warning(f"Erro ao configurar nome do bot: {str(e)}")
 
-
-@router.get('/health')
-async def telegram_health():
-    """
-    Verifica se o Telegram está configurado e o bot responde.
-    Útil para confirmar TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET e que o bot está ativo.
-    """
-    token_configured = bool(settings.TELEGRAM_BOT_TOKEN)
-    secret_configured = bool(settings.TELEGRAM_WEBHOOK_SECRET)
-    bot_ok = False
-    if token_configured:
-        try:
-            r = requests.get(
-                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getMe",
-                timeout=5
-            )
-            if r.status_code == 200 and r.json().get("ok"):
-                bot_ok = True
-        except Exception as e:
-            logger.warning(f"Telegram getMe falhou: {e}")
-    return {
-        "ok": token_configured and secret_configured and bot_ok,
-        "token_configured": token_configured,
-        "secret_configured": secret_configured,
-        "bot_ok": bot_ok,
-    }
-
-
 @router.post('/webhook')
 @limiter.limit('30/minute')
 async def telegram_webhook(
@@ -1136,131 +806,6 @@ async def telegram_webhook(
             t = get_telegram_t(language)
             
             # Processar callback
-            if callback_data.startswith("cat_yes_") or callback_data.startswith("cat_no_"):
-                parts = callback_data.split("_")
-                if len(parts) < 4:
-                    send_telegram_msg(chat_id, t('batch_not_found'))
-                    return {'status': 'invalid_callback'}
-                action = parts[1]
-                batch_id_hex = parts[2]
-                try:
-                    item_index = int(parts[3])
-                except Exception:
-                    send_telegram_msg(chat_id, t('batch_not_found'))
-                    return {'status': 'invalid_callback'}
-                
-                workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
-                if not workspace:
-                    send_telegram_msg(chat_id, t('workspace_not_found'))
-                    return {'status': 'error'}
-                
-                batch = _find_pending_batch_by_hex(str(chat_id), batch_id_hex, db)
-                if not batch:
-                    send_telegram_msg(chat_id, t('batch_not_found'))
-                    return {'status': 'not_found'}
-                
-                items = json.loads(batch.items_json)
-                if item_index >= len(items):
-                    send_telegram_msg(chat_id, t('batch_not_found'))
-                    return {'status': 'not_found'}
-                
-                item = items[item_index]
-                category_name = item.get('category_suggestion') or 'Outros'
-                tipo = item.get('type') or 'expense'
-                
-                if action == 'yes':
-                    category = _get_or_create_category(category_name, tipo, workspace, db)
-                    item['category_id'] = str(category.id)
-                    send_telegram_msg(chat_id, t('category_created').format(category=category.name))
-                else:
-                    categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
-                    fallback = _get_default_category(categories, tipo)
-                    item['category_id'] = str(fallback.id) if fallback else None
-                    send_telegram_msg(chat_id, t('category_skipped').format(category=fallback.name if fallback else 'Outros'))
-                
-                items[item_index] = item
-                batch.items_json = json.dumps(items, ensure_ascii=False)
-                db.commit()
-                
-                next_idx = _next_unresolved_index(items)
-                if next_idx is not None:
-                    next_item = items[next_idx]
-                    next_category = next_item.get('category_suggestion') or 'Outros'
-                    reply_markup = {
-                        "inline_keyboard": [[
-                            {"text": t('button_create_category'), "callback_data": f"cat_yes_{batch.id.hex[:12]}_{next_idx}"},
-                            {"text": t('button_skip_category'), "callback_data": f"cat_no_{batch.id.hex[:12]}_{next_idx}"}
-                        ]]
-                    }
-                    send_telegram_msg(
-                        chat_id,
-                        t('category_create_prompt').format(category=next_category, description=next_item.get('description')),
-                        reply_markup=reply_markup
-                    )
-                else:
-                    categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
-                    categories_by_id = {str(c.id): c.name for c in categories}
-                    summary = _build_batch_summary(items, categories_by_id, t)
-                    reply_markup = {
-                        "inline_keyboard": [[
-                            {"text": t('button_confirm_import'), "callback_data": f"batch_confirm_{batch.id.hex[:12]}"},
-                            {"text": t('button_cancel_import'), "callback_data": f"batch_cancel_{batch.id.hex[:12]}"}
-                        ]]
-                    }
-                    send_telegram_msg(chat_id, summary, reply_markup=reply_markup)
-                
-                return {'status': 'category_processed'}
-            
-            if callback_data.startswith("batch_confirm_") or callback_data.startswith("batch_cancel_"):
-                is_confirm = callback_data.startswith("batch_confirm_")
-                batch_id_hex = callback_data.replace("batch_confirm_", "").replace("batch_cancel_", "")
-                
-                workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
-                if not workspace:
-                    send_telegram_msg(chat_id, t('workspace_not_found'))
-                    return {'status': 'error'}
-                
-                batch = _find_pending_batch_by_hex(str(chat_id), batch_id_hex, db)
-                if not batch:
-                    send_telegram_msg(chat_id, t('batch_not_found'))
-                    return {'status': 'not_found'}
-                
-                items = json.loads(batch.items_json)
-                if is_confirm:
-                    for item in items:
-                        amount = float(item.get('amount', 0))
-                        amount_cents = int(abs(amount) * 100)
-                        if item.get('type') == 'expense':
-                            amount_cents = -amount_cents
-                        category_id = item.get('category_id')
-                        category_uuid = None
-                        if category_id:
-                            try:
-                                category_uuid = uuid.UUID(category_id)
-                            except Exception:
-                                category_uuid = None
-                        try:
-                            transaction_date = datetime.fromisoformat(item.get('date')).date()
-                        except Exception:
-                            transaction_date = date.today()
-                        transaction = models.Transaction(
-                            workspace_id=workspace.id,
-                            category_id=category_uuid,
-                            amount_cents=amount_cents,
-                            description=item.get('description'),
-                            transaction_date=transaction_date
-                        )
-                        db.add(transaction)
-                    db.delete(batch)
-                    db.commit()
-                    send_telegram_msg(chat_id, t('batch_import_confirmed').format(count=len(items)))
-                else:
-                    db.delete(batch)
-                    db.commit()
-                    send_telegram_msg(chat_id, t('batch_import_cancelled'))
-                
-                return {'status': 'batch_processed'}
-            
             if callback_data.startswith("confirm_"):
                 logger.info(f"Processando confirmacao de transacao: {callback_data}")
                 # Confirmar transação
@@ -1454,121 +999,6 @@ async def telegram_webhook(
                 send_telegram_msg(chat_id, t_clear('clear_empty'))
             
             return {'status': 'ok'}
-
-        # Comando /unlink - Desassociar conta
-        if text.startswith('/unlink'):
-            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-            if not user:
-                send_telegram_msg(chat_id, t('unlink_not_linked'))
-                return {'status': 'ok'}
-            language = user.language if user.language else 'pt'
-            t_unlink = get_telegram_t(language)
-            user.phone_number = None
-            db.commit()
-            send_telegram_msg(chat_id, t_unlink('unlink_success'))
-            return {'status': 'ok'}
-
-        # Comando /categorias - Listar categorias do utilizador
-        if text.startswith('/categorias') or text.startswith('/categories'):
-            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-            if not user:
-                send_telegram_msg(chat_id, t('session_expired'))
-                return {'status': 'unauthorized'}
-            language = user.language if user.language else 'pt'
-            t_cat = get_telegram_t(language)
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
-            if not workspace:
-                send_telegram_msg(chat_id, t_cat('workspace_not_found'))
-                return {'status': 'error'}
-            categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
-            if not categories:
-                send_telegram_msg(chat_id, t_cat('categories_empty'))
-                return {'status': 'ok'}
-            expenses = [c.name for c in categories if c.type == 'expense']
-            incomes = [c.name for c in categories if c.type == 'income']
-            expenses_str = ", ".join(sorted(expenses)) if expenses else "—"
-            incomes_str = ", ".join(sorted(incomes)) if incomes else "—"
-            send_telegram_msg(chat_id, t_cat('categories_list').format(expenses=expenses_str, incomes=incomes_str))
-            return {'status': 'ok'}
-
-        # Comando /resumo ou /saldo - Totais do mês + últimas N transações
-        if text.startswith('/resumo') or text.startswith('/saldo') or text.startswith('/summary'):
-            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-            if not user:
-                send_telegram_msg(chat_id, t('session_expired'))
-                return {'status': 'unauthorized'}
-            language = user.language if user.language else 'pt'
-            t_res = get_telegram_t(language)
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
-            if not workspace:
-                send_telegram_msg(chat_id, t_res('workspace_not_found'))
-                return {'status': 'error'}
-            first_day = date.today().replace(day=1)
-            end = date.today()
-            month_year = first_day.strftime("%m/%Y")
-            trans_month = db.query(models.Transaction).filter(
-                models.Transaction.workspace_id == workspace.id,
-                models.Transaction.transaction_date >= first_day,
-                models.Transaction.transaction_date <= end,
-            ).all()
-            if not trans_month:
-                send_telegram_msg(chat_id, t_res('resumo_header').format(month_year=month_year) + "\n\n" + t_res('resumo_empty'))
-                return {'status': 'ok'}
-            expenses_cents = sum(t.amount_cents for t in trans_month if t.amount_cents < 0)
-            income_cents = sum(t.amount_cents for t in trans_month if t.amount_cents > 0)
-            balance_cents = expenses_cents + income_cents
-            expenses_abs = abs(expenses_cents) / 100.0
-            receitas_val = income_cents / 100.0
-            balance_val = balance_cents / 100.0
-            msg = t_res('resumo_header').format(month_year=month_year) + "\n\n" + t_res('resumo_totals').format(
-                expenses=f"-{expenses_abs:.2f}", receitas=f"+{receitas_val:.2f}", balance=f"{balance_val:+.2f}"
-            )
-            last_n = 5
-            last_trans = db.query(models.Transaction).filter(
-                models.Transaction.workspace_id == workspace.id
-            ).order_by(models.Transaction.created_at.desc()).limit(last_n).all()
-            if last_trans:
-                msg += t_res('resumo_last').format(n=len(last_trans))
-                for t in last_trans:
-                    amt = t.amount_cents / 100.0
-                    amt_str = f"-{abs(amt):.2f}" if t.amount_cents < 0 else f"+{amt:.2f}"
-                    msg += "\n" + t_res('resumo_line').format(
-                        date=t.transaction_date.strftime("%d/%m"),
-                        description=(t.description or "—")[:40],
-                        amount=amt_str
-                    )
-            send_telegram_msg(chat_id, msg)
-            return {'status': 'ok'}
-
-        # Comando /desfazer ou /undo - Apagar a última transação
-        if text.startswith('/desfazer') or text.startswith('/undo') or text.startswith('/apagar_ultima'):
-            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
-            if not user:
-                send_telegram_msg(chat_id, t('session_expired'))
-                return {'status': 'unauthorized'}
-            language = user.language if user.language else 'pt'
-            t_undo = get_telegram_t(language)
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
-            if not workspace:
-                send_telegram_msg(chat_id, t_undo('workspace_not_found'))
-                return {'status': 'error'}
-            last_t = (
-                db.query(models.Transaction)
-                .filter(models.Transaction.workspace_id == workspace.id)
-                .order_by(models.Transaction.created_at.desc())
-                .limit(1)
-                .first()
-            )
-            if not last_t:
-                send_telegram_msg(chat_id, t_undo('desfazer_none'))
-                return {'status': 'ok'}
-            desc = (last_t.description or "—")[:50]
-            amt = last_t.amount_cents / 100.0
-            amt_str = f"-{abs(amt):.2f}" if last_t.amount_cents < 0 else f"+{amt:.2f}"
-            db.delete(last_t)
-            db.commit()
-            send_telegram_msg(chat_id, t_undo('desfazer_success').format(description=desc, amount=amt_str))
-            return {'status': 'ok'}
         
         # Processar email (associação)
         if "@" in text and "." in text:
@@ -1584,8 +1014,8 @@ async def telegram_webhook(
                 send_telegram_msg(chat_id, t_email('invalid_email'))
                 return {'status': 'invalid_email'}
             
-            # Procurar utilizador
-            user = db.query(models.User).filter(models.User.email == email_limpo).first()
+            # Procurar utilizador (insensível a maiúsculas: mesma conta que no PC)
+            user = db.query(models.User).filter(func.lower(models.User.email) == email_limpo).first()
             
             if not user:
                 # Resposta genérica para prevenir email enumeration
@@ -1607,7 +1037,7 @@ async def telegram_webhook(
                 models.User.phone_number == str(chat_id)
             ).first()
             
-            if existing_user and existing_user.email != email_limpo:
+            if existing_user and (existing_user.email or "").lower() != email_limpo:
                 # Já está associado a outro email
                 send_telegram_msg(chat_id, t_email('already_associated').format(email=f"{existing_user.email[:3]}***"))
                 return {'status': 'already_associated'}
@@ -1647,111 +1077,10 @@ async def telegram_webhook(
             send_telegram_msg(chat_id, t('workspace_not_found'))
             return {'status': 'error'}
         
-        # Processar media (foto/documento)
-        if 'photo' in message or 'document' in message:
-            file_id = None
-            mime_type = None
-            file_size = None
-            text_payload = None
-            
-            if 'photo' in message:
-                photo = message['photo'][-1]
-                file_id = photo.get('file_id')
-                file_size = photo.get('file_size')
-                mime_type = 'image/jpeg'  # Telegram envia fotos como JPEG
-            else:
-                doc = message['document']
-                file_id = doc.get('file_id')
-                mime_type = doc.get('mime_type')
-                file_size = doc.get('file_size')
-                if mime_type not in _supported_media_mime_types:
-                    send_telegram_msg(chat_id, t('media_not_supported'))
-                    return {'status': 'unsupported_media'}
-            
-            if file_size and file_size > _max_media_size_bytes:
-                send_telegram_msg(chat_id, t('media_too_large'))
-                return {'status': 'too_large'}
-            
-            if not check_and_increment_media_limit(str(chat_id), db):
-                send_telegram_msg(chat_id, t('media_limit_reached'))
-                return {'status': 'media_limit'}
-            
-            send_telegram_msg(chat_id, t('media_processing'))
-            
-            file_bytes, _ = _get_telegram_file_bytes(file_id)
-            if not file_bytes:
-                send_telegram_msg(chat_id, t('media_parse_error'))
-                return {'status': 'download_error'}
-            if len(file_bytes) > _max_media_size_bytes:
-                send_telegram_msg(chat_id, t('media_too_large'))
-                return {'status': 'too_large'}
-            
-            if mime_type in ('application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
-                send_telegram_msg(chat_id, t('media_excel_not_supported'))
-                return {'status': 'excel_not_supported'}
-            
-            if mime_type == 'text/csv':
-                try:
-                    text_payload = file_bytes.decode('utf-8', errors='ignore')
-                except Exception:
-                    text_payload = None
-
-            existing_cats = [
-                (c.name, c.type)
-                for c in db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
-            ]
-            parsed_raw, quality_reason = _parse_statement_with_gemini(
-                file_bytes, mime_type, text_payload=text_payload, existing_categories=existing_cats
-            )
-            if quality_reason == "insufficient_quality":
-                send_telegram_msg(chat_id, t('media_insufficient_quality'))
-                return {'status': 'insufficient_quality'}
-            if not parsed_raw:
-                send_telegram_msg(chat_id, t('media_parse_error'))
-                return {'status': 'parse_error'}
-
-            items = _build_items_from_gemini(parsed_raw, workspace, db)
-            if not items:
-                send_telegram_msg(chat_id, t('media_parse_error'))
-                return {'status': 'no_items'}
-            
-            batch = models.TelegramPendingBatchImport(
-                chat_id=str(chat_id),
-                workspace_id=workspace.id,
-                items_json=json.dumps(items, ensure_ascii=False)
-            )
-            db.add(batch)
-            db.commit()
-            db.refresh(batch)
-            
-            unresolved_idx = _next_unresolved_index(items)
-            if unresolved_idx is not None:
-                item = items[unresolved_idx]
-                category_name = item.get('category_suggestion') or 'Outros'
-                reply_markup = {
-                    "inline_keyboard": [[
-                        {"text": t('button_create_category'), "callback_data": f"cat_yes_{batch.id.hex[:12]}_{unresolved_idx}"},
-                        {"text": t('button_skip_category'), "callback_data": f"cat_no_{batch.id.hex[:12]}_{unresolved_idx}"}
-                    ]]
-                }
-                send_telegram_msg(
-                    chat_id,
-                    t('category_create_prompt').format(category=category_name, description=item.get('description')),
-                    reply_markup=reply_markup
-                )
-                return {'status': 'category_prompt'}
-            
-            categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
-            categories_by_id = {str(c.id): c.name for c in categories}
-            summary = _build_batch_summary(items, categories_by_id, t)
-            reply_markup = {
-                "inline_keyboard": [[
-                    {"text": t('button_confirm_import'), "callback_data": f"batch_confirm_{batch.id.hex[:12]}"},
-                    {"text": t('button_cancel_import'), "callback_data": f"batch_cancel_{batch.id.hex[:12]}"}
-                ]]
-            }
-            send_telegram_msg(chat_id, summary, reply_markup=reply_markup)
-            return {'status': 'batch_summary'}
+        # Processar fotos (desativado por enquanto)
+        if 'photo' in message:
+            send_telegram_msg(chat_id, t('photo_not_supported'))
+            return {'status': 'error'}
         
         # Processar texto
         if text:

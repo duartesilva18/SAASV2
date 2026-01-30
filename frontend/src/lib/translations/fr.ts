@@ -1097,16 +1097,8 @@ export const fr = {
           }
       },
       support: {
-          tooltip: "Contacter le support",
-          supportMovedToMenu: "Le bouton support a été déplacé dans ce menu.",
-          message: "Bonjour ! J'ai besoin d'aide avec Finly.",
-          contactTitle: "Envoyer un message au support",
-          contactPlaceholder: "Écrivez votre message...",
-          contactAttach: "Joindre un fichier",
-          contactRemoveFile: "Retirer",
-          contactSend: "Envoyer",
-          contactSuccess: "Message envoyé. Merci !",
-          contactError: "Envoi impossible. Réessayez."
+          tooltip: "Support 24/7",
+          message: "Bonjour ! J'ai besoin d'aide avec Finly."
       },
       categories: {
           title: "Écosystème des catégories",
@@ -1482,10 +1474,8 @@ export const fr = {
           notConfigured: "Non configuré",
           stripeConnected: "Votre compte Stripe est connecté. Vous recevrez les commissions automatiquement quand quelqu'un s'abonne au Pro via votre lien.",
           stripeNotConnected: "Connectez votre compte Stripe pour recevoir les commissions automatiquement.",
-          stripeFullyFunctional: "Stripe Connect 100% fonctionnel",
           openStripeDashboard: "Ouvrir le tableau de bord Stripe",
           configureStripeConnect: "Configurer Stripe Connect",
-          configureStripeToGetLink: "Configure Stripe Connect (à droite) pour obtenir ton lien d'affilié et commencer à partager.",
           affiliateLink: "Lien d'affilié",
           monthlyCommissions: "Commissions mensuelles",
           paid: "Payé",

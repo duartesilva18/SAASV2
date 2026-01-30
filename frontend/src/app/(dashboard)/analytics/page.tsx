@@ -867,18 +867,18 @@ export default function AnalyticsPage() {
       {/* Filtro + 3 cards compactos (estilo dashboard) + grid gráficos choque visual */}
       {hasEnoughData && (
       <>
-      {/* Filtro período – topo, responsivo em mobile */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-2 sm:p-3 rounded-xl sm:rounded-2xl mb-4 sm:mb-6">
-        <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg sm:rounded-xl shrink-0">
-          <Calendar size={10} className="sm:w-3 sm:h-3 text-blue-500 shrink-0" />
-          <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-blue-400 whitespace-nowrap">{t.dashboard.analytics.periodFilters}</span>
+      {/* Filtro período – topo */}
+      <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl mb-6">
+        <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <Calendar size={12} className="text-blue-500" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.periodFilters}</span>
         </div>
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 sm:mx-0 sm:pb-0 min-w-0">
+        <div className="flex items-center gap-1.5">
           {Object.entries(periods).map(([key, period]) => (
             <button
               key={key}
               onClick={() => setSelectedPeriod(key)}
-              className={`shrink-0 px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
+              className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
                 selectedPeriod === key ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
@@ -888,49 +888,49 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* 3 cards compactos: Saúde | Taxa Poupança | Resultado (mesmo tamanho/estilo do dashboard) */}
-      <section className="mb-6 sm:mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)]">
+      {/* 3 cards compactos: Saúde | Taxa Poupança | Resultado (estilo dashboard) */}
+      <section className="mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
             <div className="flex items-center justify-between mb-1">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500/10 text-blue-400 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                <Activity size={18} className="sm:w-5 sm:h-5" />
+              <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
+                <Activity size={18} />
               </div>
               {healthDelta !== null && (
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase flex items-center gap-0.5 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-[10px] font-black uppercase flex items-center gap-0.5 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)}
                 </span>
               )}
             </div>
-            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter">{processedData.healthScore}%</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
+            <p className="text-xl font-black text-white tracking-tighter">{processedData.healthScore}%</p>
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)]">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
             <div className="flex items-center justify-between mb-1">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-400 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                <Target size={18} className="sm:w-5 sm:h-5" />
+              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
+                <Target size={18} />
               </div>
               {savingRateDelta !== null && (
-                <span className={`text-[9px] sm:text-[10px] font-black uppercase ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-[10px] font-black uppercase ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)}
                 </span>
               )}
             </div>
-            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter">{processedData.savingRate}%</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
+            <p className="text-xl font-black text-white tracking-tighter">{processedData.savingRate}%</p>
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)]">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
             <div className="flex items-center justify-between mb-1">
-              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                <Wallet size={18} className="sm:w-5 sm:h-5" />
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                <Wallet size={18} />
               </div>
             </div>
-            <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">Resultado período</p>
-            <p className={`text-xl sm:text-2xl font-black tracking-tighter ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">Resultado período</p>
+            <p className={`text-xl font-black tracking-tighter ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(processedData.netResult || 0)}
             </p>
           </motion.div>
@@ -1106,21 +1106,21 @@ export default function AnalyticsPage() {
         </button>
         {/* Vault (Reservas e Investimentos) */}
         {isVaultOpen && (
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 relative overflow-x-hidden group">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all pointer-events-none" />
-          <div className="flex items-center justify-between mb-4 sm:mb-8">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-                <Landmark size={18} className="sm:w-5 sm:h-5" />
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+                <Landmark size={20} />
               </div>
-              <div className="min-w-0">
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-0.5 sm:mb-1">{t.dashboard.analytics.vaultTitle}</h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.vaultSubtitle}</p>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.vaultTitle}</h3>
+                <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.vaultSubtitle}</p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {(() => {
               const emergencyCategory = rawData.categories.find((c: any) => c.vault_type === 'emergency');
               const investmentCategory = rawData.categories.find((c: any) => c.vault_type === 'investment');
@@ -1128,68 +1128,66 @@ export default function AnalyticsPage() {
               return (
                 <>
                   <motion.div 
-                    initial={false}
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group min-w-0 overflow-visible"
+                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
                   >
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5 sm:mb-2 text-center">{t.dashboard.analytics.emergencyFund}</p>
-                    <p className="text-base sm:text-lg font-black text-white text-center mb-2 sm:mb-3">{formatCurrency(processedData.emergencyTotal)}</p>
-                    <div className="w-full h-1 bg-slate-800 rounded-full mt-2 sm:mt-3 overflow-hidden mb-2 sm:mb-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.emergencyFund}</p>
+                    <p className="text-lg font-black text-white text-center mb-3">{formatCurrency(processedData.emergencyTotal)}</p>
+                    <div className="w-full h-1 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
                       <div 
                         className="h-full bg-blue-500" 
                         style={{ width: `${Math.min(100, (processedData.emergencyTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }} 
                       />
                     </div>
-                    <div className="flex gap-1.5 sm:gap-2 mt-2 sm:mt-3 flex-shrink-0 min-h-[44px]">
-                      <button
-                        onClick={() => emergencyCategory && setVaultModal({ open: true, category: emergencyCategory, action: 'add' })}
-                        disabled={!emergencyCategory}
-                        className="flex-1 min-w-[4.5rem] sm:min-w-0 min-h-[44px] flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg sm:rounded-xl transition-all group/btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-blue-400"
-                      >
-                        <Plus size={12} className="shrink-0 text-blue-400" />
-                        <span className="truncate">{t.dashboard.analytics.add}</span>
-                      </button>
-                      <button
-                        onClick={() => emergencyCategory && setVaultModal({ open: true, category: emergencyCategory, action: 'withdraw' })}
-                        disabled={!emergencyCategory}
-                        className="flex-1 min-w-[4.5rem] sm:min-w-0 min-h-[44px] flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg sm:rounded-xl transition-all group/btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-red-400"
-                      >
-                        <Minus size={12} className="shrink-0 text-red-400" />
-                        <span className="truncate">{t.dashboard.analytics.withdraw}</span>
-                      </button>
-                    </div>
+                    {emergencyCategory && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => setVaultModal({ open: true, category: emergencyCategory, action: 'add' })}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl transition-all group/btn cursor-pointer"
+                        >
+                          <Plus size={14} className="text-blue-400 group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.add}</span>
+                        </button>
+                        <button
+                          onClick={() => setVaultModal({ open: true, category: emergencyCategory, action: 'withdraw' })}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl transition-all group/btn cursor-pointer"
+                        >
+                          <Minus size={14} className="text-red-400 group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-400">{t.dashboard.analytics.withdraw}</span>
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                   <motion.div 
-                    initial={false}
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group min-w-0 overflow-visible"
+                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
                   >
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5 sm:mb-2 text-center">Investimentos</p>
-                    <p className="text-base sm:text-lg font-black text-emerald-400 text-center mb-2 sm:mb-3">{formatCurrency(processedData.investmentTotal)}</p>
-                    <div className="w-full h-1 bg-slate-800 rounded-full mt-2 sm:mt-3 overflow-hidden mb-2 sm:mb-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">Investimentos</p>
+                    <p className="text-lg font-black text-emerald-400 text-center mb-3">{formatCurrency(processedData.investmentTotal)}</p>
+                    <div className="w-full h-1 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
                       <div 
                         className="h-full bg-emerald-500" 
                         style={{ width: `${Math.min(100, (processedData.investmentTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }} 
                       />
                     </div>
-                    <div className="flex gap-1.5 sm:gap-2 mt-2 sm:mt-3 flex-shrink-0 min-h-[44px]">
-                      <button
-                        onClick={() => investmentCategory && setVaultModal({ open: true, category: investmentCategory, action: 'add' })}
-                        disabled={!investmentCategory}
-                        className="flex-1 min-w-[4.5rem] sm:min-w-0 min-h-[44px] flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg sm:rounded-xl transition-all group/btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-400"
-                      >
-                        <Plus size={12} className="shrink-0 text-emerald-400" />
-                        <span className="truncate">{t.dashboard.analytics.add}</span>
-                      </button>
-                      <button
-                        onClick={() => investmentCategory && setVaultModal({ open: true, category: investmentCategory, action: 'withdraw' })}
-                        disabled={!investmentCategory}
-                        className="flex-1 min-w-[4.5rem] sm:min-w-0 min-h-[44px] flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg sm:rounded-xl transition-all group/btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-red-400"
-                      >
-                        <Minus size={12} className="shrink-0 text-red-400" />
-                        <span className="truncate">{t.dashboard.analytics.withdraw}</span>
-                      </button>
-                    </div>
+                    {investmentCategory && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => setVaultModal({ open: true, category: investmentCategory, action: 'add' })}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl transition-all group/btn cursor-pointer"
+                        >
+                          <Plus size={14} className="text-emerald-400 group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">{t.dashboard.analytics.add}</span>
+                        </button>
+                        <button
+                          onClick={() => setVaultModal({ open: true, category: investmentCategory, action: 'withdraw' })}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl transition-all group/btn cursor-pointer"
+                        >
+                          <Minus size={14} className="text-red-400 group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-400">{t.dashboard.analytics.withdraw}</span>
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 </>
               );

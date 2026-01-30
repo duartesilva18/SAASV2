@@ -11,8 +11,6 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { useUser } from '@/lib/UserContext';
-import { setWasOnLanding } from '@/components/BackButtonGuard';
-import { useStripePlans } from '@/lib/hooks';
 import api from '@/lib/api';
 
 function AnimatedTelegram() {
@@ -22,12 +20,9 @@ function AnimatedTelegram() {
 const fadeUp = { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 } };
 const stagger = (i: number) => ({ transition: { delay: i * 0.08 } });
 
-const FALLBACK_PRICE_IDS: Record<string, string> = { basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf', plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS', pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve' };
-
 export default function LandingPage() {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
   const { user } = useUser();
-  const { priceIdByPlanId } = useStripePlans();
   const router = useRouter();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -66,15 +61,6 @@ export default function LandingPage() {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Sinalizar que estamos na landing (BackButtonGuard usa isto para bloquear "voltar" → login).
-  // O flag só é limpo no guard ao redirecionar, para evitar race com o unmount.
-  useEffect(() => {
-    setWasOnLanding(true);
-    const url = window.location.pathname + window.location.search;
-    history.pushState({ landing: true }, '', url);
-    history.pushState({ landing: true }, '', url);
   }, []);
 
   const structuredData = {
@@ -205,12 +191,12 @@ export default function LandingPage() {
                 <React.Fragment key={i}>{part}{i < arr.length - 1 && <AnimatedTelegram />}</React.Fragment>
               ))}
             </motion.p>
-            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 sm:gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-5 sm:px-8 py-3 sm:py-4 min-h-[40px] sm:min-h-[44px] rounded-xl sm:rounded-2xl text-sm sm:text-base font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 min-h-[44px] rounded-2xl text-base font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
                 {t.hero.cta}
-                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform sm:w-5 sm:h-5" />
+                <ArrowRight size={20} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-8 py-3 sm:py-4 min-h-[40px] sm:min-h-[44px] rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
+              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 min-h-[44px] rounded-2xl text-base font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
                 {t.hero.seeHow}
               </Link>
             </motion.div>
@@ -435,12 +421,8 @@ export default function LandingPage() {
                       onClick={async () => {
                         if (user) {
                           try {
-                            const priceId = priceIdByPlanId[plan.id] || FALLBACK_PRICE_IDS[plan.id];
-                            if (!priceId) {
-                              router.push(`/pricing?plan=${plan.id}`);
-                              return;
-                            }
-                            const res = await api.post('/stripe/create-checkout-session', null, { params: { price_id: priceId } });
+                            const priceIdMap: Record<string, string> = { basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf', plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS', pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve' };
+                            const res = await api.post('/stripe/create-checkout-session', null, { params: { price_id: priceIdMap[plan.id] } });
                             window.location.href = res.data.url;
                           } catch {
                             router.push(`/pricing?plan=${plan.id}`);

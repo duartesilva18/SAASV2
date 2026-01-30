@@ -9,12 +9,11 @@ import LoadingScreen from '@/components/LoadingScreen';
 import AlertModal from '@/components/AlertModal';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
-import { SupportProvider, useSupport } from '@/lib/SupportContext';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
-import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings, Mail } from 'lucide-react';
+import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -132,8 +131,7 @@ export default function DashboardLayout({
 
   return (
     <NotificationsProvider>
-    <SupportProvider>
-    <div className="flex bg-[#020617] min-h-screen min-h-[100dvh] relative overflow-x-hidden selection:bg-blue-500/30">
+    <div className="flex bg-[#020617] min-h-screen relative overflow-hidden selection:bg-blue-500/30">
       {/* Background Glows */}
       <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -171,7 +169,7 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className={`flex-1 flex flex-col min-w-0 min-h-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
         <MobileHeaderWithNotifications
           t={t}
@@ -229,11 +227,11 @@ export default function DashboardLayout({
           </div>
         )}
 
-        <main className="flex-1 min-h-0 relative z-10 overflow-y-auto overflow-x-hidden ios-scroll-touch">
+        <main className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
-              initial={false}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
@@ -248,7 +246,6 @@ export default function DashboardLayout({
       <SupportButton />
       <LoadingIndicator />
     </div>
-    </SupportProvider>
     </NotificationsProvider>
   );
 }
@@ -266,12 +263,8 @@ function MobileHeaderWithNotifications({
   onOpenMenu: () => void;
 }) {
   const { setShowNotifications, showNotifications } = useNotifications();
-  const { openSupport, isFloatingDismissed, restoreFloating } = useSupport();
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
-  const envelopeLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const envelopeLongPressHandledRef = useRef(false);
-  const ENVELOPE_LONG_PRESS_MS = 800;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -317,81 +310,37 @@ function MobileHeaderWithNotifications({
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-800/98 backdrop-blur-xl border border-slate-600/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
                   >
-                    <div className="flex flex-col gap-0.5">
-                      {isFloatingDismissed && (
-                        <p className="px-2 py-1.5 text-[10px] font-medium text-slate-400 italic border-b border-white/5 mb-1">
-                          {t.dashboard?.support?.supportMovedToMenu ?? 'O botão de suporte foi movido para este menu.'}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-0.5">
-                        <a
-                          href="https://t.me/FinanZenApp_bot"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] cursor-pointer active:scale-95 transition-transform"
-                          title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'}
-                          onClick={() => setToolsOpen(false)}
-                        >
-                          <span className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors rotate-[-4deg]">
-                            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current rotate-[4deg]" aria-hidden>
-                              <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
-                            </svg>
-                          </span>
-                        </a>
-                        <Link
-                          href="/add-to-home"
-                          className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
-                          title="App no telemóvel"
-                          onClick={() => setToolsOpen(false)}
-                        >
-                          <Smartphone className="w-5 h-5" />
-                        </Link>
-                        <Link
-                          href="/guide"
-                          className="flex items-center justify-center w-11 h-11 rounded-xl text-amber-400 hover:bg-amber-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
-                          title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'}
-                          onClick={() => setToolsOpen(false)}
-                        >
-                          <HelpCircle className="w-5 h-5" />
-                        </Link>
-                        <button
-                          type="button"
-                          onPointerDown={() => {
-                            envelopeLongPressHandledRef.current = false;
-                            envelopeLongPressRef.current = setTimeout(() => {
-                              envelopeLongPressRef.current = null;
-                              envelopeLongPressHandledRef.current = true;
-                              restoreFloating();
-                              setToolsOpen(false);
-                            }, ENVELOPE_LONG_PRESS_MS);
-                          }}
-                          onPointerUp={() => {
-                            if (envelopeLongPressRef.current) {
-                              clearTimeout(envelopeLongPressRef.current);
-                              envelopeLongPressRef.current = null;
-                            }
-                          }}
-                          onPointerLeave={() => {
-                            if (envelopeLongPressRef.current) {
-                              clearTimeout(envelopeLongPressRef.current);
-                              envelopeLongPressRef.current = null;
-                            }
-                          }}
-                          onClick={() => {
-                            if (envelopeLongPressHandledRef.current) {
-                              envelopeLongPressHandledRef.current = false;
-                              return;
-                            }
-                            openSupport();
-                            setToolsOpen(false);
-                          }}
-                          className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
-                          title={t.dashboard?.support?.tooltip ?? 'Contactar suporte'}
-                          aria-label={t.dashboard?.support?.tooltip ?? 'Contactar suporte'}
-                        >
-                          <Mail className="w-5 h-5" />
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-0.5">
+                      <a
+                        href="https://t.me/FinanZenApp_bot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] cursor-pointer active:scale-95 transition-transform"
+                        title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'}
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors rotate-[-4deg]">
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current rotate-[4deg]" aria-hidden>
+                            <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                          </svg>
+                        </span>
+                      </a>
+                      <Link
+                        href="/add-to-home"
+                        className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
+                        title="App no telemóvel"
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <Smartphone className="w-5 h-5" />
+                      </Link>
+                      <Link
+                        href="/guide"
+                        className="flex items-center justify-center w-11 h-11 rounded-xl text-amber-400 hover:bg-amber-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
+                        title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'}
+                        onClick={() => setToolsOpen(false)}
+                      >
+                        <HelpCircle className="w-5 h-5" />
+                      </Link>
                     </div>
                   </motion.div>
                 )}

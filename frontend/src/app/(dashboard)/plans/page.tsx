@@ -5,7 +5,6 @@ import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { Zap, Trophy, Crown, Check, CheckCircle2 } from 'lucide-react';
 import { useUser } from '@/lib/UserContext';
-import { useStripePlans } from '@/lib/hooks';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -21,15 +20,13 @@ export default function PlansPage() {
   const [changePlanModal, setChangePlanModal] = useState<{ isOpen: boolean; priceId: string | null }>({ isOpen: false, priceId: null });
   const [changePlanLoading, setChangePlanLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const { planByPriceId, priceIdByPlanId } = useStripePlans();
 
-  const priceIdMap: { [key: string]: string } = {};
-  Object.entries(planByPriceId).forEach(([priceId, p]) => { priceIdMap[priceId] = p.id; });
-  if (Object.keys(priceIdMap).length === 0) {
-    priceIdMap['price_1SuIypLtWlVpaXrbD7ph1fhf'] = 'basic';
-    priceIdMap['price_1SuIzcLtWlVpaXrbLkHE0QbS'] = 'plus';
-    priceIdMap['price_1SuJ0GLtWlVpaXrb8BH9HIve'] = 'pro';
-  }
+  // Mapeamento de price_ids para planos (igual à homepage)
+  const priceIdMap: { [key: string]: string } = {
+    'price_1SuIypLtWlVpaXrbD7ph1fhf': 'basic',
+    'price_1SuIzcLtWlVpaXrbLkHE0QbS': 'plus',
+    'price_1SuJ0GLtWlVpaXrb8BH9HIve': 'pro'
+  };
 
   useEffect(() => {
     const fetchCurrentPlan = async () => {
@@ -140,8 +137,6 @@ export default function PlansPage() {
       popular: false,
     }
   ];
-
-  const getPlanPriceId = (planId: string) => priceIdByPlanId[planId] ?? plans.find(p => p.id === planId)?.priceId ?? '';
 
   const isCurrentPlan = (planPriceId: string): boolean => {
     return !!(currentPlanPriceId === planPriceId &&
@@ -273,7 +268,7 @@ export default function PlansPage() {
                   : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'
               } backdrop-blur-sm`}
             >
-              {isCurrentPlan(getPlanPriceId(plan.id)) && (
+              {isCurrentPlan(plan.priceId) && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -283,7 +278,7 @@ export default function PlansPage() {
                   <span>Plano ativo</span>
                 </motion.div>
               )}
-              {plan.popular && plan.popularLabel && !isCurrentPlan(getPlanPriceId(plan.id)) && (
+              {plan.popular && plan.popularLabel && !isCurrentPlan(plan.priceId) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 text-white px-6 py-2.5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2 z-30 whitespace-nowrap">
                   <Trophy size={16} className="animate-pulse" />
                   <span>{plan.popularLabel}</span>
@@ -330,17 +325,17 @@ export default function PlansPage() {
                 </div>
 
                 <button
-                  onClick={() => handlePlanSelect(getPlanPriceId(plan.id))}
-                  disabled={isCurrentPlan(getPlanPriceId(plan.id))}
+                  onClick={() => handlePlanSelect(plan.priceId)}
+                  disabled={isCurrentPlan(plan.priceId)}
                   className={`mt-auto w-full block text-center px-6 py-4 rounded-2xl text-base font-black uppercase tracking-[0.2em] transition-all cursor-pointer ${
-                    isCurrentPlan(getPlanPriceId(plan.id))
+                    isCurrentPlan(plan.priceId)
                       ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 cursor-not-allowed'
                       : plan.popular
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                   }`}
                 >
-                  {isCurrentPlan(getPlanPriceId(plan.id)) ? t.dashboard.pricing.activePlan : plan.buttonText}
+                  {isCurrentPlan(plan.priceId) ? t.dashboard.pricing.activePlan : plan.buttonText}
                 </button>
               </div>
             </motion.div>
