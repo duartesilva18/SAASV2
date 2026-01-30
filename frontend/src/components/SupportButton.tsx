@@ -58,8 +58,7 @@ export default function SupportButton() {
       formData.append('message', trimmed);
       files.forEach((f) => formData.append('files', f));
       await api.post('/api/support/contact', formData);
-      const support = t.dashboard?.support as SupportT | undefined;
-      setToast({ type: 'success', text: support?.contactSuccess ?? 'Mensagem enviada. Obrigado!' });
+      setToast({ type: 'success', text: (t.dashboard?.support as SupportT | undefined)?.contactSuccess ?? 'Mensagem enviada. Obrigado!' });
       setMessage('');
       setFiles([]);
       setTimeout(() => {
@@ -67,8 +66,7 @@ export default function SupportButton() {
         setToast(null);
       }, 1500);
     } catch (err: any) {
-      const support = t.dashboard?.support as SupportT | undefined;
-      const msg = err?.response?.data?.detail ?? support?.contactError ?? 'Não foi possível enviar. Tenta novamente.';
+      const msg = err?.response?.data?.detail ?? (t.dashboard?.support as SupportT | undefined)?.contactError ?? 'Não foi possível enviar. Tenta novamente.';
       setToast({ type: 'error', text: typeof msg === 'string' ? msg : 'Erro ao enviar.' });
     } finally {
       setSending(false);
