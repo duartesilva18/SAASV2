@@ -11,6 +11,7 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { useUser } from '@/lib/UserContext';
+import { setWasOnLanding } from '@/components/BackButtonGuard';
 import { useStripePlans } from '@/lib/hooks';
 import api from '@/lib/api';
 
@@ -67,9 +68,10 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Interceptar o botão "voltar" nativo do telemóvel: manter na página principal em vez de ir para login.
-  // Duas entradas iguais no history fazem com que o primeiro "voltar" fique na mesma página.
+  // Sinalizar que estamos na landing (BackButtonGuard usa isto para bloquear "voltar" → login).
+  // O flag só é limpo no guard ao redirecionar, para evitar race com o unmount.
   useEffect(() => {
+    setWasOnLanding(true);
     const url = window.location.pathname + window.location.search;
     history.pushState({ landing: true }, '', url);
     history.pushState({ landing: true }, '', url);
