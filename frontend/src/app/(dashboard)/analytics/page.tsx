@@ -29,8 +29,8 @@ export default function AnalyticsPage() {
   const [rawData, setRawData] = useState<{ transactions: any[], categories: any[], insights: any, recurring: any[] }>({ transactions: [], categories: [], insights: null, recurring: [] });
   const [processedData, setProcessedData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
-  const periods = t.dashboard.analytics.periods;
-  const [selectedPeriod, setSelectedPeriod] = useState('Tudo'); // Will be translated in display
+  const chartPeriods = t.dashboard.analytics?.chartPeriods ?? { '7D': '7D', '30D': '30D', '90D': '90D', '12M': '12M', 'Tudo': 'Tudo' };
+  const [selectedPeriod, setSelectedPeriod] = useState<'7D' | '30D' | '90D' | '12M' | 'Tudo'>('Tudo');
   const [isDistInfoOpen, setIsDistInfoOpen] = useState(false);
   const [isWeeklyInfoOpen, setIsWeeklyInfoOpen] = useState(false);
   const [isTopInfoOpen, setIsTopInfoOpen] = useState(false);
@@ -853,21 +853,21 @@ export default function AnalyticsPage() {
       {hasEnoughData && (
       <>
       {/* Filtro período – topo */}
-      <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl mb-6">
+        <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl mb-6">
         <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-xl">
           <Calendar size={12} className="text-blue-500" />
           <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.periodFilters}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {Object.entries(periods).map(([key, period]) => (
+          {Object.entries(chartPeriods).map(([key, label]) => (
             <button
               key={key}
-              onClick={() => setSelectedPeriod(key)}
+              onClick={() => setSelectedPeriod(key as '7D' | '30D' | '90D' | '12M' | 'Tudo')}
               className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
                 selectedPeriod === key ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
-              {period}
+              {label}
             </button>
           ))}
         </div>
