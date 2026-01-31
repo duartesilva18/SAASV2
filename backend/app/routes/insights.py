@@ -507,8 +507,19 @@ async def get_zen_insights(
             next_month_projected_expenses *= 0.97
         next_month_projected_expenses += (expense_volatility * 0.15)
         
-        categories_at_risk = []
-        # Calcular médias históricas por categoria (se ainda não calculado)
+        # Categorias em risco: MÊS ATUAL (gasto real) + PROJEÇÃO (próximo mês)
+        categories_at_risk_dict = {}  # cat_name -> (risk_level, amount, limit)
+        
+        # 1. Verificar gasto REAL deste mês (>= 80% do limite)
+        for cat in categories:
+            if cat.type == 'expense' and cat.monthly_limit_cents > 0:
+                limit = cat.monthly_limit_cents / 100
+                actual_spent = this_expenses_by_cat.get(cat.name, 0)
+                if limit > 0 and actual_spent >= limit * 0.8:  # 80% do limite
+                    risk_level = (actual_spent / limit) * 100
+                    categories_at_risk_dict[cat.name] = (risk_level, actual_spent, limit)
+        
+        # 2. Calcular médias históricas por categoria (para projeção)
         if not category_monthly_avg:
             for month_key in sorted_months:
                 for cat_name, amount in monthly_data[month_key]['by_category'].items():
@@ -519,26 +530,22 @@ async def get_zen_insights(
             if category_monthly_count[cat_name] > 0:
                 category_monthly_avg[cat_name] /= category_monthly_count[cat_name]
         
+        # 3. Adicionar riscos por PROJEÇÃO do próximo mês (se ainda não em risco ou projeção pior)
         for cat in categories:
             if cat.type == 'expense' and cat.monthly_limit_cents > 0:
                 limit = cat.monthly_limit_cents / 100
                 
-                # Usar média histórica da categoria se disponível, senão usar proporção atual
                 if cat.name in category_monthly_avg:
                     cat_historical_avg = category_monthly_avg[cat.name]
-                    # Calcular tendência da categoria
                     cat_values = [monthly_data[m]['by_category'].get(cat.name, 0) for m in sorted_months]
                     cat_trend_slope = calculate_trend(cat_values)
                     cat_volatility = calculate_volatility(cat_values)
-                    
-                    # Projeção da categoria = média histórica + tendência + volatilidade
                     projected_cat_expense = cat_historical_avg
                     if cat_historical_avg > 0:
                         trend_factor_cat = (cat_trend_slope * 1) / cat_historical_avg
                         projected_cat_expense = cat_historical_avg * (1 + trend_factor_cat)
-                    projected_cat_expense += (cat_volatility * 0.2)  # Margem de segurança de 20%
+                    projected_cat_expense += (cat_volatility * 0.2)
                 else:
-                    # Fallback: usar proporção atual
                     cat_avg = this_expenses_by_cat.get(cat.name, 0)
                     if cat_avg > 0:
                         cat_ratio = cat_avg / this_expenses if this_expenses > 0 else 0
@@ -546,9 +553,16 @@ async def get_zen_insights(
                     else:
                         continue
                 
-                if projected_cat_expense > limit * 0.85:  # Reduzido de 0.9 para 0.85 para detetar mais cedo
-                    risk_level = (projected_cat_expense / limit) * 100 if limit > 0 else 0
-                    categories_at_risk.append((cat.name, risk_level, projected_cat_expense, limit))
+                if projected_cat_expense >= limit * 0.85:  # Projeção >= 85% do limite
+                    proj_risk = (projected_cat_expense / limit) * 100 if limit > 0 else 0
+                    existing = categories_at_risk_dict.get(cat.name)
+                    if existing is None or proj_risk > existing[0]:
+                        categories_at_risk_dict[cat.name] = (proj_risk, projected_cat_expense, limit)
+        
+        categories_at_risk = sorted(
+            [(name, r[0], r[1], r[2]) for name, r in categories_at_risk_dict.items()],
+            key=lambda x: x[1], reverse=True  # Maior risco primeiro
+        )
         
         # Adicionar insights preditivos
         if projected_balance < 0 and len(insights) < 3:
@@ -837,7 +851,7 @@ async def get_zen_insights(
             'projected_monthly_expenses': avg_monthly_expenses,
             'months_ahead': months_ahead,
             'categories_at_risk': [
-                {'name': c[0], 'risk_percent': c[1], 'projected': c[2], 'limit': c[3]} 
+                {'name': c[0], 'category_name': c[0], 'risk_percent': c[1], 'risk_level': f'{c[1]:.0f}%', 'projected': c[2], 'limit': c[3]} 
                 for c in categories_at_risk
             ],
             'confidence': avg_confidence,
