@@ -265,19 +265,19 @@ export default function AdminAffiliatesPage() {
       className="space-y-10 pb-20"
     >
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
-        <div>
-            <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-amber-400" />
-            {t.dashboard.admin.affiliates.manageTitle.split(' ')[0]} de <span className="text-amber-400 italic">{t.dashboard.admin.affiliates.manageTitle.split(' ').slice(1).join(' ')}</span>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 px-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-white mb-1 sm:mb-2 uppercase flex flex-wrap items-center gap-2 sm:gap-3">
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 shrink-0" />
+            <span className="leading-tight">{t.dashboard.admin.affiliates.manageTitle.split(' ')[0]} de <span className="text-amber-400 italic">{t.dashboard.admin.affiliates.manageTitle.split(' ').slice(1).join(' ')}</span></span>
           </h1>
-          <p className="text-slate-500 font-medium italic text-sm">{t.dashboard.admin.affiliates.manageSubtitle}</p>
+          <p className="text-slate-500 font-medium italic text-xs sm:text-sm">{t.dashboard.admin.affiliates.manageSubtitle}</p>
         </div>
         <button
           onClick={() => setShowPromoteModal(true)}
-          className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer hover:scale-105 active:scale-95"
+          className="px-4 sm:px-6 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-400 text-black rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[44px]"
         >
-          <UserPlus className="w-5 h-5" />
+          <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
           Promover Utilizador
         </button>
       </header>
@@ -346,19 +346,19 @@ export default function AdminAffiliatesPage() {
 
       {/* Stats Overview */}
       {stats && stats.total_affiliates !== undefined && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02, y: -2 }}
-            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
           >
-            <div className="flex items-center justify-between mb-4">
-              <Users className="w-8 h-8 text-amber-400" />
-              <TrendingUp className="w-5 h-5 text-green-400" />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 shrink-0" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 shrink-0" />
             </div>
-            <p className="text-3xl font-black text-white mb-1">{stats.total_affiliates}</p>
-            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.totalAffiliates}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5 sm:mb-1 truncate">{stats.total_affiliates}</p>
+            <p className="text-[10px] sm:text-sm text-slate-400 truncate">{t.dashboard.admin.affiliates.totalAffiliates}</p>
           </motion.div>
 
           <motion.div
@@ -366,14 +366,14 @@ export default function AdminAffiliatesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             whileHover={{ scale: 1.02, y: -2 }}
-            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:shadow-blue-500/10 transition-all"
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-blue-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-blue-500/10 transition-all"
           >
-            <div className="flex items-center justify-between mb-4">
-              <DollarSign className="w-8 h-8 text-blue-400" />
-              <Activity className="w-5 h-5 text-green-400" />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 shrink-0" />
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 shrink-0" />
             </div>
-            <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_revenue_cents || 0)}</p>
-            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.totalRevenueLabel}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5 sm:mb-1 truncate">{formatPrice(stats.total_revenue_cents || 0)}</p>
+            <p className="text-[10px] sm:text-sm text-slate-400 truncate">{t.dashboard.admin.affiliates.totalRevenueLabel}</p>
           </motion.div>
 
           <motion.div
@@ -381,15 +381,15 @@ export default function AdminAffiliatesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             whileHover={{ scale: 1.02, y: -2 }}
-            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-green-500/20 rounded-2xl p-6 shadow-xl hover:shadow-green-500/10 transition-all"
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-green-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-green-500/10 transition-all"
           >
-            <div className="flex items-center justify-between mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-400" />
-              <TrendingUp className="w-5 h-5 text-green-400" />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 shrink-0" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 shrink-0" />
             </div>
-            <p className="text-3xl font-black text-white mb-1">{stats.total_conversions}</p>
-            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.conversionsLabel}</p>
-            <p className="text-xs text-slate-500 mt-2">{t.dashboard.admin.affiliates.rate}: {stats.conversion_rate?.toFixed(1) || 0}%</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5 sm:mb-1 truncate">{stats.total_conversions}</p>
+            <p className="text-[10px] sm:text-sm text-slate-400 truncate">{t.dashboard.admin.affiliates.conversionsLabel}</p>
+            <p className="text-[9px] sm:text-xs text-slate-500 mt-1 sm:mt-2 truncate">{t.dashboard.admin.affiliates.rate}: {stats.conversion_rate?.toFixed(1) || 0}%</p>
           </motion.div>
 
           <motion.div
@@ -397,14 +397,14 @@ export default function AdminAffiliatesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             whileHover={{ scale: 1.02, y: -2 }}
-            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
+            className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-amber-500/10 transition-all"
           >
-            <div className="flex items-center justify-between mb-4">
-              <Trophy className="w-8 h-8 text-amber-400" />
-              <TrendingUp className="w-5 h-5 text-green-400" />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 shrink-0" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 shrink-0" />
             </div>
-            <p className="text-3xl font-black text-white mb-1">{formatPrice(stats.total_paid_earnings_cents || stats.total_earnings_cents || 0)}</p>
-            <p className="text-sm text-slate-400">{t.dashboard.admin.affiliates.paidCommissions}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5 sm:mb-1 truncate">{formatPrice(stats.total_paid_earnings_cents || stats.total_earnings_cents || 0)}</p>
+            <p className="text-[10px] sm:text-sm text-slate-400 truncate">{t.dashboard.admin.affiliates.paidCommissions}</p>
           </motion.div>
         </div>
       )}
@@ -600,7 +600,7 @@ export default function AdminAffiliatesPage() {
             {t.dashboard.admin.affiliates.revenuePerAffiliate}
           </h3>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-400">{t.dashboard.admin.affiliates.affiliate}</th>
@@ -640,23 +640,23 @@ export default function AdminAffiliatesPage() {
       )}
 
       {/* Search */}
-      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-xl hover:border-white/10 transition-all">
-        <div className="flex items-center gap-3">
-          <Search className="w-5 h-5 text-slate-400" />
+      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-xl hover:border-white/10 transition-all">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" />
           <input
             type="text"
             placeholder={t.dashboard.admin.affiliates.searchPlaceholder || "Search by email, name or code..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none focus:text-white transition-colors"
+            className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-white placeholder-slate-500 outline-none focus:text-white transition-colors min-h-[44px]"
           />
         </div>
       </div>
 
       {/* Affiliates List */}
-      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-6 border-b border-white/10">
-          <h2 className="text-xl font-black text-white">Afiliados ({filteredAffiliates.length})</h2>
+      <div className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-4 sm:p-6 border-b border-white/10">
+          <h2 className="text-base sm:text-xl font-black text-white">Afiliados ({filteredAffiliates.length})</h2>
         </div>
         <div className="divide-y divide-white/5">
           {filteredAffiliates.length === 0 ? (
@@ -670,27 +670,28 @@ export default function AdminAffiliatesPage() {
                 key={aff.user_id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="p-6 hover:bg-white/5 transition-all cursor-pointer group"
+                className="p-4 sm:p-6 hover:bg-white/5 transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-black text-white">{aff.full_name || aff.email}</h3>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex-1 min-w-0 w-full">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                      <h3 className="text-base sm:text-lg font-black text-white truncate max-w-full">{aff.full_name || aff.email}</h3>
                       {aff.is_affiliate && (
-                        <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-black uppercase">
+                        <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-[10px] sm:text-xs font-black uppercase shrink-0">
                           Afiliado
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-400 mb-3">{aff.email}</p>
+                    <p className="text-xs sm:text-sm text-slate-400 mb-3 truncate">{aff.email}</p>
                     {aff.affiliate_code && (
-                      <div className="flex flex-col gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm font-mono text-amber-400 bg-slate-900/50 px-2 py-1 rounded border border-amber-500/20">
+                      <div className="flex flex-col gap-2 sm:gap-2 mb-3 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <code className="text-xs sm:text-sm font-mono text-amber-400 bg-slate-900/50 px-2 py-1 rounded border border-amber-500/20 break-all sm:break-normal shrink-0">
                             {aff.affiliate_code}
                           </code>
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (!aff.affiliate_code) return;
                               navigator.clipboard.writeText(aff.affiliate_code);
                               setToast({
@@ -699,20 +700,21 @@ export default function AdminAffiliatesPage() {
                                 type: 'success'
                               });
                             }}
-                            className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
+                            className="p-1.5 sm:p-1 hover:bg-white/10 rounded transition-colors cursor-pointer shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
                             title={t.dashboard.admin.affiliates.copyCode || "Copy code"}
                           >
                             <Copy className="w-4 h-4 text-slate-400 hover:text-amber-400 transition-colors" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono text-blue-400 bg-slate-900/50 px-2 py-1 rounded flex-1 truncate border border-blue-500/20">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 w-full">
+                          <code className="text-[10px] sm:text-xs font-mono text-blue-400 bg-slate-900/50 px-2 py-1.5 sm:py-1 rounded border border-blue-500/20 break-all w-full min-w-0">
                             {typeof window !== 'undefined' && aff.affiliate_code
                               ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com'}/auth/register?ref=${encodeURIComponent(aff.affiliate_code)}`
                               : ''}
                           </code>
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (!aff.affiliate_code) return;
                               const baseUrl = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com') : 'https://app.finlybot.com';
                               const fullLink = `${baseUrl}/auth/register?ref=${encodeURIComponent(aff.affiliate_code)}`;
@@ -723,7 +725,7 @@ export default function AdminAffiliatesPage() {
                                 type: 'success'
                               });
                             }}
-                            className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer hover:scale-110 active:scale-95"
+                            className="p-1.5 sm:p-1 hover:bg-white/10 rounded transition-colors cursor-pointer shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center self-start sm:self-auto"
                             title={t.dashboard.admin.affiliates.copyFullLinkTitle}
                           >
                             <Copy className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors" />
@@ -731,34 +733,34 @@ export default function AdminAffiliatesPage() {
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-6 text-sm">
+                    <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-6 text-xs sm:text-sm">
                       <div>
-                        <p className="text-slate-500">{t.dashboard.admin.affiliates.referralsLabel}</p>
+                        <p className="text-slate-500 text-[10px] sm:text-xs">{t.dashboard.admin.affiliates.referralsLabel}</p>
                         <p className="font-black text-white">{aff.total_referrals}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">{t.dashboard.admin.affiliates.conversionsLabel}</p>
+                        <p className="text-slate-500 text-[10px] sm:text-xs">{t.dashboard.admin.affiliates.conversionsLabel}</p>
                         <p className="font-black text-green-400">{aff.total_conversions}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">{t.dashboard.admin.affiliates.earningsLabel}</p>
-                        <p className="font-black text-amber-400">{formatPrice(aff.total_earnings_cents)}</p>
+                        <p className="text-slate-500 text-[10px] sm:text-xs">{t.dashboard.admin.affiliates.earningsLabel}</p>
+                        <p className="font-black text-amber-400 truncate">{formatPrice(aff.total_earnings_cents)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">{t.dashboard.admin.affiliates.sinceLabel}</p>
-                        <p className="font-black text-slate-400 text-xs">
+                        <p className="text-slate-500 text-[10px] sm:text-xs">{t.dashboard.admin.affiliates.sinceLabel}</p>
+                        <p className="font-black text-slate-400 text-[10px] sm:text-xs">
                           {new Date(aff.created_at).toLocaleDateString('pt-PT')}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 ml-6">
+                  <div className="flex items-center sm:ml-0 shrink-0">
                     {aff.is_affiliate && (
                       <button
-                        onClick={() => fetchAffiliateDetail(aff.user_id)}
-                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-amber-600/20"
+                        onClick={(e) => { e.stopPropagation(); fetchAffiliateDetail(aff.user_id); }}
+                        className="px-4 py-2.5 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-[10px] sm:text-xs uppercase transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-amber-600/20 min-h-[44px]"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 shrink-0" />
                         Ver Detalhes
                       </button>
                     )}

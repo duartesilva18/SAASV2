@@ -169,14 +169,15 @@ export default function DashboardPage() {
         // Paywall removido - contas free vão direto para o dashboard
 
         // Usar snapshot calculado pelo backend (sem cálculos no frontend!)
-        const transactions = collections.recent_transactions || [];
+        const transactions = collections.recent_transactions || collections.transactions || [];
         const categories = collections.categories || [];
-        const lowData = transactions.length < 10;
+        const isDemoMode = !hasActiveSub && transactions.length === 0;
+        const lowData = transactions.length < 10 || isDemoMode;
 
         // Se não for Pro e não tiver transações, usar demo
         let finalTransactions = transactions;
         let finalCategories = categories;
-        if (!hasActiveSub && transactions.length === 0) {
+        if (isDemoMode) {
           finalTransactions = DEMO_TRANSACTIONS;
           finalCategories = DEMO_CATEGORIES;
         }
@@ -612,23 +613,24 @@ export default function DashboardPage() {
         <p className="text-slate-400 font-medium mt-1">{t.dashboard.page.headerSubtitle}</p>
       </div>
 
-      {/* Botão Modo Demo (apenas quando não tem dados reais) */}
+      {/* Botão Modo Demo (apenas quando não tem dados reais ou poucos dados) */}
       {hasLowData && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl sm:rounded-2xl w-full mb-6"
+          transition={{ duration: 0.2 }}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl sm:rounded-2xl w-full mb-4 sm:mb-6 shrink-0"
         >
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <AlertCircle className="text-amber-500 shrink-0" size={18} />
+            <AlertCircle className="text-amber-500 shrink-0 flex-shrink-0" size={20} />
             <div className="min-w-0 flex-1">
-              <p className="text-xs sm:text-sm font-black text-amber-400 truncate">Modo Demo Ativo</p>
-              <p className="text-[10px] sm:text-xs text-amber-300/70 font-medium truncate">A mostrar dados de exemplo</p>
+              <p className="text-sm sm:text-base font-black text-amber-400">Modo Demo Ativo</p>
+              <p className="text-[11px] sm:text-xs text-amber-300/70 font-medium">A mostrar dados de exemplo</p>
             </div>
           </div>
           <Link
             href="/transactions"
-            className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors shrink-0 whitespace-nowrap border-b border-amber-400/50 hover:border-amber-300/50"
+            className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors shrink-0 whitespace-nowrap border-b border-amber-400/50 hover:border-amber-300/50 py-1 self-center sm:self-auto min-h-[44px] flex items-center justify-center sm:min-h-0"
           >
             Adicionar transações →
           </Link>
