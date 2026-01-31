@@ -792,6 +792,7 @@ export const pt = {
           projectedBalance: "Saldo Projetado",
           projectionNext3Months: "Projeção dos Próximos 3 Meses",
           categoriesAtRisk: "Categorias em Risco (Próximo Mês)",
+          adjustLimits: "Ajustar limites",
           riskPercent: "do limite",
           projection: "Projeção:",
           limit: "Limite:",

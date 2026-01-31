@@ -825,6 +825,7 @@ export const en = {
           projectedBalance: "Projected Balance",
           projectionNext3Months: "Next 3 Months Projection",
           categoriesAtRisk: "Categories at Risk (Next Month)",
+          adjustLimits: "Adjust limits",
           riskPercent: "of limit",
           projection: "Projection:",
           limit: "Limit:",

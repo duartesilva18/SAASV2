@@ -976,16 +976,55 @@ export default function AnalyticsPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Categorias em risco</h3>
             {processedData.categoriesAtRisk?.length > 0 ? (
-              <ul className="space-y-2 mb-4">
-                {(processedData.categoriesAtRisk as { category_name?: string; risk_level?: string }[]).map((c: any, i: number) => (
-                  <li key={i} className="text-sm text-slate-300 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                    {c.category_name ?? c.name ?? 'Categoria'} {c.risk_level != null && <span className="text-[10px] text-slate-500">({c.risk_level})</span>}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3 mb-4">
+                {(processedData.categoriesAtRisk as { category_name?: string; name?: string; risk_level?: string; risk_percent?: number; projected?: number; limit?: number }[]).map((c: any, i: number) => {
+                  const name = c.category_name ?? c.name ?? 'Categoria';
+                  const pct = c.risk_percent ?? parseFloat(String(c.risk_level || '0').replace('%', ''));
+                  const amount = typeof c.projected === 'number' ? c.projected : 0;
+                  const limitVal = typeof c.limit === 'number' ? c.limit : 0;
+                  const isExceeded = pct >= 100;
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-xl px-4 py-3 border ${
+                        isExceeded ? 'bg-red-500/5 border-red-500/20' : 'bg-amber-500/5 border-amber-500/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-bold text-white">{name}</span>
+                        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isExceeded ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                          {c.risk_level ?? `${pct.toFixed(0)}%`}
+                        </span>
+                      </div>
+                      {limitVal > 0 && (
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1.5">
+                          <span>{formatCurrency(amount)}</span>
+                          <span className="text-slate-600">{formatCurrency(limitVal)} limite</span>
+                        </div>
+                      )}
+                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(pct, 100)}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className={`h-full rounded-full ${isExceeded ? 'bg-red-500' : 'bg-amber-500'}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <p className="text-xs text-slate-500 italic mb-4">{t.dashboard.analytics.noCategoryAtRisk}</p>
+            )}
+            {processedData.categoriesAtRisk?.length > 0 && (
+              <Link
+                href="/categories"
+                className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors mb-4"
+              >
+                <ArrowRight size={12} />
+                {t.dashboard?.analytics?.adjustLimits ?? 'Ajustar limites'}
+              </Link>
             )}
             <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
           </motion.div>

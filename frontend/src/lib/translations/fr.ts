@@ -825,6 +825,7 @@ export const fr = {
           projectedBalance: "Solde projeté",
           projectionNext3Months: "Projection des 3 prochains mois",
           categoriesAtRisk: "Catégories à risque (mois prochain)",
+          adjustLimits: "Ajuster les limites",
           riskPercent: "de la limite",
           projection: "Projection :",
           limit: "Limite :",
