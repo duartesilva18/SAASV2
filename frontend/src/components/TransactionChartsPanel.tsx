@@ -72,9 +72,15 @@ export default function TransactionChartsPanel({
     .slice(0, 5)
     .reverse();
 
+  // Parse date string como YYYY-MM-DD para evitar timezone shift (new Date("2025-12-15") = UTC midnight)
+  const parseLocalDate = (dateStr: string): Date => {
+    const [y, m, d] = (dateStr.split('T')[0] || dateStr).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
   const getISOWeekKey = (date: Date): string => {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const dayNum = d.getDay() || 7; // ISO: Mon=1, Sun=7
+    const dayNum = date.getDay() || 7; // ISO: Mon=1, Sun=7
+    const d = new Date(date);
     d.setDate(d.getDate() + 4 - dayNum); // Mover para quinta-feira da semana
     const yearStart = new Date(d.getFullYear(), 0, 1);
     const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
@@ -82,7 +88,7 @@ export default function TransactionChartsPanel({
   };
 
   const periodData = transactions.reduce((acc: Record<string, { period: string; income: number; expenses: number }>, tx) => {
-    const date = new Date(tx.transaction_date);
+    const date = parseLocalDate(tx.transaction_date);
     let periodKey: string;
     if (evolutionPeriod === 'weekly') {
       periodKey = getISOWeekKey(date);
@@ -113,7 +119,7 @@ export default function TransactionChartsPanel({
         const yearShort = year ? `'${year.slice(-2)}` : '';
         return { ...item, label: `Sem ${parseInt(week || '0', 10)} ${yearShort}`.trim() };
       }
-      const date = new Date(item.period);
+      const date = parseLocalDate(item.period);
       return {
         ...item,
         label: date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' }),
