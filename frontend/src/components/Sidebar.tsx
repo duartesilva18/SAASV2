@@ -275,7 +275,7 @@ export default function Sidebar({
                 {user.full_name ? user.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : user.email[0].toUpperCase()}
                 
                 {(user.is_admin || isPro) && (
-                  <div className={`absolute -inset-1 rounded-2xl blur-md opacity-20 group-hover:opacity-40 transition-opacity ${user.is_admin ? 'bg-amber-500' : currentPlan?.variant === 'basic' ? 'bg-slate-500' : currentPlan?.variant === 'plus' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                  <div className={`absolute -inset-1 rounded-2xl blur-md opacity-20 group-hover:opacity-40 transition-opacity max-md:blur-none max-md:opacity-0 ${user.is_admin ? 'bg-amber-500' : currentPlan?.variant === 'basic' ? 'bg-slate-500' : currentPlan?.variant === 'plus' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                 )}
               </div>
 
@@ -489,34 +489,27 @@ export default function Sidebar({
 
   return (
     <>
-      <AnimatePresence mode="sync">
-        {isMobileOpen && (
-          <motion.div
-            key="sidebar-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onMobileClose}
-            className="fixed inset-0 bg-black/70 z-[60] lg:hidden"
-            style={{ touchAction: 'none' }}
-            aria-hidden
-          />
-        )}
-        {isMobileOpen && (
-          <motion.aside
-            key="sidebar-drawer"
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'tween', duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden shadow-2xl pb-[env(safe-area-inset-bottom)]"
-            style={{ paddingTop: 'env(safe-area-inset-top)' }}
-          >
-            {sidebarContent}
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      {/* Mobile: overlay + drawer com CSS (mais suave que Framer Motion em telemóveis) */}
+      <div
+        onClick={onMobileClose}
+        className={`fixed inset-0 bg-black/70 z-[60] lg:hidden transition-opacity duration-150 ease-out ${
+          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ touchAction: 'none' }}
+        aria-hidden={!isMobileOpen}
+      />
+      <aside
+        className={`fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-150 ease-out ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ 
+          paddingTop: 'env(safe-area-inset-top)',
+          willChange: isMobileOpen ? 'transform' : 'auto',
+        }}
+        aria-hidden={!isMobileOpen}
+      >
+        {sidebarContent}
+      </aside>
 
       <aside 
         className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24' : 'w-64'}`}
