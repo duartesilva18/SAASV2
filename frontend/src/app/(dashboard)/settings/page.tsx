@@ -7,7 +7,7 @@ import {
   CreditCard, Download, 
   Trash2, CheckCircle2, AlertCircle, Loader2,
   ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink,
-  Lock, Mail
+  Lock, Mail, X
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
