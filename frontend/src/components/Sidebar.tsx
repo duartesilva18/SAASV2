@@ -317,15 +317,19 @@ export default function Sidebar({
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-2 md:gap-2">
-                  <span className={`text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest ${
-                    user.is_admin 
-                      ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
-                      : isPro 
-                        ? (currentPlan?.variant === 'basic' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : currentPlan?.variant === 'plus' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
-                        : 'bg-slate-800 text-slate-500 border-white/5'
-                  }`}>
+                  <Link
+                    href="/plans"
+                    className={`inline-block text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest transition-colors hover:opacity-80 !cursor-pointer ${
+                      user.is_admin 
+                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                        : isPro 
+                          ? (currentPlan?.variant === 'basic' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : currentPlan?.variant === 'plus' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
+                          : 'bg-slate-800 text-slate-500 border-white/5'
+                    }`}
+                    title={t.dashboard.sidebar.plans}
+                  >
                     {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? (currentPlan?.label ?? t.dashboard.sidebar.planPro) : t.dashboard.sidebar.planFree}
-                  </span>
+                  </Link>
                   {/* Notificações: escondido no mobile (sino fica só no header) */}
                   <div className="hidden md:hidden shrink-0 ml-1">
                     <button 

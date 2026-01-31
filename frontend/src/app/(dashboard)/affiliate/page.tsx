@@ -84,6 +84,7 @@ export default function AffiliatePage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number; isPlanBased?: boolean } | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [stripeConnectLoading, setStripeConnectLoading] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
@@ -928,6 +929,14 @@ export default function AffiliatePage() {
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowWithdrawModal(true)}
+              className="mt-3 w-full px-4 py-2 text-xs text-slate-400 hover:text-amber-400 font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Info className="w-4 h-4" />
+              {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
+            </button>
           </motion.div>
 
           {/* Affiliate Link */}
@@ -1112,6 +1121,56 @@ export default function AffiliatePage() {
               <button
                 onClick={() => setShowTutorialModal(false)}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer"
+              >
+                {t.dashboard?.affiliate?.modalUnderstand || "Entendi"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal Como levantar o dinheiro */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowWithdrawModal(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <DollarSign className="w-6 h-6 text-amber-400" />
+                {(t.dashboard?.affiliate as Record<string, string>)?.['withdrawModalTitle'] ?? "Como levantar o dinheiro das comissões?"}
+              </h2>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {(t.dashboard?.affiliate as Record<string, string>)?.['withdrawStep1'] ?? "1. As comissões entram na tua conta Stripe Connect (não vão diretamente para o banco)."}
+              </p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {(t.dashboard?.affiliate as Record<string, string>)?.['withdrawStep2'] ?? "2. O Stripe envia o dinheiro para a tua conta bancária automaticamente, conforme o calendário de payouts (ex.: diário ou semanal)."}
+              </p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {(t.dashboard?.affiliate as Record<string, string>)?.['withdrawStep3'] ?? "3. Se ainda não adicionaste uma conta bancária, faz login no Dashboard Stripe e completa o onboarding."}
+              </p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {(t.dashboard?.affiliate as Record<string, string>)?.['withdrawStep4'] ?? "4. No Dashboard Stripe podes ver o saldo, o histórico de payouts e alterar a frequência dos envios."}
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-black rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer"
               >
                 {t.dashboard?.affiliate?.modalUnderstand || "Entendi"}
               </button>

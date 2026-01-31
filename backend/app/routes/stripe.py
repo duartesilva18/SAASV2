@@ -88,9 +88,10 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         
         # Adicionar divisão automática se aplicável
         # Para subscriptions, usar subscription_data com application_fee_percent
+        # application_fee_percent = percentagem que a PLATAFORMA fica (o resto vai para transfer_data.destination)
+        # Queremos afiliado a receber commission_percentage (ex: 20%), logo plataforma fica 100 - commission (ex: 80%)
         if application_fee_amount and transfer_data:
-            # Calcular percentagem da comissão e arredondar para 2 casas decimais (máximo do Stripe)
-            application_fee_percent = round((application_fee_amount / total_amount_cents) * 100, 2)
+            application_fee_percent = round(100 - commission_percentage, 2)
             
             subscription_data['application_fee_percent'] = application_fee_percent
             subscription_data['transfer_data'] = transfer_data

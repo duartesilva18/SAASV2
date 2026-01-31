@@ -1058,7 +1058,13 @@ export const pt = {
           trendDown: "Diminuindo",
           trendStable: "Estável",
           stripeError: "Erro ao aceder ao Stripe",
-          copyFullLinkTitle: "Copiar link completo"
+          copyFullLinkTitle: "Copiar link completo",
+          howToWithdraw: "Como levantar o dinheiro?",
+          withdrawModalTitle: "Como levantar o dinheiro das comissões?",
+          withdrawStep1: "1. As comissões entram na tua conta Stripe Connect (não vão diretamente para o banco).",
+          withdrawStep2: "2. O Stripe envia o dinheiro para a tua conta bancária automaticamente, conforme o calendário de payouts (ex.: diário ou semanal).",
+          withdrawStep3: "3. Ao configurar o Stripe Connect, inseres os teus dados (nome, morada, IBAN) — não precisas de conta Stripe. O Stripe cria a conta Connect para ti.",
+          withdrawStep4: "4. No Dashboard Stripe podes ver o saldo, o histórico de payouts e alterar a frequência dos envios."
       },
       support: {
           tooltip: "Contactar suporte",
