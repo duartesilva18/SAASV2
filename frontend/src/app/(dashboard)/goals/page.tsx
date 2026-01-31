@@ -214,18 +214,18 @@ export default function GoalsPage() {
     }));
 
   return (
-    <div className="w-full max-w-none space-y-12 pb-20 px-6 md:px-10 xl:px-14">
+    <div className="w-full max-w-none space-y-8 sm:space-y-12 pb-20 px-4 sm:px-6 md:px-10 xl:px-14">
       {/* Header */}
       <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
+          <div className="space-y-3 sm:space-y-4 min-w-0">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
               <Trophy size={14} /> {t.dashboard.goals.badge}
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase leading-none">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white uppercase leading-tight">
               {t.dashboard.goals.title.split(' ').slice(0, -1).join(' ')} <span className="text-blue-500 italic">{t.dashboard.goals.title.split(' ').slice(-1)[0]}</span>
             </h1>
-            <p className="text-slate-500 font-medium max-w-xl italic text-lg">
+            <p className="text-slate-500 font-medium max-w-xl italic text-sm sm:text-base md:text-lg">
               "{t.dashboard.goals.subtitle}" - {t.dashboard.goals.subtitleQuote}
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function GoalsPage() {
               });
               setShowNotifications(true);
             }}
-            className="group flex items-center gap-3 px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-95 cursor-pointer"
+            className="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-95 cursor-pointer w-full sm:w-auto"
           >
             {t.dashboard.goals.newGoal} <Plus size={18} />
           </button>
@@ -251,7 +251,7 @@ export default function GoalsPage() {
       </section>
 
       {/* Grid de Metas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
         {goals.map((goal) => {
           // Usar saldo disponível em vez de current_amount_cents
           const targetAmountEuros = goal.target_amount_cents / 100;
@@ -266,7 +266,7 @@ export default function GoalsPage() {
               key={goal.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group bg-gradient-to-b from-slate-900/70 to-slate-950/80 backdrop-blur-xl border border-white/5 p-8 rounded-[32px] relative overflow-hidden hover:border-blue-500/25 transition-all hover:shadow-[0_20px_70px_-24px_rgba(37,99,235,0.4)]"
+              className="group bg-gradient-to-b from-slate-900/70 to-slate-950/80 backdrop-blur-xl border border-white/5 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] relative overflow-hidden hover:border-blue-500/25 transition-all hover:shadow-[0_20px_70px_-24px_rgba(37,99,235,0.4)]"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors" />
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/[0.03] to-white/0 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -388,9 +388,9 @@ export default function GoalsPage() {
       </div>
 
       {/* Insights de Metas */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-12 sm:mt-0">
-        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-[32px] p-8">
-          <div className="flex items-center justify-between mb-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-10 md:mt-12 sm:mt-0">
+        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.goals.chartTypesLabel}</p>
               <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTypesTitle}</h3>
@@ -418,8 +418,8 @@ export default function GoalsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-[32px] p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.goals.chartTopLabel}</p>
               <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTopTitle}</h3>
@@ -493,10 +493,10 @@ export default function GoalsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+                <div className="space-y-4 sm:space-y-6">
                   <div>
-                    <label className="required-label text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalName}</label>
+                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalName}</label>
                     <input 
                       type="text"
                       value={formData.name}
@@ -504,14 +504,14 @@ export default function GoalsPage() {
                         setFormData({ ...formData, name: e.target.value });
                         if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
                       }}
-                      className={`w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-black uppercase tracking-widest focus:border-blue-500 focus:bg-white/10 outline-none transition-all placeholder:text-slate-700 ${errors.name ? 'field-error' : ''}`}
+                      className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base text-white font-black uppercase tracking-widest focus:border-blue-500 focus:bg-white/10 outline-none transition-all placeholder:text-slate-700 min-h-[48px] ${errors.name ? 'field-error' : ''}`}
                       placeholder={t.dashboard.goals.goalNamePlaceholder}
                     />
                     {errors.name && <p className="field-error-message">{errors.name}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.targetAmount}</label>
+                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.targetAmount}</label>
                     <div className="relative">
                       <input 
                         type="number" 
@@ -527,16 +527,16 @@ export default function GoalsPage() {
                             e.currentTarget.select();
                           }
                         }}
-                        className={`w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 pr-12 text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all ${errors.amount ? 'field-error' : ''}`}
+                        className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 pr-10 sm:pr-12 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all min-h-[48px] ${errors.amount ? 'field-error' : ''}`}
                         placeholder="0.00"
                       />
-                      <span className="absolute right-6 top-1/2 -translate-y-1/2 text-white font-black">€</span>
+                      <span className="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 text-white font-black text-sm sm:text-base">€</span>
                     </div>
                     {errors.amount && <p className="field-error-message">{errors.amount}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalType}</label>
+                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalType}</label>
                     <div className="relative">
                       <select
                         value={formData.goal_type}
@@ -544,20 +544,20 @@ export default function GoalsPage() {
                           setFormData({ ...formData, goal_type: e.target.value });
                           if (errors.type) setErrors(prev => ({ ...prev, type: undefined }));
                         }}
-                        className={`goal-type-select w-full appearance-none border border-white/10 rounded-2xl px-6 py-4 pr-12 text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all cursor-pointer ${errors.type ? 'field-error' : ''} ${
+                        className={`goal-type-select w-full appearance-none border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 pr-10 sm:pr-12 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all cursor-pointer min-h-[48px] ${errors.type ? 'field-error' : ''} ${
                           formData.goal_type === 'expense' ? 'bg-blue-950/60' : 'bg-white/5'
                         }`}
                       >
                         <option value="expense">{t.dashboard.goals.typeExpense}</option>
                         <option value="income">{t.dashboard.goals.typeIncome}</option>
                       </select>
-                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <ChevronDown size={18} className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
                     {errors.type && <p className="field-error-message">{errors.type}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.deadline}</label>
+                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.deadline}</label>
                     <input 
                       type="date"
                       value={formData.target_date}
@@ -565,7 +565,7 @@ export default function GoalsPage() {
                         setFormData({ ...formData, target_date: e.target.value });
                         if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
                       }}
-                      className={`w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all ${errors.date ? 'field-error' : ''}`}
+                      className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all min-h-[48px] ${errors.date ? 'field-error' : ''}`}
                     />
                     {errors.date && <p className="field-error-message">{errors.date}</p>}
                   </div>

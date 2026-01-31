@@ -93,7 +93,7 @@ export default function ZenInsights() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-blue-600 rounded-[32px] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-blue-600/20 relative overflow-hidden"
+        className="bg-blue-600 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 shadow-2xl shadow-blue-600/20 relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />

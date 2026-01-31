@@ -350,40 +350,40 @@ export default function VaultPage() {
       className="text-white pb-20"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-12">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center">
-            <Landmark size={24} />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8 md:mb-12">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Landmark size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-white">{t.dashboard.vault.title}</h1>
-            <p className="text-sm text-slate-400 mt-1">{t.dashboard.vault.subtitle}</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-white truncate">{t.dashboard.vault.title}</h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">{t.dashboard.vault.subtitle}</p>
           </div>
         </div>
       </div>
 
       {/* Vault Cards Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12">
         {/* Fundo de Emergência */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden"
+          className="bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">{t.dashboard.vault.emergencyFund}</p>
-                <p className="text-3xl font-black text-white">{formatCurrency(vaultData.emergencyTotal)}</p>
+            <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1 sm:mb-2">{t.dashboard.vault.emergencyFund}</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-black text-white truncate" title={formatCurrency(vaultData.emergencyTotal)}>{formatCurrency(vaultData.emergencyTotal)}</p>
               </div>
-              <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center">
-                <ShieldCheck size={32} className="text-blue-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-blue-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+                <ShieldCheck size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8 text-blue-400" />
               </div>
             </div>
             
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-6">
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4 sm:mb-6">
               <div 
                 className="h-full bg-blue-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, (vaultData.emergencyTotal / 10000) * 100)}%` }}
@@ -391,7 +391,7 @@ export default function VaultPage() {
             </div>
 
             {vaultData.emergencyCategory && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setVaultModal({ open: true, category: vaultData.emergencyCategory, action: 'add' })}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl transition-all group/btn cursor-pointer"
@@ -417,21 +417,21 @@ export default function VaultPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-[32px] p-8 relative overflow-hidden"
+          className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">{t.dashboard.vault.zenInvestments}</p>
-                <p className="text-3xl font-black text-emerald-400">{formatCurrency(vaultData.investmentTotal)}</p>
+            <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 sm:mb-2">{t.dashboard.vault.zenInvestments}</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-400 truncate" title={formatCurrency(vaultData.investmentTotal)}>{formatCurrency(vaultData.investmentTotal)}</p>
               </div>
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-                <Target size={32} className="text-emerald-400" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+                <Target size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-400" />
               </div>
             </div>
             
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-6">
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4 sm:mb-6">
               <div 
                 className="h-full bg-emerald-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, (vaultData.investmentTotal / 10000) * 100)}%` }}
@@ -439,7 +439,7 @@ export default function VaultPage() {
             </div>
 
             {vaultData.investmentCategory && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setVaultModal({ open: true, category: vaultData.investmentCategory, action: 'add' })}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl transition-all group/btn cursor-pointer"
@@ -461,13 +461,13 @@ export default function VaultPage() {
       </div>
 
       {/* Period Selector */}
-      <div className="flex flex-wrap items-center gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 rounded-[24px] mb-6">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-3 sm:p-4 rounded-xl sm:rounded-[24px] mb-4 sm:mb-6">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
           <Calendar size={14} className="text-blue-500" />
           <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Período</span>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {[
             { key: '7D', label: '7 Dias' },
             { key: '30D', label: '30 Dias' },
@@ -477,7 +477,7 @@ export default function VaultPage() {
             <button
               key={period.key}
               onClick={() => setSelectedPeriod(period.key as any)}
-              className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
+              className={`px-2.5 sm:px-4 py-1.5 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border shrink-0 ${
                 selectedPeriod === period.key
                   ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20'
                   : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-700 hover:text-slate-300'
@@ -496,10 +496,10 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <ShieldCheck className="text-blue-400" size={20} />
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <ShieldCheck className="text-blue-400 shrink-0" size={18} />
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionEmergency}</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
@@ -580,9 +580,9 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <Target className="text-emerald-400" size={20} />
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionInvestments}</h3>
           </div>
@@ -667,9 +667,9 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               <ShieldCheck className="text-blue-400" size={18} />
               <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.monthlyActivity}</h3>
@@ -752,9 +752,9 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               <Target className="text-emerald-400" size={18} />
               <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.monthlyActivity}</h3>
@@ -840,9 +840,9 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <ShieldCheck className="text-blue-400" size={20} />
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.transactionsEmergency}</h3>
           </div>
@@ -887,9 +887,9 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6"
+          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <Target className="text-emerald-400" size={20} />
             <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.transactionsInvestments}</h3>
           </div>
@@ -946,9 +946,9 @@ export default function VaultPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6 w-full max-w-sm shadow-2xl"
+              className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 w-full max-w-sm shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                     vaultModal.action === 'add' 

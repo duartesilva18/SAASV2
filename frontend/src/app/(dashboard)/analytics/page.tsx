@@ -759,35 +759,34 @@ export default function AnalyticsPage() {
       className="space-y-8 pb-20 relative"
     >
       {/* Header – compacto para choque visual logo abaixo */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white mb-1">
             {t.dashboard.analytics.title}
           </h1>
-          <p className="text-slate-500 text-sm font-medium italic">
+          <p className="text-slate-500 text-xs sm:text-sm font-medium italic">
             {t.dashboard.analytics.subtitle}
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
-          {!isPro && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl"
+        {!isPro && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-amber-500/10 border border-amber-500/20 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl w-full sm:w-auto"
+          >
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 truncate">{t.dashboard.page.demoMode}</span>
+            </div>
+            <Link 
+              href="/pricing"
+              className="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 sm:py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
-              <Link 
-                href="/pricing"
-                className="ml-2 bg-amber-500 hover:bg-amber-400 text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer"
-              >
-                {t.dashboard.page.upgradePro}
-              </Link>
-            </motion.div>
-          )}
-          
-        </div>
+              {t.dashboard.page.upgradePro}
+            </Link>
+          </motion.div>
+        )}
       </div>
 
       {/* Mensagem se não tiver nenhuma transação (Pro) */}
@@ -853,17 +852,17 @@ export default function AnalyticsPage() {
       {hasEnoughData && (
       <>
       {/* Filtro período – topo */}
-        <div className="flex flex-wrap items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 rounded-2xl mb-6">
-        <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/10 p-3 sm:p-4 rounded-2xl mb-4 sm:mb-6 overflow-x-auto">
+        <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-xl shrink-0">
           <Calendar size={12} className="text-blue-500" />
           <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.periodFilters}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           {Object.entries(chartPeriods).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setSelectedPeriod(key as '7D' | '30D' | '90D' | '12M' | 'Tudo')}
-              className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border shrink-0 ${
                 selectedPeriod === key ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
@@ -874,9 +873,9 @@ export default function AnalyticsPage() {
       </div>
 
       {/* 3 cards compactos: Saúde | Taxa Poupança | Resultado (estilo dashboard) */}
-      <section className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+      <section className="mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl">
             <div className="flex items-center justify-between mb-1">
               <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
                 <Activity size={18} />
@@ -892,7 +891,7 @@ export default function AnalyticsPage() {
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl">
             <div className="flex items-center justify-between mb-1">
               <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
                 <Target size={18} />
@@ -908,7 +907,7 @@ export default function AnalyticsPage() {
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-5 rounded-2xl border border-white/10 shadow-xl">
+          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl sm:col-span-2 md:col-span-1">
             <div className="flex items-center justify-between mb-1">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                 <Wallet size={18} />
@@ -922,7 +921,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Insight uma linha – compacto */}
-        <div className="mt-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/20 rounded-2xl px-4 py-3 flex items-center gap-3">
+        <div className="mt-3 sm:mt-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/20 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
           <Sparkles size={14} className="text-blue-400 shrink-0" />
           <p className="text-[10px] font-medium text-slate-300 italic truncate">
             {hasLowConfidence || !processedData?.summary || (String(processedData.summary || '').trim() === '') || maxWeekly.name === 'N/A'
@@ -935,9 +934,9 @@ export default function AnalyticsPage() {
       {/* Análise Pro – gráficos: estrutura fixa (top 10), cores vivas, tooltip = dashboard */}
       <section className="mb-12 space-y-6">
         {/* Linha 1: 2/3 Evolução do saldo | 1/3 Ritmo mensal */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução do saldo</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução do saldo</h3>
             <p className="text-xs text-slate-500 font-medium italic mb-4">Património acumulado ao longo do tempo</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -951,9 +950,9 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.monthlyRhythm}</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.expensesByWeekday}</p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.monthlyRhythm}</h3>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.expensesByWeekday}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.weekly || []} margin={{ top: 8, right: 8, bottom: 8 }}>
@@ -972,9 +971,9 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Linha 2: 1/3 Categorias em risco | 2/3 Comparação atual anterior */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">Categorias em risco</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">Categorias em risco</h3>
             {processedData.categoriesAtRisk?.length > 0 ? (
               <div className="space-y-3 mb-4">
                 {(processedData.categoriesAtRisk as { category_name?: string; name?: string; risk_level?: string; risk_percent?: number; projected?: number; limit?: number }[]).map((c: any, i: number) => {
@@ -1026,11 +1025,11 @@ export default function AnalyticsPage() {
                 {t.dashboard?.analytics?.adjustLimits ?? 'Ajustar limites'}
               </Link>
             )}
-            <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-3 sm:pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.comparisonPeriodSubtitle}</p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.comparisonPeriodSubtitle}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={(() => {
@@ -1055,10 +1054,10 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Linha 3: 3/3 Volume por mês */}
-        <div className="grid grid-cols-1 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.volumeByMonthTitle}</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.analytics.volumeByMonthSubtitle}</p>
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.volumeByMonthTitle}</h3>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.volumeByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
@@ -1073,10 +1072,10 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Linha 4: 2/3 Despesas por mês | 1/3 Progresso das metas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{(t.dashboard.analytics as any).expensesByMonth}</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">{(t.dashboard.analytics as any).expensesByMonthSubtitle}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{(t.dashboard.analytics as any).expensesByMonth}</h3>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{(t.dashboard.analytics as any).expensesByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={processedData.expensesByDayOfMonth || []} margin={{ top: 4, right: 4, bottom: 4 }}>
@@ -1089,8 +1088,8 @@ export default function AnalyticsPage() {
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-4">{t.dashboard.analytics.goalsProgressTitle}</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-3 sm:mb-4">{t.dashboard.analytics.goalsProgressTitle}</h3>
             {goals.length > 0 ? (
               <div className="space-y-4">
                 {goals.slice(0, 4).map((g: any, idx: number) => {
@@ -1130,9 +1129,9 @@ export default function AnalyticsPage() {
         </button>
         {/* Vault (Reservas e Investimentos) */}
         {isVaultOpen && (
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden group">
+        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden group">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6 md:mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
                 <Landmark size={20} />
@@ -1144,7 +1143,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
             {(() => {
               const emergencyCategory = rawData.categories.find((c: any) => c.vault_type === 'emergency');
               const investmentCategory = rawData.categories.find((c: any) => c.vault_type === 'investment');
@@ -1153,7 +1152,7 @@ export default function AnalyticsPage() {
                 <>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
+                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.emergencyFund}</p>
                     <p className="text-lg font-black text-white text-center mb-3">{formatCurrency(processedData.emergencyTotal)}</p>
@@ -1184,7 +1183,7 @@ export default function AnalyticsPage() {
                   </motion.div>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-4 rounded-2xl relative group"
+                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">Investimentos</p>
                     <p className="text-lg font-black text-emerald-400 text-center mb-3">{formatCurrency(processedData.investmentTotal)}</p>
@@ -1253,8 +1252,8 @@ export default function AnalyticsPage() {
       {isRecurringOpen && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upcoming Payments */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center gap-3 mb-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6`}>
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
             <Clock className="text-orange-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.upcoming}</h3>
           </div>
@@ -1302,8 +1301,8 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Recent Transactions Feed */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6`}>
-          <div className="flex items-center gap-3 mb-8">
+        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6`}>
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
             <History className="text-blue-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.recentActivity}</h3>
           </div>
@@ -1356,7 +1355,7 @@ export default function AnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden"
+            className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
             <div className="relative z-10">
@@ -1449,7 +1448,7 @@ export default function AnalyticsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
-              className={`bg-slate-900/40 backdrop-blur-xl border rounded-[32px] p-8 flex flex-col gap-6 relative overflow-hidden ${
+              className={`bg-slate-900/40 backdrop-blur-xl border rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden ${
                 insight.type === 'warning' ? 'border-red-500/20 shadow-red-500/5 shadow-2xl' : 
                 insight.type === 'danger' ? 'border-red-500/30 shadow-red-500/10 shadow-2xl' :
                 insight.type === 'success' ? 'border-emerald-500/20 shadow-emerald-500/5 shadow-2xl' :
@@ -1524,9 +1523,9 @@ export default function AnalyticsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-[32px] p-6 w-full max-w-sm shadow-2xl"
+              className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 w-full max-w-sm shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                     vaultModal.action === 'add' 
@@ -1629,7 +1628,7 @@ export default function AnalyticsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/10 blur-[80px] rounded-full -z-10" />
               

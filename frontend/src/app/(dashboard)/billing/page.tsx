@@ -147,23 +147,23 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-20 px-4 md:px-8">
+    <div className="max-w-[1400px] mx-auto space-y-8 sm:space-y-12 pb-20 px-4 md:px-8">
       {/* Header */}
       <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
+          <div className="space-y-3 sm:space-y-4 min-w-0">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
               <ShieldCheck size={14} /> {b.secureBilling}
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white uppercase leading-none">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white uppercase leading-tight">
               {b.title}<span className="text-blue-500 italic">{b.titleAccent}</span>
             </h1>
-            <p className="text-slate-500 font-medium max-w-xl">{b.subtitle}</p>
+            <p className="text-slate-500 font-medium max-w-xl text-sm sm:text-base">{b.subtitle}</p>
           </div>
 
           <button 
             onClick={handlePortal}
-            className="group flex items-center gap-3 px-8 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-95 cursor-pointer"
+            className="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-95 cursor-pointer w-full sm:w-auto shrink-0"
           >
             {b.manage}
             <ExternalLink size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -172,16 +172,16 @@ export default function BillingPage() {
       </section>
 
       {/* Subscription Card */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[50px] rounded-full -mr-16 -mt-16" />
           <div className="relative z-10">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{b.currentPlan}</p>
-            <h3 className="text-3xl font-black text-white uppercase tracking-tighter">{subData?.plan_name}</h3>
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tighter truncate">{subData?.plan_name}</h3>
           </div>
           <div className="mt-8 relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 rounded-full text-blue-400 text-[10px] font-bold">
@@ -194,7 +194,7 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="relative z-10">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{b.status}</p>
@@ -223,7 +223,7 @@ export default function BillingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[32px] flex flex-col justify-between group overflow-hidden relative"
         >
           <div className="relative z-10">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{b.nextPayment}</p>
@@ -333,7 +333,7 @@ export default function BillingPage() {
       )}
 
       {/* Info Banner */}
-      <section className="bg-blue-600/5 border border-blue-500/10 rounded-[32px] p-8 flex flex-col md:flex-row items-center gap-6">
+      <section className="bg-blue-600/5 border border-blue-500/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center gap-4 sm:gap-6">
         <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
           <ShieldCheck size={24} />
         </div>

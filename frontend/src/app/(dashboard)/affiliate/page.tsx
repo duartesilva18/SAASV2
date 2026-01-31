@@ -219,35 +219,35 @@ export default function AffiliatePage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-[32px] p-12 md:p-16 shadow-2xl overflow-hidden"
+          className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-2xl sm:rounded-[32px] p-6 sm:p-10 md:p-12 lg:p-16 shadow-2xl overflow-hidden"
         >
           {/* Background Glow */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full -z-10" />
           
-          <div className="relative z-10 text-center space-y-8">
+          <div className="relative z-10 text-center space-y-4 sm:space-y-6 md:space-y-8">
             {/* Icon */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto border border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.3)]"
+              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto border border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.3)]"
             >
-              <Sparkles className="w-12 h-12 text-blue-400" />
+              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-blue-400" />
             </motion.div>
             
             {/* Title */}
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+            <div className="space-y-3 sm:space-y-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tighter leading-tight">
                 Programa de <span className="text-blue-400">Afiliados</span>
               </h1>
-              <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+              <p className="text-slate-400 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
                 Ganha comissões ao referir novos utilizadores! Quando alguém se regista através do teu link e subscreve Pro, recebes uma comissão.
               </p>
             </div>
             
             {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto my-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-3xl mx-auto my-4 sm:my-6 md:my-8">
               {[
                 { icon: Users, text: t.dashboard.affiliate.monthlyCommissionsLabel, colorClass: 'text-blue-400' },
                 { icon: TrendingUp, text: t.dashboard.affiliate.noLimits, colorClass: 'text-emerald-400' },
@@ -290,7 +290,7 @@ export default function AffiliatePage() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleRequestAffiliate}
                 disabled={requesting}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-10 py-5 rounded-[24px] font-black uppercase tracking-[0.2em] text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-3 mx-auto shadow-[0_0_30px_rgba(59,130,246,0.4)]"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 sm:px-8 md:px-10 py-4 sm:py-5 rounded-xl sm:rounded-[24px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-xs sm:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 sm:gap-3 mx-auto shadow-[0_0_30px_rgba(59,130,246,0.4)] w-full sm:w-auto justify-center"
               >
                 Quer ser afiliado?
                 <ArrowRight className="w-5 h-5" />
@@ -396,22 +396,22 @@ export default function AffiliatePage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between gap-6 pb-4 border-b border-white/5"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 pb-4 border-b border-white/5"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-xl flex items-center justify-center border border-amber-500/30">
-            <Sparkles className="w-6 h-6 text-amber-400" />
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-xl flex items-center justify-center border border-amber-500/30 shrink-0">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tighter">
               Programa de <span className="text-amber-400">Afiliados</span>
             </h1>
-            <p className="text-xs text-slate-400 font-medium">Ganha comissões ao referir novos utilizadores</p>
+            <p className="text-xs text-slate-400 font-medium truncate">Ganha comissões ao referir novos utilizadores</p>
           </div>
         </div>
         {status.affiliate_code && (
-          <div className="flex items-center gap-3 bg-slate-900/50 border border-amber-500/20 rounded-xl px-4 py-2">
-            <code className="text-lg font-black text-amber-400 tracking-tighter">{status.affiliate_code}</code>
+          <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/50 border border-amber-500/20 rounded-xl px-3 sm:px-4 py-2 min-w-0 shrink-0">
+            <code className="text-sm sm:text-lg font-black text-amber-400 tracking-tighter truncate">{status.affiliate_code}</code>
             <button
               onClick={() => copyToClipboard(status.affiliate_code!)}
               className="p-1.5 hover:bg-white/10 rounded-lg transition-all"
@@ -427,33 +427,33 @@ export default function AffiliatePage() {
       </motion.div>
 
       {/* Stats Cards - Compact */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group"
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl relative overflow-hidden group min-w-0"
         >
           <div className="flex items-center justify-between mb-4">
             <Users className="w-8 h-8 text-amber-400" />
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Total de Referências</p>
-          <p className="text-3xl font-black text-white tracking-tighter">{status.total_referrals}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 sm:mb-2">Total de Referências</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter truncate">{status.total_referrals}</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-green-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group"
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-green-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl relative overflow-hidden group min-w-0"
         >
           <div className="flex items-center justify-between mb-4">
             <CheckCircle2 className="w-8 h-8 text-green-400" />
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Conversões</p>
-          <p className="text-3xl font-black text-white tracking-tighter">{status.total_conversions}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 sm:mb-2">Conversões</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter truncate">{status.total_conversions}</p>
           {stats && (
             <p className="text-xs text-slate-400 mt-2">Taxa: {stats.conversion_rate.toFixed(1)}%</p>
           )}
@@ -463,14 +463,14 @@ export default function AffiliatePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group"
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-blue-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl relative overflow-hidden group min-w-0"
         >
           <div className="flex items-center justify-between mb-4">
             <DollarSign className="w-8 h-8 text-blue-400" />
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Total Ganho</p>
-          <p className="text-3xl font-black text-white tracking-tighter">{formatPrice(status.total_earnings_cents)}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 sm:mb-2">Total Ganho</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter truncate">{formatPrice(status.total_earnings_cents)}</p>
           {stats && (
             <p className="text-xs text-slate-400 mt-2">Pago: {formatPrice(stats.paid_earnings_cents)}</p>
           )}
@@ -480,14 +480,14 @@ export default function AffiliatePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group"
+          className="bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-xl relative overflow-hidden group min-w-0"
         >
           <div className="flex items-center justify-between mb-4">
             <Clock className="w-8 h-8 text-amber-400" />
             <AlertCircle className="w-4 h-4 text-amber-400" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Pendente</p>
-          <p className="text-3xl font-black text-white tracking-tighter">{formatPrice(status.pending_earnings_cents)}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 sm:mb-2">Pendente</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter truncate">{formatPrice(status.pending_earnings_cents)}</p>
         </motion.div>
       </div>
 

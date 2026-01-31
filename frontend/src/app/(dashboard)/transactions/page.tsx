@@ -426,8 +426,8 @@ function TransactionsPageContent() {
             </h1>
           </div>
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-3 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
               <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
                 <ArrowUpRight size={14} className="text-emerald-500 shrink-0 sm:w-4 sm:h-4" />
@@ -436,7 +436,7 @@ function TransactionsPageContent() {
               <p className="text-lg sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-3 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-red-500/5 blur-[40px] rounded-full" />
               <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
                 <ArrowDownRight size={14} className="text-red-500 shrink-0 sm:w-4 sm:h-4" />
@@ -509,9 +509,9 @@ function TransactionsPageContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-3 bg-blue-500/5 border border-blue-500/10 rounded-2xl w-fit">
-          <Info size={14} className="text-blue-400" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <div className="flex items-start sm:items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/5 border border-blue-500/10 rounded-xl sm:rounded-2xl w-full sm:w-fit">
+          <Info size={14} className="text-blue-400 shrink-0 mt-0.5 sm:mt-0" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 min-w-0">
             {t.dashboard.transactions.zenTip} <span className="text-blue-400">{t.dashboard.transactions.zenTipText.split('Clica em qualquer linha')[0]}</span>{t.dashboard.transactions.zenTipText.split('Clica em qualquer linha')[1]}
           </p>
         </div>
@@ -795,27 +795,27 @@ function TransactionsPageContent() {
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} noValidate className="space-y-8">
+                <form onSubmit={handleSubmit} noValidate className="space-y-6 sm:space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.table.description}</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.table.description}</label>
                     <div className="relative group">
-                      <Activity size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                      <Activity size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                       <input
                         required
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         placeholder={t.dashboard.transactions.descriptionPlaceholder}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.value}</label>
+                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.value}</label>
                       <div className="relative group">
-                        <Wallet size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                        <Wallet size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                         <input
                           required
                           type="number"
@@ -823,35 +823,35 @@ function TransactionsPageContent() {
                           value={formData.amount}
                           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                           placeholder="0.00"
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.date}</label>
+                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.date}</label>
                       <div className="relative group">
-                        <Calendar size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                        <Calendar size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                         <input
                           required
                           type="date"
                           max={new Date().toISOString().split('T')[0]}
                           value={formData.transaction_date}
                           onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-5 text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.category}</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.category}</label>
                     <div className="relative group">
-                      <Tag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                      <Tag size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                       <select
                         required
                         value={formData.category_id}
                         onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
                       >
                         <option value="">{t.dashboard.transactions.selectCategory}</option>
                         {/* Separar receitas e despesas para facilitar seleção */}
@@ -953,7 +953,7 @@ function TransactionsPageContent() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 shadow-2xl overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
               

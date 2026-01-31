@@ -307,28 +307,28 @@ export default function SettingsPage() {
       transition={{ duration: 0.5 }}
       className="text-white"
     >
-      <h1 className="text-3xl font-black mb-8 tracking-tighter uppercase tracking-widest text-xs opacity-50">
+      <h1 className="text-2xl sm:text-3xl font-black mb-4 sm:mb-6 md:mb-8 tracking-tighter uppercase tracking-widest text-xs opacity-50">
         {t.dashboard.settings.title}
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Main Settings Form */}
         <div className="lg:col-span-2 space-y-8">
           <form onSubmit={handleSave} className="space-y-8">
             {/* Personal Data Section */}
-            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
+            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full -z-10" />
               
-              <div className="flex items-center gap-4 mb-10">
-                <div className="w-12 h-12 bg-blue-600/10 text-blue-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <User size={24} />
+              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 md:mb-10">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/10 text-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                  <User size={20} className="sm:w-6 sm:h-6" />
                 </div>
                 <h2 className="text-xl font-black tracking-tighter text-white uppercase tracking-widest text-[11px] opacity-60">
                   {t.dashboard.settings.personalData.title}
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
                 {/* Email (associado à conta) — somente leitura */}
                 <div className="space-y-3 md:col-span-2">
                   <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
@@ -415,20 +415,20 @@ export default function SettingsPage() {
             </section>
 
             {/* Preferences Section */}
-            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
+            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 blur-[80px] rounded-full -z-10" />
               
-              <div className="flex items-center gap-4 mb-10">
-                <div className="w-12 h-12 bg-indigo-600/10 text-indigo-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Coins size={24} />
+              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 md:mb-10">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600/10 text-indigo-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                  <Coins size={20} className="sm:w-6 sm:h-6" />
                 </div>
                 <h2 className="text-xl font-black tracking-tighter text-white uppercase tracking-widest text-[11px] opacity-60">
                   {t.dashboard.settings.preferences.title}
                 </h2>
               </div>
 
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4 sm:space-y-6 md:space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
                   {/* Currency */}
                   <div className="space-y-3">
                     <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
@@ -512,7 +512,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Alterar password — envia código ao email, depois altera no modal */}
-            <div className="space-y-4 p-6 bg-white/[0.02] border border-slate-800 rounded-2xl">
+            <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-white/[0.02] border border-slate-800 rounded-xl sm:rounded-2xl">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
                 {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
               </p>
@@ -546,19 +546,19 @@ export default function SettingsPage() {
         {/* Sidebar Settings (Billing & Danger Zone) */}
         <div className="space-y-8">
           {/* Telegram Card */}
-          <section className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 backdrop-blur-xl border border-blue-500/20 rounded-[32px] p-8 relative overflow-hidden hover:border-blue-500/40 transition-all group shadow-xl">
+          <section className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden hover:border-blue-500/40 transition-all group shadow-xl">
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-[60px] rounded-full -z-10" />
             
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-white">
-                <Send size={20} />
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-white shrink-0">
+                <Send size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h2 className="text-lg font-black tracking-tighter text-white uppercase tracking-widest text-[11px]">
+              <h2 className="text-base sm:text-lg font-black tracking-tighter text-white uppercase tracking-widest text-[11px]">
                 {t.dashboard.settings.telegramCard.title}
               </h2>
             </div>
 
-            <p className="text-slate-400 text-sm font-medium mb-8 leading-relaxed italic">
+            <p className="text-slate-400 text-xs sm:text-sm font-medium mb-4 sm:mb-6 md:mb-8 leading-relaxed italic">
               {t.dashboard.settings.telegramCard.description}
             </p>
 
@@ -566,32 +566,32 @@ export default function SettingsPage() {
               href="https://t.me/FinanZenApp_bot" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
             >
               {t.dashboard.settings.telegramCard.link} <ExternalLink size={14} />
             </a>
           </section>
 
           {/* Billing Card */}
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
+          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
             <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 blur-[60px] rounded-full -z-10" />
             
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <CreditCard size={20} />
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                <CreditCard size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h2 className="text-lg font-black tracking-tighter text-white">
+              <h2 className="text-base sm:text-lg font-black tracking-tighter text-white">
                 {t.dashboard.settings.billing.title}
               </h2>
             </div>
 
-            <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed italic">
+            <p className="text-slate-500 text-xs sm:text-sm font-medium mb-4 sm:mb-6 md:mb-8 leading-relaxed italic">
               {t.dashboard.settings.billingCard.description}
             </p>
 
             <button 
               onClick={handlePortal}
-              className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 sm:py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
             >
               {t.dashboard.settings.billing.portal} <ChevronRight size={14} />
             </button>
@@ -634,10 +634,10 @@ export default function SettingsPage() {
           </section>
 
           {/* Support Notice */}
-          <div className="p-8 bg-blue-600/5 border border-blue-500/10 rounded-[32px] text-center shadow-xl group hover:bg-blue-600/10 transition-colors">
-            <BellRing className="text-blue-500/60 mx-auto mb-4 group-hover:scale-110 transition-transform" size={32} />
-            <h4 className="text-white font-black tracking-tight mb-2 uppercase tracking-widest text-[10px] opacity-60">{t.dashboard.settings.needHelp}</h4>
-            <p className="text-slate-500 text-xs font-medium italic">{t.dashboard.settings.supportAvailable}</p>
+          <div className="p-4 sm:p-6 md:p-8 bg-blue-600/5 border border-blue-500/10 rounded-2xl sm:rounded-[32px] text-center shadow-xl group hover:bg-blue-600/10 transition-colors">
+            <BellRing className="text-blue-500/60 mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform" size={28} />
+            <h4 className="text-white font-black tracking-tight mb-1 sm:mb-2 uppercase tracking-widest text-[10px] opacity-60">{t.dashboard.settings.needHelp}</h4>
+            <p className="text-slate-500 text-[11px] sm:text-xs font-medium italic">{t.dashboard.settings.supportAvailable}</p>
           </div>
         </div>
       </div>
@@ -669,7 +669,7 @@ export default function SettingsPage() {
       {/* Modal Alterar Password (código + nova password) */}
       <AnimatePresence>
         {showChangePasswordModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -681,21 +681,21 @@ export default function SettingsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl"
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-[24px] sm:rounded-[32px] p-5 sm:p-8 shadow-2xl pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">
+              <div className="flex justify-between items-center gap-3 mb-4 sm:mb-8">
+                <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight min-w-0 truncate">
                   {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? 'Alterar password'}
                 </h3>
-                <button onClick={() => setShowChangePasswordModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer">
+                <button onClick={() => setShowChangePasswordModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
                   <X size={20} />
                 </button>
               </div>
-              <p className="text-sm text-slate-500 mb-6">
+              <p className="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-6">
                 {(t.auth as any).resetPassword?.subtitle?.replace('{email}', userEmail) ?? `Introduz o código enviado para ${userEmail}`}
               </p>
-              <form onSubmit={handleConfirmPasswordChange} className="space-y-6">
+              <form onSubmit={handleConfirmPasswordChange} className="space-y-4 sm:space-y-6">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
                     {(t.auth as any).resetPassword?.codeLabel ?? 'Código de 6 dígitos'}

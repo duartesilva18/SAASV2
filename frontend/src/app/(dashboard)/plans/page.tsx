@@ -200,7 +200,7 @@ export default function PlansPage() {
   };
 
   return (
-    <div className="space-y-20 pb-20 px-4 md:px-8 pt-10 max-w-7xl mx-auto">
+    <div className="space-y-10 sm:space-y-16 md:space-y-20 pb-20 px-4 md:px-8 pt-4 sm:pt-6 md:pt-10 max-w-7xl mx-auto">
       {/* Modal de loading ao abrir Stripe Checkout */}
       <AnimatePresence>
         {checkoutLoading && (
@@ -226,11 +226,11 @@ export default function PlansPage() {
       </AnimatePresence>
 
       {/* Header Section — igual à homepage */}
-      <section className="text-center mb-20 md:mb-28 lg:mb-32">
+      <section className="text-center mb-8 sm:mb-12 md:mb-20 lg:mb-28">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase"
+          className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-4 sm:mb-6 uppercase leading-tight"
         >
           Quanto vale ter{' '}
           <span className="text-blue-500 italic block md:inline">controlo total do teu dinheiro</span>?
@@ -239,7 +239,7 @@ export default function PlansPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-lg md:text-xl lg:text-2xl text-slate-400 mb-6 md:mb-8 max-w-2xl mx-auto"
+          className="text-sm sm:text-base md:text-lg lg:text-2xl text-slate-400 mb-4 sm:mb-6 md:mb-8 max-w-2xl mx-auto"
         >
           A maioria das pessoas não sabe para onde o dinheiro vai.
         </motion.p>
@@ -247,7 +247,7 @@ export default function PlansPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="text-lg md:text-xl lg:text-2xl text-white font-semibold mb-8 md:mb-10 max-w-2xl mx-auto"
+          className="text-sm sm:text-base md:text-lg lg:text-2xl text-white font-semibold mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto"
         >
           Quem usa a FinLy sabe. E alguns ainda ganham com isso.
         </motion.p>
@@ -255,14 +255,14 @@ export default function PlansPage() {
 
       {/* Plans Grid — cards iguais à homepage */}
       <section>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 items-stretch">
           {plans.map((plan: any, index: number) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`relative rounded-3xl p-8 md:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
+              className={`relative rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 lg:p-9 overflow-visible group transition-all duration-300 flex flex-col ${
                 plan.popular 
                   ? 'bg-slate-800/95 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] hover:border-blue-500/70' 
                   : 'bg-slate-800/80 border border-slate-600/50 hover:border-slate-500/60 hover:bg-slate-800/90'

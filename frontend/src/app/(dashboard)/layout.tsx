@@ -315,7 +315,7 @@ export default function DashboardLayout({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-[max(1rem,env(safe-area-inset-bottom))]"
+              className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
             >
               {children}
             </motion.div>
@@ -492,12 +492,12 @@ function MobileHeaderWithNotifications({
           </div>
         </div>
         {secondaryTabs && secondaryTabs.length > 0 && (
-          <nav className="flex items-center justify-center gap-1 overflow-x-auto no-scrollbar pb-1" aria-label="Menu secundário">
+          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" aria-label="Menu secundário">
             {secondaryTabs.map((tab) => (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                className={`px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center touch-manipulation ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
               >
                 {tab.label}
               </Link>

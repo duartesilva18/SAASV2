@@ -300,12 +300,12 @@ export default function RecurringPage() {
       `}</style>
       
       <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-6 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8 relative z-10">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full mb-4 sm:mb-6 text-blue-400 text-[10px] font-black uppercase tracking-widest">
               {t.dashboard.recurring.title}
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white leading-none uppercase">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white leading-tight uppercase">
               {t.dashboard.recurring.mySubscriptions} <span className="text-blue-500 italic">{t.dashboard.recurring.subscriptionsAccent}</span>
             </h1>
           </div>
@@ -382,11 +382,11 @@ export default function RecurringPage() {
         </div>
 
         {/* Main Selection Tabs */}
-        <div className="flex justify-center mt-12">
-          <div className="bg-slate-900/50 p-2 rounded-[24px] border border-slate-800 flex gap-2">
+        <div className="flex justify-center mt-8 sm:mt-12 overflow-x-auto">
+          <div className="bg-slate-900/50 p-2 rounded-xl sm:rounded-[24px] border border-slate-800 flex gap-2 min-w-0 shrink-0">
             <button
               onClick={() => setActiveTab('income')}
-              className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
+              className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-[22px] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs transition-all cursor-pointer shrink-0 ${
                 activeTab === 'income' 
                   ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20' 
                   : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -397,7 +397,7 @@ export default function RecurringPage() {
             </button>
             <button
               onClick={() => setActiveTab('expense')}
-              className={`flex items-center gap-3 px-10 py-4 rounded-[22px] font-black uppercase tracking-[0.2em] text-xs transition-all cursor-pointer ${
+              className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-[22px] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs transition-all cursor-pointer shrink-0 ${
                 activeTab === 'expense' 
                   ? 'bg-red-600 text-white shadow-xl shadow-red-600/20' 
                   : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -410,8 +410,8 @@ export default function RecurringPage() {
         </div>
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
-        <div className="flex items-center justify-between mb-8">
+      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
               <PieChartIcon size={16} />
@@ -422,7 +422,7 @@ export default function RecurringPage() {
             {activeTab === 'expense' ? t.dashboard.recurring.fixedExpenses : t.dashboard.recurring.fixedIncomes}
           </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           {weeklyPressure.map((week, index) => (
             <div key={index} className="bg-slate-950/50 border border-slate-800 rounded-[24px] p-6">
               <div className="flex items-center justify-between mb-4">
@@ -489,9 +489,9 @@ export default function RecurringPage() {
       {/* Gráficos de Análise */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfico 1: Proporção Receitas vs Despesas */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
               <PieChartIcon size={16} />
             </div>
             <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Proporção Mensal</h2>
@@ -540,9 +540,9 @@ export default function RecurringPage() {
         </div>
 
         {/* Gráfico 2: Distribuição por Categoria */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 lg:p-12">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
               <TrendingUp size={16} />
             </div>
             <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Por Categoria</h2>
@@ -581,13 +581,13 @@ export default function RecurringPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <AnimatePresence>
           {filteredRecurring.map((item) => (
-            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-[32px] p-8 cursor-pointer hover:border-blue-500/50 transition-all">
-              <div className="flex justify-between mb-8">
-                <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-blue-500">
-                  {item.process_automatically ? <Zap size={24} /> : <Clock size={24} />}
+            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 cursor-pointer hover:border-blue-500/50 transition-all">
+              <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
+                  {item.process_automatically ? <Zap size={20} className="sm:w-6 sm:h-6" /> : <Clock size={20} className="sm:w-6 sm:h-6" />}
                 </div>
                 <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-700 hover:text-red-500 cursor-pointer">
                   <Trash2 size={18} />
@@ -605,9 +605,9 @@ export default function RecurringPage() {
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] p-12">
-              <div className="flex justify-between mb-10">
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{editingId ? t.dashboard.recurring.editSubscription : t.dashboard.recurring.newSubscription} {t.dashboard.recurring.subscriptionLabel}</h2>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 md:p-12 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between gap-3 mb-6 sm:mb-8 md:mb-10">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-white uppercase tracking-tighter min-w-0">{editingId ? t.dashboard.recurring.editSubscription : t.dashboard.recurring.newSubscription} {t.dashboard.recurring.subscriptionLabel}</h2>
                 <button onClick={() => setShowAddModal(false)} className="text-slate-500 cursor-pointer"><X size={24} /></button>
               </div>
               <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -648,7 +648,7 @@ export default function RecurringPage() {
                         if (errors.description) setErrors({...errors, description: ''});
                       }} 
                       placeholder={t.dashboard.recurring.descriptionPlaceholder} 
-                      className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
+                      className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
                         errors.description ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                       }`} 
                     />
@@ -660,9 +660,9 @@ export default function RecurringPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">VALOR</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">VALOR</label>
                     <motion.div
                       animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -677,7 +677,7 @@ export default function RecurringPage() {
                           if (errors.amount) setErrors({...errors, amount: ''});
                         }} 
                         placeholder="0.00" 
-                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
+                        className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
                           errors.amount ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                         }`} 
                       />
@@ -690,7 +690,7 @@ export default function RecurringPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">DIA</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">DIA</label>
                     <motion.div
                       animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -706,7 +706,7 @@ export default function RecurringPage() {
                           setFormData({...formData, day_of_month: val});
                           if (errors.day_of_month) setErrors({...errors, day_of_month: ''});
                         }} 
-                        className={`w-full bg-slate-950 border rounded-2xl p-4 text-white outline-none transition-all cursor-pointer ${
+                        className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
                           errors.day_of_month ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
                         }`} 
                       />
@@ -719,14 +719,14 @@ export default function RecurringPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA</label>
+                  <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA</label>
                   <div className="relative group">
-                    <Tag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                    <Tag size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                     <select
                       required
                       value={formData.category_id}
                       onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
                     >
                       <option value="">{t.dashboard.recurring.selectCategory}</option>
                       {(() => {

@@ -273,34 +273,34 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-[28px] bg-slate-900 border border-slate-800 p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-[28px] bg-slate-900 border border-slate-800 p-4 sm:p-6 md:p-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[100px] -z-10" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-                <Layers size={20} />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
+                <Layers size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 truncate">
                 Gestão de Identidade
               </span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-4">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tighter mb-2 sm:mb-4">
               {t.dashboard.categories.title}
             </h1>
-            <p className="text-slate-400 font-medium max-w-xl italic">
+            <p className="text-slate-400 font-medium max-w-xl italic text-sm sm:text-base">
               {t.dashboard.categories.subtitle}
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 shrink-0">
             <button
               onClick={() => {
                 setEditingCategory(null);
                 setFormData({ name: '', nature: 'expense', monthly_limit: '', color_hex: COLORS[0], icon: 'Tag' });
                 setShowAddModal(true);
               }}
-              className="flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20 cursor-pointer"
+              className="flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 hover:bg-blue-500 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20 cursor-pointer w-full sm:w-auto"
             >
               <Plus size={18} />
               {t.dashboard.categories.addNew}
@@ -315,7 +315,7 @@ export default function CategoriesPage() {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-600/10 border border-blue-500/20 rounded-[32px] p-6 flex items-center gap-6"
+            className="bg-blue-600/10 border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
           >
             <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Landmark size={24} />
@@ -328,10 +328,10 @@ export default function CategoriesPage() {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Left: Charts & Stats */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
@@ -344,7 +344,7 @@ export default function CategoriesPage() {
             </div>
 
             {filteredStats.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 items-center">
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPie>
@@ -591,8 +591,8 @@ export default function CategoriesPage() {
         </div>
 
         {/* Right: Zen Tips & Legend */}
-        <div className="space-y-8">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] p-8 text-white relative overflow-hidden">
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10" />
             <Sparkles className="mb-6 opacity-80" size={32} />
             <h3 className="text-2xl font-black tracking-tighter mb-4 leading-none uppercase">{t.dashboard.categories.masterTip}</h3>
@@ -601,8 +601,8 @@ export default function CategoriesPage() {
             </p>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[32px] p-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6 flex items-center gap-2">
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6 flex items-center gap-2">
               <Target size={14} />
               Alvos este Mês
             </h4>
@@ -696,9 +696,9 @@ export default function CategoriesPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-8">
+                  <div className="space-y-6 sm:space-y-8">
                     <div className="relative group">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
+                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
                         {t.dashboard.categories.name}
                       </label>
                       <input
@@ -706,7 +706,7 @@ export default function CategoriesPage() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium"
+                        className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-6 sm:px-8 py-4 sm:py-5 text-sm sm:text-base text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium min-h-[48px]"
                         placeholder={t.dashboard.categories.namePlaceholder || "Category name"}
                       />
                     </div>
@@ -749,7 +749,7 @@ export default function CategoriesPage() {
                     </div>
 
                     <div className="relative group">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
+                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
                         {t.dashboard.categories.limit} (Opcional)
                       </label>
                       <div className="relative">
@@ -758,10 +758,10 @@ export default function CategoriesPage() {
                           step="0.01"
                           value={formData.monthly_limit}
                           onChange={(e) => setFormData({ ...formData, monthly_limit: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-16 font-black text-xl tracking-tighter"
+                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-6 sm:px-8 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-14 sm:pl-16 font-black text-lg sm:text-xl tracking-tighter min-h-[48px]"
                           placeholder="0.00"
                         />
-                        <span className="absolute left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-lg">
+                        <span className="absolute left-6 sm:left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-base sm:text-lg">
                           {currency === 'EUR' ? '€' : currency === 'BRL' ? 'R$' : '$'}
                         </span>
                       </div>

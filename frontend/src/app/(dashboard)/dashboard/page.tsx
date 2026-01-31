@@ -616,8 +616,8 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.filters}</span>
-          <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2">
-            <Calendar size={16} className="text-slate-400 shrink-0" />
+          <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-2 sm:px-3 py-2">
+            <Calendar size={14} className="text-slate-400 shrink-0 sm:w-4 sm:h-4" />
             <button
               type="button"
               disabled={snapshotLoading}
@@ -627,7 +627,7 @@ export default function DashboardPage() {
             >
               <ChevronLeft size={18} />
             </button>
-            <span className="text-sm font-bold text-white min-w-[140px] text-center capitalize flex items-center justify-center gap-2">
+            <span className="text-xs sm:text-sm font-bold text-white min-w-[100px] sm:min-w-[140px] text-center capitalize flex items-center justify-center gap-2">
               {snapshotLoading ? <Loader2 size={14} className="animate-spin text-slate-400 shrink-0" /> : null}
               {filterMonthLabel}
             </span>
@@ -678,10 +678,10 @@ export default function DashboardPage() {
 
       {/* 3 cards: Receitas | Despesas | Saldo */}
       <section className="mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -695,12 +695,12 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
-            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.income)}</p>
+            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className="w-10 h-10 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -714,12 +714,12 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
-            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(stats.expenses)}</p>
+            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group sm:col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -733,7 +733,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
-            <p className={`text-2xl font-black tracking-tighter ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className={`text-xl sm:text-2xl font-black tracking-tighter truncate ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)}>
               {formatCurrency(stats.balance)}
             </p>
           </motion.div>
@@ -755,9 +755,9 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl lg:col-span-2"
+            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2"
           >
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
             <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.page.last6Months}</p>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -801,9 +801,9 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl shadow-slate-900/20 flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
+            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl shadow-slate-900/20 flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
                 <Activity size={20} />
               </div>
@@ -895,9 +895,9 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 }}
-              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-1"
+              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl flex flex-col lg:col-span-1"
             >
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
+              <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
               <div className="space-y-3 flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -954,9 +954,9 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-xl flex flex-col lg:col-span-2"
+              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl flex flex-col lg:col-span-2"
             >
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
             <div className="flex-1 min-h-[180px] flex items-center justify-center">
               {chartProcessed.vaultByMonth.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
