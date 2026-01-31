@@ -597,38 +597,38 @@ export default function SettingsPage() {
             </button>
           </section>
 
-          {/* Danger Zone */}
-          <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-[32px] p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
+          {/* Danger Zone — responsiva para mobile */}
+          <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/5 blur-[40px] rounded-full -z-10" />
             
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <Trash2 size={20} />
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                <Trash2 size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <h2 className="text-lg font-black tracking-tighter text-red-500/60 uppercase tracking-widest text-[11px]">
+              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-red-500/60 uppercase tracking-widest min-w-0 truncate">
                 {t.dashboard.settings.dangerZone.title}
               </h2>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <button 
                 onClick={handleExportData}
                 disabled={exporting}
-                className="w-full py-4 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full min-h-[44px] py-3 sm:py-4 px-4 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
               >
-                {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> {t.dashboard.settings.dangerZone.export}</>}
+                {exporting ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Download size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.export}</span></>}
               </button>
               <button 
                 onClick={() => setShowPurgeConfirm(true)}
-                className="w-full py-4 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all border border-amber-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
               >
-                <Trash2 size={14} /> {t.dashboard.settings.dangerZone.purge}
+                <Trash2 size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.purge}</span>
               </button>
               <button 
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full py-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
               >
-                <Trash2 size={14} /> {t.dashboard.settings.dangerZone.delete}
+                <Trash2 size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.delete}</span>
               </button>
             </div>
           </section>
