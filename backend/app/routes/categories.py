@@ -12,6 +12,47 @@ from datetime import date
 
 router = APIRouter(prefix='/categories', tags=['categories'])
 
+
+@router.get('/suggestions')
+async def get_category_suggestions(
+    request: Request,
+    description: str = "",
+    tipo: str = "expense",
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Retorna scoring detalhado por categoria para debug/UX (motor de categorização)."""
+    workspace = getattr(request.state, 'workspace', None) or db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
+    categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id, models.Category.type == tipo).all()
+    if not categories:
+        return {"scores": [], "inference": None}
+    from ..core.categorization_engine import (
+        canonicalize,
+        extract_tokens,
+        apply_deterministic_rules,
+        lookup_merchant_registry,
+        compute_category_scores_from_tokens,
+        infer_category,
+    )
+    from ..core.config import settings
+    canonical = canonicalize(description)
+    tokens = extract_tokens(canonical, n=3)
+    merchant_match = lookup_merchant_registry(description, tipo, db, models)
+    rule_cat = apply_deterministic_rules(description, tipo)
+    category_scores, _ = compute_category_scores_from_tokens(tokens, workspace.id, tipo, db, models)
+    cat_id, source, needs_review, conf, reason, explain = infer_category(description, workspace.id, tipo, categories, db, models, settings, use_gemini=False)
+    return {
+        "canonical": canonical,
+        "tokens": tokens,
+        "merchant_registry": {"category": merchant_match[0], "alias": merchant_match[1]} if merchant_match else None,
+        "deterministic_rule": rule_cat,
+        "token_scores": {str(k): round(v, 4) for k, v in category_scores.items()},
+        "inference": {"category_id": str(cat_id) if cat_id else None, "source": source, "needs_review": needs_review, "confidence": round(conf or 0, 4), "reason": reason, "explain": explain},
+    }
+
+
 @router.get('/', response_model=List[schemas.CategoryResponse])
 async def get_categories(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # Usar workspace cacheado se disponível

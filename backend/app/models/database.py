@@ -118,6 +118,9 @@ class Transaction(Base):
     amount_cents = Column(Integer, nullable=False)
     description = Column(String(255), nullable=True)
     transaction_date = Column(Date, nullable=False, index=True)
+    inference_source = Column(String(50), nullable=True)
+    decision_reason = Column(String(255), nullable=True)
+    needs_review = Column(Boolean, nullable=False, default=False)
     is_installment = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
@@ -229,6 +232,9 @@ class TelegramPendingTransaction(Base):
     amount_cents = Column(Integer, nullable=False)
     description = Column(String(255), nullable=False)
     transaction_date = Column(Date, nullable=False)
+    inference_source = Column(String(50), nullable=True)
+    decision_reason = Column(String(255), nullable=True)
+    needs_review = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     workspace = relationship('Workspace')
@@ -249,6 +255,8 @@ class CategoryMappingCache(Base):
     transaction_type = Column(String(10), nullable=False)  # 'expense' ou 'income'
     usage_count = Column(Integer, nullable=False, default=1)  # Quantas vezes foi usado
     is_global = Column(Boolean, nullable=False, default=False)  # True = cache global partilhado
+    confidence = Column(Numeric(5, 4), nullable=False, default=1.0)
+    promoted_to_global = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_used_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
@@ -258,6 +266,57 @@ class CategoryMappingCache(Base):
     __table_args__ = (
         UniqueConstraint('workspace_id', 'description_normalized', 'transaction_type', name='unique_workspace_mapping'),
     )
+
+
+class TokenScore(Base):
+    """
+    Aprendizagem por token: token->categoria com count e score (por workspace).
+    """
+    __tablename__ = 'token_scores'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
+    token = Column(String(100), nullable=False)
+    category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='CASCADE'), nullable=False)
+    category_name = Column(String(100), nullable=False)
+    transaction_type = Column(String(10), nullable=False)
+    count = Column(Integer, nullable=False, default=1)
+    score = Column(Numeric(10, 4), nullable=False, default=1.0)
+    last_updated = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('workspace_id', 'token', 'category_id', 'transaction_type', name='unique_token_score'),
+    )
+
+
+class GeminiEvent(Base):
+    """
+    Log de chamadas Gemini para métricas e circuit-breaker.
+    """
+    __tablename__ = 'gemini_events'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='SET NULL'), nullable=True, index=True)
+    request_description = Column(String(500), nullable=False)
+    response_text = Column(String(200), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class MerchantRegistry(Base):
+    """
+    Registo de merchants e aliases para matching determinístico.
+    """
+    __tablename__ = 'merchant_registry'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    alias = Column(String(120), nullable=False, index=True)
+    canonical_name = Column(String(120), nullable=False)
+    category_name = Column(String(100), nullable=False)
+    transaction_type = Column(String(10), nullable=False)
+    usage_count = Column(Integer, nullable=False, default=1)
+    confidence = Column(Numeric(5, 4), nullable=False, default=1.0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
 
 class AffiliateReferral(Base):
     """

@@ -208,11 +208,33 @@ async def update_transaction(request: Request, transaction_id: UUID, transaction
     if 'transaction_date' in update_data and update_data['transaction_date'] > date.today():
         raise HTTPException(status_code=400, detail='Não são permitidas transações com data no futuro.')
 
+    old_category_id = db_transaction.category_id
     for field, value in update_data.items():
         setattr(db_transaction, field, value)
     
     db.commit()
     db.refresh(db_transaction)
+
+    # Aprendizagem: quando o utilizador corrige a categoria, atualizar token_scores e cache
+    if 'category_id' in update_data and db_transaction.description and db_transaction.category_id:
+        new_cat_id = db_transaction.category_id
+        if new_cat_id != old_category_id:
+            try:
+                from ..core.categorization_engine import learn_from_correction
+                cat = db.query(models.Category).filter(models.Category.id == new_cat_id).first()
+                if cat:
+                    learn_from_correction(
+                        db_transaction.description,
+                        new_cat_id,
+                        db_transaction.workspace_id,
+                        cat.type,
+                        cat.name,
+                        db,
+                        models,
+                    )
+            except Exception as e:
+                import logging
+                logging.getLogger("transactions").warning(f"Aprendizagem falhou: {e}")
     
     await log_action(db, action='update_transaction', user_id=current_user.id, details=f'id: {transaction_id}', request=request)
     return db_transaction

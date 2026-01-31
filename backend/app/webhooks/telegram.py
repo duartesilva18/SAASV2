@@ -351,37 +351,56 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
         else:
             description = "Transação Telegram"
         
-        # Se categoria foi especificada, usar diretamente (SEM ir ao cache ou Gemini)
+        inference_source = "fallback"
+        needs_review = True
+        decision_reason = ""
+        # Se categoria foi especificada, usar diretamente (SEM ir ao motor)
         if specified_category:
             category_id = specified_category.id
-            logger.info(f"✓ Usando categoria especificada pelo utilizador: '{specified_category_name}' (id: {category_id}) - PULANDO cache e Gemini")
+            inference_source = "explicit"
+            needs_review = False
+            decision_reason = f"explicit:{specified_category_name}"
+            logger.info(f"✓ Usando categoria especificada pelo utilizador: '{specified_category_name}' (id: {category_id})")
         else:
-            # Tentar encontrar categoria via cache (transações similares)
-            category_id = find_similar_transaction(description, workspace.id, db, tipo)
-            
-            # Se não encontrou no cache de transações, verificar cache de categorizações do Gemini
-            if not category_id:
-                description_normalized = normalize_text(description)
-                category_id = get_cached_category(description_normalized, workspace.id, tipo, categories, db)
-                
+            # Motor de categorização: regras, token-scoring, caches, Gemini fallback
+            try:
+                from ..core.categorization_engine import infer_category
+                from ..core.config import settings
+                cat_id, source, needs_review, conf, reason, explain = infer_category(
+                    description,
+                    workspace.id,
+                    tipo,
+                    categories,
+                    db,
+                    models,
+                    settings,
+                    explicit_category_id=None,
+                    use_gemini=True,
+                )
+                category_id = cat_id
+                inference_source = source
+                decision_reason = reason
                 if category_id:
-                    logger.info(f"Categoria encontrada no cache do Gemini para '{description}': category_id={category_id}")
-                else:
-                    # Se não está no cache, usar Gemini AI para categorizar
-                    logger.info(f"Nenhuma transação similar encontrada no cache para '{description}'. Usando Gemini AI para categorizar.")
+                    logger.info(f"Categorização: source={source}, confidence={conf:.2f}, needs_review={needs_review}")
+                    # Se Gemini retornou sucesso, guardar no cache (o motor não faz save para gemini)
+                    if source == 'gemini' and category_id:
+                        description_normalized = normalize_text(description)
+                        category_obj = next((c for c in categories if c.id == category_id), None)
+                        cat_name = category_obj.name if category_obj else "Outros"
+                        save_cached_category(description_normalized, workspace.id, category_id, cat_name, tipo, db, is_common=True)
+            except Exception as e:
+                logger.warning(f"Motor de categorização falhou, usando fallback legado: {e}")
+                # Fallback legado
+                category_id = find_similar_transaction(description, workspace.id, db, tipo)
+                if not category_id:
+                    category_id = get_cached_category(normalize_text(description), workspace.id, tipo, categories, db)
+                if not category_id:
                     category_id = categorize_with_ai(description, categories, tipo, text, workspace.id, db)
                     if category_id:
-                        # Encontrar nome da categoria
-                        category_obj = next((cat for cat in categories if cat.id == category_id), None)
-                        category_name = category_obj.name if category_obj else "Outros"
-                        
-                        logger.info(f"Gemini categorizou '{description}' com sucesso: category_id={category_id}")
-                        # Guardar no cache para futuras utilizações (privado e global se for comum)
-                        save_cached_category(description_normalized, workspace.id, category_id, category_name, tipo, db, is_common=True)
-                    else:
-                        logger.warning(f"Gemini não conseguiu categorizar '{description}'. Usando categoria padrão.")
-            else:
-                logger.info(f"Transação similar encontrada no cache para '{description}'. Usando categoria do cache: category_id={category_id}")
+                        cat_obj = next((c for c in categories if c.id == category_id), None)
+                        save_cached_category(normalize_text(description), workspace.id, category_id, cat_obj.name if cat_obj else "Outros", tipo, db, is_common=True)
+                inference_source = "legacy_fallback"
+                decision_reason = "legacy_fallback"
         
         # Se ainda não encontrou (nem cache nem IA), usar primeira categoria do tipo
         if not category_id and categories:
@@ -401,6 +420,9 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             "description": description[:255],
             "type": tipo,
             "category_id": category_id,
+            "inference_source": inference_source,
+            "needs_review": needs_review,
+            "decision_reason": decision_reason,
             "is_vault": is_vault_category,
             "is_vault_withdrawal": is_vault_withdrawal if is_vault_category else False
         })
@@ -472,6 +494,8 @@ def save_cached_category(description_normalized: str, workspace_id: uuid.UUID, c
             existing.category_name = category_name
             existing.usage_count += 1
             existing.last_used_at = datetime.now(timezone.utc)
+            if hasattr(existing, 'confidence') and existing.confidence is not None:
+                existing.confidence = min(1.0, float(existing.confidence) + 0.05)
         else:
             # Criar novo
             cache_entry = models.CategoryMappingCache(
@@ -480,7 +504,8 @@ def save_cached_category(description_normalized: str, workspace_id: uuid.UUID, c
                 category_id=category_id,
                 category_name=category_name,
                 transaction_type=tipo,
-                is_global=False
+                is_global=False,
+                confidence=0.9
             )
             db.add(cache_entry)
         
@@ -504,7 +529,8 @@ def save_cached_category(description_normalized: str, workspace_id: uuid.UUID, c
                     category_id=None,  # Não precisa de category_id específico (cada workspace tem o seu)
                     category_name=category_name,
                     transaction_type=tipo,
-                    is_global=True
+                    is_global=True,
+                    confidence=0.95
                 )
                 db.add(global_cache)
                 logger.info(f"Categoria comum guardada no cache global: '{description_normalized}' -> '{category_name}'")
@@ -855,6 +881,9 @@ async def telegram_webhook(
                     category_id=pending.category_id,
                     amount_cents=pending.amount_cents,
                     description=pending.description,
+                    inference_source=getattr(pending, 'inference_source', None),
+                    decision_reason=getattr(pending, 'decision_reason', None),
+                    needs_review=getattr(pending, 'needs_review', False),
                     transaction_date=pending.transaction_date
                 )
                 db.add(transaction)
@@ -1144,6 +1173,9 @@ async def telegram_webhook(
                             category_id=trans_data['category_id'],
                             amount_cents=amount_cents,
                             description=trans_data['description'],
+                            inference_source=trans_data.get('inference_source'),
+                            decision_reason=trans_data.get('decision_reason'),
+                            needs_review=trans_data.get('needs_review', False),
                             transaction_date=date.today()
                         )
                         db.add(transaction)
@@ -1156,6 +1188,9 @@ async def telegram_webhook(
                             category_id=trans_data['category_id'],
                             amount_cents=amount_cents,
                             description=trans_data['description'],
+                            inference_source=trans_data.get('inference_source'),
+                            decision_reason=trans_data.get('decision_reason'),
+                            needs_review=trans_data.get('needs_review', False),
                             transaction_date=date.today()
                         )
                         db.add(pending)
@@ -1230,6 +1265,9 @@ async def telegram_webhook(
                     category_id=parsed['category_id'],
                     amount_cents=amount_cents,
                     description=parsed['description'],
+                    inference_source=parsed.get('inference_source'),
+                    decision_reason=parsed.get('decision_reason'),
+                    needs_review=parsed.get('needs_review', False),
                     transaction_date=date.today()
                 )
                 db.add(transaction)
@@ -1255,6 +1293,9 @@ async def telegram_webhook(
                     category_id=parsed['category_id'],
                     amount_cents=amount_cents,
                     description=parsed['description'],
+                    inference_source=parsed.get('inference_source'),
+                    decision_reason=parsed.get('decision_reason'),
+                    needs_review=parsed.get('needs_review', False),
                     transaction_date=date.today()
                 )
                 db.add(pending)
