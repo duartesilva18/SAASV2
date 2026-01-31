@@ -191,7 +191,7 @@ export default function SupportButton() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group cursor-grab active:cursor-grabbing touch-none"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] sm:bottom-[max(1.5rem,env(safe-area-inset-bottom))] sm:right-[max(1rem,env(safe-area-inset-right))] z-[9999] flex flex-row-reverse items-center gap-3 group cursor-grab active:cursor-grabbing touch-none"
       >
         {showRemoveX && (
           <button
@@ -206,11 +206,11 @@ export default function SupportButton() {
         )}
         <div className="relative pointer-events-none">
           <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20 group-hover:opacity-40 transition-opacity" />
-          <div className="relative w-14 h-14 min-w-[56px] min-h-[56px] bg-blue-500 hover:bg-blue-400 text-white rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(59,130,246,0.4)] transition-colors border border-blue-400/20">
-            <Mail size={28} className="fill-white/10" />
+          <div className="relative w-12 h-12 sm:w-14 sm:h-14 min-w-[48px] min-h-[48px] sm:min-w-[56px] sm:min-h-[56px] bg-blue-500 hover:bg-blue-400 text-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(59,130,246,0.4)] transition-colors border border-blue-400/20">
+            <Mail size={24} className="sm:w-7 sm:h-7 fill-white/10" />
           </div>
-          <div className="absolute -top-2 -left-2 w-6 h-6 bg-slate-700 rounded-full border-2 border-slate-900 flex items-center justify-center shadow-lg">
-            <HelpCircle size={12} className="text-white" />
+          <div className="absolute -top-1 sm:-top-2 -left-1 sm:-left-2 w-5 h-5 sm:w-6 sm:h-6 bg-slate-700 rounded-full border-2 border-slate-900 flex items-center justify-center shadow-lg">
+            <HelpCircle size={10} className="sm:w-3 sm:h-3 text-white" />
           </div>
         </div>
       </motion.button>
@@ -218,10 +218,10 @@ export default function SupportButton() {
       <AnimatePresence>
         {open && (
             <motion.div
-              initial={{ opacity: 0, x: 24, y: 8 }}
-              animate={{ opacity: 1, x: 0, y: 0 }}
-              exit={{ opacity: 0, x: 24, y: 8 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.15 }}
               className="fixed z-[10001] flex flex-col rounded-2xl md:rounded-3xl border border-slate-700/50 bg-slate-900/95 backdrop-blur-md shadow-2xl
                 left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)]
                 w-[auto] max-h-[min(88vh,900px)] min-h-[260px]

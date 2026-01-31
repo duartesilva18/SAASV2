@@ -151,91 +151,92 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* User Management Section */}
-      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-[32px] p-8 md:p-10 relative overflow-hidden">
+      <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full -z-10" />
         
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
-          <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-widest text-[11px] opacity-60 mb-1">Gestão de Operadores</h2>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg md:text-xl font-black text-white uppercase tracking-widest text-[11px] opacity-60 mb-1">Gestão de Operadores</h2>
             <p className="text-xs text-slate-500 italic">Lista completa de utilizadores e permissões</p>
           </div>
           
           <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+            <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
             <input 
               type="text"
               placeholder="Procurar por email ou nome..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
+              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-3 sm:py-4 pl-12 sm:pl-14 pr-4 sm:pr-6 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium min-h-[48px]"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="min-w-[640px] px-4 sm:px-0">
+            <table className="w-full border-collapse">
             <thead>
               <tr className="text-left border-b border-white/5">
-                <th className="pb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Utilizador</th>
-                <th className="pb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Plano</th>
-                <th className="pb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Permissões</th>
-                <th className="pb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Acessos</th>
-                <th className="pb-6 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 text-right">Ações</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Utilizador</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Plano</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Permissões</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Acessos</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="group hover:bg-white/[0.02] transition-colors">
-                  <td className="py-6 px-4">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${u.is_admin ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${u.is_admin ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
                         {u.email[0].toUpperCase()}
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-white">{u.full_name || t.dashboard.admin.dashboard.userAnon}</p>
-                        <p className="text-[10px] text-slate-500 font-medium">{u.email}</p>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-black text-white truncate">{u.full_name || t.dashboard.admin.dashboard.userAnon}</p>
+                        <p className="text-[10px] text-slate-500 font-medium truncate">{u.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-6 px-4">
-                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
+                    <span className={`px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap ${
                       ['active', 'trialing'].includes(u.subscription_status) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5'
                     }`}>
                       {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : 'Free Plan'}
                     </span>
                   </td>
-                  <td className="py-6 px-4">
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex items-center gap-2">
                       {u.is_admin ? (
-                        <div className="flex items-center gap-1.5 text-blue-400 font-black text-[9px] uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded-lg border border-blue-500/20">
+                        <div className="flex items-center gap-1.5 text-blue-400 font-black text-[8px] sm:text-[9px] uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded-lg border border-blue-500/20 whitespace-nowrap">
                           <Shield size={10} /> Admin
                         </div>
                       ) : (
-                        <span className="text-[9px] font-black uppercase text-slate-600 tracking-widest">Utilizador</span>
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-600 tracking-widest whitespace-nowrap">Utilizador</span>
                       )}
                     </div>
                   </td>
-                  <td className="py-6 px-4">
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-white">{u.login_count}</span>
-                      <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter">Logins efetuados</span>
+                      <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter whitespace-nowrap">Logins</span>
                     </div>
                   </td>
-                  <td className="py-6 px-4 text-right">
+                  <td className="py-4 sm:py-6 px-2 sm:px-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => handleToggleAdmin(u.id)}
-                        className="p-2.5 bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
                         title={u.is_admin ? "Remover Admin" : "Tornar Admin"}
                       >
-                        <Shield size={16} />
+                        <Shield size={14} className="sm:w-4 sm:h-4" />
                       </button>
                       <button 
                         onClick={() => handleDeleteClick(u.id)}
-                        className="p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
                         title={t.dashboard.admin.dashboard.deleteUser}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </td>
@@ -243,6 +244,7 @@ export default function AdminDashboardPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
