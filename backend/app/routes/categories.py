@@ -85,6 +85,7 @@ async def get_category_stats(request: Request, db: Session = Depends(get_db), cu
         func.abs(models.Transaction.amount_cents) != 1  # Filtrar transações de seed (1 cêntimo)
     ).all()
     
+    # Despesas têm amount_cents negativo; total_monthly_cents será negativo
     total_monthly_cents = sum(t.amount_cents for t in transactions)
     
     stats = {}
@@ -103,14 +104,16 @@ async def get_category_stats(request: Request, db: Session = Depends(get_db), cu
         stats[cat_id]['count'] += 1
     
     result = []
+    total_abs = abs(total_monthly_cents)
     for cat_id, data in stats.items():
-        percentage = (data['total_spent_cents'] / total_monthly_cents * 100) if total_monthly_cents > 0 else 0
+        percentage = (abs(data['total_spent_cents']) / total_abs * 100) if total_abs > 0 else 0
         result.append(schemas.CategoryStats(
             **data,
             percentage=round(percentage, 1)
         ))
     
-    result.sort(key=lambda x: x.total_spent_cents, reverse=True)
+    # Ordenar por maior gasto primeiro (total_spent_cents mais negativo = mais gasto)
+    result.sort(key=lambda x: x.total_spent_cents)
     return result
 
 @router.post('/', response_model=schemas.CategoryResponse)
