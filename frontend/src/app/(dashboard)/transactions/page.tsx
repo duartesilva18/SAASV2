@@ -18,17 +18,12 @@ import { TransactionSkeleton } from '@/components/LoadingSkeleton';
 import PageLoading from '@/components/PageLoading';
 import { useTransactions, useCategories, useDebouncedValue } from '@/lib/hooks';
 import dynamic from 'next/dynamic';
-import { List } from 'react-window';
 import { ChartSkeleton } from '@/components/LoadingSkeleton';
 
 const TransactionChartsPanel = dynamic(
   () => import('@/components/TransactionChartsPanel'),
   { ssr: false, loading: () => <div className="space-y-6 lg:space-y-8"><ChartSkeleton /><ChartSkeleton /></div> }
 );
-
-const VIRTUALIZE_THRESHOLD = 30;
-const ROW_HEIGHT = 72;
-const VIRTUAL_LIST_HEIGHT = 400;
 
 interface Transaction {
   id: string;
@@ -619,69 +614,9 @@ function TransactionsPageContent() {
           )}
         </div>
 
-        {/* Desktop: table or virtualized list */}
+        {/* Desktop: tabela com paginação */}
         <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-            {filteredTransactions.length > VIRTUALIZE_THRESHOLD ? (
-              <>
-                <div className="grid grid-cols-[minmax(80px,1fr)_2fr_minmax(100px,1fr)_minmax(80px,1fr)] min-w-[600px] px-4 sm:px-6 md:px-8 py-4 border-b border-slate-800/50 bg-slate-900/20 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                  <span>{t.dashboard.transactions.table.date}</span>
-                  <span>{t.dashboard.transactions.table.description}</span>
-                  <span className="hidden sm:inline">{t.dashboard.transactions.table.category}</span>
-                  <span className="text-right">{t.dashboard.transactions.table.amount}</span>
-                </div>
-                <List
-                  rowCount={filteredTransactions.length}
-                  rowHeight={ROW_HEIGHT}
-                  rowProps={{
-                    transactions: filteredTransactions,
-                    categories,
-                    formatCurrency,
-                    setSelectedTransaction,
-                    noCategory: t.dashboard.transactions.noCategory,
-                  }}
-                  rowComponent={({ index, style, transactions: txList, categories: catList, formatCurrency: fmt, setSelectedTransaction: setSel, noCategory: noCat }) => {
-                    const transaction = txList[index];
-                    const cat = catList.find(c => c.id === transaction.category_id);
-                    const isIncome = cat && cat.vault_type !== 'none'
-                      ? transaction.amount_cents > 0
-                      : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
-                    return (
-                      <div
-                        role="row"
-                        style={style as React.CSSProperties}
-                        onClick={() => setSel(transaction)}
-                        className="grid grid-cols-[minmax(80px,1fr)_2fr_minmax(100px,1fr)_minmax(80px,1fr)] min-w-[600px] px-4 sm:px-6 md:px-8 py-4 border-b border-slate-800/30 cursor-pointer hover:bg-white/[0.02] transition-colors items-center gap-2"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
-                          <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
-                            {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <p className="text-sm font-black text-white truncate">{transaction.description}</p>
-                          <div className="flex items-center gap-2 sm:hidden">
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{cat?.name || noCat}</span>
-                          </div>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">{cat?.name || noCat}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
-                            {isIncome ? '+' : '-'}{fmt(Math.abs(transaction.amount_cents) / 100)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }}
-                  style={{ height: VIRTUAL_LIST_HEIGHT }}
-                />
-              </>
-            ) : (
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-800/50">
@@ -746,7 +681,6 @@ function TransactionsPageContent() {
                 </AnimatePresence>
               </tbody>
             </table>
-            )}
           
           {filteredTransactions.length === 0 && (
             <div className="py-32 flex flex-col items-center justify-center text-center">
@@ -762,8 +696,8 @@ function TransactionsPageContent() {
           </div>
         </div>
 
-        {/* Pagination Controls (desktop table) — apenas quando não virtualizado e há mais de uma página */}
-        {filteredTransactions.length <= VIRTUALIZE_THRESHOLD && filteredTransactions.length > itemsPerPage && (
+        {/* Pagination Controls (desktop table) — quando há mais de uma página */}
+        {filteredTransactions.length > itemsPerPage && (
           <div className="hidden md:flex px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
               {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>

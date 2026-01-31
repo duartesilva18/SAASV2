@@ -371,13 +371,11 @@ export default function AnalyticsPage() {
         const cat = rawData.categories.find((c: any) => c.id === t.category_id);
         const amount = t.amount_cents / 100;
         if (cat && cat.vault_type !== 'none') return;
-        if (cat?.type === 'income') {
+        // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
+        if (t.amount_cents > 0) {
           income += amount;
-        } else if (cat?.type === 'expense') {
-          expenses += -amount;
-        } else {
-          const expenseAmount = amount < 0 ? -amount : amount;
-          expenses += expenseAmount;
+        } else if (t.amount_cents < 0) {
+          expenses += -amount; // Converte negativo para positivo
         }
       });
       return { income, expenses };
@@ -504,8 +502,8 @@ export default function AnalyticsPage() {
     const topExpenses = filteredTransactions
       .filter((t: any) => {
         const cat = rawData.categories.find((c: any) => c.id === t.category_id);
-        // Apenas despesas que não sejam de investimento/emergência
-        return (!cat || cat.type === 'expense') && (!cat || cat.vault_type === 'none');
+        // Apenas despesas: amount_cents < 0, excluir vault
+        return t.amount_cents < 0 && (!cat || cat.vault_type === 'none');
       })
       .sort((a: any, b: any) => Math.abs(a.amount_cents) - Math.abs(b.amount_cents)) // Ordenar por valor absoluto (maiores primeiro)
       .reverse()
@@ -546,13 +544,13 @@ export default function AnalyticsPage() {
       // Vault transactions NÃO são incluídas porque:
       // - Depósito no vault: dinheiro sai do saldo disponível mas fica no vault (património não muda)
       // - Resgate do vault: dinheiro volta ao saldo disponível (património não muda)
-      if (cat?.type === 'income' && cat?.vault_type === 'none') {
-        // Receitas aumentam o património (backend garante que é positivo)
-        cumulativeBalance += amount;
-      } else if (cat?.type === 'expense' && cat?.vault_type === 'none') {
-        // VALIDAÇÃO EXPLÍCITA: Apenas subtrair despesas de consumo
-        // Backend garante que é negativo, converter para positivo antes de subtrair
-        cumulativeBalance -= -amount; // Converte negativo para positivo
+      // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
+      if (cat?.vault_type === 'none') {
+        if (t.amount_cents > 0) {
+          cumulativeBalance += amount;
+        } else if (t.amount_cents < 0) {
+          cumulativeBalance += amount; // amount já é negativo
+        }
       }
       // Se for transação de investimento/emergência (vault) ou tipo desconhecido, não altera o cumulativeBalance
       
@@ -576,32 +574,19 @@ export default function AnalyticsPage() {
       }
       const amount = t.amount_cents / 100;
 
-      if (cat) {
-        if (cat.type === 'income' && cat.vault_type === 'none') {
-          monthlyData[monthYear].income += amount;
-          periodIncome += amount;
-        } else if (cat.type === 'expense' && cat.vault_type === 'none') {
-          const expenseAmount = -amount;
-          monthlyData[monthYear].expenses += expenseAmount;
-          periodExpenses += expenseAmount;
-          catDistribution[cat.name] = (catDistribution[cat.name] || 0) + expenseAmount;
-          catExpenseCount[cat.name] = (catExpenseCount[cat.name] || 0) + 1;
-          dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
-          weeklyRhythm[dayName] += expenseAmount;
-        }
-      } else {
-        if (amount < 0) {
-          const expenseAmount = -amount;
-          monthlyData[monthYear].expenses += expenseAmount;
-          periodExpenses += expenseAmount;
-          catDistribution[othersLabel] = (catDistribution[othersLabel] || 0) + expenseAmount;
-          catExpenseCount[othersLabel] = (catExpenseCount[othersLabel] || 0) + 1;
-          dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
-          weeklyRhythm[dayName] += expenseAmount;
-        } else {
-          monthlyData[monthYear].income += amount;
-          periodIncome += amount;
-        }
+      // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
+      if (t.amount_cents > 0) {
+        monthlyData[monthYear].income += amount;
+        periodIncome += amount;
+      } else if (t.amount_cents < 0) {
+        const expenseAmount = -amount;
+        monthlyData[monthYear].expenses += expenseAmount;
+        periodExpenses += expenseAmount;
+        const catName = cat?.name ?? othersLabel;
+        catDistribution[catName] = (catDistribution[catName] || 0) + expenseAmount;
+        catExpenseCount[catName] = (catExpenseCount[catName] || 0) + 1;
+        dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
+        weeklyRhythm[dayName] += expenseAmount;
       }
     });
 

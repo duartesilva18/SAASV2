@@ -55,14 +55,15 @@ export default function TransactionChartsPanel({
   expensesLabel,
 }: TransactionChartsPanelProps) {
   const { t } = useTranslation();
-  const categoryData = transactions.reduce((acc: Record<string, { name: string; value: number; color: string }>, t) => {
-    const cat = categories.find(c => c.id === t.category_id);
+  const categoryData = transactions.reduce((acc: Record<string, { name: string; value: number; color: string }>, tx) => {
+    const cat = categories.find(c => c.id === tx.category_id);
     if (!cat || cat.vault_type !== 'none' || cat.type !== 'expense') return acc;
+    if (tx.amount_cents >= 0) return acc; // Backend: despesas são sempre negativas
     const key = cat.id;
     if (!acc[key]) {
       acc[key] = { name: cat.name, value: 0, color: cat.color_hex };
     }
-    acc[key].value += Math.abs(t.amount_cents) / 100;
+    acc[key].value += Math.abs(tx.amount_cents) / 100;
     return acc;
   }, {});
 
@@ -71,27 +72,34 @@ export default function TransactionChartsPanel({
     .slice(0, 5)
     .reverse();
 
-  const periodData = transactions.reduce((acc: Record<string, { period: string; income: number; expenses: number }>, t) => {
-    const date = new Date(t.transaction_date);
+  const getISOWeekKey = (date: Date): string => {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const dayNum = d.getDay() || 7; // ISO: Mon=1, Sun=7
+    d.setDate(d.getDate() + 4 - dayNum); // Mover para quinta-feira da semana
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+  };
+
+  const periodData = transactions.reduce((acc: Record<string, { period: string; income: number; expenses: number }>, tx) => {
+    const date = new Date(tx.transaction_date);
     let periodKey: string;
     if (evolutionPeriod === 'weekly') {
-      const year = date.getFullYear();
-      const startOfYear = new Date(year, 0, 1);
-      const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-      const week = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-      periodKey = `${year}-W${String(week).padStart(2, '0')}`;
+      periodKey = getISOWeekKey(date);
     } else {
       periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
     if (!acc[periodKey]) {
       acc[periodKey] = { period: periodKey, income: 0, expenses: 0 };
     }
-    const cat = categories.find(c => c.id === t.category_id);
-    const isIncome = cat ? cat.type === 'income' : t.amount_cents > 0;
-    if (isIncome && (!cat || cat.vault_type === 'none')) {
-      acc[periodKey].income += Math.abs(t.amount_cents) / 100;
-    } else if (!isIncome && (!cat || cat.vault_type === 'none')) {
-      acc[periodKey].expenses += Math.abs(t.amount_cents) / 100;
+    const cat = categories.find(c => c.id === tx.category_id);
+    if (cat && cat.vault_type !== 'none') return acc; // Excluir vault (investimento/emergência)
+    // Backend: income = amount_cents > 0, expense = amount_cents < 0
+    const amountEur = Math.abs(tx.amount_cents) / 100;
+    if (tx.amount_cents > 0) {
+      acc[periodKey].income += amountEur;
+    } else if (tx.amount_cents < 0) {
+      acc[periodKey].expenses += amountEur;
     }
     return acc;
   }, {});
@@ -101,8 +109,9 @@ export default function TransactionChartsPanel({
     .slice(-(evolutionPeriod === 'weekly' ? 8 : 14))
     .map((item) => {
       if (evolutionPeriod === 'weekly') {
-        const [, week] = item.period.split('-W');
-        return { ...item, label: `Sem ${parseInt(week || '0', 10)}` };
+        const [year, week] = item.period.split('-W');
+        const yearShort = year ? `'${year.slice(-2)}` : '';
+        return { ...item, label: `Sem ${parseInt(week || '0', 10)} ${yearShort}`.trim() };
       }
       const date = new Date(item.period);
       return {
