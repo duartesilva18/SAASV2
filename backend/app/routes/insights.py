@@ -556,7 +556,8 @@ async def get_zen_insights(
                 if projected_cat_expense >= limit * 0.85:  # Projeção >= 85% do limite
                     proj_risk = (projected_cat_expense / limit) * 100 if limit > 0 else 0
                     existing = categories_at_risk_dict.get(cat.name)
-                    if existing is None or proj_risk > existing[0]:
+                    # Prefer ACTUAL (mês corrente) sobre projeção: mostrar gasto real, não forecast
+                    if existing is None:
                         categories_at_risk_dict[cat.name] = (proj_risk, projected_cat_expense, limit)
         
         categories_at_risk = sorted(

@@ -650,59 +650,59 @@ export default function CategoriesPage() {
       {/* Add/Edit Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 overflow-y-auto py-4 sm:py-8">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAddModal(false)}
-              className="absolute inset-0 bg-[#020617]/90 backdrop-blur-2xl will-change-transform"
+              className="fixed inset-0 bg-[#020617]/90 backdrop-blur-2xl will-change-transform"
             />
             
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-xl bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
+              className="relative w-full max-w-xl max-h-[min(calc(100vh-2rem),640px)] flex flex-col bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-[32px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden my-auto"
             >
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
-              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full" />
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full pointer-events-none" />
 
-              <div className="p-10 md:p-14 relative z-10">
-                <div className="flex items-center justify-between mb-12">
+              <div className="p-4 sm:p-6 md:p-10 lg:p-14 relative z-10 overflow-y-auto flex-1 min-h-0">
+                <div className="flex items-center justify-between mb-6 sm:mb-8 md:mb-12">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Configuração de Gaveta</span>
+                    <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-blue-500">Configuração de Gaveta</span>
                     </div>
-                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter uppercase leading-none">
                       {editingCategory ? t.dashboard.categories.edit : t.dashboard.categories.addNew}
                     </h2>
                   </div>
-                  <button onClick={() => setShowAddModal(false)} className="p-3 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all cursor-pointer border border-transparent hover:border-white/5">
-                    <X size={24} />
+                  <button onClick={() => setShowAddModal(false)} className="p-2 sm:p-3 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all cursor-pointer border border-transparent hover:border-white/5 shrink-0">
+                    <X size={20} className="sm:w-6 sm:h-6" />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-10">
+                <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 md:space-y-10">
                   {/* Icon Selection */}
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-1 block">Escolhe a Identidade Visual</label>
-                    <div className="grid grid-cols-6 gap-4">
+                  <div className="space-y-3 sm:space-y-4">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-1 block">Escolhe a Identidade Visual</label>
+                    <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
                       {AVAILABLE_ICONS.map((item) => (
                         <button
                           key={item.name}
                           type="button"
                           onClick={() => setFormData({ ...formData, icon: item.name })}
-                          className={`group p-4 rounded-2xl transition-all cursor-pointer relative overflow-hidden ${
+                          className={`group p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl transition-all cursor-pointer relative overflow-hidden ${
                             formData.icon === item.name 
                               ? 'bg-blue-600 text-white shadow-[0_0_25px_rgba(37,99,235,0.4)] scale-110' 
                               : 'bg-slate-950/50 text-slate-500 border border-white/5 hover:border-white/10 hover:text-slate-300'
                           }`}
                         >
-                          <item.icon size={22} className="relative z-10 group-hover:scale-110 transition-transform" />
+                          <item.icon size={20} className="relative z-10 group-hover:scale-110 transition-transform" />
                           {formData.icon === item.name && (
                             <motion.div layoutId="iconGlow" className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
                           )}
@@ -711,9 +711,9 @@ export default function CategoriesPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-8">
+                  <div className="space-y-5 sm:space-y-6 md:space-y-8">
                     <div className="relative group">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-3 sm:ml-4 mb-1.5 sm:mb-2 block group-focus-within:text-blue-500 transition-colors">
                         {t.dashboard.categories.name}
                       </label>
                       <input
@@ -721,16 +721,16 @@ export default function CategoriesPage() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium"
+                        className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-6 md:px-8 py-3.5 sm:py-4 md:py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium text-sm sm:text-base"
                         placeholder={t.dashboard.categories.namePlaceholder || "Category name"}
                       />
                     </div>
 
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 block">
+                    <div className="space-y-3 sm:space-y-4">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-3 sm:ml-4 block">
                         {t.dashboard.categories.nature}
                       </label>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                         {[
                           { id: 'expense', label: t.dashboard.categories.expense, icon: TrendingUp, color: 'text-red-400' },
                           { id: 'income', label: t.dashboard.categories.income, icon: Landmark, color: 'text-emerald-400' },
@@ -740,13 +740,13 @@ export default function CategoriesPage() {
                             type="button"
                             disabled={editingCategory ? (editingCategory.vault_type !== 'none') : false}
                             onClick={() => setFormData({ ...formData, nature: nature.id as any })}
-                            className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all cursor-pointer ${
+                            className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${
                               formData.nature === nature.id 
                                 ? 'bg-slate-950 border-blue-500/50 shadow-lg shadow-blue-500/10' 
                                 : 'bg-slate-950/30 border-white/5 hover:border-white/10 opacity-60 hover:opacity-100'
                             } ${editingCategory ? (editingCategory.vault_type !== 'none' ? 'opacity-50 cursor-not-allowed' : '') : ''}`}
                           >
-                            <nature.icon size={16} className={nature.color} />
+                            <nature.icon size={16} className={`shrink-0 ${nature.color}`} />
                             <span className={`text-[10px] font-black uppercase tracking-widest ${formData.nature === nature.id ? 'text-white' : 'text-slate-500'}`}>
                               {nature.label}
                             </span>
@@ -764,7 +764,7 @@ export default function CategoriesPage() {
                     </div>
 
                     <div className="relative group">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-3 sm:ml-4 mb-1.5 sm:mb-2 block group-focus-within:text-blue-500 transition-colors">
                         {t.dashboard.categories.limit} (Opcional)
                       </label>
                       <div className="relative">
@@ -773,28 +773,28 @@ export default function CategoriesPage() {
                           step="0.01"
                           value={formData.monthly_limit}
                           onChange={(e) => setFormData({ ...formData, monthly_limit: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-white/5 rounded-2xl px-8 py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-16 font-black text-xl tracking-tighter"
+                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-6 md:px-8 py-3.5 sm:py-4 md:py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-12 sm:pl-14 md:pl-16 font-black text-base sm:text-lg md:text-xl tracking-tighter"
                           placeholder="0.00"
                         />
-                        <span className="absolute left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-lg">
+                        <span className="absolute left-5 sm:left-6 md:left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-base sm:text-lg">
                           {currency === 'EUR' ? '€' : currency === 'BRL' ? 'R$' : '$'}
                         </span>
                       </div>
                     </div>
 
                     {/* Color Selection */}
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 block">
+                    <div className="space-y-3 sm:space-y-4">
+                      <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-3 sm:ml-4 block">
                         {t.dashboard.categories.color}
                       </label>
-                      <div className="flex flex-wrap gap-4 px-2">
+                      <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2">
                         {COLORS.map((c) => (
                           <button
                             key={c}
                             type="button"
                             onClick={() => setFormData({ ...formData, color_hex: c })}
-                            className={`w-11 h-11 rounded-2xl transition-all cursor-pointer flex items-center justify-center relative ${
-                              formData.color_hex === c ? 'scale-125 ring-2 ring-white/50 ring-offset-4 ring-offset-slate-950 shadow-lg' : 'hover:scale-110 opacity-70 hover:opacity-100'
+                            className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-xl sm:rounded-2xl transition-all cursor-pointer flex items-center justify-center relative shrink-0 ${
+                              formData.color_hex === c ? 'scale-125 ring-2 ring-white/50 ring-offset-2 sm:ring-offset-4 ring-offset-slate-950 shadow-lg' : 'hover:scale-110 opacity-70 hover:opacity-100'
                             }`}
                             style={{ backgroundColor: c }}
                           >
@@ -811,7 +811,7 @@ export default function CategoriesPage() {
 
                   <button
                     type="submit"
-                    className="group relative w-full py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-[32px] font-black uppercase tracking-[0.3em] text-sm transition-all active:scale-[0.98] shadow-2xl shadow-blue-600/30 overflow-hidden cursor-pointer"
+                    className="group relative w-full py-4 sm:py-5 md:py-6 lg:py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl md:rounded-[32px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm transition-all active:scale-[0.98] shadow-2xl shadow-blue-600/30 overflow-hidden cursor-pointer shrink-0"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
                     <span className="relative z-10 flex items-center justify-center gap-3">
