@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -320,3 +320,15 @@ class AdminProjectExpense(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     created_by = relationship('User', foreign_keys=[created_by_id])
+
+
+class AdminErrorLog(Base):
+    """
+    Erros críticos registados pelo handler global (dashboard de saúde).
+    """
+    __tablename__ = 'admin_error_logs'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    path = Column(String(500), nullable=False)
+    message = Column(Text, nullable=False)
+    exc_type = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

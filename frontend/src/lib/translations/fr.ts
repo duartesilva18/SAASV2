@@ -594,6 +594,7 @@ export const fr = {
           adminPanel: "Panneau de commande",
           globalTreasury: "Trésorerie globale",
           projectExpenses: "Dépenses Projet",
+          healthDashboard: "Tableau Santé",
           marketing: "Marketing",
           affiliatesManagement: "Gestion des affiliés",
           masterPro: "Maître Pro",

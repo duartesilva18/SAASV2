@@ -94,6 +94,7 @@ export default function DashboardLayout({
         { label: s.adminPanel, href: '/admin' },
         { label: s.globalTreasury, href: '/admin/finance' },
         { label: s.projectExpenses ?? 'Despesas Projeto', href: '/admin/expenses' },
+        { label: s.healthDashboard ?? 'Dashboard Saúde', href: '/admin/health' },
         { label: s.marketing, href: '/admin/marketing' },
         { label: s.affiliatesManagement, href: '/admin/affiliates' },
       ];

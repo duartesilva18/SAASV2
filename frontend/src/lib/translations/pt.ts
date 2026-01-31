@@ -594,6 +594,7 @@ export const pt = {
           adminPanel: "Painel de Comando",
           globalTreasury: "Tesouraria Global",
           projectExpenses: "Despesas Projeto",
+          healthDashboard: "Dashboard Saúde",
           marketing: "Marketing",
           affiliatesManagement: "Gestão de Afiliados",
           masterPro: "Mestre Pro",

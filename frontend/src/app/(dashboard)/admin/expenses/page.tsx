@@ -321,14 +321,14 @@ export default function AdminExpensesPage() {
                   dataKey="value"
                   nameKey="name"
                   stroke="none"
-                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                  label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
                 >
                   {pieData.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value: number | undefined) => formatCurrency(value ?? 0)}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px' }}
                   labelStyle={{ color: '#94a3b8' }}
                 />
@@ -351,7 +351,7 @@ export default function AdminExpensesPage() {
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} tickFormatter={(v) => `${v}€`} />
                 <Tooltip
-                  formatter={(value: number) => [formatCurrency(value), 'Valor']}
+                  formatter={(value: number | undefined) => [formatCurrency(value ?? 0), 'Valor']}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px' }}
                   labelStyle={{ color: '#94a3b8' }}
                 />

@@ -110,6 +110,127 @@ async def get_admin_stats(db: Session = Depends(get_db), admin: models.User = De
     )
 
 # --- Despesas do projeto e manutenção ---
+@router.get('/health')
+async def get_health_dashboard(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    """Dashboard de saúde: estado das integrações e últimos erros."""
+    from ..core.error_buffer import get_recent_errors_from_db
+    from sqlalchemy import text
+
+    integrations = []
+
+    # Base de dados
+    db_ok = False
+    db_msg = ""
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+        db_msg = "Conectado"
+    except Exception as e:
+        db_msg = str(e)[:200]
+
+    integrations.append({"name": "Base de Dados", "status": "ok" if db_ok else "error", "message": db_msg, "icon": "database"})
+
+    # Stripe
+    stripe_ok = False
+    stripe_msg = ""
+    if settings.STRIPE_API_KEY:
+        try:
+            stripe.Balance.retrieve()
+            stripe_ok = True
+            stripe_msg = "API operacional"
+        except Exception as e:
+            stripe_msg = str(e)[:200]
+    else:
+        stripe_msg = "Chave não configurada"
+
+    integrations.append({"name": "Stripe", "status": "ok" if stripe_ok else ("skipped" if not settings.STRIPE_API_KEY else "error"), "message": stripe_msg, "icon": "stripe"})
+
+    # Email (SMTP)
+    mail_ok = False
+    mail_msg = ""
+    mail_configured = bool(
+        settings.MAIL_SERVER
+        and settings.MAIL_USERNAME
+        and settings.MAIL_PASSWORD
+        and "placeholder" not in (settings.MAIL_USERNAME or "").lower()
+        and settings.MAIL_PASSWORD != "password"
+    )
+    if mail_configured:
+        try:
+            import smtplib
+            if settings.MAIL_SSL_TLS:
+                smtp = smtplib.SMTP_SSL(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=5)
+            else:
+                smtp = smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=5)
+                if settings.MAIL_STARTTLS:
+                    smtp.starttls()
+            smtp.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
+            smtp.quit()
+            mail_ok = True
+            mail_msg = "SMTP operacional"
+        except Exception as e:
+            mail_msg = str(e)[:200]
+    else:
+        mail_msg = "Configuração não definida (MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD)"
+
+    integrations.append({
+        "name": "Email",
+        "status": "ok" if mail_ok else ("skipped" if not mail_configured else "error"),
+        "message": mail_msg,
+        "icon": "mail"
+    })
+
+    # Gemini
+    gemini_ok = False
+    gemini_msg = ""
+    if settings.GEMINI_API_KEY:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro"]
+            for model_name in models_to_try:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    model.generate_content("ok", generation_config={"max_output_tokens": 1})
+                    gemini_ok = True
+                    gemini_msg = f"API operacional ({model_name})"
+                    break
+                except Exception:
+                    continue
+            if not gemini_ok:
+                gemini_msg = "Nenhum modelo disponível (tentados: " + ", ".join(models_to_try) + ")"
+        except Exception as e:
+            gemini_msg = str(e)[:200]
+    else:
+        gemini_msg = "Chave não configurada"
+
+    integrations.append({
+        "name": "Gemini",
+        "status": "ok" if gemini_ok else ("skipped" if not settings.GEMINI_API_KEY else "error"),
+        "message": gemini_msg,
+        "icon": "gemini"
+    })
+
+    # Erros recentes (BD)
+    recent_errors = get_recent_errors_from_db(db, limit=20)
+
+    return {
+        "integrations": integrations,
+        "recent_errors": recent_errors,
+    }
+
+
+@router.post('/health/clear-errors')
+async def clear_health_errors(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    """Limpa os erros recentes da BD e memória."""
+    from ..core.error_buffer import clear_memory_errors
+
+    db.query(models.AdminErrorLog).delete()
+    db.commit()
+    clear_memory_errors()
+    return {"message": "Erros limpos."}
+
+
 @router.get('/project-expenses')
 async def get_project_expenses(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
     """Lista todas as despesas do projeto (apenas admins)."""

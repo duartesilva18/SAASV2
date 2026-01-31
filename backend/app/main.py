@@ -88,8 +88,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
+    from .core.error_buffer import add_error
     logger.error(f"Erro não tratado em {request.url.path}: {str(exc)}", exc_info=True)
     logger.error(f"Traceback: {traceback.format_exc()}")
+    add_error(request.url.path, str(exc), exc.__class__.__name__)
     
     # Obter origem da request para adicionar header CORS
     origin = request.headers.get('origin')
