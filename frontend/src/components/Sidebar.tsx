@@ -389,57 +389,73 @@ export default function Sidebar({
                         <p className="text-[11px] text-slate-600 font-black uppercase tracking-[0.2em] italic">{t.dashboard.sidebar.nothingToReport}</p>
                       </div>
                     ) : (
-                      notifications.map((notif) => (
-                        <div 
-                          key={notif.id}
-                          className={`flex gap-3 items-start p-4 rounded-xl border transition-colors group/notif min-h-[4.5rem] ${
-                            notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20' : 
-                            notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
-                            notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 
-                            'bg-white/5 border-white/5'
-                          }`}
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                            notif.type === 'danger' ? 'bg-red-500/20 text-red-400' :
-                            notif.type === 'warning' ? 'bg-amber-500/20 text-amber-400' :
-                            notif.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
-                            'bg-blue-500/20 text-blue-400'
-                          }`}>
-                            <IconComponent name={notif.icon} size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <div className="flex justify-between items-center gap-2 mb-0.5">
-                              <p 
-                                className={`text-[11px] font-black uppercase tracking-tight leading-tight truncate ${
-                                  notif.type === 'danger' ? 'text-red-400' : 
-                                  notif.type === 'warning' ? 'text-amber-400' : 
-                                  notif.type === 'success' ? 'text-emerald-400' : 
-                                  'text-white'
-                                }`}
-                                title={notif.title}
-                              >
-                                {notif.title}
-                              </p>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{notif.date}</span>
-                                <button 
-                                  onClick={() => handleMarkAsRead(notif.id)}
-                                  className="opacity-0 group-hover/notif:opacity-100 p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-all cursor-pointer"
-                                  title={t.dashboard.sidebar.markAsRead}
-                                >
-                                  <X size={10} />
-                                </button>
-                              </div>
+                      notifications.map((notif) => {
+                        const content = (
+                          <>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                              notif.type === 'danger' ? 'bg-red-500/20 text-red-400' :
+                              notif.type === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                              notif.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              <IconComponent name={notif.icon} size={18} />
                             </div>
-                            <p 
-                              className="text-[11px] text-slate-400 leading-snug font-medium italic line-clamp-2 break-words"
-                              title={notif.message}
-                            >
-                              "{notif.message}"
-                            </p>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <div className="flex justify-between items-center gap-2 mb-0.5">
+                                <p 
+                                  className={`text-[11px] font-black uppercase tracking-tight leading-tight truncate ${
+                                    notif.type === 'danger' ? 'text-red-400' : 
+                                    notif.type === 'warning' ? 'text-amber-400' : 
+                                    notif.type === 'success' ? 'text-emerald-400' : 
+                                    'text-white'
+                                  }`}
+                                  title={notif.title}
+                                >
+                                  {notif.title}
+                                </p>
+                                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{notif.date}</span>
+                                  <button 
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMarkAsRead(notif.id); }}
+                                    className="opacity-0 group-hover/notif:opacity-100 p-1 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-all cursor-pointer"
+                                    title={t.dashboard.sidebar.markAsRead}
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+                              </div>
+                              <p 
+                                className="text-[11px] text-slate-400 leading-snug font-medium italic line-clamp-2 break-words"
+                                title={notif.message}
+                              >
+                                "{notif.message}"
+                              </p>
+                            </div>
+                          </>
+                        );
+                        const wrapperClass = `flex gap-3 items-start p-4 rounded-xl border transition-colors group/notif min-h-[4.5rem] ${
+                          notif.section ? 'cursor-pointer hover:bg-white/5' : ''
+                        } ${
+                          notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20' : 
+                          notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
+                          notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 
+                          'bg-white/5 border-white/5'
+                        }`;
+                        return notif.section ? (
+                          <Link
+                            key={notif.id}
+                            href={notif.section}
+                            onClick={() => setShowNotifications(false)}
+                            className={wrapperClass}
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          <div key={notif.id} className={wrapperClass}>
+                            {content}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                     
                     {notifications.length > 0 && (

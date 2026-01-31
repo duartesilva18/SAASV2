@@ -91,7 +91,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               type: ins.type,
               icon: ins.icon,
               date: s?.now || 'Agora',
-              section: '/dashboard',
+              section: '/analytics',
             });
           }
         });
@@ -109,7 +109,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               type: diff <= 1 ? 'warning' : 'info',
               icon: 'clock',
               date: s?.next || 'Próximo',
-              section: '/transactions',
+              section: '/recurring',
             });
           }
         });
@@ -125,7 +125,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
             type: 'danger',
             icon: 'credit-card',
             date: s?.urgent || 'Urgente',
-            section: '/settings',
+            section: '/billing',
           });
         }
 
@@ -143,7 +143,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
             type: 'success',
             icon: 'trophy',
             date: s?.now || (t.dashboard?.page?.now || 'Agora'),
-            section: '/vault',
+            section: '/goals',
           });
         });
 
@@ -160,7 +160,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               type: 'info',
               icon: 'target',
               date: s?.next || 'Próximo',
-              section: '/vault',
+              section: '/goals',
             });
           }
         });
