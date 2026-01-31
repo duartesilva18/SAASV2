@@ -7,7 +7,7 @@ import {
   CreditCard, Download, 
   Trash2, CheckCircle2, AlertCircle, Loader2,
   ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink,
-  Lock
+  Lock, Mail
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [purging, setPurging] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [isSimulated, setIsSimulated] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
     country_code: '+351',
@@ -45,8 +46,12 @@ export default function SettingsPage() {
     message: '',
     type: 'info'
   });
-  const [hasPassword, setHasPassword] = useState(true); // false = entrou só por Gmail/Google
-  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [hasPassword, setHasPassword] = useState(true);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [passwordCode, setPasswordCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
   const countries = [
@@ -72,6 +77,7 @@ export default function SettingsPage() {
         if (!isMounted) return;
         
         const user = res.data;
+        setUserEmail(user.email || '');
         const customerId = user.stripe_customer_id || '';
         setIsSimulated(customerId.startsWith('sim_') || customerId.startsWith('test_'));
         setHasPassword(user.has_password !== false);
@@ -135,11 +141,53 @@ export default function SettingsPage() {
     }
   };
 
-  const handleChangePassword = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
+  const handleRequestPasswordCode = async () => {
+    if (!userEmail) return;
+    setSendingCode(true);
+    setToast({ ...toast, isVisible: false });
+    try {
+      await api.post('/auth/password-reset/request', { email: userEmail });
+      setPasswordCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowChangePasswordModal(true);
       setToast({
-        message: (t.dashboard.settings as any).passwordMismatch || 'As passwords não coincidem.',
+        message: (t.dashboard.settings as any).accountSecurity?.codeSentMessage ?? 'Código enviado. Verifica o teu email.',
+        type: 'success',
+        isVisible: true
+      });
+    } catch (err: any) {
+      setToast({
+        message: err.response?.data?.detail || t.dashboard.settings.error,
+        type: 'error',
+        isVisible: true
+      });
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleConfirmPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordCode.length !== 6) {
+      setToast({
+        message: (t.auth as any).resetPassword?.codeError ?? 'O código deve ter 6 dígitos.',
+        type: 'error',
+        isVisible: true
+      });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setToast({
+        message: (t.dashboard.settings as any).accountSecurity?.changePasswordDesc ?? 'Mínimo 8 caracteres, com maiúscula, minúscula e número.',
+        type: 'error',
+        isVisible: true
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setToast({
+        message: (t.dashboard.settings as any).passwordMismatch ?? 'As passwords não coincidem.',
         type: 'error',
         isVisible: true
       });
@@ -148,19 +196,24 @@ export default function SettingsPage() {
     setSavingPassword(true);
     setToast({ ...toast, isVisible: false });
     try {
-      await api.post('/auth/change-password', {
-        current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password
+      await api.post('/auth/password-reset/confirm', {
+        email: userEmail,
+        code: passwordCode,
+        new_password: newPassword
       });
-      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      setShowChangePasswordModal(false);
+      setPasswordCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setHasPassword(true);
       setToast({
-        message: (t.dashboard.settings as any).accountSecurity?.passwordSuccess || 'Password alterada com sucesso.',
+        message: (t.dashboard.settings as any).accountSecurity?.passwordSuccess ?? 'Password alterada com sucesso.',
         type: 'success',
         isVisible: true
       });
     } catch (err: any) {
       setToast({
-        message: err.response?.data?.detail || t.dashboard.settings.error,
+        message: err.response?.data?.detail || (t.auth as any).resetPassword?.invalidCode ?? 'Código inválido ou expirado.',
         type: 'error',
         isVisible: true
       });
@@ -276,6 +329,22 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Email (associado à conta) — somente leitura */}
+                <div className="space-y-3 md:col-span-2">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
+                    {(t.dashboard.settings as any).accountSecurity?.emailLabel ?? t.dashboard.settings.personalData?.email ?? 'Email'}
+                  </label>
+                  <div className="relative group/field">
+                    <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <input 
+                      type="email"
+                      value={userEmail}
+                      readOnly
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm text-slate-400 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
                 {/* Full Name */}
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
@@ -442,57 +511,23 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* Alterar password — só para quem criou conta com email/password (não Gmail) */}
-            {hasPassword && (
-              <div className="space-y-4 p-6 bg-white/[0.02] border border-slate-800 rounded-2xl">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                  {(t.dashboard.settings as { accountSecurity?: { changePasswordTitle: string } }).accountSecurity?.changePasswordTitle || t.dashboard.settings.personalData.changePassword}
-                </p>
-                <p className="text-xs text-slate-500 mb-4">
-                  {(t.dashboard.settings as { accountSecurity?: { changePasswordDesc: string } }).accountSecurity?.changePasswordDesc || 'Mínimo 8 caracteres, com maiúscula, minúscula e número.'}
-                </p>
-                <div className="space-y-3">
-                  <div className="relative group/field">
-                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
-                    <input
-                      type="password"
-                      placeholder={t.dashboard.settings.personalData.currentPassword}
-                      value={passwordForm.current_password}
-                      onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
-                    />
-                  </div>
-                  <div className="relative group/field">
-                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
-                    <input
-                      type="password"
-                      placeholder={t.dashboard.settings.personalData.newPassword}
-                      value={passwordForm.new_password}
-                      onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
-                    />
-                  </div>
-                  <div className="relative group/field">
-                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
-                    <input
-                      type="password"
-                      placeholder={t.dashboard.settings.personalData.confirmPassword}
-                      value={passwordForm.confirm_password}
-                      onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
-                    />
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleChangePassword()}
-                  disabled={savingPassword || !passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password}
-                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {savingPassword ? <Loader2 size={18} className="animate-spin" /> : t.dashboard.settings.personalData.changePassword}
-                </button>
-              </div>
-            )}
+            {/* Alterar password — envia código ao email, depois altera no modal */}
+            <div className="space-y-4 p-6 bg-white/[0.02] border border-slate-800 rounded-2xl">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
+              </p>
+              <p className="text-xs text-slate-500 mb-4">
+                {(t.dashboard.settings as any).accountSecurity?.changePasswordDescCode ?? 'Enviaremos um código de 6 dígitos para o teu email. Usa-o no modal para definir a nova password.'}
+              </p>
+              <button
+                type="button"
+                onClick={handleRequestPasswordCode}
+                disabled={sendingCode || !userEmail}
+                className="w-full py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {sendingCode ? <Loader2 size={18} className="animate-spin" /> : t.dashboard.settings.personalData.changePassword}
+              </button>
+            </div>
 
             <button
               type="submit"
@@ -630,6 +665,92 @@ export default function SettingsPage() {
         variant="warning"
         isLoading={purging}
       />
+
+      {/* Modal Alterar Password (código + nova password) */}
+      <AnimatePresence>
+        {showChangePasswordModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowChangePasswordModal(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-[32px] p-8 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                  {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? 'Alterar password'}
+                </h3>
+                <button onClick={() => setShowChangePasswordModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer">
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 mb-6">
+                {(t.auth as any).resetPassword?.subtitle?.replace('{email}', userEmail) ?? `Introduz o código enviado para ${userEmail}`}
+              </p>
+              <form onSubmit={handleConfirmPasswordChange} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    {(t.auth as any).resetPassword?.codeLabel ?? 'Código de 6 dígitos'}
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={passwordCode}
+                    onChange={e => setPasswordCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder={(t.auth as any).resetPassword?.codePlaceholder ?? '000000'}
+                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 px-6 text-center text-xl tracking-[0.4em] focus:outline-none focus:border-blue-500 text-white font-bold placeholder:text-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    {(t.auth as any).resetPassword?.passwordLabel ?? 'Nova password'}
+                  </label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder={(t.auth as any).resetPassword?.passwordPlaceholder ?? '••••••••••••'}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 text-white font-medium placeholder:text-slate-700"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    {t.dashboard.settings.personalData.confirmPassword}
+                  </label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder={t.dashboard.settings.personalData.confirmPassword}
+                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 text-white font-medium placeholder:text-slate-700"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingPassword || passwordCode.length !== 6 || !newPassword || !confirmPassword}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {savingPassword ? <Loader2 size={18} className="animate-spin" /> : ((t.auth as any).resetPassword?.submit ?? 'Confirmar nova password')}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Alert Modal */}
       <AlertModal

@@ -929,6 +929,8 @@ export const pt = {
               changeEmailDesc: "Confirma com a tua password atual.",
               changePasswordTitle: "Alterar password",
               changePasswordDesc: "Mínimo 8 caracteres, com maiúscula, minúscula e número.",
+              changePasswordDescCode: "Enviaremos um código de 6 dígitos para o teu email. Usa-o no modal para definir a nova password.",
+              codeSentMessage: "Código enviado. Verifica o teu email.",
               emailSuccess: "Email alterado com sucesso.",
               passwordSuccess: "Password alterada com sucesso.",
               socialAccountNote: "Contas ligadas a redes sociais não podem alterar email ou password aqui."
@@ -977,7 +979,7 @@ export const pt = {
           deleteError: "Erro ao eliminar a conta.",
           marketingChannels: "Email • SMS • Telegram",
           needHelp: "Precisas de ajuda?",
-          supportAvailable: "O nosso suporte está disponível 24/7 via Whatsapp.",
+          supportAvailable: "O nosso suporte está disponível 24/7 via Email.",
           sessionExpired: {
               title: "Sessão Expirada",
               message: "A tua sessão expirou por segurança. Por favor, inicia sessão novamente.",

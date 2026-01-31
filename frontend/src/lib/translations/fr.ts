@@ -1041,6 +1041,8 @@ export const fr = {
               changeEmailDesc: "Confirmez avec votre mot de passe actuel.",
               changePasswordTitle: "Changer le mot de passe",
               changePasswordDesc: "Minimum 8 caractères, avec majuscule, minuscule et chiffre.",
+              changePasswordDescCode: "Nous enverrons un code à 6 chiffres à votre email. Utilisez-le dans le modal pour définir votre nouveau mot de passe.",
+              codeSentMessage: "Code envoyé. Vérifiez votre email.",
               emailSuccess: "Email modifié avec succès.",
               passwordSuccess: "Mot de passe modifié avec succès.",
               socialAccountNote: "Les comptes liés aux réseaux sociaux ne peuvent pas modifier l'email ou le mot de passe ici."
