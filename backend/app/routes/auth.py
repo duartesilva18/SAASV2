@@ -411,8 +411,8 @@ async def check_verification_status(email: str, db: Session = Depends(get_db)):
 
 def create_default_categories(db: Session, workspace_id: uuid.UUID):
     default_cats = [
-        {"name": "Investimento", "type": "expense", "vault_type": "investment", "color_hex": "#3B82F6", "icon": "TrendingUp", "is_default": True},
-        {"name": "Fundo de Emergência", "type": "expense", "vault_type": "emergency", "color_hex": "#F97316", "icon": "ShieldCheck", "is_default": True},
+        {"name": "Cofre Investimentos", "type": "expense", "vault_type": "investment", "color_hex": "#3B82F6", "icon": "TrendingUp", "is_default": True},
+        {"name": "Cofre Emergência", "type": "expense", "vault_type": "emergency", "color_hex": "#F97316", "icon": "ShieldCheck", "is_default": True},
         {"name": "Alimentação", "type": "expense", "vault_type": "none", "color_hex": "#F59E0B", "icon": "Utensils", "is_default": False},
         {"name": "Entretenimento", "type": "expense", "vault_type": "none", "color_hex": "#EC4899", "icon": "Gamepad", "is_default": False},
         {"name": "Transportes", "type": "expense", "vault_type": "none", "color_hex": "#3B82F6", "icon": "Car", "is_default": False},
@@ -473,14 +473,14 @@ def create_seed_transactions(db: Session, workspace_id: uuid.UUID, categories_ma
         {"category": "Entretenimento", "description": "Jantar restaurante", "amount_cents": -1, "days_ago": 3},
         {"category": "Entretenimento", "description": "PlayStation Store", "amount_cents": -1, "days_ago": 6},
         
-        # Investimento
-        {"category": "Investimento", "description": "Ações bolsa", "amount_cents": -1, "days_ago": 7},
-        {"category": "Investimento", "description": "ETF investimento", "amount_cents": -1, "days_ago": 10},
-        {"category": "Investimento", "description": "Criptomoedas Bitcoin", "amount_cents": -1, "days_ago": 5},
+        # Cofre Investimentos
+        {"category": "Cofre Investimentos", "description": "Ações bolsa", "amount_cents": -1, "days_ago": 7},
+        {"category": "Cofre Investimentos", "description": "ETF investimento", "amount_cents": -1, "days_ago": 10},
+        {"category": "Cofre Investimentos", "description": "Criptomoedas Bitcoin", "amount_cents": -1, "days_ago": 5},
         
-        # Fundo de Emergência
-        {"category": "Fundo de Emergência", "description": "Poupança emergência", "amount_cents": -1, "days_ago": 14},
-        {"category": "Fundo de Emergência", "description": "Reserva fundo", "amount_cents": -1, "days_ago": 20},
+        # Cofre Emergência
+        {"category": "Cofre Emergência", "description": "Poupança emergência", "amount_cents": -1, "days_ago": 14},
+        {"category": "Cofre Emergência", "description": "Reserva fundo", "amount_cents": -1, "days_ago": 20},
         
         # Salário (receita)
         {"category": "Salário", "description": "Salário mensal", "amount_cents": 1, "days_ago": 0},

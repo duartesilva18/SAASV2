@@ -128,9 +128,16 @@ export default function RecurringPage() {
     if (!validate()) return;
     
     try {
-      // Para despesas, amount_cents deve ser negativo; para receitas, positivo
       const baseAmount = Math.round(parseFloat(formData.amount) * 100);
-      const amount_cents = formData.type === 'expense' ? -Math.abs(baseAmount) : Math.abs(baseAmount);
+      const selectedCat = allCategories.find(c => c.id === formData.category_id);
+      // Cofre (investimento/emergência): depósito mensal = positivo (adiciona ao cofre)
+      // Regulares: despesa = negativo, receita = positivo
+      let amount_cents: number;
+      if (selectedCat?.vault_type && selectedCat.vault_type !== 'none') {
+        amount_cents = Math.abs(baseAmount); // Depósito no cofre sempre positivo
+      } else {
+        amount_cents = formData.type === 'expense' ? -Math.abs(baseAmount) : Math.abs(baseAmount);
+      }
       
       const payload = {
         description: formData.description,
@@ -188,25 +195,17 @@ export default function RecurringPage() {
     }
   };
 
-  // IMPORTANTE: Filtrar por vault_type === 'none' para excluir vault transactions
-  // Se não houver categoria, assumir baseado no sinal do amount_cents
+  // Incluir todas as subscrições (regulares + cofre): investimento e fundo de emergência são "despesas" mensais (dinheiro que sai da conta principal)
   const recurringIncomes = recurring.filter(r => {
     const cat = allCategories.find(c => c.id === r.category_id);
-    if (!cat) {
-      // Se não tem categoria, assumir receita se amount_cents > 0
-      return r.amount_cents > 0;
-    }
-    return cat.type === 'income' && cat.vault_type === 'none';
+    if (!cat) return r.amount_cents > 0;
+    return cat.type === 'income';
   });
-  
+
   const recurringExpenses = recurring.filter(r => {
     const cat = allCategories.find(c => c.id === r.category_id);
-    if (!cat) {
-      // Se não tem categoria, assumir despesa se amount_cents < 0
-      return r.amount_cents < 0;
-    }
-    // Apenas despesas regulares (não vault)
-    return cat.type === 'expense' && cat.vault_type === 'none';
+    if (!cat) return r.amount_cents < 0;
+    return cat.type === 'expense';
   });
 
   // Receitas: amount_cents deve ser positivo, usar valor absoluto para segurança
@@ -730,9 +729,30 @@ export default function RecurringPage() {
                       className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-5 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer"
                     >
                       <option value="">{t.dashboard.recurring.selectCategory}</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                      ))}
+                      {(() => {
+                        const vaultCats = categories.filter((c: any) => c.vault_type && c.vault_type !== 'none');
+                        const regularCats = categories.filter((c: any) => !c.vault_type || c.vault_type === 'none');
+                        const regularLabel = activeTab === 'expense' ? (t.dashboard?.transactions?.filters?.expense ?? 'Despesas') : (t.dashboard?.transactions?.filters?.income ?? 'Receitas');
+                        const vaultLabel = t.dashboard?.transactions?.investmentsAndSavings ?? 'Cofre (Investimentos e Poupança)';
+                        return (
+                          <>
+                            {regularCats.length > 0 && (
+                              <optgroup label={regularLabel} className="bg-slate-900">
+                                {regularCats.map((c: any) => (
+                                  <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {vaultCats.length > 0 && (
+                              <optgroup label={vaultLabel} className="bg-slate-900">
+                                {vaultCats.map((c: any) => (
+                                  <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </>
+                        );
+                      })()}
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>

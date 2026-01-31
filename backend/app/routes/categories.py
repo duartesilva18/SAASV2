@@ -206,10 +206,12 @@ async def delete_category(request: Request, category_id: UUID, db: Session = Dep
     if not db_category:
         raise HTTPException(status_code=404, detail='Categoria não encontrada')
     
-    # Proteção especial: Só bloqueia se for categoria padrão OU se for uma das categorias de cofre principais
+    # Proteção especial: categorias de Cofre principais (novas e antigas para compatibilidade)
+    vault_investment_names = ['INVESTIMENTO', 'INVESTIMENTOS', 'COFRE INVESTIMENTOS', 'COFRE INVESTIMENTO']
+    vault_emergency_names = ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA', 'COFRE EMERGÊNCIA', 'COFRE EMERGENCIA']
     is_protected_name = (
-        (db_category.vault_type == 'investment' and db_category.name.upper() in ['INVESTIMENTO', 'INVESTIMENTOS']) or
-        (db_category.vault_type == 'emergency' and db_category.name.upper() in ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA'])
+        (db_category.vault_type == 'investment' and db_category.name.upper() in vault_investment_names) or
+        (db_category.vault_type == 'emergency' and db_category.name.upper() in vault_emergency_names)
     )
     
     if db_category.is_default or is_protected_name:
@@ -243,11 +245,12 @@ async def bulk_delete_categories(request: Request, category_ids: List[UUID], db:
     deleted_count = 0
     errors = []
     
+    vault_investment_names = ['INVESTIMENTO', 'INVESTIMENTOS', 'COFRE INVESTIMENTOS', 'COFRE INVESTIMENTO']
+    vault_emergency_names = ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA', 'COFRE EMERGÊNCIA', 'COFRE EMERGENCIA']
     for cat in categories:
-        # Mesmas proteções do delete individual
         is_protected_name = (
-            (cat.vault_type == 'investment' and cat.name.upper() in ['INVESTIMENTO', 'INVESTIMENTOS']) or
-            (cat.vault_type == 'emergency' and cat.name.upper() in ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA'])
+            (cat.vault_type == 'investment' and cat.name.upper() in vault_investment_names) or
+            (cat.vault_type == 'emergency' and cat.name.upper() in vault_emergency_names)
         )
         
         if cat.is_default or is_protected_name:
