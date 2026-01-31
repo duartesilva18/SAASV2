@@ -1516,6 +1516,7 @@ export const en = {
           stripeNotConnected: "Connect your Stripe account to receive commissions automatically.",
           openStripeDashboard: "Open Stripe Dashboard",
           configureStripeConnect: "Configure Stripe Connect",
+          loading: "Opening...",
           affiliateLink: "Affiliate Link",
           monthlyCommissions: "Monthly Commissions",
           paid: "Paid",

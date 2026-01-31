@@ -1017,6 +1017,7 @@ export const pt = {
           stripeNotConnected: "Conecta a tua conta Stripe para receberes comissões automaticamente.",
           openStripeDashboard: "Abrir Dashboard Stripe",
           configureStripeConnect: "Configurar Stripe Connect",
+          loading: "A abrir...",
           affiliateLink: "Link de Afiliado",
           monthlyCommissions: "Comissões Mensais",
           paid: "Pago",

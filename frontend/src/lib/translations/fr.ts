@@ -1486,6 +1486,7 @@ export const fr = {
           stripeNotConnected: "Connectez votre compte Stripe pour recevoir les commissions automatiquement.",
           openStripeDashboard: "Ouvrir le tableau de bord Stripe",
           configureStripeConnect: "Configurer Stripe Connect",
+          loading: "Ouverture...",
           affiliateLink: "Lien d'affilié",
           monthlyCommissions: "Commissions mensuelles",
           paid: "Payé",

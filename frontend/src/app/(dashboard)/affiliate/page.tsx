@@ -914,7 +914,7 @@ export default function AffiliatePage() {
               {stripeConnectLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {t.dashboard?.affiliate?.loading || "A abrir..."}
+                  {t.dashboard?.affiliate?.loading ?? "A abrir..."}
                 </>
               ) : status?.stripe_connect_configured ? (
                 <>
