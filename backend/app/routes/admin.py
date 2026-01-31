@@ -180,25 +180,16 @@ async def get_health_dashboard(db: Session = Depends(get_db), admin: models.User
         "icon": "mail"
     })
 
-    # Gemini
+    # Gemini (usa list_models para não gastar quota de geração)
     gemini_ok = False
     gemini_msg = ""
     if settings.GEMINI_API_KEY:
         try:
             import google.generativeai as genai
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-pro"]
-            for model_name in models_to_try:
-                try:
-                    model = genai.GenerativeModel(model_name)
-                    model.generate_content("ok", generation_config={"max_output_tokens": 1})
-                    gemini_ok = True
-                    gemini_msg = f"API operacional ({model_name})"
-                    break
-                except Exception:
-                    continue
-            if not gemini_ok:
-                gemini_msg = "Nenhum modelo disponível (tentados: " + ", ".join(models_to_try) + ")"
+            list(genai.list_models())
+            gemini_ok = True
+            gemini_msg = "API operacional (chave válida)"
         except Exception as e:
             gemini_msg = str(e)[:200]
     else:
@@ -209,6 +200,24 @@ async def get_health_dashboard(db: Session = Depends(get_db), admin: models.User
         "status": "ok" if gemini_ok else ("skipped" if not settings.GEMINI_API_KEY else "error"),
         "message": gemini_msg,
         "icon": "gemini"
+    })
+
+    # Telegram
+    telegram_ok = False
+    telegram_msg = ""
+    if settings.TELEGRAM_BOT_TOKEN:
+        telegram_ok = True
+        telegram_msg = "Bot token configurado"
+        if settings.TELEGRAM_WEBHOOK_SECRET:
+            telegram_msg = "Bot token e webhook configurados"
+    else:
+        telegram_msg = "Token não configurado"
+
+    integrations.append({
+        "name": "Telegram",
+        "status": "ok" if telegram_ok else "skipped",
+        "message": telegram_msg,
+        "icon": "telegram"
     })
 
     # Erros recentes (BD)

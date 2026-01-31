@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Activity, Database, CreditCard, Mail, Sparkles, AlertCircle, CheckCircle2, 
+  Activity, Database, CreditCard, Mail, Sparkles, MessageCircle, AlertCircle, CheckCircle2, 
   XCircle, Loader2, RefreshCw, Trash2, Clock
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -132,7 +132,8 @@ export default function AdminHealthPage() {
                   {int.icon === 'stripe' && <CreditCard size={28} className="text-slate-400 shrink-0" />}
                   {int.icon === 'mail' && <Mail size={28} className="text-slate-400 shrink-0" />}
                   {int.icon === 'gemini' && <Sparkles size={28} className="text-slate-400 shrink-0" />}
-                  {!['database','stripe','mail','gemini'].includes(int.icon) && <Activity size={28} className="text-slate-400 shrink-0" />}
+                  {int.icon === 'telegram' && <MessageCircle size={28} className="text-slate-400 shrink-0" />}
+                  {!['database','stripe','mail','gemini','telegram'].includes(int.icon) && <Activity size={28} className="text-slate-400 shrink-0" />}
                   <div>
                     <p className="font-bold text-white">{int.name}</p>
                     <p className="text-sm text-slate-500 mt-0.5">{int.message}</p>
