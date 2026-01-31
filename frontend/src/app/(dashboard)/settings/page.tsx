@@ -213,7 +213,7 @@ export default function SettingsPage() {
       });
     } catch (err: any) {
       setToast({
-        message: err.response?.data?.detail || (t.auth as any).resetPassword?.invalidCode ?? 'Código inválido ou expirado.',
+        message: (err.response?.data?.detail || (t.auth as any).resetPassword?.invalidCode) ?? 'Código inválido ou expirado.',
         type: 'error',
         isVisible: true
       });
