@@ -371,17 +371,19 @@ async def get_zen_insights(
     for t in historical_transactions:
         month_key = t.transaction_date.strftime('%Y-%m')
         cat = cat_map.get(t.category_id)
-        amount = abs(t.amount_cents / 100)
+        amount_abs = abs(t.amount_cents / 100)
+        amount_signed = t.amount_cents / 100
         if cat:
             if cat.type == 'income':
-                monthly_data[month_key]['income'] += amount
+                monthly_data[month_key]['income'] += amount_abs
             elif cat.vault_type != 'none':
-                monthly_data[month_key]['vault'] += amount
+                # Vault: positivo = depósito, negativo = resgate (usar valor com sinal)
+                monthly_data[month_key]['vault'] += amount_signed
             else:
-                monthly_data[month_key]['expenses'] += amount
-                monthly_data[month_key]['by_category'][cat.name] += amount
+                monthly_data[month_key]['expenses'] += amount_abs
+                monthly_data[month_key]['by_category'][cat.name] += amount_abs
         else:
-            monthly_data[month_key]['expenses'] += amount
+            monthly_data[month_key]['expenses'] += amount_abs
         monthly_data[month_key]['count'] += 1
     
     # Calcular médias históricas com média móvel ponderada (meses recentes têm mais peso)
