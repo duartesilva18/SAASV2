@@ -84,6 +84,7 @@ export default function AffiliatePage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number; isPlanBased?: boolean } | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [stripeConnectLoading, setStripeConnectLoading] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
@@ -878,19 +879,20 @@ export default function AffiliatePage() {
                 : (t.dashboard?.affiliate?.stripeNotConnected || "Conecta a tua conta Stripe para receberes comissões automaticamente.")}
             </p>
             <button
+              disabled={stripeConnectLoading}
               onClick={async () => {
+                setStripeConnectLoading(true);
                 try {
                   if (status?.stripe_connect_configured) {
-                    // Se já está configurado, abrir dashboard do Stripe
                     const res = await api.get('/affiliate/stripe-connect/dashboard');
                     if (res.data.dashboard_url) {
                       window.open(res.data.dashboard_url, '_blank');
                     }
                   } else {
-                    // Se não está configurado, iniciar onboarding
                     const res = await api.get('/affiliate/stripe-connect/onboard');
                     if (res.data.onboard_url) {
                       window.location.href = res.data.onboard_url;
+                      return;
                     }
                   }
                 } catch (err: any) {
@@ -899,6 +901,8 @@ export default function AffiliatePage() {
                     message: err?.response?.data?.detail || (t.dashboard.affiliate as any).stripeError,
                     type: 'error'
                   });
+                } finally {
+                  setStripeConnectLoading(false);
                 }
               }}
               className={`w-full px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 cursor-pointer ${
@@ -907,7 +911,12 @@ export default function AffiliatePage() {
                   : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black'
               }`}
             >
-              {status?.stripe_connect_configured ? (
+              {stripeConnectLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t.dashboard?.affiliate?.loading || "A abrir..."}
+                </>
+              ) : status?.stripe_connect_configured ? (
                 <>
                   <ExternalLink className="w-4 h-4" />
                   {t.dashboard?.affiliate?.openStripeDashboard || "Abrir Dashboard Stripe"}
