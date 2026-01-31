@@ -1,10 +1,24 @@
 import os
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
+
+def _get_stripe_api_key() -> str:
+    """Usa STRIPE_API_KEY ou, em alternativa, STRIPE_API_KEY_TEST/STRIPE_API_KEY_LIVE conforme STRIPE_MODE."""
+    key = os.getenv('STRIPE_API_KEY', '').strip()
+    if key:
+        return key
+    mode = (os.getenv('STRIPE_MODE') or 'test').lower()
+    if mode == 'test':
+        return (os.getenv('STRIPE_API_KEY_TEST') or '').strip()
+    return (os.getenv('STRIPE_API_KEY_LIVE') or '').strip()
+
+
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra='ignore')
     PROJECT_NAME: str = 'FinSaaS - Gestão Financeira'
     DATABASE_URL: str = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/saas_db')
     
@@ -34,8 +48,16 @@ class Settings(BaseSettings):
     ALGORITHM: str = 'HS256'
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120  # 2 horas
     
-    STRIPE_API_KEY: str = os.getenv('STRIPE_API_KEY', '')
+    # Stripe: suporta STRIPE_API_KEY ou STRIPE_API_KEY_TEST/STRIPE_API_KEY_LIVE + STRIPE_MODE
+    STRIPE_API_KEY: str = ''
     STRIPE_WEBHOOK_SECRET: str = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+    @field_validator('STRIPE_API_KEY', mode='before')
+    @classmethod
+    def set_stripe_api_key(cls, v: str) -> str:
+        if v and isinstance(v, str) and v.strip():
+            return v.strip()
+        return _get_stripe_api_key()
     
     WHATSAPP_TOKEN: str = os.getenv('WHATSAPP_TOKEN', '').strip().strip('"')
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '').strip().strip('"')

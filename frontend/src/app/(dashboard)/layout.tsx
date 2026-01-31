@@ -28,9 +28,8 @@ export default function DashboardLayout({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
-  const [supportHidden, setSupportHidden] = useState(
-    () => typeof window !== 'undefined' && localStorage.getItem(SUPPORT_HIDDEN_KEY) === '1'
-  );
+  // Inicializar sempre false para evitar hydration mismatch (server não tem localStorage)
+  const [supportHidden, setSupportHidden] = useState(false);
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -94,6 +93,7 @@ export default function DashboardLayout({
       return [
         { label: s.adminPanel, href: '/admin' },
         { label: s.globalTreasury, href: '/admin/finance' },
+        { label: s.projectExpenses ?? 'Despesas Projeto', href: '/admin/expenses' },
         { label: s.marketing, href: '/admin/marketing' },
         { label: s.affiliatesManagement, href: '/admin/affiliates' },
       ];

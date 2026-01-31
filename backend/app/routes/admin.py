@@ -109,6 +109,67 @@ async def get_admin_stats(db: Session = Depends(get_db), admin: models.User = De
         recent_logs=[]
     )
 
+# --- Despesas do projeto e manutenção ---
+@router.get('/project-expenses')
+async def get_project_expenses(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    """Lista todas as despesas do projeto (apenas admins)."""
+    rows = db.query(models.AdminProjectExpense).order_by(models.AdminProjectExpense.expense_date.desc()).all()
+    return [
+        {
+            "id": str(r.id),
+            "description": r.description,
+            "amount_cents": r.amount_cents,
+            "date": r.expense_date.isoformat() if r.expense_date else None,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.post('/project-expenses')
+async def create_project_expense(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(check_admin),
+):
+    """Adiciona uma despesa do projeto."""
+    body = await request.json()
+    description = (body.get("description") or "").strip()
+    amount_cents = int(body.get("amount_cents", 0))
+    expense_date_str = body.get("date") or body.get("expense_date")
+    if not description or amount_cents <= 0:
+        raise HTTPException(status_code=400, detail="Descrição e valor obrigatórios.")
+    expense_date = date.fromisoformat(expense_date_str[:10]) if expense_date_str else date.today()
+    exp = models.AdminProjectExpense(
+        created_by_id=admin.id,
+        description=description,
+        amount_cents=amount_cents,
+        expense_date=expense_date,
+    )
+    db.add(exp)
+    db.commit()
+    db.refresh(exp)
+    await log_action(db, action='project_expense_create', user_id=admin.id, details=f'Despesa: {description}', request=request)
+    return {"id": str(exp.id), "description": exp.description, "amount_cents": exp.amount_cents, "date": exp.expense_date.isoformat(), "created_at": exp.created_at.isoformat()}
+
+
+@router.delete('/project-expenses/{expense_id}')
+async def delete_project_expense(
+    expense_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(check_admin),
+):
+    """Remove uma despesa do projeto."""
+    exp = db.query(models.AdminProjectExpense).filter(models.AdminProjectExpense.id == expense_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Despesa não encontrada.")
+    db.delete(exp)
+    db.commit()
+    await log_action(db, action='project_expense_delete', user_id=admin.id, details=f'Removida despesa: {exp.description}', request=request)
+    return {"message": "Despesa removida."}
+
+
 @router.get('/audit-logs')
 async def get_audit_logs(
     page: int = 1, 

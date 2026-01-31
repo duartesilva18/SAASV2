@@ -48,10 +48,10 @@ export default function LoadingScreen() {
   const Icon = currentQuote.icon;
 
   return (
-    <div className="fixed inset-0 bg-[#020617] z-[9999] flex items-center justify-center overflow-hidden p-4" role="status" aria-live="polite" aria-label="A carregar">
-      {/* Background Glows */}
+    <div className="fixed inset-0 bg-[#020617] z-[9999] flex items-center justify-center overflow-hidden p-4" role="status" aria-live="polite" aria-label="A carregar" suppressHydrationWarning>
+      {/* Background Glows - inline style evita diferenças de serialização server/client */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none animate-pulse [animation-delay:1s]" />
 
       <div className="relative z-10 flex flex-col items-center justify-center max-w-2xl px-8 text-center">
         {/* Logo/Icon */}
@@ -75,7 +75,7 @@ export default function LoadingScreen() {
           aria-hidden
         >
           <div className="w-16 h-16 border-4 border-slate-800 border-t-blue-500 rounded-full animate-spin" />
-          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-indigo-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-indigo-500 rounded-full animate-spin [animation-direction:reverse] [animation-duration:0.8s]" />
         </motion.div>
 
         {/* Motivational Quote */}

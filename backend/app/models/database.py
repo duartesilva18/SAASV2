@@ -305,3 +305,18 @@ class AffiliateCommission(Base):
     __table_args__ = (
         UniqueConstraint('affiliate_id', 'month', name='unique_affiliate_month'),
     )
+
+
+class AdminProjectExpense(Base):
+    """
+    Despesas do projeto e manutenção (apenas admins).
+    """
+    __tablename__ = 'admin_project_expenses'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    description = Column(String(255), nullable=False)
+    amount_cents = Column(Integer, nullable=False)
+    expense_date = Column(Date, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    created_by = relationship('User', foreign_keys=[created_by_id])

@@ -593,6 +593,7 @@ export const pt = {
           telegramBot: "Bot Telegram",
           adminPanel: "Painel de Comando",
           globalTreasury: "Tesouraria Global",
+          projectExpenses: "Despesas Projeto",
           marketing: "Marketing",
           affiliatesManagement: "Gestão de Afiliados",
           masterPro: "Mestre Pro",
