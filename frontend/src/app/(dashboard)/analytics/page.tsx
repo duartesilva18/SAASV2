@@ -1403,37 +1403,37 @@ export default function AnalyticsPage() {
                 ))}
               </div>
 
-              {/* Categorias em Risco */}
-              {rawData.insights.predictions.categories_at_risk && rawData.insights.predictions.categories_at_risk.length > 0 && (
+              {/* Confiança da projeção */}
+              {rawData.insights.predictions.confidence != null && (
                 <div className="mt-6 pt-6 border-t border-slate-800">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-amber-400 mb-4 flex items-center gap-2">
-                    <Info size={14} />
-                    {t.dashboard.analytics.categoriesAtRisk}
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                    <ShieldCheck size={14} />
+                    {t.dashboard.analytics.projectionConfidence ?? 'Confiança da projeção'}
                   </h4>
-                  <div className="space-y-3">
-                    {rawData.insights.predictions.categories_at_risk.slice(0, 3).map((cat: any, idx: number) => (
-                      <div key={idx} className="bg-slate-900/60 border border-amber-500/20 rounded-xl p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-black text-white">{cat.name}</span>
-                          <span className={`text-xs font-black ${cat.risk_percent >= 100 ? 'text-red-400' : 'text-amber-400'}`}>
-                            {cat.risk_percent.toFixed(0)}% {t.dashboard.analytics.riskPercent}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400">
-                          <span>{t.dashboard.analytics.projection} {formatCurrency(cat.projected)}</span>
-                          <span>{t.dashboard.analytics.limit} {formatCurrency(cat.limit)}</span>
-                        </div>
-                        <div className="mt-2 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min(cat.risk_percent, 100)}%` }}
-                            transition={{ delay: idx * 0.1 + 0.3, duration: 0.5 }}
-                            className={`h-full ${cat.risk_percent >= 100 ? 'bg-red-500' : 'bg-amber-500'}`}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(rawData.insights.predictions.confidence, 100)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`h-full rounded-full ${
+                          rawData.insights.predictions.confidence >= 70 ? 'bg-emerald-500' :
+                          rawData.insights.predictions.confidence >= 50 ? 'bg-amber-500' : 'bg-slate-500'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-sm font-black text-white shrink-0">
+                      {rawData.insights.predictions.confidence.toFixed(0)}%
+                    </span>
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-2 italic">
+                    {rawData.insights.predictions.confidence >= 70
+                      ? (t.dashboard.analytics.confidenceHigh ?? 'Baseado em 6+ meses de histórico.')
+                      : rawData.insights.predictions.confidence >= 50
+                        ? (t.dashboard.analytics.confidenceMedium ?? 'Mais dados melhoram a precisão.')
+                        : (t.dashboard.analytics.confidenceLow ?? 'Histórico limitado. Projeções preliminares.')
+                    }
+                  </p>
                 </div>
               )}
             </div>
