@@ -414,7 +414,7 @@ function TransactionsPageContent() {
     >
       {/* Hero Header */}
       <section className="relative">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-8 lg:gap-10">
           <div>
             <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-6">
               <Sparkles size={14} className="text-blue-400" />
@@ -782,9 +782,9 @@ function TransactionsPageContent() {
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
               
-              <div className="p-8 lg:p-12">
-                <div className="flex justify-between items-center mb-10">
-                  <h2 className="text-3xl font-black text-white tracking-tighter">
+              <div className="p-5 sm:p-8 lg:p-12">
+                <div className="flex justify-between items-center mb-6 sm:mb-8 md:mb-10">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter">
                     {editingTransaction ? t.dashboard.transactions.editRecord : t.dashboard.transactions.newRecord}
                   </h2>
                   <button onClick={() => {

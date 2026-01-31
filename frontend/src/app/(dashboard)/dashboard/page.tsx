@@ -636,7 +636,7 @@ export default function DashboardPage() {
       )}
 
       {/* Filtros (esquerda) | Nova transação (direita) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.filters}</span>
           <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-2 sm:px-3 py-2">
@@ -700,7 +700,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 3 cards: Receitas | Despesas | Saldo */}
-      <section className="mb-10">
+      <section className="mb-6 sm:mb-8 md:mb-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
             whileHover={{ y: -4 }}
@@ -764,7 +764,7 @@ export default function DashboardPage() {
       </section>
 
       {/* 4 quadrados: [Evolução] [Analytics donut – coluna direita inteira]; [Fundos/Inv/Emerg] [continua donut] */}
-      <section className="mb-12">
+      <section className="mb-8 sm:mb-10 md:mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Gráficos</h2>
           {isPro && (
@@ -1016,7 +1016,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mb-12">
+      <section className="mb-8 sm:mb-10 md:mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.quickInsightsTitle}</h2>
           {isPro && (
@@ -1028,11 +1028,11 @@ export default function DashboardPage() {
             </Link>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm p-5 rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-sm text-slate-200 font-medium italic flex items-center gap-3"
+              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm p-4 sm:p-5 rounded-xl sm:rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-xs sm:text-sm text-slate-200 font-medium italic flex items-center gap-2 sm:gap-3"
             >
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles size={14} />

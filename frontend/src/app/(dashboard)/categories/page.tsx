@@ -655,8 +655,8 @@ export default function CategoriesPage() {
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
               <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full" />
 
-              <div className="p-10 md:p-14 relative z-10">
-                <div className="flex items-center justify-between mb-12">
+              <div className="p-5 sm:p-8 md:p-10 lg:p-14 relative z-10">
+                <div className="flex items-center justify-between mb-6 sm:mb-8 md:mb-12">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />

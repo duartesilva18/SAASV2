@@ -362,8 +362,8 @@ export default function BillingPage() {
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 blur-[80px] rounded-full -z-10" />
               
-              <div className="p-8 lg:p-12">
-                <div className="flex justify-between items-center mb-8">
+              <div className="p-5 sm:p-8 lg:p-12">
+                <div className="flex justify-between items-center mb-6 sm:mb-8">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center">
                       <AlertCircle size={24} />

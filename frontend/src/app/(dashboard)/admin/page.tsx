@@ -118,34 +118,34 @@ export default function AdminDashboardPage() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-10 pb-20"
     >
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6 px-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-white mb-2 uppercase leading-tight">
             Painel de <span className="text-blue-500 italic">Comando</span>
           </h1>
-          <p className="text-slate-500 font-medium italic text-sm">Controlo total sobre o ecossistema Finly.</p>
+          <p className="text-slate-500 font-medium italic text-xs sm:text-sm">Controlo total sobre o ecossistema Finly.</p>
         </div>
-        <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl">
-          <ShieldAlert className="text-blue-500" size={20} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Acesso Nível Root: {currentUser?.email}</span>
+        <div className="flex items-center gap-2 sm:gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-xl sm:rounded-2xl shrink-0">
+          <ShieldAlert className="text-blue-500 shrink-0" size={18} />
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">Nível Root: {currentUser?.email}</span>
         </div>
       </header>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         {[
           { label: t.dashboard.admin.dashboard.totalUsers, value: stats?.total_users, icon: Users, color: 'blue' },
           { label: t.dashboard.admin.dashboard.activeSubscriptions, value: stats?.active_subscriptions, icon: ShieldCheck, color: 'emerald' },
           { label: t.dashboard.admin.dashboard.totalVisits, value: stats?.total_visits, icon: Activity, color: 'indigo' },
           { label: t.dashboard.admin.dashboard.transactionsInSystem, value: stats?.total_transactions, icon: Zap, color: 'amber' }
         ].map((item, i) => (
-          <div key={i} className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-6 rounded-[32px] group hover:border-blue-500/20 transition-all flex-1">
-            <div className="flex items-center justify-between mb-4">
-              <item.icon className={`text-${item.color}-500`} size={20} />
-              <div className={`px-2 py-1 bg-${item.color}-500/10 rounded-lg text-[8px] font-black text-${item.color}-400 uppercase`}>Métrica Live</div>
+          <div key={i} className="bg-slate-900/40 backdrop-blur-xl border border-white/5 p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-[32px] group hover:border-blue-500/20 transition-all flex-1">
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <item.icon className={`text-${item.color}-500`} size={18} />
+              <div className={`px-1.5 sm:px-2 py-0.5 sm:py-1 bg-${item.color}-500/10 rounded-lg text-[7px] sm:text-[8px] font-black text-${item.color}-400 uppercase whitespace-nowrap`}>Métrica</div>
             </div>
-            <p className="text-3xl font-black text-white mb-1">{item.value}</p>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.label}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-0.5 sm:mb-1">{item.value}</p>
+            <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-widest truncate">{item.label}</p>
           </div>
         ))}
       </div>
@@ -249,20 +249,20 @@ export default function AdminDashboardPage() {
       </section>
 
       {/* Audit Logs Overview */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[32px] p-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-          <div className="flex items-center gap-3">
-            <Activity className="text-blue-500" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">Auditoria do Sistema</h3>
+      <section className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Activity className="text-blue-500 shrink-0" size={18} />
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white opacity-50">Auditoria do Sistema</h3>
           </div>
 
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="relative group min-w-[180px]">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-blue-400 transition-colors" size={14} />
+          <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+            <div className="relative group flex-1 md:flex-none md:min-w-[180px]">
+              <Filter className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-blue-400 transition-colors" size={14} />
               <select
                 value={auditFilter}
                 onChange={(e) => { setAuditFilter(e.target.value); setAuditPage(1); }}
-                className="w-full bg-slate-950/50 border border-slate-800 hover:border-slate-700 rounded-2xl py-3 pl-10 pr-10 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer appearance-none shadow-inner"
+                className="w-full bg-slate-950/50 border border-slate-800 hover:border-slate-700 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-8 sm:pr-10 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer appearance-none shadow-inner min-h-[44px]"
               >
                 <option value="all" className="bg-slate-900">Todas as Ações</option>
                 <option value="login" className="bg-slate-900">Logins</option>

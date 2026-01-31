@@ -477,19 +477,19 @@ export default function GoalsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-white/10 rounded-[28px] p-8 md:p-10 shadow-[0_25px_80px_-40px_rgba(59,130,246,0.35)] overflow-hidden"
+              className="relative w-full max-w-xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-white/10 rounded-2xl sm:rounded-[28px] p-5 sm:p-8 md:p-10 shadow-[0_25px_80px_-40px_rgba(59,130,246,0.35)] overflow-hidden max-h-[90vh] overflow-y-auto"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
               
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+              <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tight leading-tight">
                     {editingGoal ? t.dashboard.goals.edit : t.dashboard.goals.new} <span className="text-blue-500 italic">{t.dashboard.goals.goal}</span>
                   </h2>
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-2">{t.dashboard.goals.drawYourFuture}</p>
+                  <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mt-1 sm:mt-2">{t.dashboard.goals.drawYourFuture}</p>
                 </div>
-                <button onClick={() => setShowNotifications(false)} className="p-3 hover:bg-white/10 rounded-full text-slate-400 transition-colors cursor-pointer">
-                  <X size={24} />
+                <button onClick={() => setShowNotifications(false)} className="p-2 sm:p-3 hover:bg-white/10 rounded-full text-slate-400 transition-colors cursor-pointer shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
+                  <X size={22} />
                 </button>
               </div>
 
