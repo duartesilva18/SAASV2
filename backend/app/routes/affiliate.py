@@ -19,10 +19,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/affiliate', tags=['affiliate'])
 
-# Price IDs dos planos
-PLAN_BASIC_MONTHLY = 'price_1SuIypLtWlVpaXrbD7ph1fhf'  # Finly Basic
-PLAN_PLUS = 'price_1SuIzcLtWlVpaXrbLkHE0QbS'  # Finly Plus
-PLAN_YEARLY = 'price_1SuJ0GLtWlVpaXrb8BH9HIve'  # Finly Pro (1 ano)
+
+def _plan_ids():
+    """Price IDs dos planos (via config para permitir override por env)."""
+    return (
+        settings.STRIPE_PRICE_BASIC_MONTHLY,
+        settings.STRIPE_PRICE_PLUS,
+        settings.STRIPE_PRICE_YEARLY,
+    )
 
 def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[bool, str]:
     """
@@ -78,12 +82,13 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
         if not current_price_id:
             return (False, 'Plano inválido')
         
+        plan_basic, plan_plus, plan_yearly = _plan_ids()
         # Planos que dão acesso direto a afiliados
-        if current_price_id in [PLAN_PLUS, PLAN_YEARLY]:
+        if current_price_id in [plan_plus, plan_yearly]:
             return (True, 'Plano com acesso a afiliados')
         
         # Plano básico (1 mês) - verificar se tem 3 meses consecutivos pagos
-        if current_price_id == PLAN_BASIC_MONTHLY:
+        if current_price_id == plan_basic:
             # Buscar todas as invoices pagas do customer
             invoices = stripe.Invoice.list(
                 customer=user.stripe_customer_id,
@@ -96,7 +101,7 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
             for inv in invoices.data:
                 # Verificar se a invoice tem o price_id do plano básico
                 for line_item in inv.lines.data:
-                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == PLAN_BASIC_MONTHLY:
+                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == plan_basic:
                         basic_invoices.append(inv)
                         break
             

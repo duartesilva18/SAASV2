@@ -17,6 +17,7 @@ import Toast from '@/components/Toast';
 import confetti from 'canvas-confetti';
 import { useUser } from '@/lib/UserContext';
 import LoadingScreen from '@/components/LoadingScreen';
+import { hasProAccess } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { t, formatCurrency } = useTranslation();
@@ -96,10 +97,7 @@ export default function DashboardPage() {
   });
 
   // Dados para gráficos (Evolução 6 meses + Despesas por categoria) e "vs. mês anterior"
-  // Admins têm sempre acesso Pro
-  const hasActiveSub = useMemo(() => {
-    return userData ? (userData.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(userData.subscription_status)) : false;
-  }, [userData]);
+  const hasActiveSub = useMemo(() => hasProAccess(userData), [userData]);
   const { data: compositeData } = useSWR(hasActiveSub ? '/insights/composite' : null, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
@@ -172,7 +170,8 @@ export default function DashboardPage() {
         const transactions = collections.recent_transactions || collections.transactions || [];
         const categories = collections.categories || [];
         const isDemoMode = !hasActiveSub && transactions.length === 0;
-        const lowData = transactions.length < 10 || isDemoMode;
+        // Admins/Pro nunca veem Modo Demo – têm acesso completo
+        const lowData = !hasActiveSub && (transactions.length < 10 || isDemoMode);
 
         // Se não for Pro e não tiver transações, usar demo
         let finalTransactions = transactions;
@@ -369,9 +368,7 @@ export default function DashboardPage() {
             ]);
             
             const user = profileRes.data;
-            const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-            
-            if (!hasActiveSub) return; // Só prefetch se for Pro
+            if (!hasProAccess(user)) return; // Só prefetch se for Pro ou admin
             
             let compositeData = {
               ...analyticsRes.data,
@@ -383,9 +380,8 @@ export default function DashboardPage() {
               data: compositeData,
               timestamp: Date.now()
             }));
-          } catch (err) {
+          } catch {
             // Silenciar erros de prefetch - não é crítico
-            console.log('Prefetch analytics em background falhou (não crítico)');
           }
         };
         

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # Stripe: suporta STRIPE_API_KEY ou STRIPE_API_KEY_TEST/STRIPE_API_KEY_LIVE + STRIPE_MODE
     STRIPE_API_KEY: str = ''
     STRIPE_WEBHOOK_SECRET: str = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+    # Price IDs dos planos (override via env se necessário)
+    STRIPE_PRICE_BASIC_MONTHLY: str = os.getenv('STRIPE_PRICE_BASIC_MONTHLY', 'price_1SuIypLtWlVpaXrbD7ph1fhf')
+    STRIPE_PRICE_PLUS: str = os.getenv('STRIPE_PRICE_PLUS', 'price_1SuIzcLtWlVpaXrbLkHE0QbS')
+    STRIPE_PRICE_YEARLY: str = os.getenv('STRIPE_PRICE_YEARLY', 'price_1SuJ0GLtWlVpaXrb8BH9HIve')
 
     @field_validator('STRIPE_API_KEY', mode='before')
     @classmethod

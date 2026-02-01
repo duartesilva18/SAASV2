@@ -258,28 +258,23 @@ async def get_project_expenses(db: Session = Depends(get_db), admin: models.User
 
 @router.post('/project-expenses')
 async def create_project_expense(
+    data: schemas.ProjectExpenseCreate,
     request: Request,
     db: Session = Depends(get_db),
     admin: models.User = Depends(check_admin),
 ):
     """Adiciona uma despesa do projeto."""
-    body = await request.json()
-    description = (body.get("description") or "").strip()
-    amount_cents = int(body.get("amount_cents", 0))
-    expense_date_str = body.get("date") or body.get("expense_date")
-    if not description or amount_cents <= 0:
-        raise HTTPException(status_code=400, detail="Descrição e valor obrigatórios.")
-    expense_date = date.fromisoformat(expense_date_str[:10]) if expense_date_str else date.today()
+    expense_date = data.expense_date or date.today()
     exp = models.AdminProjectExpense(
         created_by_id=admin.id,
-        description=description,
-        amount_cents=amount_cents,
+        description=data.description.strip(),
+        amount_cents=data.amount_cents,
         expense_date=expense_date,
     )
     db.add(exp)
     db.commit()
     db.refresh(exp)
-    await log_action(db, action='project_expense_create', user_id=admin.id, details=f'Despesa: {description}', request=request)
+    await log_action(db, action='project_expense_create', user_id=admin.id, details=f'Despesa: {data.description}', request=request)
     return {"id": str(exp.id), "description": exp.description, "amount_cents": exp.amount_cents, "date": exp.expense_date.isoformat(), "created_at": exp.created_at.isoformat()}
 
 
@@ -1137,12 +1132,27 @@ async def calculate_monthly_commissions(
         
         if not referrals:
             continue
-        
-        # Calcular receita total (assumindo que cada subscrição Pro é 9.99€ = 999 cêntimos)
-        # TODO: Buscar valor real das subscrições do Stripe
-        subscription_price_cents = 999  # Valor padrão, ajustar conforme necessário
-        total_revenue = len(referrals) * subscription_price_cents
-        
+
+        # Calcular receita total: buscar valor real de cada subscrição no Stripe
+        total_revenue = 0
+        DEFAULT_PRICE_CENTS = 999  # 9.99€ fallback se Stripe não disponível
+        for ref in referrals:
+            ref_user = db.query(models.User).filter(models.User.id == ref.referred_user_id).first()
+            amount_cents = DEFAULT_PRICE_CENTS
+            if ref_user and ref_user.stripe_subscription_id and settings.STRIPE_API_KEY:
+                try:
+                    sub = stripe.Subscription.retrieve(ref_user.stripe_subscription_id)
+                    items = getattr(sub, 'items', None)
+                    if items and hasattr(items, 'data') and items.data:
+                        price = getattr(items.data[0], 'price', None) or (items.data[0].get('price') if isinstance(items.data[0], dict) else None)
+                        if price:
+                            amt = getattr(price, 'unit_amount', None) or (price.get('unit_amount') if isinstance(price, dict) else None)
+                            if amt is not None:
+                                amount_cents = int(amt)
+                except Exception as e:
+                    logger.debug(f"Stripe subscription retrieve falhou para referral {ref.id}, usando fallback: {e}")
+            total_revenue += amount_cents
+
         # Calcular comissão
         commission_amount = int((total_revenue * commission_percentage / 100))
         

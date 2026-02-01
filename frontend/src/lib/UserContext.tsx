@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import api from './api';
+import { hasProAccess } from './utils';
 
 interface User {
   id: string;
@@ -94,13 +95,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Considera Pro se estiver ativo, em trial, cancel_at_period_end ou past_due (período de graça)
   // past_due = pagamento falhou mas Stripe ainda está a tentar cobrar – mantém acesso para atualizar o método de pagamento
-  // unpaid = sem acesso (subscrição efetivamente em incumprimento)
-  // Admins têm sempre acesso Pro
-  const isPro = user?.is_admin 
-    || user?.subscription_status === 'active' 
-    || user?.subscription_status === 'trialing' 
-    || user?.subscription_status === 'cancel_at_period_end'
-    || user?.subscription_status === 'past_due';
+  const isPro = hasProAccess(user) || user?.subscription_status === 'past_due';
 
   return (
     <UserContext.Provider value={{ user, loading, refreshUser: fetchUser, logout, isPro }}>

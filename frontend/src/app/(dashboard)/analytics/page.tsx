@@ -21,6 +21,7 @@ import { Lock, ArrowRight } from 'lucide-react';
 import { ChartSkeleton, DashboardSkeleton } from '@/components/LoadingSkeleton';
 import AlertModal from '@/components/AlertModal';
 import PageLoading from '@/components/PageLoading';
+import { hasProAccess } from '@/lib/utils';
 
 export default function AnalyticsPage() {
   const { t, formatCurrency } = useTranslation();
@@ -58,11 +59,10 @@ export default function AnalyticsPage() {
           const { data, timestamp } = JSON.parse(cached);
           const isFresh = Date.now() - timestamp < 30000; // 30 segundos de cache "fresca"
           
-          const isProUser = data.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(data.subscription_status);
-          setIsPro(isProUser);
+          setIsPro(hasProAccess(data));
           
           // Se não for Pro, garantir que tem dados mock
-          if (!isProUser) {
+          if (!hasProAccess(data)) {
             const dataWithMock = {
               ...data,
               transactions: DEMO_TRANSACTIONS,
@@ -88,10 +88,8 @@ export default function AnalyticsPage() {
       ]);
 
       const user = profileRes.data;
-      // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
-      // Admins têm sempre acesso Pro
-      const hasActiveSub = user.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-      
+      const hasActiveSub = hasProAccess(user);
+
       // Se a subscrição mudou desde a última cache, ignoramos a cache e atualizamos
       const cached = localStorage.getItem('analytics_cache');
       if (cached) {
@@ -106,7 +104,8 @@ export default function AnalyticsPage() {
 
       let compositeData = {
         ...analyticsRes.data,
-        subscription_status: user.subscription_status // Guardar o status nos dados
+        subscription_status: user.subscription_status,
+        is_admin: user.is_admin
       };
 
       // Se não for Pro, sempre usar Mock Data para visualização completa
@@ -134,16 +133,13 @@ export default function AnalyticsPage() {
         timestamp: cacheTimestamp
       }));
     } catch (err) {
-      console.error('Erro ao carregar análise:', err);
       // Em caso de erro, se não for Pro, usar dados mock como fallback
       try {
         const profileRes = await api.get('/auth/me');
         const user = profileRes.data;
-        // Admins têm sempre acesso Pro
-        const hasActiveSub = user.is_admin || ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-        setIsPro(hasActiveSub);
-        
-        if (!hasActiveSub) {
+        setIsPro(hasProAccess(user));
+
+        if (!hasProAccess(user)) {
           setRawData({
             transactions: DEMO_TRANSACTIONS,
             categories: DEMO_CATEGORIES,
@@ -151,8 +147,8 @@ export default function AnalyticsPage() {
             recurring: DEMO_RECURRING
           });
         }
-      } catch (fallbackErr) {
-        console.error('Erro no fallback:', fallbackErr);
+      } catch {
+        // Fallback silencioso
       }
     } finally {
       setLoading(false);
@@ -172,9 +168,7 @@ export default function AnalyticsPage() {
         ]);
 
         const user = profileRes.data;
-        const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-        
-        if (!hasActiveSub) return; // Não verificar se não for Pro
+        if (!hasProAccess(user)) return; // Não verificar se não for Pro
 
         // Filtrar transações de seed
         const latestTransactions = transRes.data.filter((t: any) => Math.abs(t.amount_cents) !== 1);

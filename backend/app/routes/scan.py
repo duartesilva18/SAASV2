@@ -27,9 +27,8 @@ def get_gemini_model():
     for model_name in available_models:
         try:
             m = genai.GenerativeModel(model_name)
-            # Teste rápido não é possível sem chamada API, mas vamos confiar no nome
             return m
-        except:
+        except Exception:
             continue
     return genai.GenerativeModel('gemini-pro-vision') # Último fallback
 

@@ -9,6 +9,7 @@ import { Sparkles, ArrowRight, Mail, Lock, AlertCircle, ChevronLeft, CheckCircle
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
+import { hasProAccess } from '@/lib/utils';
 
 // Reusable Simplified Button Component
 const MagneticButton = ({ children, className, onClick, disabled, type = "button" }: any) => {
@@ -164,8 +165,7 @@ function LoginPageContent() {
             }));
             
             // Cache dos insights
-            const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-            if (hasActiveSub) {
+            if (hasProAccess(user)) {
               localStorage.setItem('zen_insights_cache', JSON.stringify({
                 data: insightsRes.data,
                 timestamp: Date.now()
@@ -240,8 +240,7 @@ function LoginPageContent() {
             }));
             
             // Cache dos insights
-            const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-            if (hasActiveSub) {
+            if (hasProAccess(user)) {
               localStorage.setItem('zen_insights_cache', JSON.stringify({
                 data: insightsRes.data,
                 timestamp: Date.now()

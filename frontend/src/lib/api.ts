@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { devLog } from './utils';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -23,9 +24,7 @@ api.interceptors.response.use(
   (error) => {
     // Erro de rede (servidor não acessível)
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-      console.error('Erro de rede: O servidor backend pode não estar a correr.');
-      console.error('URL da API:', api.defaults.baseURL);
-      // Não fazer nada - deixar o componente lidar com o erro
+      devLog.error('Erro de rede: O servidor backend pode não estar a correr.', 'URL:', api.defaults.baseURL);
       return Promise.reject(error);
     }
     

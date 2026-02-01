@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import api, { fetcher } from './api';
 import { useUser } from './UserContext';
 import { DEMO_CATEGORIES } from './mockData';
+import { hasProAccess } from './utils';
 
 /** Debounce valor para reduzir cálculos em pesquisas/filtros (ex.: 300ms) */
 export function useDebouncedValue<T>(value: T, delay: number): T {
@@ -32,8 +33,7 @@ export function useCategories() {
     dedupingInterval: 60000,
   });
 
-  // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
-  const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user?.subscription_status || '');
+  const hasActiveSub = hasProAccess(user);
   // Se não for Pro e não houver dados, retorna Mock Categories
   const categories = !hasActiveSub && (!data || data.length === 0) ? DEMO_CATEGORIES : data || [];
 

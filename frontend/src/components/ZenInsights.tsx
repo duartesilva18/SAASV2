@@ -9,6 +9,7 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import { DEMO_INSIGHTS } from '@/lib/mockData';
+import { hasProAccess } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 const InsightIcon = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -54,9 +55,7 @@ export default function ZenInsights() {
           api.get('/insights/')
         ]);
         const user = profileRes.data;
-        // Inclui 'cancel_at_period_end' para manter acesso até ao fim do período
-        const hasActiveSub = ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
-        if (!hasActiveSub) {
+        if (!hasProAccess(user)) {
           const translatedDemo = t?.dashboard?.zenInsights?.demo;
           setData(translatedDemo?.insights ? translatedDemo : DEMO_INSIGHTS);
         } else {

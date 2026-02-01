@@ -447,3 +447,14 @@ class PromoteToAffiliateRequest(BaseModel):
 class AffiliateSettingsUpdate(BaseModel):
     """Atualizar percentagem de comissão"""
     commission_percentage: float = Field(..., ge=0, le=100)
+
+
+class ProjectExpenseCreate(BaseModel):
+    """Criar despesa do projeto (admin)"""
+    description: str = Field(..., min_length=1, max_length=500)
+    amount_cents: int = Field(..., gt=0, le=99999999)
+    expense_date: Optional[date] = Field(None, alias='date')  # JSON: "date" (ISO YYYY-MM-DD)
+
+    class Config:
+        extra = 'ignore'
+        populate_by_name = True
