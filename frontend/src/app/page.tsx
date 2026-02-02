@@ -203,8 +203,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Secção com simulador de Telegram (do guide) — responsiva para ecrãs pequenos */}
-        <section id="telegram-simulator" className="relative px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16 lg:py-24">
+        {/* Secção com simulador de Telegram — em mobile espaço abaixo para o botão não ficar cortado */}
+        <section id="telegram-simulator" className="relative px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16 lg:py-24 pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-12 md:pb-16 lg:pb-24">
           <div className="max-w-[90rem] mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
             <motion.section
               initial={{ opacity: 0, y: 20 }}
@@ -309,7 +309,9 @@ export default function LandingPage() {
                         );
                       })}
                     </div>
-                    <div className="p-3 sm:p-4 bg-slate-800 border-t border-white/5 flex items-center gap-2 sm:gap-3 min-h-[52px] sm:min-h-0">
+                    <div
+                      className="p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 bg-slate-800 border-t border-white/5 flex items-center gap-2 sm:gap-3 min-h-[52px] sm:min-h-0"
+                    >
                       <input
                         type="text"
                         value={simInput}
