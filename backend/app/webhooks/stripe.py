@@ -7,6 +7,7 @@ from uuid import UUID
 from datetime import datetime, date
 from ..core.config import settings
 from ..core.dependencies import get_db
+from ..core.affiliate_commission import get_commission_percentage_for_price_id
 from ..models import database as models
 from .stripe_connect_handlers import (
     handle_payment_intent_succeeded,
@@ -292,10 +293,13 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         else:
                             commission_month = date.today().replace(day=1)
 
-                        commission_setting = db.query(models.SystemSetting).filter(
-                            models.SystemSetting.key == 'affiliate_commission_percentage'
-                        ).first()
-                        commission_pct = float(commission_setting.value) if commission_setting else 20.0
+                        # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice)
+                        price_id = None
+                        lines = (invoice.get('lines') or {}).get('data') or []
+                        if lines:
+                            price_obj = lines[0].get('price')
+                            price_id = price_obj if isinstance(price_obj, str) else (price_obj.get('id') if price_obj else None)
+                        commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
                         commission_amount_cents = int(amount_paid * (commission_pct / 100))
 
                         existing = db.query(models.AffiliateCommission).filter(

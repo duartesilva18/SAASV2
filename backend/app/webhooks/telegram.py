@@ -905,7 +905,7 @@ async def telegram_webhook(
                     logger.error(f"Erro ao responder callback: {str(e)}")
                 
                 # Editar mensagem
-                tipo_emoji = "💸" if pending.amount_cents < 0 else "💰"
+                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
                 tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
                 category = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
                 category_name = category.name if category else "Outros"
@@ -1202,7 +1202,7 @@ async def telegram_webhook(
                         ).first()
                         category_name = category.name if category else "Outros"
                         
-                        tipo_emoji = "💸" if amount_cents < 0 else "💰"
+                        tipo_emoji = "" if amount_cents < 0 else "💰"
                         tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
                         message_text = t('transaction_pending').format(
                             description=trans_data['description'],
@@ -1276,7 +1276,7 @@ async def telegram_webhook(
                 db.commit()
                 logger.info("Transacao commitada com sucesso (auto_confirm)")
                 
-                tipo_emoji = "💸" if amount_cents < 0 else "💰"
+                tipo_emoji = "" if amount_cents < 0 else "💰"
                 tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
                 send_telegram_msg(chat_id, t('transaction_registered').format(
                     description=parsed['description'],
@@ -1302,7 +1302,7 @@ async def telegram_webhook(
                 db.commit()
                 
                 # Enviar mensagem com botões de confirmação
-                tipo_emoji = "💸" if amount_cents < 0 else "💰"
+                tipo_emoji = "" if amount_cents < 0 else "💰"
                 tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
                 message_text = t('transaction_pending').format(
                     description=parsed['description'],

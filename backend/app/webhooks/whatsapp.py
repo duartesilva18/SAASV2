@@ -139,7 +139,7 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
 
             # 4. Responder ao Utilizador
-            tipo_emoji = "💸" if amount_cents < 0 else "💰"
+            tipo_emoji = "" if amount_cents < 0 else "💰"
             msg_confirmacao = f"{tipo_emoji} *Registado com Sucesso!*\n\n" \
                               f"📝 *O quê:* {transaction_data['description']}\n" \
                               f"💰 *Valor:* {abs(transaction_data['amount']):.2f}€\n" \

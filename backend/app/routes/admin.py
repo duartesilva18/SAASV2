@@ -4,6 +4,7 @@ from sqlalchemy import func, and_, desc
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, date, timedelta
+from decimal import Decimal
 from ..core.dependencies import get_db, conf
 from ..models import database as models
 from .. import schemas
@@ -396,52 +397,85 @@ async def update_system_setting(data: dict, db: Session = Depends(get_db), admin
     db.commit()
     return {"message": "Definições atualizadas"}
 
+def _get_commission_setting(db: Session, key: str, default: float, description: str) -> models.SystemSetting:
+    """Obtém ou cria SystemSetting de comissão."""
+    s = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+    if s:
+        return s
+    s = models.SystemSetting(key=key, value=str(default), description=description)
+    db.add(s)
+    return s
+
+
 @router.get('/affiliates/commission-percentage')
 async def get_commission_percentage(
     db: Session = Depends(get_db),
     admin: models.User = Depends(check_admin)
 ):
-    """Retorna a percentagem de comissão atual"""
-    setting = db.query(models.SystemSetting).filter(
-        models.SystemSetting.key == 'affiliate_commission_percentage'
+    """Retorna as percentagens de comissão por plano: Plus (20%) e Pro (25%). Editável pelo admin."""
+    plus_s = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == 'affiliate_commission_percentage_plus'
     ).first()
+    pro_s = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == 'affiliate_commission_percentage_pro'
+    ).first()
+    plus = float(plus_s.value) if plus_s and plus_s.value else 20.0
+    pro = float(pro_s.value) if pro_s and pro_s.value else 25.0
     return {
-        'percentage': float(setting.value) if setting else 20.0,
-        'description': setting.description if setting else 'Percentagem de comissão para afiliados'
+        'plus': plus,
+        'pro': pro,
+        'description': 'Plus = 20%, Pro = 25%. Afiliados ganham esta comissão em cada cobrança (mensal/anual) enquanto o referido continuar subscrito.'
     }
+
 
 @router.post('/affiliates/commission-percentage')
 async def update_commission_percentage(
-    percentage: float = Query(..., ge=0, le=100, description="Percentagem de comissão (0-100)"),
+    request: Request,
     db: Session = Depends(get_db),
     admin: models.User = Depends(check_admin)
 ):
-    """Atualiza a percentagem de comissão"""
-    setting = db.query(models.SystemSetting).filter(
-        models.SystemSetting.key == 'affiliate_commission_percentage'
-    ).first()
-    
-    if setting:
-        setting.value = str(percentage)
-    else:
-        setting = models.SystemSetting(
-            key='affiliate_commission_percentage',
-            value=str(percentage),
-            description='Percentagem de comissão para afiliados (ex: 20.00 = 20%)'
+    """Atualiza as percentagens de comissão por plano (Plus e/ou Pro). Body: { "plus": 20, "pro": 25 }."""
+    body = await request.json() if request else {}
+    plus_val = body.get('plus')
+    pro_val = body.get('pro')
+    if plus_val is None and pro_val is None:
+        raise HTTPException(status_code=400, detail='Envia "plus" e/ou "pro" no body (0-100).')
+    details_parts = []
+    if plus_val is not None:
+        if not isinstance(plus_val, (int, float)) or not (0 <= plus_val <= 100):
+            raise HTTPException(status_code=400, detail='"plus" deve ser um número entre 0 e 100.')
+        plus_s = _get_commission_setting(
+            db, 'affiliate_commission_percentage_plus', 20.0,
+            'Comissão afiliados plano Plus (ex: 20 = 20%)'
         )
-        db.add(setting)
-    
+        plus_s.value = str(float(plus_val))
+        details_parts.append(f'Plus={plus_val}%')
+    if pro_val is not None:
+        if not isinstance(pro_val, (int, float)) or not (0 <= pro_val <= 100):
+            raise HTTPException(status_code=400, detail='"pro" deve ser um número entre 0 e 100.')
+        pro_s = _get_commission_setting(
+            db, 'affiliate_commission_percentage_pro', 25.0,
+            'Comissão afiliados plano Pro (ex: 25 = 25%)'
+        )
+        pro_s.value = str(float(pro_val))
+        details_parts.append(f'Pro={pro_val}%')
     db.commit()
-    
     await log_action(
         db,
         action='admin_update_commission_percentage',
         user_id=admin.id,
-        details=f'Percentagem de comissão atualizada para {percentage}%',
+        details='Comissões atualizadas: ' + ', '.join(details_parts),
         request=None
     )
-    
-    return {"message": f"Percentagem de comissão atualizada para {percentage}%", "percentage": percentage}
+    plus_s = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == 'affiliate_commission_percentage_plus'
+    ).first()
+    pro_s = db.query(models.SystemSetting).filter(
+        models.SystemSetting.key == 'affiliate_commission_percentage_pro'
+    ).first()
+    plus = float(plus_s.value) if plus_s and plus_s.value else 20.0
+    pro = float(pro_s.value) if pro_s and pro_s.value else 25.0
+    return {"message": "Comissões atualizadas.", "plus": plus, "pro": pro}
 
 @router.post('/marketing/broadcast')
 async def send_marketing_broadcast(
@@ -685,11 +719,12 @@ async def get_affiliates_stats(
         # Se não houver comissões calculadas, calcular a partir das referrals
         if total_revenue_cents == 0 and total_conversions > 0:
             logger.info('Nenhuma comissão calculada encontrada, calculando a partir das referrals...')
-            # Buscar percentagem de comissão
-            commission_setting = db.query(models.SystemSetting).filter(
-                models.SystemSetting.key == 'affiliate_commission_percentage'
-            ).first()
-            commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+            # Fallback: média das comissões Plus (20%) e Pro (25%)
+            plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
+            pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
+            plus_pct = float(plus_s.value) if plus_s and plus_s.value else 20.0
+            pro_pct = float(pro_s.value) if pro_s and pro_s.value else 25.0
+            commission_percentage = (plus_pct + pro_pct) / 2
             
             # Valor padrão por subscrição (9.99€ mensal)
             default_monthly_revenue = 999  # 9.99€ em cêntimos
@@ -773,11 +808,10 @@ async def get_affiliates_revenue_timeline(
                 func.date_trunc('month', models.AffiliateReferral.subscription_date).desc()
             ).limit(12).all()
             
-            # Buscar percentagem de comissão
-            commission_setting = db.query(models.SystemSetting).filter(
-                models.SystemSetting.key == 'affiliate_commission_percentage'
-            ).first()
-            commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+            # Fallback: média das comissões Plus e Pro
+            plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
+            pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
+            commission_percentage = ((float(plus_s.value) if plus_s and plus_s.value else 20.0) + (float(pro_s.value) if pro_s and pro_s.value else 25.0)) / 2
             
             # Valor padrão por subscrição (9.99€ mensal ou 89.90€ anual)
             default_monthly_revenue = 999  # 9.99€ em cêntimos
@@ -842,11 +876,9 @@ async def get_revenue_by_affiliate(
         # Se não houver comissões calculadas, buscar dados das referrals diretamente
         if not affiliates_data:
             logger.info('Nenhuma comissão calculada encontrada, buscando dados das referrals...')
-            # Buscar percentagem de comissão
-            commission_setting = db.query(models.SystemSetting).filter(
-                models.SystemSetting.key == 'affiliate_commission_percentage'
-            ).first()
-            commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+            plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
+            pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
+            commission_percentage = ((float(plus_s.value) if plus_s and plus_s.value else 20.0) + (float(pro_s.value) if pro_s and pro_s.value else 25.0)) / 2
             
             # Valor padrão por subscrição (9.99€ mensal)
             default_monthly_revenue = 999  # 9.99€ em cêntimos
@@ -1091,18 +1123,12 @@ async def calculate_monthly_commissions(
     
     month_date = datetime.strptime(month, '%Y-%m').date().replace(day=1)
     
-    # Buscar percentagem de comissão
-    commission_setting = db.query(models.SystemSetting).filter(
-        models.SystemSetting.key == 'affiliate_commission_percentage'
-    ).first()
-    
-    if not commission_setting:
-        raise HTTPException(
-            status_code=400,
-            detail='Percentagem de comissão não configurada. Configure em /admin/settings'
-        )
-    
-    commission_percentage = Decimal(commission_setting.value)
+    # Média das comissões Plus e Pro para cálculo manual
+    plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
+    pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
+    plus_pct = float(plus_s.value) if plus_s and plus_s.value else 20.0
+    pro_pct = float(pro_s.value) if pro_s and pro_s.value else 25.0
+    commission_percentage = Decimal(str((plus_pct + pro_pct) / 2))
     
     # Buscar todos os afiliados
     affiliates = db.query(models.User).filter(models.User.is_affiliate == True).all()

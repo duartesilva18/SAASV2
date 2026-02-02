@@ -75,7 +75,8 @@ export default function AdminAffiliatesPage() {
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const [referralsPage, setReferralsPage] = useState(1);
   const [referralsPerPage] = useState(10);
-  const [commissionPercentage, setCommissionPercentage] = useState<number>(20.0);
+  const [commissionPlus, setCommissionPlus] = useState<number>(20.0);
+  const [commissionPro, setCommissionPro] = useState<number>(25.0);
   const [editingCommission, setEditingCommission] = useState(false);
   const [savingCommission, setSavingCommission] = useState(false);
 
@@ -94,7 +95,7 @@ export default function AdminAffiliatesPage() {
         api.get('/admin/affiliates/stats').catch(() => ({ data: null })),
         api.get('/admin/affiliates/revenue-timeline').catch(() => ({ data: { timeline: [] } })),
         api.get('/admin/affiliates/revenue-by-affiliate').catch(() => ({ data: { affiliates: [] } })),
-        api.get('/admin/affiliates/commission-percentage').catch(() => ({ data: { percentage: 20.0 } }))
+        api.get('/admin/affiliates/commission-percentage').catch(() => ({ data: { plus: 20.0, pro: 25.0 } }))
       ]);
       setAffiliates(affiliatesRes.data);
       if (statsRes?.data) {
@@ -106,9 +107,8 @@ export default function AdminAffiliatesPage() {
       if (revenueRes?.data?.affiliates) {
         setRevenueByAffiliate(revenueRes.data.affiliates);
       }
-      if (commissionRes?.data?.percentage) {
-        setCommissionPercentage(commissionRes.data.percentage);
-      }
+      if (commissionRes?.data?.plus != null) setCommissionPlus(Number(commissionRes.data.plus));
+      if (commissionRes?.data?.pro != null) setCommissionPro(Number(commissionRes.data.pro));
     } catch (err: any) {
       console.error('Error loading affiliates:', err);
       setToast({
@@ -122,7 +122,7 @@ export default function AdminAffiliatesPage() {
   };
 
   const handleSaveCommission = async () => {
-    if (commissionPercentage < 0 || commissionPercentage > 100) {
+    if (commissionPlus < 0 || commissionPlus > 100 || commissionPro < 0 || commissionPro > 100) {
       setToast({
         isVisible: true,
         message: t.dashboard.admin.affiliates.percentageRangeError,
@@ -130,16 +130,13 @@ export default function AdminAffiliatesPage() {
       });
       return;
     }
-    
     setSavingCommission(true);
     try {
-      await api.post('/admin/affiliates/commission-percentage', null, {
-        params: { percentage: commissionPercentage }
-      });
+      await api.post('/admin/affiliates/commission-percentage', { plus: commissionPlus, pro: commissionPro });
       setEditingCommission(false);
       setToast({
         isVisible: true,
-        message: t.dashboard.admin.affiliates.percentageUpdated.replace('{percentage}', commissionPercentage.toString()),
+        message: t.dashboard.admin.affiliates.percentageUpdated?.replace('{percentage}', `Plus ${commissionPlus}%, Pro ${commissionPro}%`) || 'Comissões atualizadas.',
         type: 'success'
       });
     } catch (err: any) {
@@ -288,22 +285,37 @@ export default function AdminAffiliatesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-slate-900/30 backdrop-blur-xl border border-slate-800/50 rounded-xl p-4 shadow-lg"
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="text-xs font-black uppercase tracking-widest text-slate-500">{t.dashboard.admin.affiliates.commissionPercentage}</div>
             {editingCommission ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={commissionPercentage}
-                  onChange={(e) => setCommissionPercentage(parseFloat(e.target.value) || 0)}
-                  className="w-20 bg-slate-800/50 border border-amber-500/30 rounded-lg px-3 py-1.5 text-white font-black text-sm focus:outline-none focus:border-amber-500 transition-all"
-                  autoFocus
-                />
-                <span className="text-sm font-black text-slate-400">%</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-400">Plus</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={commissionPlus}
+                    onChange={(e) => setCommissionPlus(parseFloat(e.target.value) || 0)}
+                    className="w-16 bg-slate-800/50 border border-amber-500/30 rounded-lg px-2 py-1.5 text-white font-black text-sm focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="text-sm font-black text-slate-400">%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-400">Pro</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={commissionPro}
+                    onChange={(e) => setCommissionPro(parseFloat(e.target.value) || 0)}
+                    className="w-16 bg-slate-800/50 border border-amber-500/30 rounded-lg px-2 py-1.5 text-white font-black text-sm focus:outline-none focus:border-amber-500"
+                  />
+                  <span className="text-sm font-black text-slate-400">%</span>
+                </div>
                 <button
                   onClick={handleSaveCommission}
                   disabled={savingCommission}
@@ -319,7 +331,7 @@ export default function AdminAffiliatesPage() {
                 <button
                   onClick={() => {
                     setEditingCommission(false);
-                    fetchData(); // Reset to original value
+                    fetchData();
                   }}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer"
                 >
@@ -328,7 +340,7 @@ export default function AdminAffiliatesPage() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-lg font-black text-amber-400/80">{commissionPercentage}%</span>
+                <span className="text-lg font-black text-amber-400/80">Plus {commissionPlus}% · Pro {commissionPro}%</span>
                 <button
                   onClick={() => setEditingCommission(true)}
                   className="p-1.5 hover:bg-slate-800/50 text-slate-400 hover:text-amber-400 rounded-lg transition-all cursor-pointer"

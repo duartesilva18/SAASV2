@@ -427,11 +427,12 @@ async def get_affiliate_stats(
         models.AffiliateReferral.referrer_id == current_user.id
     ).order_by(models.AffiliateReferral.created_at.desc()).all()
     
-    # Buscar percentagem de comissão atual
-    commission_setting = db.query(models.SystemSetting).filter(
-        models.SystemSetting.key == 'affiliate_commission_percentage'
-    ).first()
-    commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+    # Comissão por plano: Plus 20%, Pro 25% (editável pelo admin)
+    plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
+    pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
+    commission_plus = float(plus_s.value) if plus_s and plus_s.value else 20.0
+    commission_pro = float(pro_s.value) if pro_s and pro_s.value else 25.0
+    commission_percentage = commission_plus  # fallback para payment_info legado
     
     # Configurar Stripe
     if settings.STRIPE_API_KEY:
@@ -603,6 +604,8 @@ async def get_affiliate_stats(
         total_earnings_cents=int(total_earnings),
         pending_earnings_cents=int(pending_earnings),
         paid_earnings_cents=int(paid_earnings),
+        commission_plus_percent=commission_plus,
+        commission_pro_percent=commission_pro,
         referrals=referrals_data,
         monthly_commissions=monthly_commissions,
         weekly_revenue=weekly_revenue

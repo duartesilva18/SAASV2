@@ -3,11 +3,48 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, date
 from ..models import database as models
+from ..core.affiliate_commission import get_commission_percentage_for_price_id
 import logging
 import stripe
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _get_price_id_from_payment_intent(payment_intent: dict) -> str | None:
+    """Obtém o price_id da subscrição associada ao payment_intent (via invoice)."""
+    invoice_id = payment_intent.get('invoice')
+    if not invoice_id or not settings.STRIPE_API_KEY:
+        return None
+    try:
+        stripe.api_key = settings.STRIPE_API_KEY
+        invoice = stripe.Invoice.retrieve(invoice_id, expand=['lines.data.price'])
+        lines = (invoice.get('lines') or {}).get('data') or []
+        if lines:
+            price = lines[0].get('price')
+            if isinstance(price, str):
+                return price
+            if price:
+                return price.get('id')
+    except Exception as e:
+        logger.warning(f'Erro ao obter price_id do invoice {invoice_id}: {e}')
+    return None
+
+
+def _get_commission_percentage_for_payment(payment_intent: dict, db: Session) -> float:
+    """Percentagem de comissão: por price_id (Plus 20%, Pro 25%) ou metadata do checkout."""
+    metadata = payment_intent.get('metadata') or {}
+    price_id = _get_price_id_from_payment_intent(payment_intent)
+    if price_id:
+        return get_commission_percentage_for_price_id(price_id, db)
+    # Fallback: valor guardado no checkout (renovações podem não ter price no PI)
+    meta_pct = metadata.get('commission_percentage')
+    if meta_pct is not None:
+        try:
+            return float(meta_pct)
+        except (TypeError, ValueError):
+            pass
+    return 20.0  # fallback legado
 
 
 def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
@@ -113,11 +150,8 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
         
         # Se não existe, criar (será calculada depois, mas marcamos como paga)
         if not commission:
-            # Buscar percentagem de comissão
-            commission_setting = db.query(models.SystemSetting).filter(
-                models.SystemSetting.key == 'affiliate_commission_percentage'
-            ).first()
-            commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+            # Comissão por plano: Plus 20%, Pro 25% (a partir do price_id da invoice ou metadata)
+            commission_percentage = _get_commission_percentage_for_payment(payment_intent, db)
             
             # Calcular comissão do pagamento atual
             amount = payment_intent.get('amount', 0)
@@ -145,10 +179,7 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
                 # Atualizar valores se necessário
                 amount = payment_intent.get('amount', 0)
                 commission.total_revenue_cents += amount
-                commission_setting = db.query(models.SystemSetting).filter(
-                    models.SystemSetting.key == 'affiliate_commission_percentage'
-                ).first()
-                commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+                commission_percentage = _get_commission_percentage_for_payment(payment_intent, db)
                 commission.commission_amount_cents += int(amount * (commission_percentage / 100))
                 commission.conversions_count += 1
         

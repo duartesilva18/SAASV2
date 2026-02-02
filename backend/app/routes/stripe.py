@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 import stripe
 from ..core.config import settings
 from ..core.dependencies import get_db
+from ..core.affiliate_commission import get_commission_percentage_for_price_id
 from ..models import database as models
 from .auth import get_current_user
 import logging
@@ -62,21 +63,20 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                     is_connect_active = referrer.stripe_connect_onboarding_completed
                 
                 if is_connect_active:
-                    # Buscar percentagem de comissão
-                    commission_setting = db.query(models.SystemSetting).filter(
-                        models.SystemSetting.key == 'affiliate_commission_percentage'
-                    ).first()
-                    commission_percentage = float(commission_setting.value) if commission_setting else 20.0
+                    # Comissão por plano: Plus 20%, Pro 25% (editável pelo admin). Basic = 0%.
+                    commission_percentage = get_commission_percentage_for_price_id(price_id, db)
                     
-                    # Calcular comissão
-                    application_fee_amount = int(total_amount_cents * (commission_percentage / 100))
-                    referrer_id = str(referrer.id)
-                    
-                    transfer_data = {
-                        'destination': referrer.stripe_connect_account_id,
-                    }
-                    
-                    logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
+                    # Calcular comissão só se plano pago (Plus/Pro)
+                    application_fee_amount = int(total_amount_cents * (commission_percentage / 100)) if commission_percentage > 0 else None
+                    if application_fee_amount and application_fee_amount > 0:
+                        referrer_id = str(referrer.id)
+                        transfer_data = {
+                            'destination': referrer.stripe_connect_account_id,
+                        }
+                        logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos ({commission_percentage}%) para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
+                    else:
+                        application_fee_amount = None
+                        transfer_data = None
         
         # Criar checkout session
         subscription_data = {

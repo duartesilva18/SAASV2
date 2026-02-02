@@ -102,7 +102,7 @@ export const fr = {
           }
       },
       affiliate: {
-          badge: "💸 Programme d'affiliation FinLy",
+          badge: "Programme d'affiliation FinLy",
           title: "Utilisez. Parrainez. Gagnez.",
           description: "Chaque fois que quelqu'un rejoint FinLy via votre lien :",
           benefits: [
@@ -112,14 +112,14 @@ export const fr = {
               "Vous gagnez tant que la personne reste active"
           ],
           example: {
-              title: "📌 Exemple simple :",
+              title: "Exemple simple :",
               line1: "10 personnes en forfait mensuel → ~20 € par mois",
               line2: "50 personnes → ~100 € par mois",
               footer: "Sans pub. Sans effort supplémentaire."
           }
       },
       guarantee: {
-          title: "🔒 Sans risque, sans piège",
+          title: "Sans risque, sans piège",
           items: [
               "Paiement sécurisé",
               "Annulez à tout moment",

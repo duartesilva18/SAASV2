@@ -91,6 +91,12 @@ Atualiza:
   - affiliate_payout_enabled = TRUE (se ativo)
 ```
 
+### Comissões por plano (editável pelo admin)
+- **Plano Plus**: 20% (default). `SystemSetting`: `affiliate_commission_percentage_plus`
+- **Plano Pro**: 25% (default). `SystemSetting`: `affiliate_commission_percentage_pro`
+- **Plano Basic**: 0% (sem comissão)
+Os afiliados ganham esta comissão **em cada cobrança** (mensal ou anual) enquanto o utilizador referido continuar subscrito — não é só no primeiro mês.
+
 ### 3. Cliente paga Pack Pro (Divisão Automática)
 ```
 Cliente → POST /stripe/create-checkout-session

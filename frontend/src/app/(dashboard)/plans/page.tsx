@@ -355,7 +355,7 @@ export default function PlansPage() {
         className="max-w-3xl mx-auto text-center mt-16 mb-16"
       >
         <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-base font-black uppercase tracking-[0.2em] mb-8">
-          💸 Programa de Afiliados FinLy
+          Programa de Afiliados FinLy
         </div>
         <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
           Usa. Indica. Ganha.
@@ -370,7 +370,7 @@ export default function PlansPage() {
           <li className="flex items-center justify-center gap-3">⏳ Ganhas enquanto a pessoa continuar ativa</li>
         </ul>
         <div className="bg-slate-800/90 border border-slate-600/60 rounded-3xl p-6 md:p-8 shadow-xl">
-          <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">📌 Exemplo simples:</p>
+          <p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">Exemplo simples:</p>
           <p className="text-lg md:text-xl text-slate-200 font-medium mb-1">10 pessoas no plano mensal → ~20€ por mês</p>
           <p className="text-lg md:text-xl text-slate-200 font-medium mb-5">50 pessoas → ~100€ por mês</p>
           <p className="text-base text-slate-500">Sem anúncios. Sem suporte. Sem esforço extra.</p>
@@ -385,7 +385,7 @@ export default function PlansPage() {
       >
         <div className="text-center mb-8">
           <span className="inline-flex items-center gap-2 text-slate-500 text-sm font-black uppercase tracking-[0.2em]">
-            🔒 Sem risco, sem letras pequenas
+            Sem risco, sem letras pequenas
           </span>
         </div>
         <div className="flex flex-wrap justify-center gap-6 sm:gap-12">

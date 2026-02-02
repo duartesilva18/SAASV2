@@ -102,7 +102,7 @@ export const en = {
           }
       },
       affiliate: {
-          badge: "💸 FinLy Affiliate Program",
+          badge: "FinLy Affiliate Program",
           title: "Use. Refer. Earn.",
           description: "Whenever someone joins FinLy through your link:",
           benefits: [
@@ -112,14 +112,14 @@ export const en = {
               "You earn while the person stays active"
           ],
           example: {
-              title: "📌 Simple example:",
+              title: "Simple example:",
               line1: "10 people on monthly plan → ~€20 per month",
               line2: "50 people → ~€100 per month",
               footer: "No ads. No support. No extra effort."
           }
       },
       guarantee: {
-          title: "🔒 No risk, no fine print",
+          title: "No risk, no fine print",
           items: [
               "Secure payment",
               "Cancel anytime",

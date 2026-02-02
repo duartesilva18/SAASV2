@@ -402,6 +402,8 @@ class AffiliateStats(BaseModel):
     total_earnings_cents: int
     pending_earnings_cents: int
     paid_earnings_cents: int
+    commission_plus_percent: Optional[float] = 20.0  # Comissão plano Plus (editável pelo admin)
+    commission_pro_percent: Optional[float] = 25.0  # Comissão plano Pro (editável pelo admin)
     referrals: List[AffiliateReferralResponse]
     monthly_commissions: List[dict]  # {month: str, revenue_cents: int, commission_cents: int, conversions: int}
     weekly_revenue: List[dict]  # {week: str, revenue_cents: int, commission_cents: int, week_label: str}

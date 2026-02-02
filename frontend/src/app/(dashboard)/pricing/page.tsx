@@ -328,7 +328,7 @@ export default function PricingPage() {
       >
         <div className="text-center mb-8">
           <span className="inline-flex items-center gap-2 text-slate-500 text-sm font-black uppercase tracking-[0.2em]">
-            🔒 Sem risco, sem letras pequenas
+            Sem risco, sem letras pequenas
           </span>
         </div>
         <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
