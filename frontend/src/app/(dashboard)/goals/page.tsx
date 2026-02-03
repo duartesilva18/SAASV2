@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
-import { useDashboardSnapshot } from '@/lib/hooks/useDashboard';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -34,7 +33,6 @@ const COLORS = [
 
 export default function GoalsPage() {
   const { t, formatCurrency } = useTranslation();
-  const { snapshot } = useDashboardSnapshot(); // Obter snapshot com available_cash
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowNotifications] = useState(false);
@@ -42,12 +40,15 @@ export default function GoalsPage() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [goalToClose, setGoalToClose] = useState<any | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [closeTransactionChoice, setCloseTransactionChoice] = useState<'income' | 'expense' | 'none'>('income');
+  const [closingGoal, setClosingGoal] = useState<string | null>(null);
+  const [goalForDeposit, setGoalForDeposit] = useState<any | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositLoading, setDepositLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [completingGoal, setCompletingGoal] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; amount?: string; type?: string; date?: string }>({});
-
-  // Saldo disponível do utilizador (em euros)
-  const availableCash = snapshot?.available_cash || 0;
 
   const getTomorrowDate = () => {
     const tomorrow = new Date();
@@ -107,7 +108,7 @@ export default function GoalsPage() {
         name: formData.name,
         goal_type: formData.goal_type,
         target_amount_cents: Math.round(formData.target_amount_cents * 100),
-        current_amount_cents: 0, // Sempre 0, será calculado pelo saldo
+        current_amount_cents: editingGoal ? editingGoal.current_amount_cents : 0,
         target_date: formData.target_date,
         icon: formData.icon,
         color_hex: formData.color_hex
@@ -148,38 +149,41 @@ export default function GoalsPage() {
     setShowDeleteConfirm(true);
   };
 
-  const handleCompleteGoal = async (goal: any) => {
+  const handleDeposit = async () => {
+    if (!goalForDeposit || !depositAmount || parseFloat(depositAmount) <= 0) return;
+    setDepositLoading(true);
     try {
-      setCompletingGoal(goal.id);
-      
-      const isIncomeGoal = goal.goal_type === 'income';
-      
-      if (!isIncomeGoal) {
-        // Encontrar uma categoria de despesa compatível ou usar null
-        const selectedCategory = categories.find(c => c.type === 'expense' && c.vault_type === 'none');
-        
-        // goal.target_amount_cents já está em cêntimos no backend
-        const transactionPayload = {
-          amount_cents: -Math.abs(goal.target_amount_cents),
-          description: `Meta concluída: ${goal.name}`,
-          category_id: selectedCategory?.id || null,
-          transaction_date: new Date().toISOString().split('T')[0],
-          is_installment: false
-        };
-
-        await api.post('/transactions/', transactionPayload);
-      }
-      
-      // Remover a meta após criar a transação
-      await api.delete(`/goals/${goal.id}`);
-      
-      setToast({ show: true, message: isIncomeGoal ? `Meta "${goal.name}" concluída!` : `Meta "${goal.name}" concluída! Transação criada.`, type: 'success' });
+      const amount_cents = Math.round(parseFloat(depositAmount) * 100);
+      await api.post(`/goals/${goalForDeposit.id}/deposit`, { amount_cents });
+      setToast({ show: true, message: t.dashboard.goals?.depositSuccess ?? 'Valor adicionado à meta.', type: 'success' });
+      setGoalForDeposit(null);
+      setDepositAmount('');
       fetchGoals();
     } catch (err: any) {
-      console.error('Erro ao completar meta:', err);
-      setToast({ show: true, message: err.response?.data?.detail || t.dashboard.goals.completeError, type: 'error' });
+      setToast({ show: true, message: err.response?.data?.detail || (t.dashboard.goals?.depositError ?? 'Erro ao adicionar.'), type: 'error' });
     } finally {
-      setCompletingGoal(null);
+      setDepositLoading(false);
+    }
+  };
+
+  const handleCloseGoal = async () => {
+    if (!goalToClose) return;
+    setClosingGoal(goalToClose.id);
+    try {
+      const createTransaction = closeTransactionChoice !== 'none';
+      const transactionType = closeTransactionChoice === 'none' ? 'income' : closeTransactionChoice;
+      await api.post(`/goals/${goalToClose.id}/close`, {
+        create_transaction: createTransaction,
+        transaction_type: transactionType,
+      });
+      setToast({ show: true, message: t.dashboard.goals?.closeSuccess ?? 'Meta terminada.', type: 'success' });
+      setGoalToClose(null);
+      setShowCloseConfirm(false);
+      fetchGoals();
+    } catch (err: any) {
+      setToast({ show: true, message: err.response?.data?.detail || (t.dashboard.goals?.closeError ?? 'Erro ao terminar meta.'), type: 'error' });
+    } finally {
+      setClosingGoal(null);
     }
   };
 
@@ -253,10 +257,9 @@ export default function GoalsPage() {
       {/* Grid de Metas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
         {goals.map((goal) => {
-          // Usar saldo disponível em vez de current_amount_cents
           const targetAmountEuros = goal.target_amount_cents / 100;
-          const currentAmountEuros = availableCash; // Saldo disponível do utilizador
-          const progress = Math.min(100, (currentAmountEuros / targetAmountEuros) * 100) || 0;
+          const currentAmountEuros = (goal.current_amount_cents || 0) / 100;
+          const progress = targetAmountEuros > 0 ? Math.min(100, (currentAmountEuros / targetAmountEuros) * 100) : 0;
           const Icon = ICONS.find(i => i.name === goal.icon)?.icon || Target;
           const daysLeft = Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
           const canComplete = currentAmountEuros >= targetAmountEuros;
@@ -332,7 +335,7 @@ export default function GoalsPage() {
                   </div>
                   
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                    <span style={{ color: goal.color_hex }}>{Math.round(progress)}% {t.dashboard.goals.completed}</span>
+                    <span style={{ color: goal.color_hex }}>{Math.round(progress)}%</span>
                     {canComplete ? (
                       <span className="text-emerald-400">{formatCurrency(currentAmountEuros - targetAmountEuros)} {t.dashboard.goals.exceeded || 'EXCEDIDO'}</span>
                     ) : (
@@ -340,34 +343,23 @@ export default function GoalsPage() {
                     )}
                   </div>
                   
-                  {canComplete && (
+                  <div className="flex flex-col sm:flex-row gap-2 mt-4">
                     <button
-                      onClick={() => handleCompleteGoal(goal)}
-                      disabled={completingGoal === goal.id}
-                      className={`w-full mt-4 py-3 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                        goal.goal_type === 'income'
-                          ? 'bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50'
-                          : 'bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50'
-                      }`}
+                      type="button"
+                      onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
+                      className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
-                      {completingGoal === goal.id ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          >
-                            <Check size={16} />
-                          </motion.div>
-                          Processando...
-                        </>
-                      ) : (
-                        <>
-                          <Check size={16} />
-                          {goal.goal_type === 'income' ? t.dashboard.goals.completeGoalIncome : t.dashboard.goals.completeGoalExpense}
-                        </>
-                      )}
+                      <Plus size={16} />
+                      {t.dashboard.goals?.addMoney ?? 'Adicionar'}
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
+                      className="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl font-black uppercase tracking-widest text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {t.dashboard.goals?.finishGoal ?? 'Terminar meta'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -621,6 +613,81 @@ export default function GoalsPage() {
         cancelText={t.dashboard.goals.cancel}
         variant="danger"
       />
+
+      {showCloseConfirm && goalToClose && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+          >
+            <h3 className="text-lg font-black text-white mb-1">{t.dashboard.goals?.finishGoal ?? 'Terminar meta'}</h3>
+            <p className="text-slate-400 text-sm mb-4">{goalToClose.name} · {formatCurrency((goalToClose.current_amount_cents || 0) / 100)}</p>
+            <p className="text-slate-400 text-xs mb-3">{t.dashboard.goals?.closeCreateTransactionQuestion ?? 'Queres criar uma transação automaticamente?'}</p>
+            <div className="space-y-2 mb-6">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+                <input type="radio" name="closeTx" checked={closeTransactionChoice === 'income'} onChange={() => setCloseTransactionChoice('income')} className="text-blue-500" />
+                <span className="text-sm font-bold text-white">{t.dashboard.goals?.asIncome ?? 'Como receita'}</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+                <input type="radio" name="closeTx" checked={closeTransactionChoice === 'expense'} onChange={() => setCloseTransactionChoice('expense')} className="text-blue-500" />
+                <span className="text-sm font-bold text-white">{t.dashboard.goals?.asExpense ?? 'Como despesa'}</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+                <input type="radio" name="closeTx" checked={closeTransactionChoice === 'none'} onChange={() => setCloseTransactionChoice('none')} className="text-blue-500" />
+                <span className="text-sm font-bold text-white">{t.dashboard.goals?.noTransaction ?? 'Não criar transação'}</span>
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setShowCloseConfirm(false); setGoalToClose(null); }} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-400 font-bold text-sm cursor-pointer">
+                {t.dashboard.goals.cancel}
+              </button>
+              <button type="button" onClick={handleCloseGoal} disabled={!!closingGoal} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm cursor-pointer">
+                {closingGoal ? '...' : (t.dashboard.goals?.confirmClose ?? 'Terminar')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {goalForDeposit && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+          >
+            <h3 className="text-lg font-black text-white mb-1">{t.dashboard.goals?.addMoney ?? 'Adicionar à meta'}</h3>
+            <p className="text-slate-400 text-sm mb-4">{goalForDeposit.name}</p>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0,00"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value.replace(',', '.'))}
+              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold text-lg mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setGoalForDeposit(null); setDepositAmount(''); }}
+                className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-400 font-bold text-sm cursor-pointer"
+              >
+                {t.dashboard.goals.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeposit}
+                disabled={depositLoading || !depositAmount || parseFloat(depositAmount) <= 0}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2"
+              >
+                {depositLoading ? '...' : (t.dashboard.goals?.addMoney ?? 'Adicionar')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <Toast 
         isVisible={toast.show}

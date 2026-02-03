@@ -507,7 +507,7 @@ export default function Sidebar({
       </aside>
 
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24' : 'w-64'}`}
+        className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24 2xl:w-20' : 'w-64 2xl:w-52'}`}
       >
         {sidebarContent}
         <button 

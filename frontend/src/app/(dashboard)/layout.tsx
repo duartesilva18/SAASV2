@@ -209,7 +209,7 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24 2xl:ml-20' : 'lg:ml-64 2xl:ml-52'}`}>
         {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
         <MobileHeaderWithNotifications
           t={t}

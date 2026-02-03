@@ -560,96 +560,29 @@ export default function SettingsPage() {
           </form>
         </div>
 
-        {/* Sidebar Settings (Billing & Danger Zone) */}
+        {/* Exportar e Importar no mesmo card */}
         <div className="space-y-8">
-          {/* Telegram Card */}
-          <section className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden hover:border-blue-500/40 transition-all group shadow-xl">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-[60px] rounded-full -z-10" />
-            
-            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-white shrink-0">
-                <Send size={18} className="sm:w-5 sm:h-5" />
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shrink-0 text-slate-300">
+                <Download size={20} />
               </div>
-              <h2 className="text-base sm:text-lg font-black tracking-tighter text-white uppercase tracking-widest text-[11px]">
-                {t.dashboard.settings.telegramCard.title}
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
+                {(t.dashboard.settings as any).exportImportTitle ?? 'Exportar e importar dados'}
               </h2>
             </div>
-
-            <p className="text-slate-400 text-xs sm:text-sm font-medium mb-4 sm:mb-6 md:mb-8 leading-relaxed italic">
-              {t.dashboard.settings.telegramCard.description}
+            <p className="text-xs text-slate-500 mb-4">
+              {(t.dashboard.settings as any).exportImportDescription ?? 'Backup ou restauro da tua conta em ficheiro JSON.'}
             </p>
-
-            <a 
-              href="https://t.me/FinanZenApp_bot" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
-            >
-              {t.dashboard.settings.telegramCard.link} <ExternalLink size={14} />
-            </a>
-          </section>
-
-          {/* Billing Card */}
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 blur-[60px] rounded-full -z-10" />
-            
-            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                <CreditCard size={18} className="sm:w-5 sm:h-5" />
-              </div>
-              <h2 className="text-base sm:text-lg font-black tracking-tighter text-white">
-                {t.dashboard.settings.billing.title}
-              </h2>
-            </div>
-
-            <p className="text-slate-500 text-xs sm:text-sm font-medium mb-4 sm:mb-6 md:mb-8 leading-relaxed italic">
-              {t.dashboard.settings.billingCard.description}
-            </p>
-
-            <button 
-              onClick={handlePortal}
-              className="w-full py-3 sm:py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
-            >
-              {t.dashboard.settings.billing.portal} <ChevronRight size={14} />
-            </button>
-          </section>
-
-          {/* Exportar e Importar lado a lado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <Download size={20} />
-                </div>
-                <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
-                  {(t.dashboard.settings as any).exportDataTitle ?? 'Exportar dados da conta'}
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                {(t.dashboard.settings as any).exportDataDescription ?? 'Descarrega um ficheiro JSON com workspaces, categorias, transações, metas e transações recorrentes. Podes guardar como cópia de segurança ou importar noutra conta em Definições.'}
-              </p>
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={handleExportData}
                 disabled={exporting}
-                className="w-full h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
               </button>
-            </section>
-
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                  <Upload size={20} />
-                </div>
-                <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
-                  {(t.dashboard.settings as any).importDataTitle ?? 'Importar dados da conta'}
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                {(t.dashboard.settings as any).importDataDescription ?? 'Escolhe um ficheiro JSON exportado pelo Finly. Serão criados novos workspaces com as categorias, transações, recorrentes e metas desse ficheiro.'}
-              </p>
               <input
                 ref={importFileInputRef}
                 type="file"
@@ -662,12 +595,12 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => importFileInputRef.current?.click()}
                 disabled={importing}
-                className="w-full h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {importing ? <Loader2 size={14} className="animate-spin" /> : <><Upload size={14} /> <span>{(t.dashboard.settings as any).importButton ?? 'Escolher ficheiro e importar'}</span></>}
+                {importing ? <Loader2 size={14} className="animate-spin" /> : <><Upload size={14} /> <span>{(t.dashboard.settings as any).importButton ?? 'Importar'}</span></>}
               </button>
-            </section>
-          </div>
+            </div>
+          </section>
 
           {/* Danger Zone — responsiva para mobile */}
           <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
