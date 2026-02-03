@@ -32,7 +32,7 @@ TELEGRAM_TRANSLATIONS = {
             "• Categorização automática com IA\n"
             "• Especifica categoria: <code>Descrição - Categoria Valor€</code>\n"
             "• Data específica: <code>Almoço 15€ 28/01</code> ou <code>dia 28 Almoço 15€</code>\n"
-            "• Múltiplas transações numa mensagem\n\n"
+            "• Múltiplas transações numa mensagem ou num áudio: <code>Almoço 15€ gasolina 40€</code>\n\n"
             "🧘‍♂️ <i>Simplicidade é a chave do controlo financeiro.</i>"
         ),
         'rate_limit': (
@@ -285,7 +285,7 @@ TELEGRAM_TRANSLATIONS = {
             "• Automatic categorization with AI\n"
             "• Specify category: <code>Description - Category Value€</code>\n"
             "• Specific date: <code>Lunch 15€ 28/01</code> or <code>day 28 Lunch 15€</code>\n"
-            "• Multiple transactions in one message\n\n"
+            "• Multiple transactions in one message or one voice note: <code>Lunch 15€ gas 40€</code>\n\n"
             "🧘‍♂️ <i>Simplicity is the key to financial control.</i>"
         ),
         'rate_limit': (

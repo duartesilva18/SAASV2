@@ -120,6 +120,82 @@ def similarity_score(str1: str, str2: str) -> float:
     """Calcula similaridade entre duas strings (0.0 a 1.0)"""
     return SequenceMatcher(None, str1, str2).ratio()
 
+
+def _get_historical_canonical_forms(workspace_id: int, db: Session, limit: int = 400) -> List[tuple]:
+    """
+    Devolve formas canónicas (normalized, original) a partir das descrições históricas do workspace.
+    Inclui descrições completas e palavras individuais (>=3 chars) para corrigir transcrições de voz.
+    """
+    # Descrições únicas ordenadas por frequência (mais usadas primeiro)
+    rows = (
+        db.query(models.Transaction.description, func.count(models.Transaction.id))
+        .filter(
+            models.Transaction.workspace_id == workspace_id,
+            models.Transaction.description.isnot(None),
+            models.Transaction.description != "",
+        )
+        .group_by(models.Transaction.description)
+        .order_by(func.count(models.Transaction.id).desc())
+        .limit(limit)
+        .all()
+    )
+    seen_normalized = set()
+    out = []
+    for desc, _ in rows:
+        if not desc or not desc.strip():
+            continue
+        d = desc.strip()[:255]
+        norm = normalize_text(d)
+        if norm not in seen_normalized:
+            seen_normalized.add(norm)
+            out.append((norm, d))
+        for word in re.split(r"\s+", d):
+            if len(word) >= 3 and re.search(r"[a-zA-Zàáâãäåèéêëìíîïòóôõöùúûüç]", word, re.IGNORECASE):
+                w_norm = normalize_text(word)
+                if w_norm not in seen_normalized:
+                    seen_normalized.add(w_norm)
+                    out.append((w_norm, word))
+    return out
+
+
+def correct_transcription_with_history(text: str, workspace_id: int, db: Session, threshold: float = 0.82) -> str:
+    """
+    Corrige o texto (ex.: transcrição de voz) usando descrições históricas do workspace.
+    Substitui palavras semelhantes pela forma guardada no histórico (ortografia e maiúsculas corretas).
+    """
+    if not text or not text.strip():
+        return text
+    canonical = _get_historical_canonical_forms(workspace_id, db)
+    if not canonical:
+        return text
+    tokens = re.split(r"\s+", text.strip())
+    replacements = {}
+    for token in tokens:
+        if len(token) < 3 or re.match(r"^-?\d+([.,]\d+)?$", token) or token.lower() in ("euro", "euros", "eur", "€", "e"):
+            continue
+        if not re.search(r"[a-zA-Zàáâãäåèéêëìíîïòóôõöùúûüç]", token, re.IGNORECASE):
+            continue
+        t_norm = normalize_text(token)
+        best_score = 0.0
+        best_original = None
+        for norm_form, original_form in canonical:
+            score = similarity_score(t_norm, norm_form)
+            if score >= threshold and score > best_score:
+                best_score = score
+                best_original = original_form
+        if best_original is not None:
+            replacements[token] = best_original
+    if not replacements:
+        return text
+    # Aplicar substituições por palavra inteira (evitar alterar dentro de palavras)
+    result = text
+    for token, original in replacements.items():
+        result = re.sub(rf"\b{re.escape(token)}\b", original, result, flags=re.IGNORECASE)
+    if result != text:
+        logger.info("[Histórico] Texto corrigido: '%s' -> '%s'", text[:80], result[:80])
+    return result
+
+
 def find_best_category_match(user_input: str, categories: List[models.Category], threshold: float = 0.6) -> Optional[models.Category]:
     """
     Encontra a categoria mais similar ao input do utilizador usando similaridade de strings.
@@ -289,6 +365,94 @@ def _strip_date_from_description(description: str) -> str:
     return s or description.strip()
 
 
+# --- Números por extenso para voz (PT/EN) ---
+# Unidades e 10–19 (ordem: mais longos primeiro para não partir "dezassete" em "dez"+"assete")
+_NUMBER_WORDS_BASE = [
+    ("dezassete", "17"), ("dezasseis", "16"), ("dezanove", "19"), ("dezoito", "18"),
+    ("catorze", "14"), ("quatorze", "14"), ("quinze", "15"), ("treze", "13"),
+    ("doze", "12"), ("onze", "11"), ("nove", "9"), ("oito", "8"), ("sete", "7"),
+    ("seis", "6"), ("cinco", "5"), ("quatro", "4"), ("três", "3"), ("tres", "3"),
+    ("dois", "2"), ("duas", "2"), ("uma", "1"), ("um", "1"),
+    ("vinte", "20"), ("trinta", "30"), ("quarenta", "40"), ("cinquenta", "50"),
+    ("sessenta", "60"), ("setenta", "70"), ("oitenta", "80"), ("noventa", "90"),
+    ("cem", "100"), ("cento", "100"), ("duzentos", "200"), ("duzentas", "200"),
+    ("trezentos", "300"), ("trezentas", "300"), ("quatrocentos", "400"), ("quatrocentas", "400"),
+    ("quinhentos", "500"), ("quinhentas", "500"), ("seiscentos", "600"), ("seiscentas", "600"),
+    ("setecentos", "700"), ("setecentas", "700"), ("oitocentos", "800"), ("oitocentas", "800"),
+    ("novecentos", "900"), ("novecentas", "900"), ("mil", "1000"),
+    ("seventeen", "17"), ("sixteen", "16"), ("nineteen", "19"), ("eighteen", "18"),
+    ("fourteen", "14"), ("fifteen", "15"), ("thirteen", "13"), ("twelve", "12"),
+    ("eleven", "11"), ("nine", "9"), ("eight", "8"), ("seven", "7"),
+    ("six", "6"), ("five", "5"), ("four", "4"), ("three", "3"), ("two", "2"),
+    ("one", "1"), ("twenty", "20"), ("thirty", "30"), ("forty", "40"), ("fifty", "50"),
+    ("sixty", "60"), ("seventy", "70"), ("eighty", "80"), ("ninety", "90"),
+    ("hundred", "100"), ("thousand", "1000"),
+]
+# Compostos PT: "vinte e um" .. "noventa e nove"
+_PT_TENS = [("vinte", 20), ("trinta", 30), ("quarenta", 40), ("cinquenta", 50),
+            ("sessenta", 60), ("setenta", 70), ("oitenta", 80), ("noventa", 90)]
+_PT_ONES = [("um", 1), ("dois", 2), ("três", 3), ("tres", 3), ("quatro", 4), ("cinco", 5),
+            ("seis", 6), ("sete", 7), ("oito", 8), ("nove", 9)]
+_EN_TENS = [("twenty", 20), ("thirty", 30), ("forty", 40), ("fifty", 50),
+            ("sixty", 60), ("seventy", 70), ("eighty", 80), ("ninety", 90)]
+_EN_ONES = [("one", 1), ("two", 2), ("three", 3), ("four", 4), ("five", 5),
+            ("six", 6), ("seven", 7), ("eight", 8), ("nine", 9)]
+
+
+def _build_compound_patterns() -> List[tuple]:
+    """Gera padrões compostos (ex.: 'vinte e cinco' -> 25) para PT e EN."""
+    out = []
+    for (t_name, t_val), (o_name, o_val) in [(t, o) for t in _PT_TENS for o in _PT_ONES]:
+        out.append((f"{t_name} e {o_name}", str(t_val + o_val)))
+    for (t_name, t_val), (o_name, o_val) in [(t, o) for t in _EN_TENS for o in _EN_ONES]:
+        out.append((f"{t_name} {o_name}", str(t_val + o_val)))
+    return out
+
+
+_COMPOUND_PATTERNS = _build_compound_patterns()
+
+
+def _normalize_number_words(text: str) -> str:
+    """
+    Substitui números por extenso (e compostos) por dígitos para melhor parse de voz.
+    - Compostos: "vinte e cinco" -> 25, "thirty five" -> 35
+    - Centenas: "cento e 25" -> 125, "mil e 500" -> 1500
+    - "N e meio" -> N.5 (ex.: "quinze e meio" -> 15.5)
+    - "dez" não é substituído após um dia (ex.: "28 dez" = dezembro)
+    """
+    if not text or not text.strip():
+        return text
+    s = text
+    # 1) Compostos primeiro (vinte e cinco -> 25, thirty five -> 35)
+    for phrase, digit in _COMPOUND_PATTERNS:
+        s = re.sub(rf"\b{re.escape(phrase)}\b", digit, s, flags=re.IGNORECASE)
+    # 2) Centena + e + número ANTES de substituir "cento"/"mil" (cento e 25 -> 125)
+    for prefix, base in [
+        ("cento e", 100), ("cem e", 100), ("duzentos e", 200), ("duzentas e", 200),
+        ("trezentos e", 300), ("trezentas e", 300), ("quatrocentos e", 400), ("quatrocentas e", 400),
+        ("quinhentos e", 500), ("quinhentas e", 500), ("seiscentos e", 600), ("seiscentas e", 600),
+        ("setecentos e", 700), ("setecentas e", 700), ("oitocentos e", 800), ("oitocentas e", 800),
+        ("novecentos e", 900), ("novecentas e", 900), ("mil e", 1000),
+        ("one hundred and", 100), ("two hundred and", 200), ("three hundred and", 300),
+    ]:
+        def _repl(m, b=base):
+            try:
+                return str(b + int(m.group(1)))
+            except ValueError:
+                return m.group(0)
+        s = re.sub(rf"\b{re.escape(prefix)}\s+(\d+)\b", lambda m, _b=base: _repl(m, _b), s, flags=re.IGNORECASE)
+    # 3) Palavras simples (exceto "dez", tratado em 5)
+    for word, digit in _NUMBER_WORDS_BASE:
+        if word.lower() == "dez":
+            continue
+        s = re.sub(rf"\b{re.escape(word)}\b", digit, s, flags=re.IGNORECASE)
+    # 4) "N e meio" -> N.5 (ex.: "quinze e meio" já é "15 e meio" após passo 3)
+    s = re.sub(r"\b(\d+)\s+e\s+meio\b", r"\1.5", s, flags=re.IGNORECASE)
+    # 5) "dez" -> 10, exceto em datas ("28 dez") e em "dezembro"
+    s = re.sub(r"(?<!\s\d)\bdez\b(?!embro)", "10", s, flags=re.IGNORECASE)
+    return s
+
+
 def _remove_dates_for_value_parsing(text: str) -> str:
     """
     Remove padrões de data do texto antes de extrair valores monetários.
@@ -313,7 +477,10 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
     Extrai valor, tipo e categoria de uma mensagem de texto.
     Suporta múltiplas transações separadas por espaço.
     Aceita data na mensagem: "Almoço 15€ 28/01", "Almoço 28/01 15€", "dia 28 Almoço 15€".
+    Normaliza números por extenso (ex.: quinze euros) para melhor suporte a voz.
     """
+    # Normalizar números por extenso (voz: "quinze euros" -> "15 euros")
+    text = _normalize_number_words(text)
     # Data opcional na mensagem (aplica-se a todas as transações da mensagem)
     parsed_date = _parse_date_from_text(text)
     default_transaction_date = parsed_date if parsed_date else date.today()
@@ -445,8 +612,15 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             end_pos = valor_match.start()
             description = text_for_values[start_pos:end_pos].strip()
         
+        # Limpar separadores de voz em múltiplas transações: " e gasolina", ", gasolina", " e "
+        description = re.sub(r"^[\s,]+", "", description)
+        description = re.sub(r"[\s,]+$", "", description)
+        description = re.sub(r"^\s*e\s+", "", description, flags=re.IGNORECASE)
+        description = re.sub(r"\s+e\s*$", "", description, flags=re.IGNORECASE)
+        description = description.strip()
+        
         # Limpar descrição (remover categoria se foi especificada sem hífen)
-        words_to_remove = ['€', 'euro', 'euros', 'eur', 'gastei', 'paguei', 'recebi', 
+        words_to_remove = ['€', 'euro', 'euros', 'eur', 'e', 'gastei', 'paguei', 'recebi', 
                           'em', 'no', 'na', 'de', 'do', 'da', 'com', 'para']
         
         # Se categoria foi especificada (sem hífen), removê-la da descrição (incluindo variações parciais)
@@ -2059,8 +2233,9 @@ async def telegram_webhook(
                 logger.info("[Telegram] Foto processada: %s transações (extrato/tabela)", len(parsed.get("transactions", [])))
             else:
                 logger.info("[Telegram] Foto processada: 1 transação - %s", parsed.get("description"))
-        # Processar texto
+        # Processar texto (corrigir com histórico antes do parse: voz e texto)
         elif text:
+            text = correct_transcription_with_history(text, workspace.id, db)
             logger.info(f"Processando texto como transação: '{text}'")
             try:
                 parsed = parse_transaction(text, workspace, db)
