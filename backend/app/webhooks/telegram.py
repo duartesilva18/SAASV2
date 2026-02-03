@@ -2525,7 +2525,7 @@ async def telegram_webhook(
                 logger.info("[Telegram] Foto processada: 1 transação - %s", parsed.get("description"))
         # Processar texto (corrigir com histórico antes do parse: voz e texto)
         elif text:
-                text = correct_transcription_with_history(text, workspace.id, db)
+            text = correct_transcription_with_history(text, workspace.id, db)
             logger.info(f"Processando texto como transação: '{text}'")
             default_cat_id = getattr(user, 'telegram_default_category_id', None)
             try:
