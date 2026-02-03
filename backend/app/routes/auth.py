@@ -76,6 +76,13 @@ def purge_expired_unverified_users(db: Session):
     if expired:
         db.commit()
 
+def normalize_email(email: str) -> str:
+    """Normaliza email: trim, minúsculas e remove ponto final (typo comum)."""
+    if not email:
+        return ''
+    return (email.strip().lower()).rstrip('.')
+
+
 def validate_email(email: str) -> bool:
     """Valida formato de email usando regex robusto"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -119,7 +126,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
         raise credentials_exception
     
     # Lookup por email insensível a maiúsculas (evita contas duplicadas Telegram vs Google)
-    email_normalized = (email or "").strip().lower()
+    email_normalized = normalize_email(email or "")
     user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
     if user is None:
         logger.warning(f'❌ Token válido mas utilizador não encontrado: {email}')
@@ -145,7 +152,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         purge_expired_unverified_users(db)
         _purge_expired_registration_verifications(db)
 
-        email_normalized = user_in.email.strip().lower()
+        email_normalized = normalize_email(user_in.email)
         if not validate_email(email_normalized):
             raise HTTPException(status_code=400, detail='Formato de email inválido.')
         is_valid, error_msg = validate_password(user_in.password)
@@ -268,7 +275,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
 async def register_confirm(request: Request, data: schemas.RegisterConfirmRequest, db: Session = Depends(get_db)):
     """Confirma o registo com email + código de 6 dígitos. Cria o utilizador e devolve tokens."""
     _purge_expired_registration_verifications(db)
-    email_normalized = (data.email or '').strip().lower()
+    email_normalized = normalize_email(data.email or '')
     code_clean = (data.code or '').strip()
     if len(code_clean) != 6 or not code_clean.isdigit():
         raise HTTPException(status_code=400, detail='Código inválido ou expirado.')
@@ -353,7 +360,7 @@ async def resend_verification(
 ):
     """Reenvia o link de verificação de email para um registo pendente."""
     purge_expired_unverified_users(db)
-    email_lower = (data.email or '').strip().lower()
+    email_lower = normalize_email(data.email or '')
     if not email_lower or not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email_lower):
         raise HTTPException(status_code=400, detail='Formato de email inválido.')
 
@@ -399,9 +406,10 @@ async def resend_verification(
 @router.get('/verification-status/{email}')
 async def check_verification_status(email: str, db: Session = Depends(get_db)):
     purge_expired_unverified_users(db)
-    user = db.query(models.User).filter(models.User.email == email).first()
+    email_norm = normalize_email(email or '')
+    user = db.query(models.User).filter(models.User.email == email_norm).first()
     ev = db.query(models.EmailVerification).filter(
-        models.EmailVerification.email == email,
+        models.EmailVerification.email == email_norm,
         models.EmailVerification.is_used == False
     ).first()
     return {
@@ -735,7 +743,7 @@ async def update_email(request: Request, data: schemas.UserUpdateEmail, current_
         raise HTTPException(status_code=400, detail='Alteração de email não disponível para contas ligadas a redes sociais.')
     if not security.verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail='Password atual incorreta.')
-    new_email_normalized = (data.new_email or '').strip().lower()
+    new_email_normalized = normalize_email(data.new_email or '')
     if not validate_email(new_email_normalized):
         raise HTTPException(status_code=400, detail='Formato de email inválido.')
     if new_email_normalized == current_user.email:
@@ -1082,7 +1090,7 @@ async def purge_user_data(request: Request, current_user: models.User = Depends(
 @router.post('/login', response_model=schemas.Token)
 @limiter.limit('5/minute')
 async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    email_lower = (form_data.username or '').strip().lower()
+    email_lower = normalize_email(form_data.username or '')
     user = db.query(models.User).filter(models.User.email == email_lower).first()
     if not user or not security.verify_password(form_data.password, user.password_hash):
         logger.warning(f'Falha de login para: {form_data.username} de {request.client.host}')
@@ -1111,7 +1119,8 @@ async def login(request: Request, db: Session = Depends(get_db), form_data: OAut
 @router.post('/password-reset/request')
 @limiter.limit('3/hour')
 async def request_password_reset(request: Request, data: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+    email_norm = normalize_email(data.email or '')
+    user = db.query(models.User).filter(models.User.email == email_norm).first()
     if not user:
         logger.warning(f'Pedido de reset de password para email inexistente: {data.email}')
         raise HTTPException(status_code=404, detail='Não existe nenhuma conta associada a este email.')
@@ -1120,11 +1129,11 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
     
-    reset_obj = models.PasswordReset(email=data.email, code=code, expires_at=expires_at)
+    reset_obj = models.PasswordReset(email=email_norm, code=code, expires_at=expires_at)
     db.add(reset_obj)
     db.commit()
     
-    await log_action(db, action='password_reset_request', user_id=user.id, details=f'Pedido de reset: {data.email}', request=request)
+    await log_action(db, action='password_reset_request', user_id=user.id, details=f'Pedido de reset: {email_norm}', request=request)
     
     # Get user language preference from user model (already in database)
     # If language field doesn't exist yet (before migration), default to 'pt'
@@ -1190,7 +1199,7 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     
     message = MessageSchema(
         subject=t['subject'],
-        recipients=[data.email],
+        recipients=[email_norm],
         body=html,
         subtype=MessageType.html
     )
@@ -1199,14 +1208,15 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     try:
         await fm.send_message(message)
     except Exception as e:
-        logger.error(f'ERRO CRÍTICO EMAIL para {data.email}: {str(e)}')
+        logger.error(f'ERRO CRÍTICO EMAIL para {email_norm}: {str(e)}')
     
     return {'message': 'Código de recuperação enviado para o email.'}
 
 @router.post('/password-reset/verify')
 async def verify_reset_code(request: Request, data: schemas.PasswordResetVerify, db: Session = Depends(get_db)):
+    email_norm = normalize_email(data.email or '')
     reset_obj = db.query(models.PasswordReset).filter(
-        models.PasswordReset.email == data.email,
+        models.PasswordReset.email == email_norm,
         models.PasswordReset.code == data.code,
         models.PasswordReset.is_used == False,
         models.PasswordReset.expires_at > datetime.now(timezone.utc)
@@ -1215,16 +1225,17 @@ async def verify_reset_code(request: Request, data: schemas.PasswordResetVerify,
     if not reset_obj:
         raise HTTPException(status_code=400, detail='Código inválido ou expirado')
     
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+    user = db.query(models.User).filter(models.User.email == email_norm).first()
     if user:
-        await log_action(db, action='password_reset_verify', user_id=user.id, details=f'Código verificado: {data.email}', request=request)
+        await log_action(db, action='password_reset_verify', user_id=user.id, details=f'Código verificado: {email_norm}', request=request)
     
     return {'message': 'Código verificado com sucesso.'}
 
 @router.post('/password-reset/confirm')
 async def confirm_password_reset(request: Request, data: schemas.PasswordResetConfirm, db: Session = Depends(get_db)):
+    email_norm = normalize_email(data.email or '')
     reset_obj = db.query(models.PasswordReset).filter(
-        models.PasswordReset.email == data.email,
+        models.PasswordReset.email == email_norm,
         models.PasswordReset.code == data.code,
         models.PasswordReset.is_used == False,
         models.PasswordReset.expires_at > datetime.now(timezone.utc)
@@ -1233,7 +1244,7 @@ async def confirm_password_reset(request: Request, data: schemas.PasswordResetCo
     if not reset_obj:
         raise HTTPException(status_code=400, detail='Código inválido ou expirado')
     
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+    user = db.query(models.User).filter(models.User.email == email_norm).first()
     if not user:
         raise HTTPException(status_code=404, detail='Utilizador não encontrado')
     
@@ -1276,7 +1287,7 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
             raise HTTPException(status_code=400, detail='Não foi possível obter o email do provedor social')
         
         # Lookup insensível a maiúsculas: mesma conta Telegram (ex: Joao@...) e Google (joao@...)
-        email_normalized = (email or "").strip().lower()
+        email_normalized = normalize_email(email or "")
         user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
         
         # Se o usuário já existe, não criar referência (referências só para contas novas)
