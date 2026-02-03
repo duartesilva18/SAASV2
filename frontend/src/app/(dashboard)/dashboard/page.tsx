@@ -601,7 +601,7 @@ export default function DashboardPage() {
       transition={{ duration: 0.5 }}
       className="text-white pb-20 -mt-4"
     >
-      {/* Cabeçalho: saudação + resumo | Modo Demo (estilo dashboard Pro) */}
+      {/* Cabeçalho: saudação + resumo | Modo Demo + Upgrade Pro */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
@@ -628,30 +628,6 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
-
-      {/* Aviso Modo Demo Ativo (apenas quando não tem dados reais ou poucos dados) */}
-      {hasLowData && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3 bg-amber-500/10 border border-amber-500/20 rounded-xl sm:rounded-2xl w-full mb-4 sm:mb-6 shrink-0"
-        >
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <AlertCircle className="text-amber-500 shrink-0 flex-shrink-0" size={20} />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm sm:text-base font-black text-amber-400">Modo Demo Ativo</p>
-              <p className="text-[11px] sm:text-xs text-amber-300/70 font-medium">A mostrar dados de exemplo</p>
-            </div>
-          </div>
-          <Link
-            href="/transactions"
-            className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors shrink-0 whitespace-nowrap border-b border-amber-400/50 hover:border-amber-300/50 py-1 self-center sm:self-auto min-h-[44px] flex items-center justify-center sm:min-h-0"
-          >
-            Adicionar transações →
-          </Link>
-        </motion.div>
-      )}
 
       {/* Filtros (esquerda) | Nova transação (direita) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
