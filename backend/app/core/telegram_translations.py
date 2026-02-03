@@ -93,6 +93,14 @@ TELEGRAM_TRANSLATIONS = {
             "• <code>Gasolina 50€</code>\n\n"
             "🧘‍♂️ <i>Simplicidade é a chave.</i>"
         ),
+        'photo_rate_limit': (
+            "📸 <b>Limite de pedidos atingido</b>\n\n"
+            "⏳ Enviaste demasiados pedidos neste momento (limite da API).\n\n"
+            "Espera 1–2 minutos e tenta enviar a foto de novo, ou escreve a transação em texto:\n"
+            "• <code>Almoço 15€</code>\n"
+            "• <code>Gasolina 50€</code>\n\n"
+            "🧘‍♂️ <i>Simplicidade é a chave.</i>"
+        ),
         'parse_error': (
             "🤔 <b>Não consegui entender</b>\n\n"
             "💡 <b>Tenta formatos como:</b>\n"
@@ -266,6 +274,14 @@ TELEGRAM_TRANSLATIONS = {
             "📸 <b>Image processing</b>\n\n"
             "⚠️ This feature is temporarily unavailable.\n\n"
             "📝 Please write the transaction in text:\n"
+            "• <code>Lunch 15€</code>\n"
+            "• <code>Gas 50€</code>\n\n"
+            "🧘‍♂️ <i>Simplicity is the key.</i>"
+        ),
+        'photo_rate_limit': (
+            "📸 <b>Rate limit reached</b>\n\n"
+            "⏳ Too many requests right now (API limit).\n\n"
+            "Wait 1–2 minutes and try sending the photo again, or write the transaction in text:\n"
             "• <code>Lunch 15€</code>\n"
             "• <code>Gas 50€</code>\n\n"
             "🧘‍♂️ <i>Simplicity is the key.</i>"

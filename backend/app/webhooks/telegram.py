@@ -28,6 +28,11 @@ class AIUnavailableError(Exception):
     pass
 
 
+class OpenAIRateLimitError(Exception):
+    """Levantada quando a OpenAI devolve 429 Too Many Requests (limite de pedidos excedido)."""
+    pass
+
+
 def _telegram_lang(from_user: Optional[dict]) -> str:
     """Infer bot language from Telegram user (when app user has no language set)."""
     code = (from_user or {}).get("language_code") or "pt"
@@ -855,7 +860,20 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
             "date": date_str,
             "category": category_name or None,
         }
+    except OpenAIRateLimitError:
+        raise
     except Exception as e:
+        err_str = str(e).lower()
+        is_rate_limit = (
+            getattr(e, "status_code", None) == 429
+            or "429" in str(e)
+            or "rate_limit" in err_str
+            or "too many requests" in err_str
+            or "quota" in err_str
+        )
+        if is_rate_limit:
+            logger.warning("[OpenAI Vision] Rate limit (429) - demasiados pedidos ou quota excedida: %s", e)
+            raise OpenAIRateLimitError(e) from e
         logger.exception("[OpenAI Vision] Erro ao processar foto: %s", e)
         return None
 
@@ -1347,7 +1365,12 @@ async def telegram_webhook(
                 models.Category.workspace_id == workspace.id
             ).all()
             logger.info("[Telegram] Foto recebida file_id=%s workspace_id=%s categorias=%s", file_id[:20] if file_id else None, workspace.id, len(all_categories))
-            photo_result = process_photo_with_openai(file_id, all_categories)
+            try:
+                photo_result = process_photo_with_openai(file_id, all_categories)
+            except OpenAIRateLimitError as e:
+                logger.warning("[Telegram] OpenAI rate limit (429): %s -> enviando photo_rate_limit", e)
+                send_telegram_msg(chat_id, t('photo_rate_limit'))
+                return {'status': 'error'}
             if not photo_result:
                 logger.warning("[Telegram] process_photo_with_openai retornou None -> enviando photo_not_supported")
                 send_telegram_msg(chat_id, t('photo_not_supported'))
