@@ -52,10 +52,10 @@ async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db
     import logging
     logger = logging.getLogger("transactions")
     
-    # Usar workspace cacheado se disponível
+    # Usar workspace cacheado se disponível; senão o primeiro por created_at (igual ao import)
     workspace = getattr(request.state, 'workspace', None)
     if not workspace:
-        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
         if not workspace:
             raise HTTPException(status_code=404, detail='Workspace not found')
         request.state.workspace = workspace
@@ -86,7 +86,7 @@ async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db
 
 @router.post('/', response_model=schemas.TransactionResponse)
 async def create_transaction(request: Request, transaction_in: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     
@@ -193,7 +193,7 @@ async def create_transaction(request: Request, transaction_in: schemas.Transacti
 
 @router.patch('/{transaction_id}', response_model=schemas.TransactionResponse)
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     db_transaction = db.query(models.Transaction).filter(
         models.Transaction.id == transaction_id,
         models.Transaction.workspace_id == workspace.id
@@ -241,7 +241,7 @@ async def update_transaction(request: Request, transaction_id: UUID, transaction
 
 @router.delete('/{transaction_id}')
 async def delete_transaction(request: Request, transaction_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     db_transaction = db.query(models.Transaction).filter(
         models.Transaction.id == transaction_id,
         models.Transaction.workspace_id == workspace.id

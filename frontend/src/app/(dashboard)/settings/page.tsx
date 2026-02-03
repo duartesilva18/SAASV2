@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+import { mutate as swrMutate } from 'swr';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import AlertModal from '@/components/AlertModal';
@@ -259,6 +260,14 @@ export default function SettingsPage() {
       const msg = (t.dashboard.settings as any).importSuccess ?? 'Dados importados.';
       const detail = [imp.workspaces && `${imp.workspaces} workspace(s)`, imp.categories && `${imp.categories} categorias`, imp.transactions && `${imp.transactions} transações`, imp.recurring && `${imp.recurring} recorrentes`, imp.goals && `${imp.goals} metas`].filter(Boolean).join(', ');
       setToast({ isVisible: true, message: detail ? `${msg} ${detail}` : msg, type: 'success' });
+      // Invalidar cache para Transações, Categorias, Recorrentes e Metas aparecerem atualizados
+      await Promise.all([
+        swrMutate('/transactions/'),
+        swrMutate('/categories/'),
+        swrMutate('/recurring/'),
+        swrMutate('/goals/'),
+        swrMutate('/insights/'),
+      ]);
     } catch (err: any) {
       const message = err?.response?.data?.detail ?? (t.dashboard.settings as any).importError ?? 'Erro ao importar. Usa um ficheiro exportado pelo Finly.';
       setToast({ isVisible: true, message, type: 'error' });

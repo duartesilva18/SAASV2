@@ -928,7 +928,7 @@ async def import_user_data(
 ):
     """
     Importa dados de um ficheiro JSON exportado pelo Finly.
-    Cria novos workspaces com categorias, transações, recorrentes e metas.
+    Faz merge no teu workspace atual (o primeiro) para as transações aparecerem em Transações.
     """
     try:
         body = await request.json()
@@ -943,27 +943,24 @@ async def import_user_data(
             status_code=400,
             detail='Formato não reconhecido. Usa um ficheiro exportado pelo Finly (Exportar dados da conta).'
         )
+    ws = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not ws:
+        ws = models.Workspace(owner_id=current_user.id, name='Meu Workspace')
+        db.add(ws)
+        db.flush()
     stats = {'workspaces': 0, 'categories': 0, 'transactions': 0, 'recurring': 0, 'goals': 0}
+    existing_cats = {c.name: c.id for c in db.query(models.Category).filter(models.Category.workspace_id == ws.id).all()}
+    cat_name_to_id = dict(existing_cats)
     for ws_data in workspaces_data:
         if not isinstance(ws_data, dict):
             continue
-        name = (ws_data.get('name') or 'Workspace importado')[:100]
-        opening_cents = int(ws_data.get('opening_balance_cents', 0))
-        opening_date = _parse_date(ws_data.get('opening_balance_date'))
-        ws = models.Workspace(
-            owner_id=current_user.id,
-            name=name,
-            opening_balance_cents=opening_cents,
-            opening_balance_date=opening_date,
-        )
-        db.add(ws)
-        db.flush()
         stats['workspaces'] += 1
-        cat_name_to_id = {}
         for c in ws_data.get('categories') or []:
             if not isinstance(c, dict) or not c.get('name'):
                 continue
             cname = (c.get('name') or '')[:100]
+            if cname in cat_name_to_id:
+                continue
             ctype = c.get('type') in ('income', 'expense') and c.get('type') or 'expense'
             cat = models.Category(
                 workspace_id=ws.id,
@@ -1001,11 +998,7 @@ async def import_user_data(
         for r in ws_data.get('recurring_transactions') or []:
             if not isinstance(r, dict) or r.get('description') is None or r.get('amount_cents') is None:
                 continue
-            day = int(r.get('day_of_month', 1))
-            if day < 1:
-                day = 1
-            if day > 28:
-                day = 28
+            day = min(28, max(1, int(r.get('day_of_month', 1))))
             cat_name = r.get('category_name')
             cat_id = cat_name_to_id.get(cat_name) if cat_name else None
             rec = models.RecurringTransaction(

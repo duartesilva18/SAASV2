@@ -10,6 +10,7 @@ import {
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import AlertModal from '@/components/AlertModal';
+import { STRIPE_PRICE_IDS } from '@/lib/stripePrices';
 
 interface PricingModalProps {
   isVisible: boolean;
@@ -67,7 +68,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
       id: 'monthly',
       name: t.dashboard.pricing.monthlyPlan.name,
       price: 9.99,
-      priceId: 'price_1SuIypLtWlVpaXrbD7ph1fhf',
+      priceId: STRIPE_PRICE_IDS.basic,
       description: t.dashboard.pricing.monthlyPlan.description,
       features: t.dashboard.pricing.monthlyPlan.features,
       icon: Zap,
@@ -77,7 +78,7 @@ export default function PricingModal({ isVisible, onClose }: PricingModalProps) 
       id: 'yearly',
       name: t.dashboard.pricing.yearlyPlan.name,
       price: 89.90, // ~7.49/mês
-      priceId: 'price_1SuJ0GLtWlVpaXrb8BH9HIve',
+      priceId: STRIPE_PRICE_IDS.pro,
       description: t.dashboard.pricing.yearlyPlan.description,
       features: t.dashboard.pricing.yearlyPlan.features,
       icon: Crown,

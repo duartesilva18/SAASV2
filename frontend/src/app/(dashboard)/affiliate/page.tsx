@@ -848,37 +848,25 @@ export default function AffiliatePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-xl"
+            className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"
           >
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-amber-400" />
                 {t.dashboard?.affiliate?.automaticPayments || "Pagamentos Automáticos"}
               </h3>
-              {/* Status Badge */}
               {status && (
-                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  status.stripe_connect_configured
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+                <span className={`shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                  status.stripe_connect_configured ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/60 text-slate-400'
                 }`}>
-                  {status.stripe_connect_configured ? (
-                    <>
-                      <CheckCircle2 className="w-3 h-3" />
-                      {t.dashboard?.affiliate?.configured || "Configurado"}
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-3 h-3" />
-                      {t.dashboard?.affiliate?.notConfigured || "Não Configurado"}
-                    </>
-                  )}
-                </div>
+                  {status.stripe_connect_configured ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                  {status.stripe_connect_configured ? (t.dashboard?.affiliate?.configured || "Configurado") : (t.dashboard?.affiliate?.notConfigured || "Não configurado")}
+                </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 font-medium mb-4 leading-relaxed">
+            <p className="text-xs text-slate-400 mb-4">
               {status?.stripe_connect_configured
-                ? (t.dashboard?.affiliate?.stripeConnected || "A tua conta Stripe está conectada. Receberás comissões automaticamente quando alguém subscrever Pro através do teu link.")
+                ? (t.dashboard?.affiliate?.stripeConnected || "A tua conta Stripe está conectada. Receberás comissões automaticamente.")
                 : (t.dashboard?.affiliate?.stripeNotConnected || "Conecta a tua conta Stripe para receberes comissões automaticamente.")}
             </p>
             <button
@@ -888,9 +876,7 @@ export default function AffiliatePage() {
                 try {
                   if (status?.stripe_connect_configured) {
                     const res = await api.get('/affiliate/stripe-connect/dashboard');
-                    if (res.data.dashboard_url) {
-                      window.open(res.data.dashboard_url, '_blank');
-                    }
+                    if (res.data.dashboard_url) window.open(res.data.dashboard_url, '_blank');
                   } else {
                     const res = await api.get('/affiliate/stripe-connect/onboard');
                     if (res.data.onboard_url) {
@@ -899,56 +885,32 @@ export default function AffiliatePage() {
                     }
                   }
                 } catch (err: any) {
-                  setToast({
-                    isVisible: true,
-                    message: err?.response?.data?.detail || (t.dashboard.affiliate as any).stripeError,
-                    type: 'error'
-                  });
+                  setToast({ isVisible: true, message: err?.response?.data?.detail || (t.dashboard.affiliate as any).stripeError, type: 'error' });
                 } finally {
                   setStripeConnectLoading(false);
                 }
               }}
-              className={`w-full px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 cursor-pointer ${
+              className={`w-full h-11 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-colors ${
                 status?.stripe_connect_configured
-                  ? 'bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 text-white border border-slate-500/50'
-                  : 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black'
+                  ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                  : 'bg-amber-600 hover:bg-amber-500 text-black'
               }`}
             >
-              {stripeConnectLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t.dashboard?.affiliate?.loading ?? "A abrir..."}
-                </>
-              ) : status?.stripe_connect_configured ? (
-                <>
-                  <ExternalLink className="w-4 h-4" />
-                  {t.dashboard?.affiliate?.openStripeDashboard || "Abrir Dashboard Stripe"}
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="w-4 h-4" />
-                  {t.dashboard?.affiliate?.configureStripeConnect || "Configurar Stripe Connect"}
-                </>
-              )}
+              {stripeConnectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+              {stripeConnectLoading ? (t.dashboard?.affiliate?.loading ?? "A abrir...") : status?.stripe_connect_configured ? (t.dashboard?.affiliate?.openStripeDashboard || "Abrir Dashboard Stripe") : (t.dashboard?.affiliate?.configureStripeConnect || "Configurar Stripe Connect")}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowWithdrawModal(true)}
-              className="mt-3 w-full px-4 py-2 text-xs text-slate-400 hover:text-amber-400 font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Info className="w-4 h-4" />
-              {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
-            </button>
-            {(status?.stripe_connect_configured || status?.stripe_connect_account_id) && (
-              <button
-                type="button"
-                onClick={() => setShowDisconnectStripeModal(true)}
-                className="mt-3 w-full px-4 py-3 rounded-xl border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4 shrink-0" />
-                {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeButton'] ?? "Desligar conta Stripe"}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <button type="button" onClick={() => setShowWithdrawModal(true)} className="text-slate-500 hover:text-amber-400 flex items-center gap-1.5 cursor-pointer">
+                <Info className="w-3.5 h-3.5" />
+                {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
               </button>
-            )}
+              {(status?.stripe_connect_configured || status?.stripe_connect_account_id) && (
+                <button type="button" onClick={() => setShowDisconnectStripeModal(true)} className="text-red-400/90 hover:text-red-400 flex items-center gap-1.5 cursor-pointer">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeButton'] ?? "Desligar conta Stripe"}
+                </button>
+              )}
+            </div>
           </motion.div>
 
           {/* Affiliate Link */}

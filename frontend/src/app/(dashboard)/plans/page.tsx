@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect } from 'react';
+import { PLAN_SLUG_BY_PRICE_ID, STRIPE_PRICE_IDS } from '@/lib/stripePrices';
 
 export default function PlansPage() {
   const { t } = useTranslation();
@@ -21,12 +22,7 @@ export default function PlansPage() {
   const [changePlanLoading, setChangePlanLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Mapeamento de price_ids para planos (igual à homepage)
-  const priceIdMap: { [key: string]: string } = {
-    'price_1SuIypLtWlVpaXrbD7ph1fhf': 'basic',
-    'price_1SuIzcLtWlVpaXrbLkHE0QbS': 'plus',
-    'price_1SuJ0GLtWlVpaXrb8BH9HIve': 'pro'
-  };
+  const priceIdMap = PLAN_SLUG_BY_PRICE_ID;
 
   useEffect(() => {
     const fetchCurrentPlan = async () => {
@@ -101,7 +97,7 @@ export default function PlansPage() {
       features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
       limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
       buttonText: 'Começar agora',
-      priceId: 'price_1SuIypLtWlVpaXrbD7ph1fhf',
+      priceId: STRIPE_PRICE_IDS.basic,
       icon: Zap,
       popular: false,
     },
@@ -116,7 +112,7 @@ export default function PlansPage() {
       features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
       limitation: null,
       buttonText: 'Quero começar a ganhar com a FinLy',
-      priceId: 'price_1SuIzcLtWlVpaXrbLkHE0QbS',
+      priceId: STRIPE_PRICE_IDS.plus,
       icon: Trophy,
       popular: true,
       popularLabel: '🔥 MAIS ESCOLHIDO',
@@ -132,7 +128,7 @@ export default function PlansPage() {
       features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
       limitation: null,
       buttonText: 'Quero o plano mais completo',
-      priceId: 'price_1SuJ0GLtWlVpaXrb8BH9HIve',
+      priceId: STRIPE_PRICE_IDS.pro,
       icon: Crown,
       popular: false,
     }

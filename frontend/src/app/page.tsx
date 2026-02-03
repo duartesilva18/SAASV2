@@ -12,6 +12,7 @@ import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
+import { STRIPE_PRICE_IDS } from '@/lib/stripePrices';
 
 function AnimatedTelegram() {
   return <span className="inline-block mx-1 font-black text-blue-400">Telegram</span>;
@@ -424,7 +425,7 @@ export default function LandingPage() {
                       onClick={async () => {
                         if (user) {
                           try {
-                            const priceIdMap: Record<string, string> = { basic: 'price_1SuIypLtWlVpaXrbD7ph1fhf', plus: 'price_1SuIzcLtWlVpaXrbLkHE0QbS', pro: 'price_1SuJ0GLtWlVpaXrb8BH9HIve' };
+                            const priceIdMap: Record<string, string> = { basic: STRIPE_PRICE_IDS.basic, plus: STRIPE_PRICE_IDS.plus, pro: STRIPE_PRICE_IDS.pro };
                             const res = await api.post('/stripe/create-checkout-session', null, { params: { price_id: priceIdMap[plan.id] } });
                             window.location.href = res.data.url;
                           } catch {

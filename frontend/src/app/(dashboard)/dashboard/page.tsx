@@ -601,15 +601,35 @@ export default function DashboardPage() {
       transition={{ duration: 0.5 }}
       className="text-white pb-20 -mt-4"
     >
-      {/* Cabeçalho: saudação + resumo */}
-      <div className="mb-6">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-          {greeting}, {userName}
-        </h1>
-        <p className="text-slate-400 font-medium mt-1">{t.dashboard.page.headerSubtitle}</p>
+      {/* Cabeçalho: saudação + resumo | Modo Demo (estilo dashboard Pro) */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
+            {greeting}, {userName}
+          </h1>
+          <p className="text-slate-400 font-medium mt-1">{t.dashboard.page.headerSubtitle}</p>
+        </div>
+        {!isPro && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-amber-500/10 border border-amber-500/20 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl w-full sm:w-auto shrink-0"
+          >
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 truncate">{t.dashboard.page.demoMode}</span>
+            </div>
+            <Link
+              href="/pricing"
+              className="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 sm:py-1 rounded-lg text-[9px] font-black uppercase transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              {t.dashboard.page.upgradePro}
+            </Link>
+          </motion.div>
+        )}
       </div>
 
-      {/* Botão Modo Demo (apenas quando não tem dados reais ou poucos dados) */}
+      {/* Aviso Modo Demo Ativo (apenas quando não tem dados reais ou poucos dados) */}
       {hasLowData && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -678,14 +698,6 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {!isPro && (
-            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{t.dashboard.page.demoMode}</span>
-              <Link href="/pricing" className="text-amber-400 hover:text-amber-300 text-xs font-bold">
-                {t.dashboard.page.upgradePro}
-              </Link>
-            </div>
-          )}
           <button
             type="button"
             onClick={() => setShowAddTransactionModal(true)}

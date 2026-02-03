@@ -51,6 +51,7 @@ import { useUser } from '@/lib/UserContext';
 import { useNotifications } from '@/lib/NotificationsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+import { PLAN_BY_PRICE_ID } from '@/lib/stripePrices';
 
 // Menu principal da sidebar: apenas páginas de alto nível (lista plana, sem grupos)
 const getMainMenu = (t: any) => [
@@ -62,12 +63,6 @@ const getMainMenu = (t: any) => [
   { name: t.dashboard.sidebar.settings, href: '/settings', icon: Settings, activePaths: ['/settings', '/billing', '/plans'] },
   { name: t.dashboard.sidebar.admin, href: '/admin', icon: Shield, adminOnly: true, activePaths: ['/admin'] },
 ];
-
-const PLAN_BY_PRICE_ID: Record<string, { label: string; variant: 'basic' | 'plus' | 'pro' }> = {
-  'price_1SuIypLtWlVpaXrbD7ph1fhf': { label: 'FinLy Basic', variant: 'basic' },
-  'price_1SuIzcLtWlVpaXrbLkHE0QbS': { label: 'FinLy Plus', variant: 'plus' },
-  'price_1SuJ0GLtWlVpaXrb8BH9HIve': { label: 'FinLy Pro', variant: 'pro' },
-};
 
 export default function Sidebar({ 
   isCollapsed, 
