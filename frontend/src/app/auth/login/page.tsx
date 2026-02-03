@@ -348,23 +348,23 @@ function LoginPageContent() {
             </Link>
           </div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[360px] sm:max-w-[400px] 3xl:max-w-[520px]">
-            <div className="mb-4 3xl:mb-8 3xl:lg:mb-12 text-center lg:text-left">
-              <div className="lg:hidden w-11 h-11 3xl:w-14 3xl:h-14 rounded-xl 3xl:rounded-xl flex items-center justify-center mx-auto mb-4 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[380px] sm:max-w-[420px] 3xl:max-w-[520px]">
+            <div className="mb-5 sm:mb-6 3xl:mb-8 3xl:lg:mb-12 text-center lg:text-left">
+              <div className="lg:hidden w-12 h-12 sm:w-14 sm:h-14 3xl:w-14 3xl:h-14 rounded-xl flex items-center justify-center mx-auto mb-5 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl 3xl:text-4xl 3xl:lg:text-5xl font-black tracking-tighter mb-2 3xl:mb-3 3xl:lg:mb-4 text-white">
+              <h1 className="text-2xl sm:text-3xl lg:text-3xl 3xl:text-4xl 3xl:lg:text-5xl font-black tracking-tighter mb-2.5 3xl:mb-3 3xl:lg:mb-4 text-white">
                 {t.auth.login.title}
                 <span className="text-blue-500 italic ml-1 3xl:ml-2">{t.auth.login.titleAccent}</span>
               </h1>
-              <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg italic">
+              <p className="text-slate-500 font-medium text-sm sm:text-base 3xl:text-base 3xl:lg:text-lg italic">
                 {t.auth.login.subtitle}
               </p>
             </div>
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-5 sm:p-6 3xl:p-8 3xl:sm:p-10 3xl:lg:p-12 rounded-xl 3xl:rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-6 sm:p-7 3xl:p-8 3xl:sm:p-10 3xl:lg:p-12 rounded-xl 3xl:rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {error && (
@@ -372,7 +372,7 @@ function LoginPageContent() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="mb-4 3xl:mb-8 p-3 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-xl 3xl:rounded-2xl text-red-400 text-[10px] 3xl:text-xs font-black tracking-tight leading-tight"
+                    className="mb-4 3xl:mb-8 p-3.5 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-xl 3xl:rounded-2xl text-red-400 text-xs 3xl:text-xs font-black tracking-tight leading-tight"
                   >
                     <div className="flex items-center gap-2 3xl:gap-3">
                       <div className="w-6 h-6 3xl:w-8 3xl:h-8 bg-red-500/20 rounded-lg 3xl:rounded-xl flex items-center justify-center shrink-0">
@@ -406,20 +406,20 @@ function LoginPageContent() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSubmit} noValidate className="space-y-3 3xl:space-y-6 3xl:lg:space-y-8">
+              <form onSubmit={handleSubmit} noValidate className="space-y-4 3xl:space-y-6 3xl:lg:space-y-8">
                 <div>
-                  <label className="block text-[8px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500 mb-1.5 3xl:mb-3 ml-1.5 3xl:ml-2">
+                  <label className="block text-[10px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500 mb-2 3xl:mb-3 ml-1.5 3xl:ml-2">
                     {t.auth.login.emailLabel}
                   </label>
                   <div className="relative group/input">
-                    <div className={`absolute left-3 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && !validateEmail(email) ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-blue-500'}`}>
-                      <Mail size={14} className="3xl:w-5 3xl:h-5" />
+                    <div className={`absolute left-3.5 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && !validateEmail(email) ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-blue-500'}`}>
+                      <Mail size={15} className="3xl:w-5 3xl:h-5" />
                     </div>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); if (error) { setError(''); setShowResendVerification(false); setResendSuccess(''); setResendError(''); } }}
-                      className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-2.5 3xl:py-5 3xl:lg:py-6 pl-9 3xl:pl-14 pr-3 3xl:pr-5 text-[11px] 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-3 3xl:py-5 3xl:lg:py-6 pl-10 3xl:pl-14 pr-3 3xl:pr-5 text-xs sm:text-sm 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
                       placeholder="o-teu-email@exemplo.com"
                       required
                     />
@@ -432,26 +432,26 @@ function LoginPageContent() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1.5 3xl:mb-3 ml-1.5 3xl:ml-2">
-                    <label className="block text-[8px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500">
+                  <div className="flex justify-between items-center mb-2 3xl:mb-3 ml-1.5 3xl:ml-2">
+                    <label className="block text-[10px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500">
                       {t.auth.login.passwordLabel}
                     </label>
                     <Link
                       href="/auth/forgot-password"
-                      className="text-[7px] 3xl:text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors underline decoration-blue-500/20 underline-offset-1 3xl:underline-offset-4 cursor-pointer"
+                      className="text-[9px] 3xl:text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors underline decoration-blue-500/20 underline-offset-1 3xl:underline-offset-4 cursor-pointer"
                     >
                       {t.auth.login.forgotPassword}
                     </Link>
                   </div>
                   <div className="relative group/input">
-                    <div className={`absolute left-3 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && password.length < 4 ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-blue-500'}`}>
-                      <Lock size={14} className="3xl:w-5 3xl:h-5" />
+                    <div className={`absolute left-3.5 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && password.length < 4 ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-blue-500'}`}>
+                      <Lock size={15} className="3xl:w-5 3xl:h-5" />
                     </div>
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                      className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-2.5 3xl:py-5 3xl:lg:py-6 pl-9 3xl:pl-14 pr-9 3xl:pr-12 text-[11px] 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 4 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-3 3xl:py-5 3xl:lg:py-6 pl-10 3xl:pl-14 pr-9 3xl:pr-12 text-xs sm:text-sm 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 4 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
                       placeholder="••••••••••••"
                       required
                     />
@@ -465,17 +465,17 @@ function LoginPageContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 3xl:gap-3 ml-1.5 3xl:ml-2 group cursor-pointer w-fit" onClick={() => setRememberMe(!rememberMe)}>
-                  <div className={`w-3.5 h-3.5 3xl:w-5 3xl:h-5 rounded border flex items-center justify-center transition-all ${rememberMe ? 'bg-blue-600 border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]' : 'bg-slate-950/50 border-slate-800'}`}>
+                <div className="flex items-center gap-2 3xl:gap-3 ml-1.5 3xl:ml-2 group cursor-pointer w-fit" onClick={() => setRememberMe(!rememberMe)}>
+                  <div className={`w-4 h-4 3xl:w-5 3xl:h-5 rounded border flex items-center justify-center transition-all ${rememberMe ? 'bg-blue-600 border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]' : 'bg-slate-950/50 border-slate-800'}`}>
                     <AnimatePresence>
                       {rememberMe && (
                         <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.15 }}>
-                          <Check size={8} className="text-white stroke-[4] 3xl:w-3.5 3xl:h-3.5" />
+                          <Check size={9} className="text-white stroke-[4] 3xl:w-3.5 3xl:h-3.5" />
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
-                  <span className={`text-[8px] 3xl:text-[10px] font-black uppercase tracking-widest transition-colors ${rememberMe ? 'text-slate-200' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                  <span className={`text-[10px] 3xl:text-[10px] font-black uppercase tracking-widest transition-colors ${rememberMe ? 'text-slate-200' : 'text-slate-500 group-hover:text-slate-300'}`}>
                     {t.auth.login.rememberMe}
                   </span>
                 </div>
@@ -483,7 +483,7 @@ function LoginPageContent() {
                 <MagneticButton
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 3xl:py-5 3xl:lg:py-7 min-h-[38px] 3xl:min-h-[48px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg 3xl:rounded-2xl 3xl:lg:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.3em] transition-all shadow-[0_12px_24px_-8px_rgba(37,99,235,0.5)] 3xl:shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-2 3xl:mt-4 flex items-center justify-center gap-1.5 3xl:gap-3 3xl:lg:gap-4 text-[9px] 3xl:text-xs 3xl:lg:text-sm relative overflow-hidden cursor-pointer"
+                  className="w-full py-3 3xl:py-5 3xl:lg:py-7 min-h-[44px] 3xl:min-h-[48px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg 3xl:rounded-2xl 3xl:lg:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.3em] transition-all shadow-[0_12px_24px_-8px_rgba(37,99,235,0.5)] 3xl:shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-2 3xl:mt-4 flex items-center justify-center gap-2 3xl:gap-3 3xl:lg:gap-4 text-xs 3xl:text-xs 3xl:lg:text-sm relative overflow-hidden cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-4 h-4 3xl:w-6 3xl:h-6 border-2 3xl:border-3 border-white/30 border-t-white rounded-full animate-spin" />
@@ -495,28 +495,28 @@ function LoginPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-5 3xl:mt-10 3xl:lg:mt-14">
-                <div className="relative mb-5 3xl:mb-10 text-center">
+              <div className="mt-6 3xl:mt-10 3xl:lg:mt-14">
+                <div className="relative mb-6 3xl:mb-10 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
-                  <div className="relative flex justify-center text-[8px] 3xl:text-[9px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.4em]">
-                    <span className="bg-[#020617] px-2.5 3xl:px-4 text-slate-600">{t.auth.login.orContinueWith}</span>
+                  <div className="relative flex justify-center text-[9px] 3xl:text-[9px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.4em]">
+                    <span className="bg-[#020617] px-3 3xl:px-4 text-slate-600">{t.auth.login.orContinueWith}</span>
                   </div>
                 </div>
-                <div className="flex justify-center scale-[0.9] sm:scale-95 3xl:scale-100">
+                <div className="flex justify-center scale-[0.95] sm:scale-100 3xl:scale-100">
                   <GoogleLoginButton onLoginSuccess={(token) => handleSocialLogin(token, 'google')} />
                 </div>
               </div>
             </motion.div>
 
-            <div className="mt-5 3xl:mt-10 3xl:lg:mt-14 text-center">
-              <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg mb-3 3xl:mb-4 3xl:lg:mb-6 italic">
+            <div className="mt-6 3xl:mt-10 3xl:lg:mt-14 text-center">
+              <p className="text-slate-500 font-medium text-sm sm:text-base 3xl:text-base 3xl:lg:text-lg mb-3 3xl:mb-4 3xl:lg:mb-6 italic">
                 {t.auth.login.noAccount}
               </p>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-2 3xl:gap-3 3xl:lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-5 3xl:px-8 3xl:lg:px-12 py-3 3xl:py-4 3xl:lg:py-6 rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] text-[9px] 3xl:text-[10px] 3xl:lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+                className="inline-flex items-center gap-2 3xl:gap-3 3xl:lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-6 3xl:px-8 3xl:lg:px-12 py-3.5 3xl:py-4 3xl:lg:py-6 rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] text-[10px] sm:text-xs 3xl:text-[10px] 3xl:lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.login.registerCta}
                 <Sparkles size={14} className="text-blue-500 group-hover:rotate-12 transition-transform 3xl:w-[18px] 3xl:h-[18px] 3xl:lg:size-5" />
