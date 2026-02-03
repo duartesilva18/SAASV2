@@ -416,39 +416,83 @@ export default function CategoriesPage() {
                 </div>
             )}
           </div>
+        </div>
 
-          {/* Detailed Category Cards */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-              <Tag size={18} className="text-blue-400" />
-              Minhas Gavetas
-            </h3>
-            <div className="flex items-center gap-3">
-              {isSelectionMode && selectedIds.length > 0 && (
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(true)}
-                  disabled={isBulkDeleting}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-red-600/20 cursor-pointer"
-                >
-                  {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                  Apagar Selecionadas ({selectedIds.length})
-                </button>
-              )}
-              <button
-                onClick={toggleSelectionMode}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border cursor-pointer ${
-                  isSelectionMode 
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' 
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                }`}
-              >
-                {isSelectionMode ? <X size={14} /> : <Check size={14} />}
-                {isSelectionMode ? t.dashboard.categories.cancelSelection : t.dashboard.categories.selectCategories}
-              </button>
-            </div>
+        {/* Right: Zen Tips & Legend */}
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10" />
+            <Sparkles className="mb-6 opacity-80" size={32} />
+            <h3 className="text-2xl font-black tracking-tighter mb-4 leading-none uppercase">{t.dashboard.categories.masterTip}</h3>
+            <p className="text-blue-100 font-medium italic text-sm leading-relaxed">
+              "{t.dashboard.categories.masterTipText}"
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6 flex items-center gap-2">
+              <Target size={14} />
+              Alvos este Mês
+            </h4>
+            <div className="space-y-6">
+              {stats.filter((s) => {
+                const category = categories.find(c => c.id === s.category_id);
+                return category && category.vault_type === 'none';
+              }).slice(0, 3).map((s) => (
+                <div key={s.category_id} className="flex items-center gap-4">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${s.color}20`, color: s.color }}
+                  >
+                    {(() => {
+                      const Icon = getIconComponent(s.icon);
+                      return <Icon size={20} />;
+                    })()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-white uppercase tracking-tighter">{s.name}</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase">{s.count} {t.dashboard.categories.transactions}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Minhas Gavetas — largura total do ecrã */}
+      <div className="-mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <Tag size={18} className="text-blue-400" />
+            Minhas Gavetas
+          </h3>
+          <div className="flex items-center gap-3">
+            {isSelectionMode && selectedIds.length > 0 && (
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                disabled={isBulkDeleting}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-red-600/20 cursor-pointer"
+              >
+                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Apagar Selecionadas ({selectedIds.length})
+              </button>
+            )}
+            <button
+              onClick={toggleSelectionMode}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border cursor-pointer ${
+                isSelectionMode 
+                  ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' 
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              {isSelectionMode ? <X size={14} /> : <Check size={14} />}
+              {isSelectionMode ? t.dashboard.categories.cancelSelection : t.dashboard.categories.selectCategories}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {categories.map((cat) => {
               const stat = stats.find(s => s.category_id === cat.id);
               const Icon = getIconComponent(cat.icon);
@@ -588,48 +632,6 @@ export default function CategoriesPage() {
               );
             })}
           </div>
-        </div>
-
-        {/* Right: Zen Tips & Legend */}
-        <div className="space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10" />
-            <Sparkles className="mb-6 opacity-80" size={32} />
-            <h3 className="text-2xl font-black tracking-tighter mb-4 leading-none uppercase">{t.dashboard.categories.masterTip}</h3>
-            <p className="text-blue-100 font-medium italic text-sm leading-relaxed">
-              "{t.dashboard.categories.masterTipText}"
-            </p>
-          </div>
-
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6 flex items-center gap-2">
-              <Target size={14} />
-              Alvos este Mês
-            </h4>
-            <div className="space-y-6">
-              {stats.filter((s) => {
-                const category = categories.find(c => c.id === s.category_id);
-                return category && category.vault_type === 'none';
-              }).slice(0, 3).map((s) => (
-                <div key={s.category_id} className="flex items-center gap-4">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${s.color}20`, color: s.color }}
-                  >
-                    {(() => {
-                      const Icon = getIconComponent(s.icon);
-                      return <Icon size={20} />;
-                    })()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-black text-white uppercase tracking-tighter">{s.name}</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase">{s.count} {t.dashboard.categories.transactions}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Add/Edit Modal */}
