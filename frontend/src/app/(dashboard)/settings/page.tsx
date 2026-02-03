@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Phone, Coins, UserCircle, 
@@ -114,7 +114,7 @@ export default function SettingsPage() {
     return () => { isMounted = false; };
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setToast({ ...toast, isVisible: false });
@@ -169,7 +169,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleConfirmPasswordChange = async (e: React.FormEvent) => {
+  const handleConfirmPasswordChange = async (e: FormEvent) => {
     e.preventDefault();
     if (passwordCode.length !== 6) {
       setToast({
