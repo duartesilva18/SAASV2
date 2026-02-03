@@ -11,10 +11,12 @@ def get_commission_percentage_for_price_id(price_id: str, db: Session) -> float:
     """
     Retorna a percentagem de comissão do afiliado para o price_id dado.
     Plus = 20% (editável), Pro = 25% (editável), Basic = 0%.
-    Os afiliados ganham esta comissão em cada cobrança (mensal ou anual) enquanto o referido continuar subscrito.
+    Qualquer outro price_id pago (ex: Pro mensal) usa 25% por defeito para não perder comissões.
     """
     if not price_id:
         return 0.0
+    if price_id == getattr(settings, 'STRIPE_PRICE_BASIC_MONTHLY', ''):
+        return 0.0  # Plano Basic = sem comissão
     if price_id == settings.STRIPE_PRICE_PLUS:
         s = db.query(models.SystemSetting).filter(
             models.SystemSetting.key == 'affiliate_commission_percentage_plus'
@@ -25,4 +27,5 @@ def get_commission_percentage_for_price_id(price_id: str, db: Session) -> float:
             models.SystemSetting.key == 'affiliate_commission_percentage_pro'
         ).first()
         return float(s.value) if s and s.value else DEFAULT_PRO_PERCENT
-    return 0.0  # Basic ou desconhecido
+    # Qualquer outro plano pago (ex: Pro mensal com outro price_id) → 25% por defeito
+    return DEFAULT_PRO_PERCENT

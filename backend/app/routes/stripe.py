@@ -31,18 +31,35 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         
         # Buscar preço para calcular total
         price = stripe.Price.retrieve(price_id)
-        total_amount_cents = price.unit_amount  # Valor total em cêntimos
+        total_amount_cents = getattr(price, 'unit_amount', None) or 0  # Valor total em cêntimos (evitar None)
+        if total_amount_cents < 0:
+            total_amount_cents = 0
         
-        # Verificar se cliente tem referrer_id e se referrer tem Stripe Connect ativo
+        # Verificar se cliente tem referrer (por user.referrer_id ou por AffiliateReferral) e se referrer tem Stripe Connect ativo
         application_fee_amount = None
         transfer_data = None
         referrer_id = None
-        
+        referrer = None
+
         if current_user.referrer_id:
             referrer = db.query(models.User).filter(models.User.id == current_user.referrer_id).first()
-            logger.info(f'🔍 Verificando referrer para divisão automática: referrer_id={current_user.referrer_id}, referrer={referrer.email if referrer else None}, is_affiliate={referrer.is_affiliate if referrer else False}, has_connect_account={bool(referrer.stripe_connect_account_id) if referrer else False}')
+        if not referrer:
+            # Fallback: utilizador pode ter sido referido mas user.referrer_id não estar definido (ex: bug antigo)
+            ref_row = db.query(models.AffiliateReferral).filter(
+                models.AffiliateReferral.referred_user_id == current_user.id
+            ).first()
+            if ref_row:
+                referrer = db.query(models.User).filter(models.User.id == ref_row.referrer_id).first()
+                if referrer:
+                    logger.info(f'🔍 Referrer obtido via AffiliateReferral (user {current_user.email} não tinha referrer_id): {referrer.email}')
+                    # Corrigir user.referrer_id para futuros checkouts e lógica geral
+                    current_user.referrer_id = referrer.id
+                    db.commit()
+
+        if referrer:
+            logger.info(f'🔍 Verificando referrer para divisão automática: referrer_id={referrer.id}, referrer={referrer.email}, is_affiliate={referrer.is_affiliate}, has_connect_account={bool(referrer.stripe_connect_account_id)}')
             
-            if referrer and referrer.is_affiliate and referrer.stripe_connect_account_id:
+            if referrer.is_affiliate and referrer.stripe_connect_account_id:
                 # Verificar se conta está ativa (verificar em tempo real com Stripe)
                 # Considerar ativa se onboarding está completo e charges estão habilitados
                 # (payouts pode demorar a ativar, mas a conta já está funcional)
@@ -63,20 +80,41 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                     is_connect_active = referrer.stripe_connect_onboarding_completed
                 
                 if is_connect_active:
-                    # Comissão por plano: Plus 20%, Pro 25% (editável pelo admin). Basic = 0%.
+                    # Comissão por plano: Plus 20%, Pro 25% (editável pelo admin). Basic = 0%. Outros planos pagos = 25%.
                     commission_percentage = get_commission_percentage_for_price_id(price_id, db)
                     
                     # Calcular comissão só se plano pago (Plus/Pro)
                     application_fee_amount = int(total_amount_cents * (commission_percentage / 100)) if commission_percentage > 0 else None
-                    if application_fee_amount and application_fee_amount > 0:
+                    # Só aplicar divisão se houver valor a transferir (mín. 1 cêntimo) e total válido
+                    if application_fee_amount and application_fee_amount >= 1 and total_amount_cents >= 1:
                         referrer_id = str(referrer.id)
                         transfer_data = {
                             'destination': referrer.stripe_connect_account_id,
                         }
-                        logger.info(f'Divisão automática configurada: {application_fee_amount} cêntimos ({commission_percentage}%) para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
+                        logger.info(f'✅ Divisão automática configurada: {application_fee_amount} cêntimos ({commission_percentage}%) para afiliado {referrer.email} (account: {referrer.stripe_connect_account_id})')
                     else:
                         application_fee_amount = None
                         transfer_data = None
+                        if commission_percentage <= 0:
+                            logger.warning(f'⚠️ Divisão NÃO aplicada: comissão 0% para price_id={price_id}. O afiliado {referrer.email} não receberá comissão desta venda.')
+                        else:
+                            logger.warning(f'⚠️ Divisão NÃO aplicada: application_fee_amount inválido (total={total_amount_cents}, pct={commission_percentage})')
+                else:
+                    logger.warning(f'⚠️ Divisão NÃO aplicada: conta Stripe Connect do afiliado {referrer.email} não está ativa (onboarding incompleto ou charges desativados). O afiliado deve concluir o onboarding em Stripe Connect para receber comissões.')
+            else:
+                if not referrer.is_affiliate:
+                    logger.warning(f'⚠️ Divisão NÃO aplicada: utilizador {referrer.email} não é afiliado (is_affiliate=False).')
+                elif not referrer.stripe_connect_account_id:
+                    logger.warning(f'⚠️ Divisão NÃO aplicada: afiliado {referrer.email} não tem Stripe Connect ligado. Deve ligar a conta em Afiliados para receber comissões.')
+        else:
+            if not current_user.referrer_id:
+                ref_exists = db.query(models.AffiliateReferral).filter(
+                    models.AffiliateReferral.referred_user_id == current_user.id
+                ).first()
+                if ref_exists:
+                    logger.warning(f'⚠️ Divisão NÃO aplicada: utilizador {current_user.email} tem referência em affiliate_referrals mas referrer não encontrado (referrer_id pode ter sido removido).')
+                else:
+                    logger.info(f'ℹ️ Checkout sem afiliado: utilizador {current_user.email} não foi referido (sem referrer_id).')
         
         # Criar checkout session
         subscription_data = {
@@ -92,6 +130,11 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         # Queremos afiliado a receber commission_percentage (ex: 20%), logo plataforma fica 100 - commission (ex: 80%)
         if application_fee_amount and transfer_data:
             application_fee_percent = round(100 - commission_percentage, 2)
+            # Evitar 0 ou 100 que o Stripe pode rejeitar
+            if application_fee_percent <= 0:
+                application_fee_percent = 0.01
+            elif application_fee_percent >= 100:
+                application_fee_percent = 99.99
             
             subscription_data['application_fee_percent'] = application_fee_percent
             subscription_data['transfer_data'] = transfer_data
