@@ -10,6 +10,7 @@ const config: Config = {
     extend: {
       screens: {
         'custom': {'max': '1450px'},
+        '3xl': '1600px',  // ecrãs ≥1600px = tamanho “grande”; abaixo = compacto
       },
     },
   },
