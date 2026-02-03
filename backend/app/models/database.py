@@ -30,6 +30,8 @@ class User(Base):
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
     telegram_auto_confirm = Column(Boolean, nullable=False, default=False)
     telegram_default_category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
+    # Pro concedido por admin até uma data (acesso Pro temporário sem subscrição Stripe)
+    pro_granted_until = Column(DateTime(timezone=True), nullable=True)
     # Campos de afiliado
     is_affiliate = Column(Boolean, nullable=False, default=False)
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)
@@ -52,6 +54,18 @@ class User(Base):
     def has_password(self) -> bool:
         """True se a conta foi criada com email/password; False se entrou só por Google/social."""
         return self.password_hash is not None
+
+    def has_effective_pro(self) -> bool:
+        """True se o utilizador tem acesso Pro: admin, subscrição ativa ou Pro concedido até uma data futura."""
+        from datetime import datetime, timezone
+        if self.is_admin:
+            return True
+        if self.subscription_status in ('active', 'trialing', 'cancel_at_period_end'):
+            return True
+        if self.pro_granted_until:
+            now = datetime.now(timezone.utc)
+            return self.pro_granted_until > now
+        return False
 
 class Workspace(Base):
     __tablename__ = 'workspaces'

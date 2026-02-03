@@ -7,7 +7,7 @@ import {
   Search, Filter, ArrowUpRight, TrendingUp,
   Mail, Calendar, ShieldCheck, Zap, Lock,
   ChevronRight, Loader2, AlertCircle, CheckCircle2,
-  MoreVertical, ShieldAlert, ChevronLeft, ChevronDown, Globe
+  MoreVertical, ShieldAlert, ChevronLeft, ChevronDown, Globe, Gift, X
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -26,6 +26,11 @@ export default function AdminDashboardPage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Grant Pro modal
+  const [userToGrantPro, setUserToGrantPro] = useState<{ id: string; name: string } | null>(null);
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantMonths, setGrantMonths] = useState<number>(3);
+  const [grantingPro, setGrantingPro] = useState(false);
   // Audit Logs States
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditPage, setAuditPage] = useState(1);
@@ -101,6 +106,47 @@ export default function AdminDashboardPage() {
   const handleDeleteClick = (userId: string) => {
     setUserToDelete(userId);
     setShowDeleteConfirm(true);
+  };
+
+  const openGrantModal = (u: { id: string; full_name?: string; email: string }) => {
+    setUserToGrantPro({ id: u.id, name: u.full_name || u.email });
+    setShowGrantModal(true);
+    setGrantMonths(3);
+  };
+
+  const handleGrantPro = async () => {
+    if (!userToGrantPro) return;
+    setGrantingPro(true);
+    try {
+      await api.post(`/admin/users/${userToGrantPro.id}/grant-pro`, { months: grantMonths });
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.grantProSuccess, type: 'success' });
+      setShowGrantModal(false);
+      setUserToGrantPro(null);
+      fetchData();
+    } catch (err) {
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.grantProError, type: 'error' });
+    } finally {
+      setGrantingPro(false);
+    }
+  };
+
+  const handleRevokePro = async (userId: string) => {
+    try {
+      await api.post(`/admin/users/${userId}/revoke-pro`);
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.revokeProSuccess, type: 'success' });
+      fetchData();
+    } catch (err) {
+      setToast({ isVisible: true, message: t.dashboard.admin.dashboard.revokeProError, type: 'error' });
+    }
+  };
+
+  const isProGranted = (u: { pro_granted_until?: string | null }) => {
+    if (!u.pro_granted_until) return false;
+    return new Date(u.pro_granted_until) > new Date();
+  };
+
+  const formatProUntil = (iso: string) => {
+    return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const filteredUsers = users.filter(u => 
@@ -199,11 +245,13 @@ export default function AdminDashboardPage() {
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
-                    <span className={`px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap ${
-                      ['active', 'trialing'].includes(u.subscription_status) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5'
-                    }`}>
-                      {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : 'Free Plan'}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap inline-flex w-fit ${
+                        ['active', 'trialing'].includes(u.subscription_status) || isProGranted(u) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5'
+                      }`}>
+                        {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : isProGranted(u) ? t.dashboard.admin.dashboard.proUntil.replace('{date}', formatProUntil(u.pro_granted_until!)) : 'Free Plan'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex items-center gap-2">
@@ -224,10 +272,29 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!u.is_admin && (
+                        isProGranted(u) ? (
+                          <button 
+                            onClick={() => handleRevokePro(u.id)}
+                            className="p-2 sm:p-2.5 bg-slate-800 hover:bg-amber-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
+                            title={t.dashboard.admin.dashboard.revokePro}
+                          >
+                            <X size={14} className="sm:w-4 sm:h-4" />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => openGrantModal(u)}
+                            className="p-2 sm:p-2.5 bg-slate-800 hover:bg-emerald-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
+                            title={t.dashboard.admin.dashboard.grantPro}
+                          >
+                            <Gift size={14} className="sm:w-4 sm:h-4" />
+                          </button>
+                        )
+                      )}
                       <button 
                         onClick={() => handleToggleAdmin(u.id)}
                         className="p-2 sm:p-2.5 bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                        title={u.is_admin ? "Remover Admin" : "Tornar Admin"}
+                        title={u.is_admin ? t.dashboard.admin.dashboard.removeAdmin : t.dashboard.admin.dashboard.makeAdmin}
                       >
                         <Shield size={14} className="sm:w-4 sm:h-4" />
                       </button>
@@ -373,11 +440,68 @@ export default function AdminDashboardPage() {
         }}
         onConfirm={handleDeleteUser}
         title={t.dashboard.admin.dashboard.deleteUser}
-        message="Tem a certeza que deseja eliminar este utilizador permanentemente? Esta ação não pode ser desfeita."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        message={t.dashboard.admin.dashboard.deleteUserConfirmMessage}
+        confirmText={t.dashboard.admin.dashboard.confirmDelete}
+        cancelText={t.dashboard.admin.dashboard.cancel}
         variant="danger"
       />
+
+      {/* Grant Pro modal */}
+      <AnimatePresence>
+        {showGrantModal && userToGrantPro && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => !grantingPro && (setShowGrantModal(false), setUserToGrantPro(null))}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <h3 className="text-lg font-black text-white mb-2">{t.dashboard.admin.dashboard.grantProTitle}</h3>
+              <p className="text-sm text-slate-400 mb-4">{userToGrantPro.name}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">{t.dashboard.admin.dashboard.grantProDuration}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+                {[1, 3, 6, 12].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setGrantMonths(m)}
+                    className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all ${
+                      grantMonths === m ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {m === 1 ? t.dashboard.admin.dashboard.grantPro1Month : m === 3 ? t.dashboard.admin.dashboard.grantPro3Months : m === 6 ? t.dashboard.admin.dashboard.grantPro6Months : t.dashboard.admin.dashboard.grantPro1Year}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowGrantModal(false); setUserToGrantPro(null); }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm"
+                >
+                  {t.dashboard.admin.dashboard.cancel}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGrantPro}
+                  disabled={grantingPro}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {grantingPro ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {t.dashboard.admin.dashboard.grantPro}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Toast 
         message={toast.message} 

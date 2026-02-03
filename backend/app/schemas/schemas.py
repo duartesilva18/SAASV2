@@ -24,16 +24,22 @@ class UserResponse(UserBase):
     is_onboarded: bool
     marketing_opt_in: bool
     subscription_status: Optional[str] = 'none'
+    pro_granted_until: Optional[datetime] = None  # Pro concedido por admin até esta data
     terms_accepted: bool = False
     terms_accepted_at: Optional[datetime] = None
     created_at: datetime
     has_password: bool = True  # True = conta criada com email/password; False = só Google/social
 
     @model_validator(mode='after')
-    def admin_has_pro(self):
-        """Contas admin têm sempre Pro ativo para o frontend e lógica de acesso."""
+    def admin_or_granted_has_pro(self):
+        """Contas admin ou com Pro concedido têm subscription_status = active para o frontend."""
+        from datetime import datetime, timezone
         if self.is_admin and (not self.subscription_status or self.subscription_status not in ('active', 'trialing', 'cancel_at_period_end')):
             object.__setattr__(self, 'subscription_status', 'active')
+            return self
+        if self.pro_granted_until and self.pro_granted_until > datetime.now(timezone.utc):
+            if self.subscription_status not in ('active', 'trialing', 'cancel_at_period_end'):
+                object.__setattr__(self, 'subscription_status', 'active')
         return self
 
     class Config:
@@ -310,6 +316,7 @@ class AdminUserResponse(BaseModel):
     phone_number: Optional[str] = None
     marketing_opt_in: bool = False
     subscription_status: str
+    pro_granted_until: Optional[datetime] = None
     created_at: datetime
     is_active: bool
     is_admin: bool
@@ -318,6 +325,12 @@ class AdminUserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GrantProRequest(BaseModel):
+    """Conceder Pro até uma data ou por N meses."""
+    until: Optional[datetime] = None  # Data limite (UTC)
+    months: Optional[int] = None  # Alternativa: até agora + N meses (ignorado se until for enviado)
 
 class AdminUserDetail(AdminUserResponse):
     workspaces: List[WorkspaceResponse]

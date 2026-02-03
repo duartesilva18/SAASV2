@@ -2437,8 +2437,8 @@ async def telegram_webhook(
             language = user.language if user.language else 'pt'
             t_email = get_telegram_t(language)
             
-            # Verificar se é conta Pro (admins têm sempre Pro ativo)
-            if not user.is_admin and user.subscription_status not in ['active', 'trialing', 'cancel_at_period_end']:
+            # Verificar se é conta Pro (admin, subscrição ativa ou Pro concedido até data)
+            if not user.has_effective_pro():
                 send_telegram_msg(chat_id, t_email('pro_required'))
                 return {'status': 'pro_required'}
             

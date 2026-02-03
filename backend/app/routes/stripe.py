@@ -276,9 +276,9 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
 
 @router.get('/subscription-details')
 async def get_subscription_details(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Retorna os detalhes da subscrição atual, incluindo o price_id. Admins têm sempre Pro ativo."""
+    """Retorna os detalhes da subscrição atual, incluindo o price_id. Admins e Pro concedido têm Pro ativo."""
     try:
-        if current_user.is_admin:
+        if current_user.has_effective_pro() and not current_user.stripe_subscription_id:
             return {
                 'has_subscription': True,
                 'price_id': None,

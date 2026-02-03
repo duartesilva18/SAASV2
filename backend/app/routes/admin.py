@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from ..core.dependencies import get_db, conf
 from ..models import database as models
@@ -350,6 +350,48 @@ async def toggle_admin_status(user_id: UUID, db: Session = Depends(get_db), admi
     user.is_admin = not user.is_admin
     db.commit()
     return {'message': f"Admin status for {user.email} updated to {user.is_admin}"}
+
+
+@router.post('/users/{user_id}/grant-pro')
+async def grant_pro_to_user(
+    user_id: UUID,
+    body: schemas.GrantProRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(check_admin)
+):
+    """Concede Pro a um utilizador até uma data (ou por N meses)."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Utilizador não encontrado')
+    until = body.until
+    if until is None and body.months is not None:
+        until = datetime.now(timezone.utc) + timedelta(days=body.months * 30)
+    if until is None:
+        raise HTTPException(status_code=400, detail='Indica "until" (data ISO) ou "months" (número).')
+    if until <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail='A data deve ser no futuro.')
+    user.pro_granted_until = until
+    db.commit()
+    await log_action(db, action='admin_grant_pro', user_id=admin_user.id, details=f'Pro concedido a {user.email} até {until.isoformat()}', request=request)
+    return {'success': True, 'pro_granted_until': until.isoformat(), 'message': f'Pro concedido até {until.strftime("%Y-%m-%d")}'}
+
+
+@router.post('/users/{user_id}/revoke-pro')
+async def revoke_granted_pro(
+    user_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(check_admin)
+):
+    """Remove o Pro concedido manualmente (pro_granted_until). Não afeta subscrição Stripe."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Utilizador não encontrado')
+    user.pro_granted_until = None
+    db.commit()
+    await log_action(db, action='admin_revoke_pro', user_id=admin_user.id, details=f'Pro concedido revogado para {user.email}', request=request)
+    return {'success': True, 'message': 'Pro concedido revogado.'}
 
 @router.put('/users/{user_id}', response_model=schemas.AdminUserResponse)
 async def update_user_admin(request: Request, user_id: UUID, user_update: schemas.AdminUserUpdate, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
