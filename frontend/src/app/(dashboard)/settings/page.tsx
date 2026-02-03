@@ -283,9 +283,10 @@ export default function SettingsPage() {
         message: (t.dashboard.settings as any).exportSuccess ?? 'Ficheiro descarregado. Guarda-o em segurança para backup ou para usar noutra conta.',
         type: 'success'
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.exportError, type: 'error' });
+      const detail = err?.response?.data?.detail ?? t.dashboard.settings.exportError;
+      setAlertModal({ isOpen: true, title: 'Erro', message: typeof detail === 'string' ? detail : t.dashboard.settings.exportError, type: 'error' });
     } finally {
       setExporting(false);
     }

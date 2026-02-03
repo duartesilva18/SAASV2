@@ -811,10 +811,10 @@ async def get_stripe_connect_dashboard(
             current_user.stripe_connect_account_id,
             redirect_url=f"{settings.FRONTEND_URL}/affiliate"
         )
-        return {
-            'dashboard_url': getattr(login_link, 'url', None),
-            'expires_at': getattr(login_link, 'expires_at', None),
-        }
+        url = getattr(login_link, 'url', None)
+        if not url:
+            raise HTTPException(status_code=500, detail='Stripe não devolveu o link do dashboard.')
+        return {'dashboard_url': url}
         
     except stripe.error.StripeError as e:
         logger.error(f'Erro ao criar login link: {str(e)}')
