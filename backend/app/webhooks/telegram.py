@@ -287,6 +287,25 @@ def _strip_date_from_description(description: str) -> str:
     return s or description.strip()
 
 
+def _remove_dates_for_value_parsing(text: str) -> str:
+    """
+    Remove padrões de data do texto antes de extrair valores monetários.
+    Evita que "01/02/2026" seja interpretado como vários valores (1, 2, 202, 6).
+    Substitui datas por espaço para manter posições coerentes.
+    """
+    if not text:
+        return text
+    s = text
+    # DD/MM/YYYY, DD/MM/YY, DD/MM, DD-MM (substituir por espaço)
+    s = re.sub(r'\b\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\b', ' ', s)
+    # "dia 28" / "day 28"
+    s = re.sub(r'\b(?:dia|day)\s+\d{1,2}\b', ' ', s, flags=re.IGNORECASE)
+    # "28 jan" / "28 janeiro" / etc.
+    s = re.sub(r'\b\d{1,2}\s+(?:jan|janeiro|fev|fevereiro|mar|mar[cç]o|marco|abr|abril|mai|maio|jun|junho|jul|julho|ago|agosto|set|setembro|out|outubro|nov|novembro|dez|dezembro|january|february|march|april|may|june|july|august|september|october|november|december)\b', ' ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
 def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Optional[Dict]:
     """
     Extrai valor, tipo e categoria de uma mensagem de texto.
@@ -297,13 +316,20 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
     parsed_date = _parse_date_from_text(text)
     default_transaction_date = parsed_date if parsed_date else date.today()
 
+    # Remover datas do texto antes de extrair valores, para "Almoco 15€ 01/02/2026" não virar vários valores (1, 2, 202, 6)
+    text_for_values = _remove_dates_for_value_parsing(text)
+
     # Suporta múltiplas transações: "Almoço 15€ Gasolina 10€"
     transactions = []
     
     # Regex para encontrar valores monetários (inclui -15€)
-    # Suporta: "15€", "15.50€", "-15€", "1.234,56€", "1 234€"
-    valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?'
-    valor_matches = list(re.finditer(valor_pattern, text, re.IGNORECASE))
+    # Só considerar valor se estiver associado a €/eur/euros (evita apanhar números soltos de datas)
+    valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)\b'
+    valor_matches = list(re.finditer(valor_pattern, text_for_values, re.IGNORECASE))
+    if not valor_matches:
+        # Fallback: sem símbolo € (ex.: "15" no fim de frase)
+        valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?'
+        valor_matches = list(re.finditer(valor_pattern, text_for_values, re.IGNORECASE))
     if not valor_matches:
         return None
     
@@ -401,34 +427,28 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             amount = abs(amount)
             tipo = "expense"
         
-        # Extrair descrição (texto antes do valor, ou texto entre valores)
-        # Se há hífen no texto, a descrição é apenas a parte ANTES do hífen
-        if ' - ' in text or ' -' in text or '- ' in text:
-            # Dividir o texto completo por hífen
-            text_parts = re.split(r'\s*-\s*', text, 1)
+        # Extrair descrição (texto antes do valor, ou texto entre valores) — usar text_for_values (posições dos matches)
+        if ' - ' in text_for_values or ' -' in text_for_values or '- ' in text_for_values:
+            text_parts = re.split(r'\s*-\s*', text_for_values, 1)
             if len(text_parts) == 2:
-                # A descrição é a primeira parte (antes do hífen)
                 first_part = text_parts[0].strip()
-                # Remover qualquer valor monetário que possa estar na primeira parte
                 description = re.sub(r'\s*\d+[.,\s]*\d*\s*(?:€|eur|euros|e)?', '', first_part, flags=re.IGNORECASE).strip()
                 logger.info(f"Descrição após separar por hífen: '{description}'")
             else:
-                # Fallback: usar lógica normal
                 start_pos = valor_matches[i-1].end() if i > 0 else 0
                 end_pos = valor_match.start()
-                description = text[start_pos:end_pos].strip()
+                description = text_for_values[start_pos:end_pos].strip()
         else:
-            # Sem hífen: usar lógica normal
             start_pos = valor_matches[i-1].end() if i > 0 else 0
             end_pos = valor_match.start()
-            description = text[start_pos:end_pos].strip()
+            description = text_for_values[start_pos:end_pos].strip()
         
         # Limpar descrição (remover categoria se foi especificada sem hífen)
         words_to_remove = ['€', 'euro', 'euros', 'eur', 'gastei', 'paguei', 'recebi', 
                           'em', 'no', 'na', 'de', 'do', 'da', 'com', 'para']
         
         # Se categoria foi especificada (sem hífen), removê-la da descrição (incluindo variações parciais)
-        if specified_category and not (' - ' in text or ' -' in text or '- ' in text):
+        if specified_category and not (' - ' in text_for_values or ' -' in text_for_values or '- ' in text_for_values):
                 desc_words = description.split()
                 category_name_normalized = normalize_text(specified_category.name)
                 # Remover palavras que correspondem à categoria (exato ou parcial)
@@ -784,12 +804,35 @@ Responde APENAS com o nome exato da categoria:"""
         return (None, None)
 
 
+def _build_parsed_from_photo_result(
+    photo_result: Dict, workspace: models.Workspace, db: Session
+) -> Optional[Dict]:
+    """
+    Converte o resultado de process_photo_with_openai (uma transação ou lista de transações)
+    no mesmo formato que parse_transaction: um dict único ou {"multiple": True, "transactions": [...]}.
+    """
+    if not photo_result:
+        return None
+    if photo_result.get("transactions") and isinstance(photo_result["transactions"], list):
+        transactions = []
+        for item in photo_result["transactions"]:
+            parsed_one = _parsed_from_photo(item, workspace, db)
+            if parsed_one:
+                transactions.append(parsed_one)
+        if not transactions:
+            return None
+        if len(transactions) == 1:
+            return transactions[0]
+        return {"multiple": True, "transactions": transactions}
+    return _parsed_from_photo(photo_result, workspace, db)
+
+
 def _parsed_from_photo(
     photo_data: Dict, workspace: models.Workspace, db: Session
 ) -> Optional[Dict]:
     """
     Constrói um dict 'parsed' (mesmo formato que parse_transaction para transação única)
-    a partir do resultado de process_photo_with_openai.
+    a partir de um item (amount, description, type, date, category) devolvido pela Vision.
     """
     logger.info("[_parsed_from_photo] Entrada: description=%r amount=%s type=%s", photo_data.get("description"), photo_data.get("amount"), photo_data.get("type"))
     description = (photo_data.get("description") or "").strip()[:255]
@@ -940,25 +983,36 @@ def process_photo_with_openai(file_id: str, categories: List[models.Category]) -
         cats_expense = ", ".join(expense_names) if expense_names else "(nenhuma)"
         cats_income = ", ".join(income_names) if income_names else "(nenhuma)"
 
-        prompt = f"""Analisa esta imagem (recibo, fatura ou nota).
-Extrai os dados da transação.
+        prompt = f"""Analisa esta imagem para extrair transações financeiras.
 
-DATA ATUAL: {dt.now().strftime('%Y-%m-%d')}
+PRIORIDADE 1 — EXTRATO BANCÁRIO (tabela com várias linhas):
+Se a imagem for um extrato bancário (tabela com colunas como Data, Descrição, Categoria, Valor, Comerciante, Saldo Após):
+- Lê CADA LINHA da tabela (cada linha = uma transação).
+- NÃO ignores nenhuma linha. Extrai TODAS as transações visíveis.
+- Coluna "Data": usa formato DD/MM/YYYY e converte para "date" em YYYY-MM-DD.
+- Coluna "Descrição": usa como description (ex: "Compra supermercado", "Almoço restaurante"). Podes combinar com Comerciante se fizer sentido (ex: "Compra supermercado - Pingo Doce").
+- Coluna "Valor": valor numérico (usa ponto decimal). Se estiver negativo (ex: -54,32 €), amount é o valor absoluto e type é "expense".
+- Coluna "Categoria": se existir na tabela, mapeia para o nome EXATO de uma categoria da lista abaixo; senão, infere pela descrição/comerciante.
+- Ignora colunas como ID, Saldo Após (não são transações).
 
-Categorias disponíveis do utilizador:
-- Para despesas (type=expense): {cats_expense}
-- Para receitas (type=income): {cats_income}
+PRIORIDADE 2 — RECIBO/FATURA ÚNICO:
+Se for um único recibo ou fatura (não uma tabela), extrai uma única transação com amount, description, type, date, category.
 
-Escolhe a categoria que melhor se adequa à transação. O valor de "category" deve ser o nome EXATO de uma das categorias listadas acima (conforme o type).
+DATA ATUAL (usa se a data não estiver na imagem): {dt.now().strftime('%Y-%m-%d')}
 
-REGRAS:
-- 'amount': Valor total (número, ponto decimal). Ex: 15.50
-- 'description': Nome do estabelecimento ou descrição curta (máx 40 caracteres)
-- 'type': 'expense' se for compra/despesa, 'income' se for receita/reembolso
-- 'date': Data no formato YYYY-MM-DD (usa a DATA ATUAL se não encontrares)
-- 'category': Nome exato de uma categoria da lista correspondente ao type (despesas ou receitas)
+Categorias disponíveis — usa o nome EXATO desta lista (conforme type):
+- Despesas (type=expense): {cats_expense}
+- Receitas (type=income): {cats_income}
 
-Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "description": "texto", "type": "expense ou income", "date": "YYYY-MM-DD", "category": "NomeExatoDaCategoria"}}
+Para cada transação no JSON:
+- amount: número com ponto decimal (sempre positivo; o type indica despesa ou receita).
+- description: texto curto (máx 80 caracteres), ex: "Compra supermercado", "Bilhete avião Lisboa Porto".
+- type: "expense" (saída/despesa) ou "income" (entrada/receita).
+- date: YYYY-MM-DD.
+- category: nome EXATO de uma categoria da lista acima (ex: "Alimentos", "Viagens").
+
+Responde APENAS com um JSON válido, sem markdown:
+{{"transactions": [ {{"amount": 54.32, "description": "Compra supermercado", "type": "expense", "date": "2025-01-03", "category": "Alimentos"}}, ... ]}}
 """
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
         logger.info("[OpenAI Vision] A chamar OpenAI chat.completions (gpt-4o-mini)...")
@@ -973,7 +1027,7 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
                     ],
                 }
             ],
-            max_tokens=300,
+            max_tokens=2000,
             temperature=0.1,
         )
         text_response = ""
@@ -982,34 +1036,59 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
         if not text_response:
             logger.warning("[OpenAI Vision] OpenAI respondeu sem content. choices=%s", len(response.choices) if response.choices else 0)
             return None
-        logger.info("[OpenAI Vision] Resposta bruta (primeiros 300 chars): %s", (text_response[:300] + "..." if len(text_response) > 300 else text_response))
-        # Limpar markdown se existir
+        logger.info("[OpenAI Vision] Resposta bruta (primeiros 500 chars): %s", (text_response[:500] + "..." if len(text_response) > 500 else text_response))
         clean = re.search(r"\{[\s\S]*\}", text_response)
         if clean:
             text_response = clean.group(0)
         try:
             parsed = json.loads(text_response)
         except json.JSONDecodeError as je:
-            logger.warning("[OpenAI Vision] JSON inválido na resposta: %s. raw=%s", je, text_response[:200])
+            logger.warning("[OpenAI Vision] JSON inválido: %s. raw=%s", je, text_response[:300])
             return None
-        amount = float(parsed.get("amount", 0))
-        description = (parsed.get("description") or "").strip()[:255]
-        tipo = (parsed.get("type") or "expense").lower()
-        if tipo not in ("expense", "income"):
-            tipo = "expense"
-        date_str = parsed.get("date") or dt.now().strftime("%Y-%m-%d")
-        category_name = (parsed.get("category") or "").strip()
-        if not description or amount <= 0:
-            logger.warning("[OpenAI Vision] Dados inválidos (description vazia ou amount<=0): description=%r amount=%s", description or "(vazio)", amount)
-            return None
-        logger.info("[OpenAI Vision] Sucesso: description=%s amount=%s type=%s category=%s", description, amount, tipo, category_name or "(nenhuma)")
-        return {
-            "amount": amount,
-            "description": description,
-            "type": tipo,
-            "date": date_str,
-            "category": category_name or None,
-        }
+        transactions_raw = parsed.get("transactions")
+        if isinstance(transactions_raw, list) and len(transactions_raw) > 0:
+            out = []
+            for item in transactions_raw:
+                amount = float(item.get("amount", 0))
+                description = (item.get("description") or "").strip()[:255]
+                tipo = (item.get("type") or "expense").lower()
+                if tipo not in ("expense", "income"):
+                    tipo = "expense"
+                date_str = item.get("date") or dt.now().strftime("%Y-%m-%d")
+                category_name = (item.get("category") or "").strip()
+                if not description:
+                    description = "Transação"
+                if amount <= 0 and tipo == "expense":
+                    amount = abs(amount)
+                out.append({
+                    "amount": amount,
+                    "description": description,
+                    "type": tipo,
+                    "date": date_str,
+                    "category": category_name or None,
+                })
+            logger.info("[OpenAI Vision] Extraídas %s transações da imagem", len(out))
+            return {"transactions": out}
+        if isinstance(parsed.get("amount"), (int, float)):
+            amount = float(parsed.get("amount", 0))
+            description = (parsed.get("description") or "").strip()[:255]
+            tipo = (parsed.get("type") or "expense").lower()
+            if tipo not in ("expense", "income"):
+                tipo = "expense"
+            date_str = parsed.get("date") or dt.now().strftime("%Y-%m-%d")
+            category_name = (parsed.get("category") or "").strip()
+            if not description or amount <= 0:
+                logger.warning("[OpenAI Vision] Dados inválidos: description=%r amount=%s", description or "(vazio)", amount)
+                return None
+            return {
+                "amount": amount,
+                "description": description,
+                "type": tipo,
+                "date": date_str,
+                "category": category_name or None,
+            }
+        logger.warning("[OpenAI Vision] Resposta sem 'transactions' nem campos de uma transação: %s", list(parsed.keys()) if isinstance(parsed, dict) else type(parsed))
+        return None
     except OpenAIRateLimitError:
         raise
     except Exception as e:
@@ -1087,41 +1166,33 @@ def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = No
     return None
 
 def setup_bot_commands():
-    """Configura os comandos do bot no Telegram"""
+    """Configura os comandos do bot no Telegram (aparecem no menu azul ao digitar /)"""
     if not settings.TELEGRAM_BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN não configurado - não é possível configurar comandos")
         return
     
+    # Lista completa para aparecer no menu de comandos (max 100; descrição max 256 chars)
     commands = [
-        {
-            "command": "start",
-            "description": "🚀 Iniciar o bot e associar conta"
-        },
-        {
-            "command": "info",
-            "description": "📖 Ver guia de utilização e exemplos"
-        },
-        {
-            "command": "help",
-            "description": "❓ Ver ajuda e comandos disponíveis"
-        },
-        {
-            "command": "clear",
-            "description": "🧹 Limpar transações pendentes"
-        }
+        {"command": "start", "description": "🚀 Iniciar e associar conta"},
+        {"command": "info", "description": "📖 Guia e exemplos de formato"},
+        {"command": "help", "description": "❓ Ajuda e comandos"},
+        {"command": "ajuda", "description": "❓ Ajuda (atalho)"},
+        {"command": "resumo", "description": "📊 Resumo do dia (hoje)"},
+        {"command": "hoje", "description": "📊 Resumo do dia"},
+        {"command": "mes", "description": "📊 Resumo do mês"},
+        {"command": "pendentes", "description": "📋 Listar transações pendentes"},
+        {"command": "clear", "description": "🧹 Limpar todas as pendentes"},
+        {"command": "revoke", "description": "🔓 Desvincular Telegram da conta"},
+        {"command": "idioma", "description": "🌐 Mudar idioma (pt / en)"},
     ]
     
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/setMyCommands"
-    payload = {
-        'commands': commands
-    }
-    
     try:
-        response = requests.post(url, json=payload, timeout=5)
+        response = requests.post(url, json={"commands": commands}, timeout=5)
         response.raise_for_status()
-        logger.info("Comandos do bot configurados com sucesso")
+        logger.info("Comandos do bot configurados com sucesso (menu /)")
     except Exception as e:
-        logger.error(f"Erro ao configurar comandos do bot: {str(e)}")
+        logger.error("Erro ao configurar comandos do bot: %s", e)
 
 def setup_bot_info():
     """Configura informações adicionais do bot (descrição, about, etc.)"""
@@ -1860,18 +1931,21 @@ async def telegram_webhook(
                 logger.warning("[Telegram] process_photo_with_openai retornou None -> enviando photo_not_supported")
                 send_telegram_msg(chat_id, t('photo_not_supported'))
                 return {'status': 'error'}
-            logger.info("[Telegram] Vision OK, a construir parsed com _parsed_from_photo")
+            logger.info("[Telegram] Vision OK, a construir parsed (pode ser lista)")
             try:
-                parsed = _parsed_from_photo(photo_result, workspace, db)
+                parsed = _build_parsed_from_photo_result(photo_result, workspace, db)
             except AIUnavailableError as ae:
-                logger.warning("[Telegram] _parsed_from_photo AIUnavailableError: %s", ae)
+                logger.warning("[Telegram] Vision AIUnavailableError: %s", ae)
                 send_telegram_msg(chat_id, t('ai_unavailable'))
                 return {'status': 'error'}
             if not parsed:
-                logger.warning("[Telegram] _parsed_from_photo retornou None -> enviando photo_not_supported")
+                logger.warning("[Telegram] Vision retornou None -> enviando photo_not_supported")
                 send_telegram_msg(chat_id, t('photo_not_supported'))
                 return {'status': 'error'}
-            logger.info("[Telegram] Foto processada com sucesso: %s", parsed.get("description"))
+            if parsed.get("multiple"):
+                logger.info("[Telegram] Foto processada: %s transações (extrato/tabela)", len(parsed.get("transactions", [])))
+            else:
+                logger.info("[Telegram] Foto processada: 1 transação - %s", parsed.get("description"))
         # Processar texto
         elif text:
             logger.info(f"Processando texto como transação: '{text}'")
