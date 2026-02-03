@@ -85,7 +85,9 @@ export default function AffiliatePage() {
   const [errorInfo, setErrorInfo] = useState<{ months: number; monthsNeeded: number; isPlanBased?: boolean } | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showDisconnectStripeModal, setShowDisconnectStripeModal] = useState(false);
   const [stripeConnectLoading, setStripeConnectLoading] = useState(false);
+  const [disconnectStripeLoading, setDisconnectStripeLoading] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
@@ -937,6 +939,15 @@ export default function AffiliatePage() {
               <Info className="w-4 h-4" />
               {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
             </button>
+            {status?.stripe_connect_configured && (
+              <button
+                type="button"
+                onClick={() => setShowDisconnectStripeModal(true)}
+                className="mt-2 w-full px-4 py-2 text-xs text-slate-500 hover:text-red-400 font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {(t.dashboard?.affiliate as Record<string, string>)?.['changeStripeAccount'] ?? "Trocar conta Stripe"}
+              </button>
+            )}
           </motion.div>
 
           {/* Affiliate Link */}
@@ -1173,6 +1184,83 @@ export default function AffiliatePage() {
                 className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-black rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer"
               >
                 {t.dashboard?.affiliate?.modalUnderstand || "Entendi"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal: Trocar conta Stripe (desligar e permitir associar outra) */}
+      {showDisconnectStripeModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => !disconnectStripeLoading && setShowDisconnectStripeModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-xl w-full shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <CreditCard className="w-6 h-6 text-amber-400" />
+                {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeTitle'] ?? "Trocar conta Stripe?"}
+              </h2>
+              <button
+                onClick={() => !disconnectStripeLoading && setShowDisconnectStripeModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                disabled={disconnectStripeLoading}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed mb-6">
+              {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeMessage'] ?? "Vais desligar a conta Stripe atual. As comissões já geradas não são afetadas. Depois podes configurar outra conta Stripe quando quiseres."}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDisconnectStripeModal(false)}
+                disabled={disconnectStripeLoading}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeCancel'] ?? "Cancelar"}
+              </button>
+              <button
+                onClick={async () => {
+                  setDisconnectStripeLoading(true);
+                  try {
+                    await api.post('/affiliate/stripe-connect/disconnect');
+                    setShowDisconnectStripeModal(false);
+                    const statusRes = await api.get('/affiliate/status');
+                    setStatus(statusRes.data);
+                    setToast({
+                      isVisible: true,
+                      message: (t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeSuccess'] ?? "Conta desligada. Podes configurar outra quando quiseres.",
+                      type: 'success'
+                    });
+                  } catch (err: any) {
+                    setToast({
+                      isVisible: true,
+                      message: err?.response?.data?.detail ?? (t.dashboard?.affiliate as Record<string, string>)?.['stripeError'] ?? "Erro ao desligar conta.",
+                      type: 'error'
+                    });
+                  } finally {
+                    setDisconnectStripeLoading(false);
+                  }
+                }}
+                disabled={disconnectStripeLoading}
+                className="px-6 py-3 bg-red-600/80 hover:bg-red-600 text-white rounded-xl font-black uppercase tracking-wider text-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              >
+                {disconnectStripeLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {(t.dashboard?.affiliate as Record<string, string>)?.['loading'] ?? "A processar..."}
+                  </>
+                ) : (
+                  (t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeConfirm'] ?? "Desligar conta"
+                )}
               </button>
             </div>
           </motion.div>

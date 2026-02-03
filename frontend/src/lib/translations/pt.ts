@@ -1071,7 +1071,13 @@ export const pt = {
           withdrawStep1: "1. As comissões entram na tua conta Stripe Connect (não vão diretamente para o banco).",
           withdrawStep2: "2. O Stripe envia o dinheiro para a tua conta bancária automaticamente, conforme o calendário de payouts (ex.: diário ou semanal).",
           withdrawStep3: "3. Ao configurar o Stripe Connect, inseres os teus dados (nome, morada, IBAN) — não precisas de conta Stripe. O Stripe cria a conta Connect para ti.",
-          withdrawStep4: "4. No Dashboard Stripe podes ver o saldo, o histórico de payouts e alterar a frequência dos envios."
+          withdrawStep4: "4. No Dashboard Stripe podes ver o saldo, o histórico de payouts e alterar a frequência dos envios.",
+          changeStripeAccount: "Trocar conta Stripe",
+          disconnectStripeTitle: "Trocar conta Stripe?",
+          disconnectStripeMessage: "Vais desligar a conta Stripe atual. As comissões já geradas não são afetadas. Depois podes configurar outra conta Stripe quando quiseres.",
+          disconnectStripeCancel: "Cancelar",
+          disconnectStripeConfirm: "Desligar conta",
+          disconnectStripeSuccess: "Conta desligada. Podes configurar outra quando quiseres."
       },
       support: {
           tooltip: "Contactar suporte",

@@ -1581,7 +1581,13 @@ export const en = {
           modalStripeSetup: "Setup is simple:",
           modalStripeSetup1: "Click \"Configure Stripe Connect\"",
           modalStripeSetup2: "Complete the Stripe onboarding",
-          modalStripeSetup3: "Start receiving commissions automatically"
+          modalStripeSetup3: "Start receiving commissions automatically",
+          changeStripeAccount: "Change Stripe account",
+          disconnectStripeTitle: "Change Stripe account?",
+          disconnectStripeMessage: "You will disconnect your current Stripe account. Existing commissions are not affected. You can then connect a different Stripe account when you want.",
+          disconnectStripeCancel: "Cancel",
+          disconnectStripeConfirm: "Disconnect account",
+          disconnectStripeSuccess: "Account disconnected. You can connect another one when you want."
       }
   },
   legal: {

@@ -831,3 +831,26 @@ async def get_stripe_connect_dashboard(
         )
 
 
+@router.post('/stripe-connect/disconnect')
+async def disconnect_stripe_connect(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Desliga a conta Stripe Connect do afiliado. Permite associar outra conta depois."""
+    if not current_user.is_affiliate:
+        raise HTTPException(
+            status_code=403,
+            detail='Não és afiliado.'
+        )
+    if not current_user.stripe_connect_account_id:
+        return {'ok': True, 'message': 'Nenhuma conta estava ligada.'}
+
+    current_user.stripe_connect_account_id = None
+    current_user.stripe_connect_onboarding_completed = False
+    current_user.stripe_connect_account_status = None
+    current_user.affiliate_payout_enabled = False
+    db.commit()
+
+    logger.info(f'Stripe Connect desligado para afiliado {current_user.email}')
+    return {'ok': True, 'message': 'Conta Stripe desligada. Podes configurar outra conta quando quiseres.'}
+
