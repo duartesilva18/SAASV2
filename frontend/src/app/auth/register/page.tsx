@@ -225,16 +225,16 @@ function RegisterPageContent() {
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
       
-      <div className="hidden lg:flex md:w-1/2 flex-col justify-center p-12 lg:p-20 relative z-10 border-r border-slate-900/50 bg-slate-950/60">
+      <div className="hidden lg:flex md:w-1/2 flex-col justify-center p-6 lg:p-8 3xl:p-12 3xl:lg:p-20 relative z-10 border-r border-slate-900/50 bg-slate-950/60">
         <Link
           href="/"
-          className="absolute top-12 left-12 lg:left-20 flex items-center gap-2 text-slate-500 hover:text-white transition-all text-xs font-black uppercase tracking-[0.3em] group cursor-pointer"
+          className="absolute top-6 3xl:top-12 left-6 3xl:left-12 3xl:lg:left-20 flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] 3xl:text-xs font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] group cursor-pointer"
         >
-          <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform 3xl:w-4 3xl:h-4" />
           {t.auth.register.backToHome}
         </Link>
 
-        <div className="relative min-h-[400px] flex flex-col justify-center">
+        <div className="relative min-h-[280px] 3xl:min-h-[400px] flex flex-col justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={benefitIndex}
@@ -243,86 +243,86 @@ function RegisterPageContent() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="mt-4 mb-8 lg:mb-12 rotate-3 flex items-center justify-start">
+              <div className="mt-2 mb-4 3xl:mb-8 3xl:lg:mb-12 rotate-3 flex items-center justify-start">
                 <img 
                   src="/images/logo/logo-semfundo.png" 
                   alt="Finly" 
-                  className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
+                  className="w-16 h-16 lg:w-20 lg:h-20 3xl:w-24 3xl:h-24 3xl:lg:w-32 3xl:lg:h-32 object-contain"
                 />
               </div>
-              <h2 className="text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-6 lg:mb-8">
+              <h2 className="text-2xl lg:text-3xl 3xl:text-5xl 3xl:lg:text-7xl font-black tracking-tighter leading-[0.9] mb-4 3xl:mb-6 3xl:lg:mb-8">
                 {registerBenefits[benefitIndex].title.split(' ').map((word: string, i: number) => (
                   <span key={i} className={i % 2 === 1 ? "text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400 italic font-black" : ""}>
                     {word}{' '}
                   </span>
                 ))}
               </h2>
-              <p className="text-xl lg:text-2xl text-slate-400 mb-8 lg:mb-12 max-w-lg leading-relaxed font-medium italic border-l-4 border-emerald-500/30 pl-6 lg:pl-8">
+              <p className="text-sm lg:text-base 3xl:text-xl 3xl:lg:text-2xl text-slate-400 mb-4 3xl:mb-8 3xl:lg:mb-12 max-w-lg leading-relaxed font-medium italic border-l-4 border-emerald-500/30 pl-4 3xl:pl-6 3xl:lg:pl-8">
                 "{registerBenefits[benefitIndex].quote}"
               </p>
-              <div className="grid grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-12">
+              <div className="grid grid-cols-2 gap-2 3xl:gap-4 3xl:lg:gap-6 mb-4 3xl:mb-8 3xl:lg:mb-12">
                 {[
                   { i: Zap, t: t.auth.register.benefits.instant, c: "text-amber-500" },
                   { i: Heart, t: t.auth.register.benefits.noStress, c: "text-rose-500" },
                   { i: ShieldCheck, t: t.auth.register.benefits.privacy, c: "text-blue-500" },
                   { i: Star, t: t.auth.register.benefits.guarantee, c: "text-emerald-500" }
                 ].map((item, idx) => (
-                  <div key={idx} className="bg-slate-900/60 border border-slate-800 p-4 lg:p-6 rounded-[24px] lg:rounded-[32px] group hover:border-emerald-500/30 transition-all">
-                    <item.i size={20} className={`${item.c} mb-3 lg:mb-4 lg:size-[24px]`} />
-                    <div className="text-[10px] lg:text-sm font-black uppercase tracking-widest text-white">{item.t}</div>
+                  <div key={idx} className="bg-slate-900/60 border border-slate-800 p-3 3xl:p-4 3xl:lg:p-6 rounded-xl 3xl:rounded-2xl 3xl:lg:rounded-[32px] group hover:border-emerald-500/30 transition-all">
+                    <item.i size={16} className={`${item.c} mb-2 3xl:mb-3 3xl:lg:mb-4 3xl:w-5 3xl:h-5 3xl:lg:size-[24px]`} />
+                    <div className="text-[9px] 3xl:text-[10px] 3xl:lg:text-sm font-black uppercase tracking-widest text-white">{item.t}</div>
                   </div>
                 ))}
               </div>
-              <div className="p-6 lg:p-8 bg-emerald-500/5 border border-emerald-500/10 rounded-[24px] lg:rounded-[32px] max-w-md flex items-center gap-4 lg:gap-6">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 bg-emerald-500/10 rounded-xl lg:rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
-                  <Trophy size={24} className="lg:size-[28px]" />
+              <div className="p-3 3xl:p-4 3xl:lg:p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-xl 3xl:rounded-2xl 3xl:lg:rounded-[32px] max-w-md flex items-center gap-3 3xl:gap-4 3xl:lg:gap-6">
+                <div className="w-10 h-10 3xl:w-12 3xl:h-12 3xl:lg:w-14 3xl:lg:h-14 bg-emerald-500/10 rounded-lg 3xl:rounded-xl 3xl:lg:rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
+                  <Trophy size={20} className="3xl:size-6 3xl:lg:size-[28px]" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/80 leading-relaxed">
+                <p className="text-[9px] 3xl:text-[10px] 3xl:lg:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/80 leading-relaxed">
                   {registerBenefits[benefitIndex].stat}
                 </p>
               </div>
             </motion.div>
           </AnimatePresence>
-          <div className="flex gap-2 mt-12 lg:mt-16">
+          <div className="flex gap-1.5 3xl:gap-2 mt-6 3xl:mt-12 3xl:lg:mt-16">
             {registerBenefits.map((_: any, i: number) => (
               <div
                 key={i}
-                className={`h-1.5 transition-all duration-700 rounded-full ${i === benefitIndex ? 'w-12 lg:w-16 bg-emerald-500' : 'w-3 lg:w-4 bg-slate-800'}`}
+                className={`h-1 3xl:h-1.5 transition-all duration-700 rounded-full ${i === benefitIndex ? 'w-8 3xl:w-12 3xl:lg:w-16 bg-emerald-500' : 'w-2 3xl:w-3 3xl:lg:w-4 bg-slate-800'}`}
               />
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-8 3xl:p-12 3xl:xl:p-24 relative z-10 bg-[#020617] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-8 3xl:p-12 3xl:xl:p-24 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="lg:hidden absolute top-5 sm:top-6 left-4 sm:left-5">
           <Link
             href="/"
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] cursor-pointer min-h-[42px] min-w-[42px] -m-2 p-2 rounded-xl active:scale-[0.98]"
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] cursor-pointer min-h-[42px] min-w-[42px] -m-2 p-2 rounded-lg 3xl:rounded-xl active:scale-[0.98]"
             aria-label={t.auth.register.back}
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={14} className="3xl:w-3.5 3xl:h-3.5" />
             {t.auth.register.back}
           </Link>
         </div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[360px] sm:max-w-[400px] lg:max-w-[480px] 3xl:max-w-[520px]">
-          <div className="mb-5 lg:mb-8 3xl:mb-12 text-center lg:text-left">
-            <div className="lg:hidden w-12 h-12 3xl:w-14 3xl:h-14 rounded-xl flex items-center justify-center mx-auto mb-4 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[360px] sm:max-w-[400px] 3xl:max-w-[520px]">
+          <div className="mb-4 3xl:mb-8 3xl:lg:mb-12 text-center lg:text-left">
+            <div className="lg:hidden w-11 h-11 3xl:w-14 3xl:h-14 rounded-xl 3xl:rounded-xl flex items-center justify-center mx-auto mb-4 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
               <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl 3xl:text-5xl font-black tracking-tighter mb-2 lg:mb-3 3xl:mb-4 text-white">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl 3xl:text-4xl 3xl:lg:text-5xl font-black tracking-tighter mb-2 3xl:mb-3 3xl:lg:mb-4 text-white">
               {t.auth.register.title}
               <span className="text-emerald-500 italic font-black ml-1 3xl:ml-2">{t.auth.register.titleAccent}</span>
             </h1>
-            <p className="text-slate-500 font-medium text-sm sm:text-base lg:text-lg italic">
+            <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg italic">
               {t.auth.register.subtitle}
             </p>
           </div>
 
           <motion.div
             animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-            className={`bg-slate-900/60 border p-5 sm:p-6 lg:p-10 3xl:p-12 rounded-xl lg:rounded-[32px] relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+            className={`bg-slate-900/60 border p-5 sm:p-6 3xl:p-8 3xl:sm:p-10 3xl:lg:p-12 rounded-xl 3xl:rounded-[32px] relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
           >
             <AnimatePresence mode="wait">
               {success && (
@@ -330,16 +330,16 @@ function RegisterPageContent() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="mb-5 3xl:mb-8 p-4 3xl:p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl 3xl:rounded-2xl flex items-start gap-3 3xl:gap-4 text-emerald-400 shadow-lg shadow-emerald-500/10"
+                  className="mb-4 3xl:mb-8 p-3 3xl:p-5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg 3xl:rounded-2xl flex items-start gap-2 3xl:gap-4 text-emerald-400 shadow-lg shadow-emerald-500/10"
                 >
-                  <div className="w-9 h-9 3xl:w-10 3xl:h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={18} className="3xl:size-[20px] text-emerald-400" />
+                  <div className="w-8 h-8 3xl:w-10 3xl:h-10 bg-emerald-500/20 rounded-lg 3xl:rounded-xl flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={16} className="3xl:size-[20px] text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs 3xl:text-sm font-black uppercase tracking-widest mb-1 text-emerald-400">
+                    <p className="text-[11px] 3xl:text-sm font-black uppercase tracking-widest mb-0.5 3xl:mb-1 text-emerald-400">
                       {t.auth.verifyRegister?.codeSentTitle ?? 'Código enviado!'}
                     </p>
-                    <p className="text-[11px] 3xl:text-xs font-medium opacity-90 leading-relaxed">
+                    <p className="text-[10px] 3xl:text-xs font-medium opacity-90 leading-relaxed">
                       {t.auth.verifyRegister?.codeSentMessage ?? `Enviamos um código de verificação para ${email}. A redirecionar...`}
                     </p>
                   </div>
@@ -350,66 +350,66 @@ function RegisterPageContent() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="mb-5 3xl:mb-8 p-3 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-xl 3xl:rounded-2xl flex items-center gap-2 3xl:gap-3 text-red-400 text-[10px] 3xl:text-xs font-black tracking-tight leading-tight"
+                  className="mb-4 3xl:mb-8 p-2.5 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-lg 3xl:rounded-2xl flex items-center gap-1.5 3xl:gap-3 text-red-400 text-[9px] 3xl:text-xs font-black tracking-tight leading-tight"
                 >
-                  <div className="w-7 h-7 3xl:w-8 3xl:h-8 bg-red-500/20 rounded-lg 3xl:rounded-xl flex items-center justify-center shrink-0">
-                    <AlertCircle size={14} className="3xl:size-4" />
+                  <div className="w-6 h-6 3xl:w-8 3xl:h-8 bg-red-500/20 rounded 3xl:rounded-xl flex items-center justify-center shrink-0">
+                    <AlertCircle size={12} className="3xl:size-4" />
                   </div>
                   {error}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} noValidate className={`space-y-4 lg:space-y-6 3xl:space-y-8 ${success ? 'pointer-events-none opacity-50' : ''}`}>
+            <form onSubmit={handleSubmit} noValidate className={`space-y-3 3xl:space-y-6 3xl:lg:space-y-8 ${success ? 'pointer-events-none opacity-50' : ''}`}>
               <div>
-                <label className="block text-[9px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] text-slate-500 mb-2 3xl:mb-3 ml-2">
+                <label className="block text-[8px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500 mb-1.5 3xl:mb-3 ml-1.5 3xl:ml-2">
                   {t.auth.register.emailLabel}
                 </label>
                 <div className="relative group/input">
-                  <div className={`absolute left-4 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && !validateEmail(email) ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-emerald-500'}`}>
-                    <Mail size={18} className="3xl:size-5" />
+                  <div className={`absolute left-3 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && !validateEmail(email) ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-emerald-500'}`}>
+                    <Mail size={14} className="3xl:w-5 3xl:h-5" />
                   </div>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
-                    className={`w-full bg-slate-950/50 border rounded-xl 3xl:rounded-[24px] py-3 3xl:py-5 lg:py-6 pl-11 3xl:pl-14 pr-4 3xl:pr-5 text-xs 3xl:text-sm lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
+                    className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-2.5 3xl:py-5 3xl:lg:py-6 pl-9 3xl:pl-14 pr-3 3xl:pr-5 text-[11px] 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
                     placeholder={t.auth.register.emailPlaceholder}
                     required
                   />
                   {email && validateEmail(email) && !error && (
-                    <div className="absolute right-4 3xl:right-5 top-1/2 -translate-y-1/2 text-emerald-500">
-                      <CheckCircle2 size={16} className="3xl:w-[18px] 3xl:h-[18px]" />
+                    <div className="absolute right-3 3xl:right-5 top-1/2 -translate-y-1/2 text-emerald-500">
+                      <CheckCircle2 size={12} className="3xl:w-[18px] 3xl:h-[18px]" />
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-[9px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] text-slate-500 mb-2 3xl:mb-3 ml-2">
+                <label className="block text-[8px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500 mb-1.5 3xl:mb-3 ml-1.5 3xl:ml-2">
                   {t.auth.register.passwordLabel}
                 </label>
-                <div className="relative group/input mb-3 3xl:mb-4">
-                  <div className={`absolute left-4 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && password.length < 6 ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-emerald-500'}`}>
-                    <Lock size={18} className="3xl:size-5" />
+                <div className="relative group/input mb-2 3xl:mb-4">
+                  <div className={`absolute left-3 3xl:left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && password.length < 6 ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-emerald-500'}`}>
+                    <Lock size={14} className="3xl:w-5 3xl:h-5" />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                    className={`w-full bg-slate-950/50 border rounded-xl 3xl:rounded-[24px] py-3 3xl:py-5 lg:py-6 pl-11 3xl:pl-16 pr-11 3xl:pr-14 text-xs 3xl:text-sm lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
+                    className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-2.5 3xl:py-5 3xl:lg:py-6 pl-9 3xl:pl-14 pr-9 3xl:pr-12 text-[11px] 3xl:text-sm 3xl:lg:text-base focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
                     placeholder="••••••••••••"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 3xl:right-6 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors p-1 cursor-pointer z-10"
+                    className="absolute right-3 3xl:right-5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-colors p-0.5 cursor-pointer z-10"
                   >
-                    {showPassword ? <EyeOff size={16} className="3xl:w-[18px] 3xl:h-[18px]" /> : <Eye size={16} className="3xl:w-[18px] 3xl:h-[18px]" />}
+                    {showPassword ? <EyeOff size={12} className="3xl:w-[18px] 3xl:h-[18px]" /> : <Eye size={12} className="3xl:w-[18px] 3xl:h-[18px]" />}
                   </button>
                 </div>
-                <div className="px-3 3xl:px-4 space-y-2 3xl:space-y-3">
+                <div className="px-2 3xl:px-4 space-y-1.5 3xl:space-y-3">
                   <div className="flex gap-1.5 3xl:gap-2 h-1.5">
                     {[1, 2, 3, 4].map((step) => {
                       const strength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : password.length < 14 ? 3 : 4;
@@ -423,7 +423,7 @@ function RegisterPageContent() {
                   </div>
                   <div className="flex items-center gap-1.5 3xl:gap-2 transition-all duration-300">
                     <div className={`w-3.5 h-3.5 3xl:w-4 3xl:h-4 rounded-full flex items-center justify-center transition-colors ${password.length >= 6 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-600'}`}>
-                      <CheckCircle2 size={10} strokeWidth={4} className="shrink-0" />
+                      <CheckCircle2 size={10} strokeWidth={4} className="text-white shrink-0" />
                     </div>
                     <span className={`text-[8px] 3xl:text-[10px] font-black uppercase tracking-widest transition-colors ${password.length >= 6 ? 'text-emerald-500' : 'text-slate-600'}`}>
                       {t.auth.register.passwordHint}
@@ -432,8 +432,8 @@ function RegisterPageContent() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 3xl:gap-3 px-2 py-1.5 3xl:py-2">
-                <ShieldCheck size={16} className="text-emerald-500 shrink-0 mt-0.5 3xl:size-5" />
+              <div className="flex items-start gap-1.5 3xl:gap-3 px-1.5 3xl:px-2 py-1 3xl:py-2">
+                <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5 3xl:size-5" />
                 <p className="text-[8px] 3xl:text-[10px] text-slate-500 leading-relaxed uppercase font-black tracking-widest">
                   {t.auth.register.termsText}{' '}
                   <Link href="/terms" className="text-blue-400 hover:text-blue-300 underline">
@@ -449,28 +449,28 @@ function RegisterPageContent() {
               <MagneticButton
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 3xl:py-5 lg:py-7 min-h-[42px] 3xl:min-h-[48px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] transition-all shadow-[0_14px_28px_-8px_rgba(16,185,129,0.5)] 3xl:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-3 3xl:mt-4 flex items-center justify-center gap-2 3xl:gap-4 text-[10px] 3xl:text-xs lg:text-sm relative overflow-hidden cursor-pointer"
+                className="w-full py-2.5 3xl:py-5 3xl:lg:py-7 min-h-[38px] 3xl:min-h-[48px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg 3xl:rounded-2xl 3xl:lg:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.3em] transition-all shadow-[0_12px_24px_-8px_rgba(16,185,129,0.5)] 3xl:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-2 3xl:mt-4 flex items-center justify-center gap-1.5 3xl:gap-4 text-[9px] 3xl:text-xs 3xl:lg:text-sm relative overflow-hidden cursor-pointer"
               >
                 {loading ? (
-                  <div className="w-5 h-5 3xl:w-6 3xl:h-6 border-2 3xl:border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-4 h-4 3xl:w-6 3xl:h-6 border-2 3xl:border-3 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    {t.auth.register.submit} <ArrowRight size={18} className="3xl:w-5 3xl:h-5" />
+                    {t.auth.register.submit} <ArrowRight size={14} className="3xl:w-5 3xl:h-5" />
                   </>
                 )}
               </MagneticButton>
             </form>
 
             {/* Referral Code Field */}
-            <div className="mt-5 3xl:mt-6 pt-5 3xl:pt-6 border-t border-slate-800">
-              <label className="block text-[9px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] text-slate-500 mb-2 3xl:mb-3 ml-2">
+            <div className="mt-4 3xl:mt-10 3xl:lg:mt-14 pt-4 3xl:pt-6 border-t border-slate-800">
+              <label className="block text-[8px] 3xl:text-[10px] font-black uppercase tracking-[0.2em] 3xl:tracking-[0.3em] text-slate-500 mb-1.5 3xl:mb-3 ml-1.5 3xl:ml-2">
                 {t.auth.register.referralCodeLabel ?? 'Código de Referência (Opcional)'}
               </label>
               <input
                 type="text"
                 value={referralCode}
                 onChange={(e) => setReferralCode((e.target.value || '').trim().slice(0, 20))}
-                className={`w-full bg-slate-950/50 border rounded-xl 3xl:rounded-[24px] py-3 3xl:py-4 pl-4 3xl:pl-5 pr-4 3xl:pr-5 text-xs 3xl:text-sm focus:outline-none transition-all placeholder:text-slate-800 font-medium ${
+                className={`w-full bg-slate-950/50 border rounded-lg 3xl:rounded-[24px] py-2.5 3xl:py-4 pl-3 3xl:pl-5 pr-3 3xl:pr-5 text-[11px] 3xl:text-sm focus:outline-none transition-all placeholder:text-slate-800 font-medium ${
                   referralCodeValid === 'valid'
                     ? 'border-emerald-500/50 focus:border-emerald-500'
                     : referralCodeValid === 'invalid'
@@ -481,7 +481,7 @@ function RegisterPageContent() {
                 maxLength={20}
               />
               {referralCode && (
-                <p className={`text-[11px] 3xl:text-xs mt-1.5 3xl:mt-2 ml-2 font-medium ${
+                <p className={`text-[10px] 3xl:text-xs mt-1 3xl:mt-2 ml-1.5 3xl:ml-2 font-medium ${
                   referralCodeValid === 'valid'
                     ? 'text-emerald-400'
                     : referralCodeValid === 'invalid'
@@ -500,16 +500,16 @@ function RegisterPageContent() {
             </div>
 
             {/* Google Login */}
-            <div className="mt-6 3xl:mt-8">
-              <div className="relative mb-5 3xl:mb-6 text-center">
+            <div className="mt-4 3xl:mt-10 3xl:lg:mt-14">
+              <div className="relative mb-4 3xl:mb-10 text-center">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-800" />
                 </div>
-                <div className="relative flex justify-center text-[8px] 3xl:text-[9px] font-black uppercase tracking-[0.3em] 3xl:tracking-[0.4em]">
-                  <span className="bg-slate-900/60 px-3 3xl:px-4 text-slate-600">ou</span>
+                <div className="relative flex justify-center text-[7px] 3xl:text-[9px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.4em]">
+                  <span className="bg-[#020617] px-2 3xl:px-4 text-slate-600">ou</span>
                 </div>
               </div>
-              <div className="flex justify-center">
+              <div className="flex justify-center scale-[0.9] sm:scale-95 3xl:scale-100">
                 <GoogleRegisterButton 
                   onLoginSuccess={(token) => handleSocialLogin(token, 'google')} 
                   referralCode={referralCode}
@@ -518,23 +518,23 @@ function RegisterPageContent() {
             </div>
           </motion.div>
 
-          <div className="mt-6 lg:mt-10 3xl:mt-14 text-center">
-            <p className="text-slate-500 font-medium text-sm sm:text-base lg:text-lg mb-3 3xl:mb-4 lg:mb-6 italic">
+          <div className="mt-5 3xl:mt-10 3xl:lg:mt-14 text-center">
+            <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg mb-3 3xl:mb-4 3xl:lg:mb-6 italic">
               {t.auth.register.alreadyHaveAccount}
             </p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-2 3xl:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-6 3xl:px-8 lg:px-12 py-3 3xl:py-4 lg:py-6 rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] text-[9px] 3xl:text-[10px] lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+              className="inline-flex items-center gap-2 3xl:gap-3 3xl:lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-5 3xl:px-8 3xl:lg:px-12 py-3 3xl:py-4 3xl:lg:py-6 rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] text-[9px] 3xl:text-[10px] 3xl:lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
             >
               {t.auth.register.loginCta}
-              <ArrowRight size={16} className="text-emerald-500 group-hover:translate-x-1 transition-transform 3xl:w-5 3xl:h-5 lg:size-5" />
+              <ArrowRight size={12} className="text-emerald-500 group-hover:translate-x-1 transition-transform 3xl:w-[18px] 3xl:h-[18px] 3xl:lg:size-5" />
             </Link>
           </div>
         </motion.div>
       </div>
 
-      <div className="absolute bottom-5 3xl:bottom-8 lg:bottom-12 right-6 3xl:right-12 text-[7px] 3xl:text-[8px] lg:text-[10px] font-black text-slate-700 uppercase tracking-[0.3em] 3xl:tracking-[0.5em] opacity-50 flex items-center gap-1.5 3xl:gap-3 whitespace-nowrap">
-        <ShieldCheck size={10} className="3xl:w-3 3xl:h-3 lg:size-[14px]" />
+      <div className="absolute bottom-4 3xl:bottom-8 3xl:lg:bottom-12 left-1/2 -translate-x-1/2 lg:left-auto lg:right-8 3xl:lg:right-12 lg:translate-x-0 flex items-center gap-1.5 3xl:gap-2 3xl:lg:gap-3 text-[7px] 3xl:text-[8px] 3xl:lg:text-[10px] font-black text-slate-700 uppercase tracking-[0.25em] 3xl:tracking-[0.4em] 3xl:lg:tracking-[0.5em] opacity-50 whitespace-nowrap">
+        <ShieldCheck size={10} className="3xl:w-3 3xl:h-3 3xl:lg:size-[14px]" />
         {t.auth.register.securePrivate}
       </div>
     </div>
