@@ -640,15 +640,18 @@ def _parsed_from_photo(
     Constrói um dict 'parsed' (mesmo formato que parse_transaction para transação única)
     a partir do resultado de process_photo_with_openai.
     """
+    logger.info("[_parsed_from_photo] Entrada: description=%r amount=%s type=%s", photo_data.get("description"), photo_data.get("amount"), photo_data.get("type"))
     description = (photo_data.get("description") or "").strip()[:255]
     try:
         amount = float(photo_data.get("amount", 0))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as e:
+        logger.warning("[_parsed_from_photo] amount inválido: %s", e)
         return None
     tipo = (photo_data.get("type") or "expense").lower()
     if tipo not in ("expense", "income"):
         tipo = "expense"
     if not description or amount <= 0:
+        logger.warning("[_parsed_from_photo] Dados inválidos: description vazia ou amount<=0 (description=%r amount=%s)", description or "(vazio)", amount)
         return None
     date_str = photo_data.get("date") or ""
     transaction_date = date.today()
@@ -662,6 +665,7 @@ def _parsed_from_photo(
         models.Category.type == tipo,
     ).all()
     if not categories:
+        logger.warning("[_parsed_from_photo] Sem categorias para workspace_id=%s tipo=%s", workspace.id, tipo)
         return None
 
     # Se a Vision devolveu uma categoria, tentar usar (match exato ou por similaridade)
@@ -708,7 +712,7 @@ def _parsed_from_photo(
         category_id = categories[0].id
     category_obj = db.query(models.Category).filter(models.Category.id == category_id).first()
     is_vault_category = category_obj and getattr(category_obj, "vault_type", "none") != "none"
-    return {
+    result = {
         "amount": amount,
         "description": description,
         "type": tipo,
@@ -720,6 +724,8 @@ def _parsed_from_photo(
         "is_vault_withdrawal": False,
         "transaction_date": transaction_date,
     }
+    logger.info("[_parsed_from_photo] OK: category_id=%s inference_source=%s", category_id, inference_source)
+    return result
 
 
 def process_photo_with_openai(file_id: str, categories: List[models.Category]) -> Optional[Dict]:
@@ -728,7 +734,12 @@ def process_photo_with_openai(file_id: str, categories: List[models.Category]) -
     amount, description, type (expense/income), date e category. Inclui as categorias
     do workspace no prompt para a IA escolher uma da lista.
     """
-    if not settings.TELEGRAM_BOT_TOKEN or not settings.OPENAI_API_KEY:
+    logger.info("[OpenAI Vision] Início process_photo_with_openai file_id=%s categories_count=%s", file_id[:20] if file_id else None, len(categories) if categories else 0)
+    if not settings.TELEGRAM_BOT_TOKEN:
+        logger.warning("[OpenAI Vision] TELEGRAM_BOT_TOKEN não configurado")
+        return None
+    if not settings.OPENAI_API_KEY:
+        logger.warning("[OpenAI Vision] OPENAI_API_KEY não configurado")
         return None
     try:
         # 1. Obter file_path do Telegram
@@ -737,18 +748,26 @@ def process_photo_with_openai(file_id: str, categories: List[models.Category]) -
         r.raise_for_status()
         data = r.json()
         if not data.get("ok") or "result" not in data:
-            logger.warning("Telegram getFile falhou: %s", data)
+            logger.warning("[OpenAI Vision] Telegram getFile falhou: ok=%s result_present=%s body=%s", data.get("ok"), "result" in data, data)
             return None
         file_path = data["result"].get("file_path")
         if not file_path:
+            logger.warning("[OpenAI Vision] getFile sem file_path: %s", data.get("result"))
             return None
+        logger.info("[OpenAI Vision] file_path obtido: %s", file_path)
         # 2. Descarregar o ficheiro
         download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
         img_resp = requests.get(download_url, timeout=15)
         img_resp.raise_for_status()
         content = img_resp.content
-        if not content or len(content) > 20 * 1024 * 1024:  # máx 20MB
+        content_len = len(content) if content else 0
+        if not content:
+            logger.warning("[OpenAI Vision] Download vazio")
             return None
+        if content_len > 20 * 1024 * 1024:
+            logger.warning("[OpenAI Vision] Imagem demasiado grande: %s bytes (máx 20MB)", content_len)
+            return None
+        logger.info("[OpenAI Vision] Imagem descarregada: %s bytes", content_len)
         # 3. Enviar para OpenAI vision
         import base64
         from openai import OpenAI
@@ -787,6 +806,7 @@ REGRAS:
 Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "description": "texto", "type": "expense ou income", "date": "YYYY-MM-DD", "category": "NomeExatoDaCategoria"}}
 """
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        logger.info("[OpenAI Vision] A chamar OpenAI chat.completions (gpt-4o-mini)...")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -805,12 +825,18 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
         if response.choices and response.choices[0].message.content:
             text_response = response.choices[0].message.content.strip()
         if not text_response:
+            logger.warning("[OpenAI Vision] OpenAI respondeu sem content. choices=%s", len(response.choices) if response.choices else 0)
             return None
+        logger.info("[OpenAI Vision] Resposta bruta (primeiros 300 chars): %s", (text_response[:300] + "..." if len(text_response) > 300 else text_response))
         # Limpar markdown se existir
         clean = re.search(r"\{[\s\S]*\}", text_response)
         if clean:
             text_response = clean.group(0)
-        parsed = json.loads(text_response)
+        try:
+            parsed = json.loads(text_response)
+        except json.JSONDecodeError as je:
+            logger.warning("[OpenAI Vision] JSON inválido na resposta: %s. raw=%s", je, text_response[:200])
+            return None
         amount = float(parsed.get("amount", 0))
         description = (parsed.get("description") or "").strip()[:255]
         tipo = (parsed.get("type") or "expense").lower()
@@ -819,7 +845,9 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
         date_str = parsed.get("date") or dt.now().strftime("%Y-%m-%d")
         category_name = (parsed.get("category") or "").strip()
         if not description or amount <= 0:
+            logger.warning("[OpenAI Vision] Dados inválidos (description vazia ou amount<=0): description=%r amount=%s", description or "(vazio)", amount)
             return None
+        logger.info("[OpenAI Vision] Sucesso: description=%s amount=%s type=%s category=%s", description, amount, tipo, category_name or "(nenhuma)")
         return {
             "amount": amount,
             "description": description,
@@ -828,7 +856,7 @@ Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "descrip
             "category": category_name or None,
         }
     except Exception as e:
-        logger.exception("Erro ao processar foto com OpenAI: %s", e)
+        logger.exception("[OpenAI Vision] Erro ao processar foto: %s", e)
         return None
 
 
@@ -1318,20 +1346,24 @@ async def telegram_webhook(
             all_categories = db.query(models.Category).filter(
                 models.Category.workspace_id == workspace.id
             ).all()
-            logger.info("Processando foto com OpenAI Vision (categorias no prompt)")
+            logger.info("[Telegram] Foto recebida file_id=%s workspace_id=%s categorias=%s", file_id[:20] if file_id else None, workspace.id, len(all_categories))
             photo_result = process_photo_with_openai(file_id, all_categories)
             if not photo_result:
+                logger.warning("[Telegram] process_photo_with_openai retornou None -> enviando photo_not_supported")
                 send_telegram_msg(chat_id, t('photo_not_supported'))
                 return {'status': 'error'}
+            logger.info("[Telegram] Vision OK, a construir parsed com _parsed_from_photo")
             try:
                 parsed = _parsed_from_photo(photo_result, workspace, db)
-            except AIUnavailableError:
+            except AIUnavailableError as ae:
+                logger.warning("[Telegram] _parsed_from_photo AIUnavailableError: %s", ae)
                 send_telegram_msg(chat_id, t('ai_unavailable'))
                 return {'status': 'error'}
             if not parsed:
+                logger.warning("[Telegram] _parsed_from_photo retornou None -> enviando photo_not_supported")
                 send_telegram_msg(chat_id, t('photo_not_supported'))
                 return {'status': 'error'}
-            logger.info("Foto processada: %s", parsed.get("description"))
+            logger.info("[Telegram] Foto processada com sucesso: %s", parsed.get("description"))
         # Processar texto
         elif text:
             logger.info(f"Processando texto como transação: '{text}'")

@@ -218,7 +218,7 @@ export default function GoalsPage() {
     }));
 
   return (
-    <div className="w-full max-w-none space-y-8 sm:space-y-12 pb-20 px-4 sm:px-6 md:px-10 xl:px-14">
+    <div className="w-full max-w-none min-w-0 space-y-8 sm:space-y-12 pb-20 px-4 sm:px-6 md:px-10 xl:px-14">
       {/* Header */}
       <section className="relative">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
@@ -226,7 +226,7 @@ export default function GoalsPage() {
             <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
               <Trophy size={14} /> {t.dashboard.goals.badge}
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white uppercase leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white uppercase leading-tight break-words">
               {t.dashboard.goals.title.split(' ').slice(0, -1).join(' ')} <span className="text-blue-500 italic">{t.dashboard.goals.title.split(' ').slice(-1)[0]}</span>
             </h1>
             <p className="text-slate-500 font-medium max-w-xl italic text-sm sm:text-base md:text-lg">
@@ -254,8 +254,8 @@ export default function GoalsPage() {
         </div>
       </section>
 
-      {/* Grid de Metas — responsivo: 1 col mobile, 2 sm, 3 lg (portáteis), 4 xl */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8">
+      {/* Grid de Metas — cards iguais, responsivo: 1→2→3→4 colunas conforme ecrã */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 min-w-0 w-full">
         {goals.map((goal) => {
           const targetAmountEuros = goal.target_amount_cents / 100;
           const currentAmountEuros = (goal.current_amount_cents || 0) / 100;
@@ -265,101 +265,103 @@ export default function GoalsPage() {
           const canComplete = currentAmountEuros >= targetAmountEuros;
 
           return (
-            <motion.div 
+            <motion.div
               key={goal.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group bg-gradient-to-b from-slate-900/70 to-slate-950/80 backdrop-blur-xl border border-white/5 p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl lg:rounded-[32px] relative overflow-hidden hover:border-blue-500/25 transition-all hover:shadow-[0_20px_70px_-24px_rgba(37,99,235,0.4)] min-w-0"
+              className="group relative flex flex-col min-h-[320px] w-full bg-gradient-to-b from-slate-900/70 to-slate-950/80 border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-all hover:shadow-lg hover:shadow-blue-500/5"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors" />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/[0.03] to-white/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-              
-              <div className="relative z-10 space-y-4 sm:space-y-5 lg:space-y-8">
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div 
-                      className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0"
-                      style={{ backgroundColor: `${goal.color_hex}20`, color: goal.color_hex }}
+              {/* Blur decorativo */}
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-[40px] rounded-full -mr-12 -mt-12 pointer-events-none" aria-hidden />
+
+              <div className="relative z-10 flex flex-col flex-1 min-h-0 p-4 md:p-5">
+                {/* Linha 1: ícone + badge + ações */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${goal.color_hex}25`, color: goal.color_hex }}
                     >
-                      <Icon size={24} className="shrink-0" />
+                      <Icon size={20} />
                     </div>
                     <span
-                      className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest shrink-0 ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                         goal.goal_type === 'income'
-                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
+                          : 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
                       }`}
                     >
                       {goal.goal_type === 'income' ? t.dashboard.goals.typeIncome : t.dashboard.goals.typeExpense}
                     </span>
                   </div>
-                  <div className="flex gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button onClick={() => openEdit(goal)} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all cursor-pointer">
-                      <Edit2 size={16} />
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button type="button" onClick={() => openEdit(goal)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors" aria-label="Editar">
+                      <Edit2 size={14} />
                     </button>
-                    <button onClick={() => handleDeleteClick(goal.id)} className="p-2 hover:bg-red-500/10 rounded-xl text-slate-500 hover:text-red-400 transition-all cursor-pointer">
-                      <Trash2 size={16} />
+                    <button type="button" onClick={() => handleDeleteClick(goal.id)} className="p-1.5 hover:bg-red-500/15 rounded-lg text-slate-400 hover:text-red-400 transition-colors" aria-label="Eliminar">
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
 
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-black text-white uppercase tracking-tight mb-1 truncate" title={goal.name}>{goal.name}</h3>
-                  <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 flex-wrap">
-                    <Calendar size={12} /> {new Date(goal.target_date).toLocaleDateString('pt-PT')} • {daysLeft > 0 ? `${daysLeft} ${t.dashboard.goals.daysRemaining}` : t.dashboard.goals.dateReached}
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-600">
-                    {goal.goal_type === 'income' ? t.dashboard.goals.incomeGoalHint : t.dashboard.goals.expenseGoalHint}
-                  </p>
-                </div>
+                {/* Nome + data */}
+                <h3 className="text-sm font-bold text-white uppercase tracking-tight truncate mb-0.5" title={goal.name}>
+                  {goal.name}
+                </h3>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-3 flex-shrink-0">
+                  <Calendar size={10} className="inline mr-1 align-middle" />
+                  {new Date(goal.target_date).toLocaleDateString('pt-PT')} · {daysLeft > 0 ? `${daysLeft} ${t.dashboard.goals.daysRemaining}` : t.dashboard.goals.dateReached}
+                </p>
 
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-end justify-between gap-2 min-w-0">
+                {/* Valores + barra — ocupa espaço intermédio */}
+                <div className="flex-1 min-h-0 flex flex-col gap-3">
+                  <div className="flex justify-between items-baseline gap-2">
                     <div className="min-w-0">
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">{t.dashboard.goals.accumulated}</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-black text-white tracking-tighter truncate" title={formatCurrency(currentAmountEuros)}>{formatCurrency(currentAmountEuros)}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.accumulated}</p>
+                      <p className="text-base font-bold text-white tabular-nums truncate">{formatCurrency(currentAmountEuros)}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">{t.dashboard.goals.target}</p>
-                      <p className="text-xs sm:text-sm font-black text-slate-400">{formatCurrency(targetAmountEuros)}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.target}</p>
+                      <p className="text-sm font-bold text-slate-400 tabular-nums">{formatCurrency(targetAmountEuros)}</p>
                     </div>
                   </div>
 
-                  <div className="h-4 w-full bg-white/5 rounded-2xl p-1 border border-white/5">
-                    <motion.div 
+                  <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
-                      className="h-full rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-1000"
+                      className="h-full rounded-full transition-all duration-700"
                       style={{ backgroundColor: goal.color_hex }}
                     />
                   </div>
-                  
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
                     <span style={{ color: goal.color_hex }}>{Math.round(progress)}%</span>
                     {canComplete ? (
                       <span className="text-emerald-400">{formatCurrency(currentAmountEuros - targetAmountEuros)} {t.dashboard.goals.exceeded || 'EXCEDIDO'}</span>
                     ) : (
-                      <span className="text-slate-600">{formatCurrency(targetAmountEuros - currentAmountEuros)} {t.dashboard.goals.remaining}</span>
+                      <span className="text-slate-500">{formatCurrency(targetAmountEuros - currentAmountEuros)} {t.dashboard.goals.remaining}</span>
                     )}
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-4">
-                    <button
-                      type="button"
-                      onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
-                      className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 min-h-[44px]"
-                    >
-                      <Plus size={14} className="sm:w-4 sm:h-4" />
-                      <span className="truncate">{t.dashboard.goals?.addMoney ?? 'Adicionar'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
-                      className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 min-h-[44px]"
-                    >
-                      <span className="truncate">{t.dashboard.goals?.finishGoal ?? 'Terminar meta'}</span>
-                    </button>
-                  </div>
+                </div>
+
+                {/* Botões sempre no fundo, 2 colunas iguais */}
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
+                    className="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Plus size={14} className="shrink-0" />
+                    <span>{t.dashboard.goals?.addMoney ?? 'Adicionar'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
+                    className="py-2.5 px-3 bg-slate-700/80 hover:bg-slate-600 text-slate-200 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center"
+                  >
+                    {t.dashboard.goals?.finishGoal ?? 'Terminar meta'}
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -380,7 +382,7 @@ export default function GoalsPage() {
       </div>
 
       {/* Insights de Metas */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-10 md:mt-12 sm:mt-0">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-10 md:mt-12 sm:mt-0 min-w-0">
         <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
