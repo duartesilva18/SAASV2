@@ -10,6 +10,9 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      # ffmpeg para transcrição de mensagens de voz (Whisper + pydub)
+      - key: NIXPACKS_APT_PKGS
+        value: ffmpeg
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: ENVIRONMENT

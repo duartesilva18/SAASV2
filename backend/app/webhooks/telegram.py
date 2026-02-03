@@ -11,6 +11,8 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, date, timezone
 from typing import Optional, Dict, List
+import io
+import tempfile
 import unicodedata
 from difflib import SequenceMatcher
 
@@ -926,11 +928,51 @@ def _parsed_from_photo(
     return result
 
 
+# Redimensionar/comprimir imagem para Vision: menos tokens = resposta mais rápida
+VISION_MAX_PIXELS = 1024
+VISION_JPEG_QUALITY = 82
+VISION_MIN_BYTES_TO_COMPRESS = 80 * 1024  # Só comprimir se > ~80KB
+
+
+def _compress_image_for_vision(content: bytes, file_path: str, content_len: int):
+    """
+    Redimensiona e comprime a imagem para reduzir payload e tokens na Vision.
+    Retorna (bytes_finais, mime). Se falhar ou imagem já pequena, devolve original.
+    """
+    mime = "image/jpeg"
+    if file_path and file_path.lower().endswith(".png"):
+        mime = "image/png"
+    elif file_path and file_path.lower().endswith(".webp"):
+        mime = "image/webp"
+    if content_len < VISION_MIN_BYTES_TO_COMPRESS:
+        return content, mime
+    try:
+        from io import BytesIO
+        from PIL import Image
+        img = Image.open(BytesIO(content))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        w, h = img.size
+        if w <= VISION_MAX_PIXELS and h <= VISION_MAX_PIXELS and content_len < 200 * 1024:
+            return content, mime
+        ratio = min(VISION_MAX_PIXELS / w, VISION_MAX_PIXELS / h, 1.0)
+        if ratio < 1.0:
+            new_w, new_h = int(w * ratio), int(h * ratio)
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=VISION_JPEG_QUALITY, optimize=True)
+        out = buf.getvalue()
+        logger.info("[OpenAI Vision] Imagem comprimida: %s -> %s bytes (%.0f%%)", content_len, len(out), 100 * len(out) / max(1, content_len))
+        return out, "image/jpeg"
+    except Exception as e:
+        logger.warning("[OpenAI Vision] Compressão falhou, usa original: %s", e)
+        return content, mime
+
+
 def process_photo_with_openai(file_id: str, categories: List[models.Category]) -> Optional[Dict]:
     """
-    Descarrega a foto do Telegram e envia para OpenAI vision (gpt-4o-mini) para extrair
-    amount, description, type (expense/income), date e category. Inclui as categorias
-    do workspace no prompt para a IA escolher uma da lista.
+    Descarrega a foto do Telegram, comprime se necessário, e envia para OpenAI vision
+    para extrair transações (uma ou lista para extratos).
     """
     logger.info("[OpenAI Vision] Início process_photo_with_openai file_id=%s categories_count=%s", file_id[:20] if file_id else None, len(categories) if categories else 0)
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -966,56 +1008,31 @@ def process_photo_with_openai(file_id: str, categories: List[models.Category]) -
             logger.warning("[OpenAI Vision] Imagem demasiado grande: %s bytes (máx 20MB)", content_len)
             return None
         logger.info("[OpenAI Vision] Imagem descarregada: %s bytes", content_len)
-        # 3. Enviar para OpenAI vision
+        content, mime = _compress_image_for_vision(content, file_path, content_len)
         import base64
         from openai import OpenAI
         from datetime import datetime as dt
         b64 = base64.b64encode(content).decode("utf-8")
-        mime = "image/jpeg"
-        if file_path.lower().endswith(".png"):
-            mime = "image/png"
-        elif file_path.lower().endswith(".webp"):
-            mime = "image/webp"
         data_url = f"data:{mime};base64,{b64}"
+        logger.info("[OpenAI Vision] Payload após compressão: %s bytes", len(content))
 
         expense_names = [c.name for c in categories if getattr(c, "type", "expense") == "expense"]
         income_names = [c.name for c in categories if getattr(c, "type", "income") == "income"]
         cats_expense = ", ".join(expense_names) if expense_names else "(nenhuma)"
         cats_income = ", ".join(income_names) if income_names else "(nenhuma)"
 
-        prompt = f"""Analisa esta imagem para extrair transações financeiras.
+        prompt = f"""Extrai transações desta imagem.
 
-PRIORIDADE 1 — EXTRATO BANCÁRIO (tabela com várias linhas):
-Se a imagem for um extrato bancário (tabela com colunas como Data, Descrição, Categoria, Valor, Comerciante, Saldo Após):
-- Lê CADA LINHA da tabela (cada linha = uma transação).
-- NÃO ignores nenhuma linha. Extrai TODAS as transações visíveis.
-- Coluna "Data": usa formato DD/MM/YYYY e converte para "date" em YYYY-MM-DD.
-- Coluna "Descrição": usa como description (ex: "Compra supermercado", "Almoço restaurante"). Podes combinar com Comerciante se fizer sentido (ex: "Compra supermercado - Pingo Doce").
-- Coluna "Valor": valor numérico (usa ponto decimal). Se estiver negativo (ex: -54,32 €), amount é o valor absoluto e type é "expense".
-- Coluna "Categoria": se existir na tabela, mapeia para o nome EXATO de uma categoria da lista abaixo; senão, infere pela descrição/comerciante.
-- Ignora colunas como ID, Saldo Após (não são transações).
+Se for EXTRATO/TABELA (Data, Descrição, Valor, Categoria, Comerciante): lista TODAS as linhas. Cada linha = uma transação. Data→YYYY-MM-DD. Valor negativo→amount positivo, type expense. Categoria na tabela ou infere. Ignora ID e Saldo.
+Se for RECIBO único: uma transação.
 
-PRIORIDADE 2 — RECIBO/FATURA ÚNICO:
-Se for um único recibo ou fatura (não uma tabela), extrai uma única transação com amount, description, type, date, category.
+Data hoje: {dt.now().strftime('%Y-%m-%d')}
+Categorias (nome EXATO): expense={cats_expense} | income={cats_income}
 
-DATA ATUAL (usa se a data não estiver na imagem): {dt.now().strftime('%Y-%m-%d')}
-
-Categorias disponíveis — usa o nome EXATO desta lista (conforme type):
-- Despesas (type=expense): {cats_expense}
-- Receitas (type=income): {cats_income}
-
-Para cada transação no JSON:
-- amount: número com ponto decimal (sempre positivo; o type indica despesa ou receita).
-- description: texto curto (máx 80 caracteres), ex: "Compra supermercado", "Bilhete avião Lisboa Porto".
-- type: "expense" (saída/despesa) ou "income" (entrada/receita).
-- date: YYYY-MM-DD.
-- category: nome EXATO de uma categoria da lista acima (ex: "Alimentos", "Viagens").
-
-Responde APENAS com um JSON válido, sem markdown:
-{{"transactions": [ {{"amount": 54.32, "description": "Compra supermercado", "type": "expense", "date": "2025-01-03", "category": "Alimentos"}}, ... ]}}
-"""
+JSON só, sem markdown:
+{{"transactions":[{{"amount":n,"description":"...","type":"expense","date":"YYYY-MM-DD","category":"NomeExato"}}]}}"""
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        logger.info("[OpenAI Vision] A chamar OpenAI chat.completions (gpt-4o-mini)...")
+        logger.info("[OpenAI Vision] A chamar OpenAI (imagem %s bytes)...", len(content))
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -1027,8 +1044,8 @@ Responde APENAS com um JSON válido, sem markdown:
                     ],
                 }
             ],
-            max_tokens=2000,
-            temperature=0.1,
+            max_tokens=1500,
+            temperature=0.05,
         )
         text_response = ""
         if response.choices and response.choices[0].message.content:
@@ -1104,6 +1121,85 @@ Responde APENAS com um JSON válido, sem markdown:
             logger.warning("[OpenAI Vision] Rate limit (429) - demasiados pedidos ou quota excedida: %s", e)
             raise OpenAIRateLimitError(e) from e
         logger.exception("[OpenAI Vision] Erro ao processar foto: %s", e)
+        return None
+
+
+def _ogg_to_mp3_bytes(content: bytes) -> Optional[bytes]:
+    """Converte áudio OGG (ex.: mensagem de voz Telegram) para MP3 para compatibilidade com Whisper."""
+    try:
+        from pydub import AudioSegment
+        seg = AudioSegment.from_file(io.BytesIO(content), format="ogg")
+        buf = io.BytesIO()
+        seg.export(buf, format="mp3")
+        buf.seek(0)
+        return buf.read()
+    except Exception as e:
+        logger.warning("[Whisper] Conversão OGG->MP3 falhou: %s", e)
+        return None
+
+
+def transcribe_audio_from_telegram(message: dict) -> Optional[str]:
+    """
+    Obtém file_id de message['voice'] ou message['audio'], descarrega o ficheiro,
+    converte OGG para MP3 se necessário, e envia para OpenAI Whisper. Devolve o texto transcrito ou None.
+    """
+    voice = message.get("voice") or message.get("audio")
+    if not voice:
+        return None
+    file_id = voice.get("file_id")
+    if not file_id:
+        return None
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.OPENAI_API_KEY:
+        logger.warning("[Whisper] TELEGRAM_BOT_TOKEN ou OPENAI_API_KEY não configurado")
+        return None
+    try:
+        get_file_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
+        r = requests.get(get_file_url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("ok") or "result" not in data:
+            logger.warning("[Whisper] getFile falhou: %s", data)
+            return None
+        file_path = data["result"].get("file_path")
+        if not file_path:
+            return None
+        download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
+        resp = requests.get(download_url, timeout=15)
+        resp.raise_for_status()
+        content = resp.content
+        if not content or len(content) > 25 * 1024 * 1024:
+            logger.warning("[Whisper] Áudio vazio ou >25MB: %s bytes", len(content) if content else 0)
+            return None
+        # Whisper suporta mp3, m4a, wav, webm; Telegram voice é normalmente .ogg
+        ext = (file_path or "").lower().split(".")[-1] if "." in (file_path or "") else ""
+        if ext == "ogg":
+            mp3_content = _ogg_to_mp3_bytes(content)
+            if mp3_content:
+                content = mp3_content
+                ext = "mp3"
+            else:
+                logger.warning("[Whisper] Áudio OGG sem conversão (instala ffmpeg para voz Telegram)")
+                return None
+        suffix = f".{ext}" if ext in ("mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm") else ".mp3"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+            tmp.write(content)
+            tmp.flush()
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            with open(tmp.name, "rb") as f:
+                transcript = client.audio.transcriptions.create(model="whisper-1", file=f)
+        text = (transcript.text or "").strip()
+        if not text:
+            return None
+        logger.info("[Whisper] Transcrição: %s...", text[:80] if len(text) > 80 else text)
+        return text
+    except OpenAIRateLimitError:
+        raise
+    except Exception as e:
+        err_str = str(e).lower()
+        if "429" in err_str or "rate" in err_str or "quota" in err_str:
+            raise OpenAIRateLimitError(e) from e
+        logger.exception("[Whisper] Erro ao transcrever áudio: %s", e)
         return None
 
 
@@ -1631,6 +1727,23 @@ async def telegram_webhook(
         message = data['message']
         chat_id = message['chat']['id']
         text = message.get('text', '').strip()
+        # Áudio/voice: transcrever com Whisper e usar o texto como mensagem
+        if not text and (message.get('voice') or message.get('audio')):
+            user_temp = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            language = (user_temp.language if user_temp and user_temp.language else None) or _telegram_lang(message.get("from"))
+            t_audio = get_telegram_t(language)
+            send_telegram_msg(chat_id, t_audio('processing_audio'))
+            try:
+                text = transcribe_audio_from_telegram(message) or ""
+            except OpenAIRateLimitError as e:
+                logger.warning("[Telegram] Whisper rate limit (429): %s", e)
+                send_telegram_msg(chat_id, t_audio('photo_rate_limit'))
+                return {'status': 'error'}
+            if not text:
+                send_telegram_msg(chat_id, t_audio('audio_error'))
+                return {'status': 'error'}
+            text = text.strip()
+            logger.info(f"Áudio transcrito: '{text[:100]}'")
         logger.info(f"Mensagem recebida: chat_id={chat_id}, text='{text[:100]}'")
         
         # Buscar utilizador para obter linguagem (se existir); senão usar idioma do Telegram

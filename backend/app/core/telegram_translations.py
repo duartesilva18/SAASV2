@@ -217,6 +217,12 @@ TELEGRAM_TRANSLATIONS = {
         'source_explicit': 'Por ti',
         'origin_suffix': "(<i>{origin}</i>)",
         'processing_photo': "⏳ A processar a imagem…",
+        'processing_audio': "⏳ A processar o áudio…",
+        'audio_error': (
+            "🎤 <b>Áudio não processado</b>\n\n"
+            "Não consegui transcrever esta mensagem de voz.\n"
+            "💡 Envia a transação por texto, por ex: <code>Almoço 15€</code>"
+        ),
         'summary_today': (
             "📊 <b>Resumo de hoje</b>\n\n"
             "📉 Despesas: <b>{expenses}€</b>\n"
@@ -464,6 +470,12 @@ TELEGRAM_TRANSLATIONS = {
         'source_explicit': 'By you',
         'origin_suffix': "(<i>{origin}</i>)",
         'processing_photo': "⏳ Processing image…",
+        'processing_audio': "⏳ Processing audio…",
+        'audio_error': (
+            "🎤 <b>Audio not processed</b>\n\n"
+            "I couldn't transcribe this voice message.\n"
+            "💡 Send the transaction as text, e.g. <code>Lunch 15€</code>"
+        ),
         'summary_today': (
             "📊 <b>Today's summary</b>\n\n"
             "📉 Expenses: <b>{expenses}€</b>\n"
