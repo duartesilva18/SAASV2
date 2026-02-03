@@ -632,6 +632,206 @@ Responde APENAS com o nome exato da categoria:"""
         logger.error(f"Erro na categorização IA: {str(e)}")
         return None
 
+
+def _parsed_from_photo(
+    photo_data: Dict, workspace: models.Workspace, db: Session
+) -> Optional[Dict]:
+    """
+    Constrói um dict 'parsed' (mesmo formato que parse_transaction para transação única)
+    a partir do resultado de process_photo_with_openai.
+    """
+    description = (photo_data.get("description") or "").strip()[:255]
+    try:
+        amount = float(photo_data.get("amount", 0))
+    except (TypeError, ValueError):
+        return None
+    tipo = (photo_data.get("type") or "expense").lower()
+    if tipo not in ("expense", "income"):
+        tipo = "expense"
+    if not description or amount <= 0:
+        return None
+    date_str = photo_data.get("date") or ""
+    transaction_date = date.today()
+    if date_str:
+        try:
+            transaction_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+    categories = db.query(models.Category).filter(
+        models.Category.workspace_id == workspace.id,
+        models.Category.type == tipo,
+    ).all()
+    if not categories:
+        return None
+
+    # Se a Vision devolveu uma categoria, tentar usar (match exato ou por similaridade)
+    category_id = None
+    inference_source = "legacy_fallback"
+    decision_reason = "legacy_fallback"
+    needs_review = False
+    vision_category_name = (photo_data.get("category") or "").strip()
+    if vision_category_name:
+        exact = next((c for c in categories if c.name.strip() == vision_category_name), None)
+        if exact:
+            category_id = exact.id
+            inference_source = "openai_vision"
+            decision_reason = "openai_vision"
+        else:
+            match = find_best_category_match(vision_category_name, categories, threshold=0.7)
+            if match:
+                category_id = match.id
+                inference_source = "openai_vision"
+                decision_reason = "openai_vision"
+
+    if not category_id:
+        try:
+            from ..core.categorization_engine import infer_category
+            from ..core.config import settings as _settings
+            cat_id, source, needs_review, _conf, reason, _explain = infer_category(
+                description,
+                workspace.id,
+                tipo,
+                categories,
+                db,
+                models,
+                _settings,
+                explicit_category_id=None,
+                use_gemini=True,
+            )
+            category_id = cat_id
+            inference_source = source
+            decision_reason = reason
+        except Exception as e:
+            logger.warning("Categorização falhou para foto: %s", e)
+            category_id = categories[0].id if categories else None
+    if not category_id and categories:
+        category_id = categories[0].id
+    category_obj = db.query(models.Category).filter(models.Category.id == category_id).first()
+    is_vault_category = category_obj and getattr(category_obj, "vault_type", "none") != "none"
+    return {
+        "amount": amount,
+        "description": description,
+        "type": tipo,
+        "category_id": category_id,
+        "inference_source": inference_source,
+        "decision_reason": decision_reason,
+        "needs_review": needs_review,
+        "is_vault": is_vault_category,
+        "is_vault_withdrawal": False,
+        "transaction_date": transaction_date,
+    }
+
+
+def process_photo_with_openai(file_id: str, categories: List[models.Category]) -> Optional[Dict]:
+    """
+    Descarrega a foto do Telegram e envia para OpenAI vision (gpt-4o-mini) para extrair
+    amount, description, type (expense/income), date e category. Inclui as categorias
+    do workspace no prompt para a IA escolher uma da lista.
+    """
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.OPENAI_API_KEY:
+        return None
+    try:
+        # 1. Obter file_path do Telegram
+        get_file_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
+        r = requests.get(get_file_url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("ok") or "result" not in data:
+            logger.warning("Telegram getFile falhou: %s", data)
+            return None
+        file_path = data["result"].get("file_path")
+        if not file_path:
+            return None
+        # 2. Descarregar o ficheiro
+        download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
+        img_resp = requests.get(download_url, timeout=15)
+        img_resp.raise_for_status()
+        content = img_resp.content
+        if not content or len(content) > 20 * 1024 * 1024:  # máx 20MB
+            return None
+        # 3. Enviar para OpenAI vision
+        import base64
+        from openai import OpenAI
+        from datetime import datetime as dt
+        b64 = base64.b64encode(content).decode("utf-8")
+        mime = "image/jpeg"
+        if file_path.lower().endswith(".png"):
+            mime = "image/png"
+        elif file_path.lower().endswith(".webp"):
+            mime = "image/webp"
+        data_url = f"data:{mime};base64,{b64}"
+
+        expense_names = [c.name for c in categories if getattr(c, "type", "expense") == "expense"]
+        income_names = [c.name for c in categories if getattr(c, "type", "income") == "income"]
+        cats_expense = ", ".join(expense_names) if expense_names else "(nenhuma)"
+        cats_income = ", ".join(income_names) if income_names else "(nenhuma)"
+
+        prompt = f"""Analisa esta imagem (recibo, fatura ou nota).
+Extrai os dados da transação.
+
+DATA ATUAL: {dt.now().strftime('%Y-%m-%d')}
+
+Categorias disponíveis do utilizador:
+- Para despesas (type=expense): {cats_expense}
+- Para receitas (type=income): {cats_income}
+
+Escolhe a categoria que melhor se adequa à transação. O valor de "category" deve ser o nome EXATO de uma das categorias listadas acima (conforme o type).
+
+REGRAS:
+- 'amount': Valor total (número, ponto decimal). Ex: 15.50
+- 'description': Nome do estabelecimento ou descrição curta (máx 40 caracteres)
+- 'type': 'expense' se for compra/despesa, 'income' se for receita/reembolso
+- 'date': Data no formato YYYY-MM-DD (usa a DATA ATUAL se não encontrares)
+- 'category': Nome exato de uma categoria da lista correspondente ao type (despesas ou receitas)
+
+Responde APENAS com um JSON válido, sem markdown: {{"amount": número, "description": "texto", "type": "expense ou income", "date": "YYYY-MM-DD", "category": "NomeExatoDaCategoria"}}
+"""
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            max_tokens=300,
+            temperature=0.1,
+        )
+        text_response = ""
+        if response.choices and response.choices[0].message.content:
+            text_response = response.choices[0].message.content.strip()
+        if not text_response:
+            return None
+        # Limpar markdown se existir
+        clean = re.search(r"\{[\s\S]*\}", text_response)
+        if clean:
+            text_response = clean.group(0)
+        parsed = json.loads(text_response)
+        amount = float(parsed.get("amount", 0))
+        description = (parsed.get("description") or "").strip()[:255]
+        tipo = (parsed.get("type") or "expense").lower()
+        if tipo not in ("expense", "income"):
+            tipo = "expense"
+        date_str = parsed.get("date") or dt.now().strftime("%Y-%m-%d")
+        category_name = (parsed.get("category") or "").strip()
+        if not description or amount <= 0:
+            return None
+        return {
+            "amount": amount,
+            "description": description,
+            "type": tipo,
+            "date": date_str,
+            "category": category_name or None,
+        }
+    except Exception as e:
+        logger.exception("Erro ao processar foto com OpenAI: %s", e)
+        return None
+
+
 def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = None, pin_message: bool = False):
     """Envia mensagem para o Telegram"""
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -1110,13 +1310,30 @@ async def telegram_webhook(
             send_telegram_msg(chat_id, t('workspace_not_found'))
             return {'status': 'error'}
         
-        # Processar fotos (desativado por enquanto)
+        parsed = None
+        # Processar fotos (OpenAI Vision)
         if 'photo' in message:
-            send_telegram_msg(chat_id, t('photo_not_supported'))
-            return {'status': 'error'}
-        
+            file_id = message['photo'][-1]['file_id']
+            # Carregar todas as categorias do workspace para enviar no prompt da Vision
+            all_categories = db.query(models.Category).filter(
+                models.Category.workspace_id == workspace.id
+            ).all()
+            logger.info("Processando foto com OpenAI Vision (categorias no prompt)")
+            photo_result = process_photo_with_openai(file_id, all_categories)
+            if not photo_result:
+                send_telegram_msg(chat_id, t('photo_not_supported'))
+                return {'status': 'error'}
+            try:
+                parsed = _parsed_from_photo(photo_result, workspace, db)
+            except AIUnavailableError:
+                send_telegram_msg(chat_id, t('ai_unavailable'))
+                return {'status': 'error'}
+            if not parsed:
+                send_telegram_msg(chat_id, t('photo_not_supported'))
+                return {'status': 'error'}
+            logger.info("Foto processada: %s", parsed.get("description"))
         # Processar texto
-        if text:
+        elif text:
             logger.info(f"Processando texto como transação: '{text}'")
             try:
                 parsed = parse_transaction(text, workspace, db)
@@ -1129,192 +1346,168 @@ async def telegram_webhook(
                 logger.warning(f"Não foi possível fazer parse da mensagem: '{text}'")
                 send_telegram_msg(chat_id, t('parse_error'))
                 return {'status': 'error'}
-            
-            # Processar múltiplas transações
-            if parsed.get('multiple'):
-                transactions = parsed['transactions']
-                created_count = 0
-                
-                for trans_data in transactions:
-                    amount_cents = int(trans_data['amount'] * 100)
-                    
-                    # Lógica especial para categorias de vault (investimento/emergência)
-                    if trans_data.get('is_vault', False):
-                        # Para vault: depósito = positivo, resgate = negativo
-                        if trans_data.get('is_vault_withdrawal', False):
-                            # Resgate: negativo
-                            amount_cents = -abs(amount_cents)
-                        else:
-                            # Depósito: positivo (padrão para vault)
-                            amount_cents = abs(amount_cents)
-                    elif trans_data['type'] == 'expense':
-                        # Despesa regular: negativo
+        
+        if not parsed:
+            logger.info("Mensagem não processada (sem texto nem foto)")
+            return {'status': 'ignored'}
+        
+        # Processar múltiplas transações
+        if parsed.get('multiple'):
+            transactions = parsed['transactions']
+            created_count = 0
+
+            for trans_data in transactions:
+                amount_cents = int(trans_data['amount'] * 100)
+                if trans_data.get('is_vault', False):
+                    if trans_data.get('is_vault_withdrawal', False):
                         amount_cents = -abs(amount_cents)
                     else:
-                        # Receita regular: positivo
                         amount_cents = abs(amount_cents)
-                    
-                    if user.telegram_auto_confirm:
-                        # Criar diretamente
-                        transaction = models.Transaction(
-                            workspace_id=workspace.id,
-                            category_id=trans_data['category_id'],
-                            amount_cents=amount_cents,
-                            description=trans_data['description'],
-                            inference_source=trans_data.get('inference_source'),
-                            decision_reason=trans_data.get('decision_reason'),
-                            needs_review=trans_data.get('needs_review', False),
-                            transaction_date=date.today()
-                        )
-                        db.add(transaction)
-                        created_count += 1
-                    else:
-                        # Criar pendente
-                        pending = models.TelegramPendingTransaction(
-                            chat_id=str(chat_id),
-                            workspace_id=workspace.id,
-                            category_id=trans_data['category_id'],
-                            amount_cents=amount_cents,
-                            description=trans_data['description'],
-                            inference_source=trans_data.get('inference_source'),
-                            decision_reason=trans_data.get('decision_reason'),
-                            needs_review=trans_data.get('needs_review', False),
-                            transaction_date=date.today()
-                        )
-                        db.add(pending)
-                        db.flush()
-                        
-                        # Enviar botões de confirmação
-                        category = db.query(models.Category).filter(
-                            models.Category.id == trans_data['category_id']
-                        ).first()
-                        category_name = category.name if category else "Outros"
-                        
-                        tipo_emoji = "" if amount_cents < 0 else "💰"
-                        tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
-                        message_text = t('transaction_pending').format(
-                            description=trans_data['description'],
-                            emoji=tipo_emoji,
-                            amount=abs(amount_cents)/100,
-                            category=category_name,
-                            type=tipo_texto
-                        )
-                        
-                        # Usar UUID curto no callback_data (limite 64 bytes)
-                        pending_id_hex = pending.id.hex[:16]
-                        reply_markup = {
-                            "inline_keyboard": [[
-                                {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
-                                {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
-                            ]]
-                        }
-                        send_telegram_msg(chat_id, message_text, reply_markup)
-                
-                if user.telegram_auto_confirm:
-                    db.commit()
-                    send_telegram_msg(chat_id, t('multiple_transactions_created').format(count=created_count))
-                else:
-                    db.commit()
-                
-                return {'status': 'success'}
-            
-            # Processar transação única
-            amount_cents = int(parsed['amount'] * 100)
-            
-            category = db.query(models.Category).filter(
-                models.Category.id == parsed['category_id']
-            ).first()
-            category_name = category.name if category else "Outros"
-            
-            # Lógica especial para categorias de vault (investimento/emergência)
-            is_vault_category = category and category.vault_type != 'none'
-            is_vault_withdrawal = parsed.get('is_vault_withdrawal', False) if is_vault_category else False
-            
-            if is_vault_category:
-                # Para vault: depósito = positivo, resgate = negativo
-                if is_vault_withdrawal:
-                    # Resgate: negativo
+                elif trans_data['type'] == 'expense':
                     amount_cents = -abs(amount_cents)
                 else:
-                    # Depósito: positivo (padrão para vault)
                     amount_cents = abs(amount_cents)
-            elif parsed['type'] == 'expense':
-                # Despesa regular: negativo
+
+                if user.telegram_auto_confirm:
+                    transaction = models.Transaction(
+                        workspace_id=workspace.id,
+                        category_id=trans_data['category_id'],
+                        amount_cents=amount_cents,
+                        description=trans_data['description'],
+                        inference_source=trans_data.get('inference_source'),
+                        decision_reason=trans_data.get('decision_reason'),
+                        needs_review=trans_data.get('needs_review', False),
+                        transaction_date=date.today()
+                    )
+                    db.add(transaction)
+                    created_count += 1
+                else:
+                    pending = models.TelegramPendingTransaction(
+                        chat_id=str(chat_id),
+                        workspace_id=workspace.id,
+                        category_id=trans_data['category_id'],
+                        amount_cents=amount_cents,
+                        description=trans_data['description'],
+                        inference_source=trans_data.get('inference_source'),
+                        decision_reason=trans_data.get('decision_reason'),
+                        needs_review=trans_data.get('needs_review', False),
+                        transaction_date=date.today()
+                    )
+                    db.add(pending)
+                    db.flush()
+                    category = db.query(models.Category).filter(
+                        models.Category.id == trans_data['category_id']
+                    ).first()
+                    category_name = category.name if category else "Outros"
+                    tipo_emoji = "" if amount_cents < 0 else "💰"
+                    tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
+                    message_text = t('transaction_pending').format(
+                        description=trans_data['description'],
+                        emoji=tipo_emoji,
+                        amount=abs(amount_cents)/100,
+                        category=category_name,
+                        type=tipo_texto
+                    )
+                    pending_id_hex = pending.id.hex[:16]
+                    reply_markup = {
+                        "inline_keyboard": [[
+                            {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
+                            {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
+                        ]]
+                    }
+                    send_telegram_msg(chat_id, message_text, reply_markup)
+
+            if user.telegram_auto_confirm:
+                db.commit()
+                send_telegram_msg(chat_id, t('multiple_transactions_created').format(count=created_count))
+            else:
+                db.commit()
+            return {'status': 'success'}
+            
+        # Processar transação única
+        amount_cents = int(parsed['amount'] * 100)
+        transaction_date = parsed.get('transaction_date') or date.today()
+
+        category = db.query(models.Category).filter(
+            models.Category.id == parsed['category_id']
+        ).first()
+        category_name = category.name if category else "Outros"
+
+        # Lógica especial para categorias de vault (investimento/emergência)
+        is_vault_category = category and category.vault_type != 'none'
+        is_vault_withdrawal = parsed.get('is_vault_withdrawal', False) if is_vault_category else False
+
+        if is_vault_category:
+            # Para vault: depósito = positivo, resgate = negativo
+            if is_vault_withdrawal:
                 amount_cents = -abs(amount_cents)
             else:
-                # Receita regular: positivo
                 amount_cents = abs(amount_cents)
-            
-            if user.telegram_auto_confirm:
-                logger.info(f"Modo auto_confirm ativo - criando transacao diretamente")
-                # Criar transação diretamente
-                transaction = models.Transaction(
-                    workspace_id=workspace.id,
-                    category_id=parsed['category_id'],
-                    amount_cents=amount_cents,
-                    description=parsed['description'],
-                    inference_source=parsed.get('inference_source'),
-                    decision_reason=parsed.get('decision_reason'),
-                    needs_review=parsed.get('needs_review', False),
-                    transaction_date=date.today()
-                )
-                db.add(transaction)
-                db.flush()
-                logger.info(f"Transacao criada com ID: {transaction.id}, workspace_id: {workspace.id}, amount_cents: {amount_cents}")
-                db.commit()
-                logger.info("Transacao commitada com sucesso (auto_confirm)")
-                
-                tipo_emoji = "" if amount_cents < 0 else "💰"
-                tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
-                send_telegram_msg(chat_id, t('transaction_registered').format(
-                    description=parsed['description'],
-                    emoji=tipo_emoji,
-                    amount=abs(parsed['amount']),
-                    category=category_name,
-                    type=tipo_texto
-                ))
-            else:
-                # Criar TelegramPendingTransaction
-                pending = models.TelegramPendingTransaction(
-                    chat_id=str(chat_id),
-                    workspace_id=workspace.id,
-                    category_id=parsed['category_id'],
-                    amount_cents=amount_cents,
-                    description=parsed['description'],
-                    inference_source=parsed.get('inference_source'),
-                    decision_reason=parsed.get('decision_reason'),
-                    needs_review=parsed.get('needs_review', False),
-                    transaction_date=date.today()
-                )
-                db.add(pending)
-                db.commit()
-                
-                # Enviar mensagem com botões de confirmação
-                tipo_emoji = "" if amount_cents < 0 else "💰"
-                tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
-                message_text = t('transaction_pending').format(
-                    description=parsed['description'],
-                    emoji=tipo_emoji,
-                    amount=abs(parsed['amount']),
-                    category=category_name,
-                    type=tipo_texto
-                )
-                
-                # Usar UUID curto no callback_data (limite 64 bytes)
-                pending_id_hex = pending.id.hex[:16]
-                reply_markup = {
-                    "inline_keyboard": [[
-                        {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
-                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
-                    ]]
-                }
-                send_telegram_msg(chat_id, message_text, reply_markup)
-            
-            logger.info("Transação processada com sucesso")
-            return {'status': 'success'}
-        
-        logger.info("Mensagem não processada (sem texto)")
-        return {'status': 'ignored'}
+        elif parsed['type'] == 'expense':
+            amount_cents = -abs(amount_cents)
+        else:
+            amount_cents = abs(amount_cents)
+
+        if user.telegram_auto_confirm:
+            logger.info("Modo auto_confirm ativo - criando transacao diretamente")
+            transaction = models.Transaction(
+                workspace_id=workspace.id,
+                category_id=parsed['category_id'],
+                amount_cents=amount_cents,
+                description=parsed['description'],
+                inference_source=parsed.get('inference_source'),
+                decision_reason=parsed.get('decision_reason'),
+                needs_review=parsed.get('needs_review', False),
+                transaction_date=transaction_date,
+            )
+            db.add(transaction)
+            db.flush()
+            logger.info("Transacao criada com ID: %s, workspace_id: %s, amount_cents: %s", transaction.id, workspace.id, amount_cents)
+            db.commit()
+            logger.info("Transacao commitada com sucesso (auto_confirm)")
+            tipo_emoji = "" if amount_cents < 0 else "💰"
+            tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
+            send_telegram_msg(chat_id, t('transaction_registered').format(
+                description=parsed['description'],
+                emoji=tipo_emoji,
+                amount=abs(parsed['amount']),
+                category=category_name,
+                type=tipo_texto
+            ))
+        else:
+            pending = models.TelegramPendingTransaction(
+                chat_id=str(chat_id),
+                workspace_id=workspace.id,
+                category_id=parsed['category_id'],
+                amount_cents=amount_cents,
+                description=parsed['description'],
+                inference_source=parsed.get('inference_source'),
+                decision_reason=parsed.get('decision_reason'),
+                needs_review=parsed.get('needs_review', False),
+                transaction_date=transaction_date,
+            )
+            db.add(pending)
+            db.commit()
+            tipo_emoji = "" if amount_cents < 0 else "💰"
+            tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
+            message_text = t('transaction_pending').format(
+                description=parsed['description'],
+                emoji=tipo_emoji,
+                amount=abs(parsed['amount']),
+                category=category_name,
+                type=tipo_texto
+            )
+            pending_id_hex = pending.id.hex[:16]
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
+                    {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
+                ]]
+            }
+            send_telegram_msg(chat_id, message_text, reply_markup)
+
+        logger.info("Transação processada com sucesso")
+        return {'status': 'success'}
         
     except Exception as e:
         logger.error(f"Erro Telegram: {str(e)}", exc_info=True)
