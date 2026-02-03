@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, date, timezone
 from typing import Optional, Dict, List
 import io
 import tempfile
+import time
 import unicodedata
 from difflib import SequenceMatcher
 
@@ -194,6 +195,33 @@ def correct_transcription_with_history(text: str, workspace_id: int, db: Session
     if result != text:
         logger.info("[Histórico] Texto corrigido: '%s' -> '%s'", text[:80], result[:80])
     return result
+
+
+def get_category_by_keyword(description: str, workspace_id, tipo: str, db: Session):
+    """Se alguma palavra da descrição (normalizada) estiver em category_keywords, devolve category_id; senão None."""
+    if not description or not hasattr(models, 'CategoryKeyword'):
+        return None
+    try:
+        for word in description.split():
+            if len(word) < 2:
+                continue
+            w_norm = normalize_text(word)
+            if len(w_norm) < 2:
+                continue
+            kw = db.query(models.CategoryKeyword).filter(
+                models.CategoryKeyword.workspace_id == workspace_id,
+                models.CategoryKeyword.keyword == w_norm,
+            ).first()
+            if kw:
+                cat = db.query(models.Category).filter(
+                    models.Category.id == kw.category_id,
+                    models.Category.type == tipo,
+                ).first()
+                if cat:
+                    return cat.id
+    except Exception as e:
+        logger.warning("[Telegram] get_category_by_keyword falhou: %s", e)
+    return None
 
 
 def find_best_category_match(user_input: str, categories: List[models.Category], threshold: float = 0.6) -> Optional[models.Category]:
@@ -472,12 +500,18 @@ def _remove_dates_for_value_parsing(text: str) -> str:
     return s
 
 
-def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Optional[Dict]:
+def parse_transaction(
+    text: str,
+    workspace: models.Workspace,
+    db: Session,
+    default_category_id: Optional[uuid.UUID] = None,
+) -> Optional[Dict]:
     """
     Extrai valor, tipo e categoria de uma mensagem de texto.
     Suporta múltiplas transações separadas por espaço.
     Aceita data na mensagem: "Almoço 15€ 28/01", "Almoço 28/01 15€", "dia 28 Almoço 15€".
     Normaliza números por extenso (ex.: quinze euros) para melhor suporte a voz.
+    default_category_id: se definido (/categoria), usa esta categoria para todas as transações da mensagem.
     """
     # Normalizar números por extenso (voz: "quinze euros" -> "15 euros")
     text = _normalize_number_words(text)
@@ -656,18 +690,34 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
         inference_source = "fallback"
         needs_review = True
         decision_reason = ""
-        # Se categoria foi especificada, usar diretamente (SEM ir ao motor)
+        category_id = None
+        suggested_category_name = None
+        # Categoria por defeito (/categoria ou /definir): usar se válida para este tipo
+        if default_category_id:
+            def_cat = next((c for c in categories if c.id == default_category_id), None)
+            if def_cat:
+                category_id = default_category_id
+                inference_source = "telegram_default"
+                needs_review = False
+                decision_reason = "telegram_default"
+        # Se categoria foi especificada na mensagem, usar diretamente (SEM ir ao motor)
         if specified_category:
             category_id = specified_category.id
             inference_source = "explicit"
             needs_review = False
             decision_reason = f"explicit:{specified_category_name}"
             logger.info(f"✓ Usando categoria especificada pelo utilizador: '{specified_category_name}' (id: {category_id})")
-        else:
+        elif not category_id:
+            # Keywords por categoria (workspace): palavra → categoria
+            keyword_cat_id = get_category_by_keyword(description, workspace.id, tipo, db)
+            if keyword_cat_id:
+                category_id = keyword_cat_id
+                inference_source = "keyword"
+                decision_reason = "keyword_telegram"
+                needs_review = False
+        if not category_id:
             # Prioridade: cache (exato) → histórico/similaridade → motor SEM IA → (opcional) IA só se nada acertar
-            # Objetivo: IA apenas para imagens; texto usa dados históricos e similaridade ao máximo.
             cache_key = _description_cache_key(description)
-            category_id = None
             inference_source = "legacy_fallback"
             decision_reason = "legacy_fallback"
 
@@ -1207,23 +1257,46 @@ JSON só, sem markdown:
 {{"transactions":[{{"amount":n,"description":"...","type":"expense","date":"YYYY-MM-DD","category":"NomeExato"}}]}}"""
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
         logger.info("[OpenAI Vision] A chamar OpenAI (imagem %s bytes)...", len(content))
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": data_url}},
-                    ],
-                }
-            ],
-            max_tokens=1500,
-            temperature=0.05,
-        )
+        VISION_RETRY_DELAYS = [2, 5]
         text_response = ""
-        if response.choices and response.choices[0].message.content:
-            text_response = response.choices[0].message.content.strip()
+        for attempt in range(1 + len(VISION_RETRY_DELAYS)):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {"type": "image_url", "image_url": {"url": data_url}},
+                            ],
+                        }
+                    ],
+                    max_tokens=1500,
+                    temperature=0.05,
+                )
+                if response.choices and response.choices[0].message.content:
+                    text_response = response.choices[0].message.content.strip()
+                break
+            except OpenAIRateLimitError:
+                raise
+            except Exception as api_err:
+                err_str = str(api_err).lower()
+                is_429 = (
+                    getattr(api_err, "status_code", None) == 429
+                    or "429" in str(api_err)
+                    or "rate_limit" in err_str
+                    or "too many requests" in err_str
+                )
+                is_timeout = "timeout" in err_str or "timed out" in err_str
+                if (is_429 or is_timeout) and attempt < len(VISION_RETRY_DELAYS):
+                    delay = VISION_RETRY_DELAYS[attempt]
+                    logger.warning("[OpenAI Vision] Tentativa %s falhou (%s), retry em %ss", attempt + 1, api_err, delay)
+                    time.sleep(delay)
+                    continue
+                if is_429:
+                    raise OpenAIRateLimitError(api_err) from api_err
+                raise
         if not text_response:
             logger.warning("[OpenAI Vision] OpenAI respondeu sem content. choices=%s", len(response.choices) if response.choices else 0)
             return None
@@ -1435,6 +1508,74 @@ def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = No
     
     return None
 
+
+def edit_telegram_message(chat_id: int, message_id: int, text: str, reply_markup: Optional[Dict] = None) -> bool:
+    """Edita texto e/ou teclado de uma mensagem existente."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return False
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
+    payload = {"chat_id": chat_id, "message_id": message_id, "text": text, "parse_mode": "HTML"}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        r = requests.post(url, json=payload, timeout=5)
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        logger.warning("[Telegram] editMessageText falhou: %s", e)
+        return False
+
+
+def _build_batch_message_and_keyboard(
+    chat_id: str,
+    batch_id_hex: str,
+    db: Session,
+    t,
+) -> tuple:
+    """Constrói texto e inline_keyboard para a lista de pendentes do batch. Devolve (message_text, reply_markup) ou (None, None) se não houver pendentes."""
+    pendents_batch = (
+        db.query(models.TelegramPendingTransaction)
+        .filter(
+            models.TelegramPendingTransaction.chat_id == chat_id,
+            models.TelegramPendingTransaction.batch_id.isnot(None),
+        )
+        .order_by(models.TelegramPendingTransaction.created_at)
+        .all()
+    )
+    pendents_batch = [p for p in pendents_batch if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
+    if not pendents_batch:
+        return None, None
+    lines = []
+    total_cents = 0
+    keyboard = []
+    for p in pendents_batch:
+        total_cents += p.amount_cents
+        cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
+        cat_name = cat.name if cat else "Outros"
+        lines.append(t('list_pending_line').format(
+            description=p.description,
+            amount=abs(p.amount_cents) / 100,
+            category=cat_name,
+        ))
+        keyboard.append([
+            {"text": "✅", "callback_data": f"confirm_{p.id.hex[:16]}"},
+            {"text": "❌", "callback_data": f"cancel_{p.id.hex[:16]}"},
+        ])
+    total_euros = abs(total_cents) / 100
+    message_text = (
+        t('list_pending_header')
+        + "".join(lines)
+        + t('list_pending_total').format(total=total_euros)
+        + t('list_confirm_question')
+    )
+    keyboard.append([
+        {"text": t('button_confirm_all'), "callback_data": f"confirm_batch_{batch_id_hex}"},
+        {"text": t('button_cancel_all'), "callback_data": f"cancel_batch_{batch_id_hex}"},
+    ])
+    reply_markup = {"inline_keyboard": keyboard}
+    return message_text, reply_markup
+
+
 def setup_bot_commands():
     """Configura os comandos do bot no Telegram (aparecem no menu azul ao digitar /)"""
     if not settings.TELEGRAM_BOT_TOKEN:
@@ -1454,6 +1595,7 @@ def setup_bot_commands():
         {"command": "clear", "description": "🧹 Limpar todas as pendentes"},
         {"command": "revoke", "description": "🔓 Desvincular Telegram da conta"},
         {"command": "idioma", "description": "🌐 Mudar idioma (pt / en)"},
+        {"command": "categoria", "description": "🏷️ Categoria por defeito (nome ou stop)"},
     ]
     
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/setMyCommands"
@@ -1705,7 +1847,8 @@ async def telegram_webhook(
                 reply_markup = {
                     "inline_keyboard": [[
                         {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex_new}"},
-                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex_new}"}
+                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex_new}"},
+                        {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex_new}"},
                     ]]
                 }
                 send_telegram_msg(chat_id, msg, reply_markup)
@@ -1734,6 +1877,110 @@ async def telegram_webhook(
                     pass
                 send_telegram_msg(chat_id, t('transaction_cancelled'))
                 return {'status': 'cancelled'}
+            elif callback_data.startswith("changecat_"):
+                pending_id_hex = callback_data.replace("changecat_", "")
+                all_p = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                pending = next((p for p in all_p if p.id.hex[:16] == pending_id_hex), None)
+                if not pending or pending.batch_id:
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                            json={'callback_query_id': callback_query['id']},
+                            timeout=5,
+                        )
+                    except Exception:
+                        pass
+                    return {'status': 'not_found'}
+                tipo = "expense" if pending.amount_cents < 0 else "income"
+                categories = db.query(models.Category).filter(
+                    models.Category.workspace_id == pending.workspace_id,
+                    models.Category.type == tipo,
+                ).all()
+                keyboard = []
+                row = []
+                for c in categories[:20]:
+                    row.append({"text": (c.name[:20] + "…" if len(c.name) > 20 else c.name), "callback_data": f"setcat_{pending_id_hex}_{c.id}"})
+                    if len(row) >= 2:
+                        keyboard.append(row)
+                        row = []
+                if row:
+                    keyboard.append(row)
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                edit_telegram_message(
+                    chat_id,
+                    callback_query["message"]["message_id"],
+                    t('change_category_prompt'),
+                    {"inline_keyboard": keyboard},
+                )
+                return {'status': 'changecat_shown'}
+            elif callback_data.startswith("setcat_"):
+                parts = callback_data.replace("setcat_", "").split("_", 1)
+                if len(parts) != 2:
+                    return {'status': 'error'}
+                pending_id_hex, category_id_str = parts[0], parts[1]
+                all_p = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                pending = next((p for p in all_p if p.id.hex[:16] == pending_id_hex), None)
+                if not pending or pending.batch_id:
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                            json={'callback_query_id': callback_query['id']},
+                            timeout=5,
+                        )
+                    except Exception:
+                        pass
+                    return {'status': 'not_found'}
+                try:
+                    cat_uuid = uuid.UUID(category_id_str)
+                except ValueError:
+                    return {'status': 'error'}
+                cat = db.query(models.Category).filter(
+                    models.Category.id == cat_uuid,
+                    models.Category.workspace_id == pending.workspace_id,
+                ).first()
+                if not cat:
+                    return {'status': 'not_found'}
+                pending.category_id = cat.id
+                db.commit()
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
+                tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
+                msg = t('transaction_pending').format(
+                    description=pending.description,
+                    emoji=tipo_emoji,
+                    amount=abs(pending.amount_cents) / 100,
+                    category=cat.name,
+                    type=tipo_texto,
+                    origin_line=_origin_line(getattr(pending, 'inference_source', None), t),
+                    date_line=_date_line(getattr(pending, 'transaction_date', None) or date.today(), t),
+                )
+                reply_markup = {
+                    "inline_keyboard": [[
+                        {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
+                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
+                        {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
+                    ]]
+                }
+                edit_telegram_message(chat_id, callback_query["message"]["message_id"], msg, reply_markup)
+                return {'status': 'category_updated'}
             elif callback_data.startswith("cancel_batch_"):
                 batch_id_hex = callback_data.replace("cancel_batch_", "")
                 all_pending = db.query(models.TelegramPendingTransaction).filter(
@@ -1779,6 +2026,8 @@ async def telegram_webhook(
                     send_telegram_msg(chat_id, t('transaction_not_found'))
                     return {'status': 'not_found'}
                 
+                from_batch = pending.batch_id is not None
+                batch_id_hex = pending.batch_id.hex[:16] if pending.batch_id else None
                 # Criar transação real
                 logger.info(f"Criando transacao: workspace_id={pending.workspace_id}, category_id={pending.category_id}, amount_cents={pending.amount_cents}, description={pending.description}, transaction_date={pending.transaction_date}")
                 transaction = models.Transaction(
@@ -1794,13 +2043,11 @@ async def telegram_webhook(
                 db.add(transaction)
                 db.flush()
                 logger.info(f"Transacao criada com ID: {transaction.id}, transaction_date: {transaction.transaction_date}, created_at: {transaction.created_at}")
-                # Copiar para mensagem (save_cached_category faz commit e pode expirar pending)
                 desc_for_msg = pending.description
                 amount_cents_for_msg = pending.amount_cents
                 category_id_for_msg = pending.category_id
                 inference_source_for_msg = getattr(pending, 'inference_source', None)
                 transaction_date_for_msg = getattr(pending, 'transaction_date', None) or date.today()
-                # Aprendizagem: guardar no cache para futuras mensagens (menos IA)
                 cache_key = _description_cache_key(pending.description)
                 if cache_key and pending.category_id:
                     category = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
@@ -1811,37 +2058,43 @@ async def telegram_webhook(
                 db.commit()
                 logger.info("Transacao confirmada e commitada com sucesso")
                 
-                # Responder ao callback
                 try:
                     requests.post(
                         f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
                         json={'callback_query_id': callback_query['id']},
-                        timeout=5
+                        timeout=5,
                     )
                 except Exception as e:
                     logger.error(f"Erro ao responder callback: {str(e)}")
                 
-                # Mensagem de confirmação
-                tipo_emoji = "" if amount_cents_for_msg < 0 else "💰"
-                tipo_texto = t('type_expense') if amount_cents_for_msg < 0 else t('type_income')
-                category = db.query(models.Category).filter(models.Category.id == category_id_for_msg).first()
-                category_name = category.name if category else "Outros"
-                origin_line = _origin_line(inference_source_for_msg, t)
-                send_telegram_msg(chat_id, t('transaction_confirmed').format(
-                    description=desc_for_msg,
-                    emoji=tipo_emoji,
-                    amount=abs(amount_cents_for_msg)/100,
-                    category=category_name,
-                    type=tipo_texto,
-                    origin_line=origin_line,
-                    date_line=_date_line(transaction_date_for_msg, t),
-                ))
-                # Dica após primeira transação (workspace com apenas 1 transação)
-                total_tx = db.query(models.Transaction).filter(
-                    models.Transaction.workspace_id == transaction.workspace_id
-                ).count()
-                if total_tx == 1:
-                    send_telegram_msg(chat_id, t('tip_multi'))
+                if from_batch and batch_id_hex:
+                    message_id = callback_query.get("message", {}).get("message_id")
+                    if message_id is not None:
+                        msg_text, markup = _build_batch_message_and_keyboard(str(chat_id), batch_id_hex, db, t)
+                        if msg_text and markup:
+                            edit_telegram_message(chat_id, message_id, msg_text, markup)
+                        else:
+                            edit_telegram_message(chat_id, message_id, t('batch_list_empty'), {"inline_keyboard": []})
+                else:
+                    tipo_emoji = "" if amount_cents_for_msg < 0 else "💰"
+                    tipo_texto = t('type_expense') if amount_cents_for_msg < 0 else t('type_income')
+                    category = db.query(models.Category).filter(models.Category.id == category_id_for_msg).first()
+                    category_name = category.name if category else "Outros"
+                    origin_line = _origin_line(inference_source_for_msg, t)
+                    send_telegram_msg(chat_id, t('transaction_confirmed').format(
+                        description=desc_for_msg,
+                        emoji=tipo_emoji,
+                        amount=abs(amount_cents_for_msg)/100,
+                        category=category_name,
+                        type=tipo_texto,
+                        origin_line=origin_line,
+                        date_line=_date_line(transaction_date_for_msg, t),
+                    ))
+                    total_tx = db.query(models.Transaction).filter(
+                        models.Transaction.workspace_id == transaction.workspace_id
+                    ).count()
+                    if total_tx == 1:
+                        send_telegram_msg(chat_id, t('tip_multi'))
                 
                 logger.info("Callback de confirmacao processado com sucesso")
                 return {'status': 'confirmed'}
@@ -1868,22 +2121,28 @@ async def telegram_webhook(
                         break
                 
                 if pending:
+                    batch_id_hex = pending.batch_id.hex[:16] if pending.batch_id else None
                     db.delete(pending)
                     db.commit()
                     logger.info(f"Transação pendente eliminada com sucesso: id={pending.id}")
-                    
-                    # Responder ao callback
                     try:
                         requests.post(
                             f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
-                            json={'callback_query_id': callback_query['id']}
+                            json={'callback_query_id': callback_query['id']},
+                            timeout=5,
                         )
-                        logger.info("Callback query respondido com sucesso")
                     except Exception as e:
                         logger.error(f"Erro ao responder callback query: {str(e)}")
-                    
-                    send_telegram_msg(chat_id, t('transaction_cancelled'))
-                    logger.info("Mensagem de cancelamento enviada ao utilizador")
+                    if batch_id_hex:
+                        message_id = callback_query.get("message", {}).get("message_id")
+                        if message_id is not None:
+                            msg_text, markup = _build_batch_message_and_keyboard(str(chat_id), batch_id_hex, db, t)
+                            if msg_text and markup:
+                                edit_telegram_message(chat_id, message_id, msg_text, markup)
+                            else:
+                                edit_telegram_message(chat_id, message_id, t('batch_list_empty'), {"inline_keyboard": []})
+                    else:
+                        send_telegram_msg(chat_id, t('transaction_cancelled'))
                     return {'status': 'cancelled'}
                 else:
                     logger.warning(f"Transação pendente não encontrada: hex={pending_id_hex}, chat_id={chat_id}")
@@ -2086,6 +2345,37 @@ async def telegram_webhook(
                 send_telegram_msg(chat_id, t_lang('language_set'))
             return {'status': 'ok'}
         
+        # Comando /categoria [nome] ou /definir [nome] - Categoria por defeito até "stop"
+        if text.strip().lower().startswith('/categoria ') or text.strip().lower().startswith('/definir '):
+            user_cat = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user_cat:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            workspace_cat = db.query(models.Workspace).filter(models.Workspace.owner_id == user_cat.id).first()
+            if not workspace_cat:
+                send_telegram_msg(chat_id, t('workspace_not_found'))
+                return {'status': 'error'}
+            part = text.strip().split(maxsplit=1)
+            rest = (part[1].strip() if len(part) > 1 else "") or ""
+            lang_cat = user_cat.language if user_cat.language else 'pt'
+            t_cat = get_telegram_t(lang_cat)
+            if rest.lower() in ("stop", "parar", "clear", "nenhuma", "none", "remove"):
+                user_cat.telegram_default_category_id = None
+                db.commit()
+                send_telegram_msg(chat_id, t_cat('categoria_default_cleared'))
+                return {'status': 'ok'}
+            cat_by_name = db.query(models.Category).filter(
+                models.Category.workspace_id == workspace_cat.id,
+                func.lower(models.Category.name) == rest.lower(),
+            ).first()
+            if not cat_by_name:
+                send_telegram_msg(chat_id, t_cat('categoria_not_found').format(name=rest[:50]))
+                return {'status': 'not_found'}
+            user_cat.telegram_default_category_id = cat_by_name.id
+            db.commit()
+            send_telegram_msg(chat_id, t_cat('categoria_default_set').format(name=cat_by_name.name))
+            return {'status': 'ok'}
+        
         # Comando /clear - Limpar transações pendentes
         if text.startswith('/clear'):
             logger.info(f"Comando /clear recebido de chat_id={chat_id}")
@@ -2235,10 +2525,11 @@ async def telegram_webhook(
                 logger.info("[Telegram] Foto processada: 1 transação - %s", parsed.get("description"))
         # Processar texto (corrigir com histórico antes do parse: voz e texto)
         elif text:
-            text = correct_transcription_with_history(text, workspace.id, db)
+                text = correct_transcription_with_history(text, workspace.id, db)
             logger.info(f"Processando texto como transação: '{text}'")
+            default_cat_id = getattr(user, 'telegram_default_category_id', None)
             try:
-                parsed = parse_transaction(text, workspace, db)
+                parsed = parse_transaction(text, workspace, db, default_category_id=default_cat_id)
             except AIUnavailableError as ae:
                 err_str = str(ae).lower()
                 if "429" in err_str or "rate" in err_str or "limit" in err_str:
@@ -2330,35 +2621,10 @@ async def telegram_webhook(
                 return {'status': 'success'}
 
             db.flush()
-            # Construir uma única mensagem: lista (descrição — valor — categoria) + total + botões
-            total_cents = 0
-            lines = []
-            pendents_batch = db.query(models.TelegramPendingTransaction).filter(
-                models.TelegramPendingTransaction.batch_id == batch_id
-            ).order_by(models.TelegramPendingTransaction.created_at).all()
-            for p in pendents_batch:
-                total_cents += p.amount_cents
-                category = db.query(models.Category).filter(models.Category.id == p.category_id).first()
-                category_name = category.name if category else "Outros"
-                lines.append(t('list_pending_line').format(
-                    description=p.description,
-                    amount=abs(p.amount_cents) / 100,
-                    category=category_name,
-                ))
-            total_euros = abs(total_cents) / 100
-            message_text = (
-                t('list_pending_header')
-                + "".join(lines)
-                + t('list_pending_total').format(total=total_euros)
-                + t('list_confirm_question')
-            )
-            reply_markup = {
-                "inline_keyboard": [[
-                    {"text": t('button_confirm_all'), "callback_data": f"confirm_batch_{batch_id_hex}"},
-                    {"text": t('button_cancel_all'), "callback_data": f"cancel_batch_{batch_id_hex}"},
-                ]]
-            }
-            send_telegram_msg(chat_id, message_text, reply_markup)
+            # Construir mensagem com botões por linha (✅/❌) + Confirmar tudo / Cancelar tudo
+            message_text, reply_markup = _build_batch_message_and_keyboard(str(chat_id), batch_id_hex, db, t)
+            if message_text and reply_markup:
+                send_telegram_msg(chat_id, message_text, reply_markup)
             db.commit()
             return {'status': 'success'}
             
@@ -2483,7 +2749,8 @@ async def telegram_webhook(
             reply_markup = {
                 "inline_keyboard": [[
                     {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
-                    {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
+                    {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
+                    {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
                 ]]
             }
             send_telegram_msg(chat_id, message_text, reply_markup)

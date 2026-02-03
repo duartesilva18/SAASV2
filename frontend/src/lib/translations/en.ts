@@ -504,7 +504,7 @@ export const en = {
           congratulations: "Congratulations! You've just unlocked maximum power. Unlimited AI and 24/7 support now at your service.",
           explorePro: "Explore Pro Features",
           telegramBot: "Telegram Bot: Ultra-Fast Registration",
-          telegramDesc: "Record expenses by text or receipt photos in 2 seconds without opening the app.",
+          telegramDesc: "Record expenses by text, voice or receipt photos in seconds without opening the app.",
           associateTelegram: "Associate with Telegram",
           efficiencyMessages: {
               excellent: "Excellent! You're transforming income into assets with mastery.",
@@ -637,6 +637,7 @@ export const en = {
                   "Pro Analytics & AI Insights",
                   "Recurring Cycle Management",
                   "Telegram Support",
+                  "Voice messages on Telegram (audio registration)",
                   "Data Export (JSON/CSV)",
               ],
               error: "Error starting checkout. Make sure you are logged in."

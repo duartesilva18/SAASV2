@@ -29,6 +29,7 @@ class User(Base):
     stripe_customer_id = Column(String(255), unique=True, nullable=True)
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
     telegram_auto_confirm = Column(Boolean, nullable=False, default=False)
+    telegram_default_category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
     # Campos de afiliado
     is_affiliate = Column(Boolean, nullable=False, default=False)
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)
@@ -91,6 +92,14 @@ class Category(Base):
         CheckConstraint('monthly_limit_cents >= 0'),
         UniqueConstraint('workspace_id', 'name', name='categories_unique_name'),
     )
+
+
+class CategoryKeyword(Base):
+    __tablename__ = 'category_keywords'
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    keyword = Column(String(100), nullable=False, primary_key=True)
+
 
 class InstallmentGroup(Base):
     __tablename__ = 'installment_groups'

@@ -504,7 +504,7 @@ export const fr = {
           congratulations: "Félicitations ! Vous venez de débloquer la puissance maximale. IA illimitée et support 24/7 à votre service.",
           explorePro: "Explorer les fonctionnalités Pro",
           telegramBot: "Bot Telegram : enregistrement ultra-rapide",
-          telegramDesc: "Enregistrez les dépenses par texte ou photo de reçu en 2 secondes sans ouvrir l'app.",
+          telegramDesc: "Enregistrez les dépenses par texte, voix ou photo de reçu en quelques secondes sans ouvrir l'app.",
           associateTelegram: "Associer Telegram",
           efficiencyMessages: {
               excellent: "Excellent ! Vous transformez vos revenus en patrimoine avec maîtrise.",
@@ -637,6 +637,7 @@ export const fr = {
                   "Analytiques Pro et insights IA",
                   "Gestion des cycles récurrents",
                   "Support Telegram",
+                  "Messages vocaux sur Telegram (enregistrement par audio)",
                   "Export des données (JSON/CSV)",
               ],
               error: "Erreur au démarrage du paiement. Assurez-vous d'être connecté."

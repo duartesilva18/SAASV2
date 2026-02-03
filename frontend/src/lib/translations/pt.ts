@@ -504,7 +504,7 @@ export const pt = {
           congratulations: "Parabéns! Acabas de desbloquear o poder máximo. IA ilimitada e suporte 24/7 agora ao teu serviço.",
           explorePro: "Explorar Funções Pro",
           telegramBot: "Bot Telegram: Registo Ultra-Rápido",
-          telegramDesc: "Regista despesas por texto ou fotos de recibos em 2 segundos sem abrir a app.",
+          telegramDesc: "Regista despesas por texto, voz ou fotos de recibos em segundos sem abrir a app.",
           associateTelegram: "Associar com Telegram",
           efficiencyMessages: {
               excellent: "Excelente! Estás a transformar receita em património com mestria.",
@@ -1261,6 +1261,7 @@ export const pt = {
                   "Análise Pro & Insights de IA",
                   "Gestão de Ciclos Recorrentes",
                   "Suporte via Telegram",
+                  "Mensagens de voz no Telegram (registo por áudio)",
                   "Exportação de Dados (JSON/CSV)",
               ],
               error: "Erro ao iniciar checkout. Certifique-se de que está logado."

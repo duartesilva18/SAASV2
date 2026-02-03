@@ -186,6 +186,10 @@ TELEGRAM_TRANSLATIONS = {
             "💡 Nenhuma transação foi registada.\n\n"
             "🧘‍♂️ <i>Podes enviar uma nova lista quando quiseres.</i>"
         ),
+        'batch_list_empty': "✓ Lista atualizada. Todas as linhas foram processadas.",
+        'categoria_default_set': "✅ Categoria por defeito definida: <b>{name}</b>. As próximas mensagens usarão esta categoria até enviares <code>/categoria stop</code>.",
+        'categoria_default_cleared': "✅ Categoria por defeito removida. As mensagens voltam a ser categorizadas normalmente.",
+        'categoria_not_found': "⚠️ Categoria «{name}» não encontrada no teu workspace. Usa o nome exato (ex.: Alimentação).",
         'multiple_transactions_created': (
             "✨ <b>{count} Transação(ões) Criada(s)!</b> ✨\n\n"
             "💎 Todas as transações foram registadas automaticamente.\n\n"
@@ -210,6 +214,8 @@ TELEGRAM_TRANSLATIONS = {
         'type_income': 'Receita',
         'button_confirm': '✨ Confirmar',
         'button_cancel': '🚫 Cancelar',
+        'button_change_category': '🏷️ Mudar categoria',
+        'change_category_prompt': '🏷️ <b>Escolhe a categoria:</b>',
         'source_cache': 'Por cache',
         'source_history': 'Por histórico',
         'source_openai': 'Por IA',
@@ -439,6 +445,10 @@ TELEGRAM_TRANSLATIONS = {
             "💡 No transactions were registered.\n\n"
             "🧘‍♂️ <i>You can send a new list whenever you want.</i>"
         ),
+        'batch_list_empty': "✓ List updated. All lines have been processed.",
+        'categoria_default_set': "✅ Default category set: <b>{name}</b>. Next messages will use this category until you send <code>/categoria stop</code>.",
+        'categoria_default_cleared': "✅ Default category cleared. Messages will be categorized normally again.",
+        'categoria_not_found': "⚠️ Category «{name}» not found in your workspace. Use the exact name (e.g. Food).",
         'multiple_transactions_created': (
             "✨ <b>{count} Transaction(s) Created!</b> ✨\n\n"
             "💎 All transactions were registered automatically.\n\n"
@@ -463,6 +473,8 @@ TELEGRAM_TRANSLATIONS = {
         'type_income': 'Income',
         'button_confirm': '✨ Confirm',
         'button_cancel': '🚫 Cancel',
+        'button_change_category': '🏷️ Change category',
+        'change_category_prompt': '🏷️ <b>Choose category:</b>',
         'source_cache': 'From cache',
         'source_history': 'From history',
         'source_openai': 'From AI',
