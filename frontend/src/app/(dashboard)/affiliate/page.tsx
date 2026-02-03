@@ -10,7 +10,7 @@ import {
   Users, TrendingUp, Copy, CheckCircle2, 
   ExternalLink, DollarSign, Calendar, AlertCircle,
   Sparkles, ArrowRight, Loader2, Clock, LineChart as LineChartIcon,
-  CreditCard, Info, X, Share2, Gift, Target
+  CreditCard, Info, X, Share2, Gift, Target, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
