@@ -128,7 +128,8 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
                 status_code=400,
                 detail='Não tens uma subscrição ativa. Subscreve primeiro um plano em Planos ou Preços.'
             )
-        if current_user.subscription_status not in ('active', 'trialing', 'cancel_at_period_end'):
+        # Admins têm sempre Pro; outros utilizadores precisam de subscrição ativa
+        if not current_user.is_admin and current_user.subscription_status not in ('active', 'trialing', 'cancel_at_period_end'):
             raise HTTPException(
                 status_code=400,
                 detail='A tua subscrição não está ativa. Subscreve um plano para continuar.'
@@ -275,8 +276,15 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
 
 @router.get('/subscription-details')
 async def get_subscription_details(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Retorna os detalhes da subscrição atual, incluindo o price_id"""
+    """Retorna os detalhes da subscrição atual, incluindo o price_id. Admins têm sempre Pro ativo."""
     try:
+        if current_user.is_admin:
+            return {
+                'has_subscription': True,
+                'price_id': None,
+                'subscription_status': 'active',
+                'cancel_at_period_end': False
+            }
         if not current_user.stripe_subscription_id:
             return {
                 'has_subscription': False,

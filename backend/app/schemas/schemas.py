@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from uuid import UUID
 
 class UserBase(BaseModel):
@@ -28,6 +28,13 @@ class UserResponse(UserBase):
     terms_accepted_at: Optional[datetime] = None
     created_at: datetime
     has_password: bool = True  # True = conta criada com email/password; False = só Google/social
+
+    @model_validator(mode='after')
+    def admin_has_pro(self):
+        """Contas admin têm sempre Pro ativo para o frontend e lógica de acesso."""
+        if self.is_admin and (not self.subscription_status or self.subscription_status not in ('active', 'trialing', 'cancel_at_period_end')):
+            object.__setattr__(self, 'subscription_status', 'active')
+        return self
 
     class Config:
         from_attributes = True
