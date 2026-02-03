@@ -798,6 +798,237 @@ async def accept_terms(request: Request, current_user: models.User = Depends(get
     logger.info(f'Utilizador aceitou termos: {current_user.email}')
     return current_user
 
+@router.get('/export-data')
+async def export_user_data(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporta todos os dados da conta (workspaces, categorias, transações, metas, recorrentes)
+    em JSON para backup ou para importar noutra conta no futuro.
+    """
+    workspaces = (
+        db.query(models.Workspace)
+        .filter(models.Workspace.owner_id == current_user.id)
+        .order_by(models.Workspace.created_at)
+        .all()
+    )
+    out_workspaces = []
+    for ws in workspaces:
+        categories = db.query(models.Category).filter(models.Category.workspace_id == ws.id).order_by(models.Category.name).all()
+        category_id_to_name = {str(c.id): c.name for c in categories}
+        transactions = (
+            db.query(models.Transaction)
+            .filter(models.Transaction.workspace_id == ws.id)
+            .order_by(models.Transaction.transaction_date, models.Transaction.created_at)
+            .all()
+        )
+        recurring = (
+            db.query(models.RecurringTransaction)
+            .filter(models.RecurringTransaction.workspace_id == ws.id)
+            .order_by(models.RecurringTransaction.description)
+            .all()
+        )
+        goals = (
+            db.query(models.SavingsGoal)
+            .filter(models.SavingsGoal.workspace_id == ws.id)
+            .order_by(models.SavingsGoal.name)
+            .all()
+        )
+        out_workspaces.append({
+            'name': ws.name,
+            'opening_balance_cents': ws.opening_balance_cents,
+            'opening_balance_date': ws.opening_balance_date.isoformat() if ws.opening_balance_date else None,
+            'categories': [
+                {
+                    'name': c.name,
+                    'type': c.type,
+                    'color_hex': c.color_hex,
+                    'icon': c.icon,
+                    'monthly_limit_cents': c.monthly_limit_cents,
+                    'vault_type': c.vault_type,
+                }
+                for c in categories
+            ],
+            'transactions': [
+                {
+                    'amount_cents': t.amount_cents,
+                    'description': t.description,
+                    'transaction_date': t.transaction_date.isoformat(),
+                    'category_name': category_id_to_name.get(str(t.category_id)) if t.category_id else None,
+                }
+                for t in transactions
+            ],
+            'recurring_transactions': [
+                {
+                    'description': r.description,
+                    'amount_cents': r.amount_cents,
+                    'day_of_month': r.day_of_month,
+                    'category_name': category_id_to_name.get(str(r.category_id)) if r.category_id else None,
+                    'is_active': r.is_active,
+                    'process_automatically': r.process_automatically,
+                }
+                for r in recurring
+            ],
+            'savings_goals': [
+                {
+                    'name': g.name,
+                    'goal_type': g.goal_type,
+                    'target_amount_cents': g.target_amount_cents,
+                    'current_amount_cents': g.current_amount_cents,
+                    'target_date': g.target_date.isoformat(),
+                    'icon': g.icon,
+                    'color_hex': g.color_hex,
+                }
+                for g in goals
+            ],
+        })
+    return {
+        'version': 1,
+        'exported_at': datetime.now(timezone.utc).isoformat(),
+        'profile': {
+            'full_name': current_user.full_name,
+            'currency': current_user.currency,
+            'language': current_user.language,
+        },
+        'workspaces': out_workspaces,
+    }
+
+
+def _parse_date(s):
+    """Parse ISO date string to date object."""
+    if not s:
+        return None
+    if isinstance(s, date):
+        return s
+    try:
+        return datetime.fromisoformat(s.replace('Z', '+00:00')).date()
+    except (ValueError, TypeError):
+        return None
+
+
+@router.post('/import-data')
+async def import_user_data(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Importa dados de um ficheiro JSON exportado pelo Finly.
+    Cria novos workspaces com categorias, transações, recorrentes e metas.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail='Corpo inválido. Envia um ficheiro JSON exportado pelo Finly.')
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail='O ficheiro deve ser um objeto JSON válido.')
+    version = body.get('version')
+    workspaces_data = body.get('workspaces')
+    if version != 1 or not isinstance(workspaces_data, list):
+        raise HTTPException(
+            status_code=400,
+            detail='Formato não reconhecido. Usa um ficheiro exportado pelo Finly (Exportar dados da conta).'
+        )
+    stats = {'workspaces': 0, 'categories': 0, 'transactions': 0, 'recurring': 0, 'goals': 0}
+    for ws_data in workspaces_data:
+        if not isinstance(ws_data, dict):
+            continue
+        name = (ws_data.get('name') or 'Workspace importado')[:100]
+        opening_cents = int(ws_data.get('opening_balance_cents', 0))
+        opening_date = _parse_date(ws_data.get('opening_balance_date'))
+        ws = models.Workspace(
+            owner_id=current_user.id,
+            name=name,
+            opening_balance_cents=opening_cents,
+            opening_balance_date=opening_date,
+        )
+        db.add(ws)
+        db.flush()
+        stats['workspaces'] += 1
+        cat_name_to_id = {}
+        for c in ws_data.get('categories') or []:
+            if not isinstance(c, dict) or not c.get('name'):
+                continue
+            cname = (c.get('name') or '')[:100]
+            ctype = c.get('type') in ('income', 'expense') and c.get('type') or 'expense'
+            cat = models.Category(
+                workspace_id=ws.id,
+                name=cname,
+                type=ctype,
+                color_hex=(c.get('color_hex') or '#3B82F6')[:7],
+                icon=(c.get('icon') or 'Tag')[:50],
+                monthly_limit_cents=int(c.get('monthly_limit_cents', 0)),
+                vault_type=(c.get('vault_type') or 'none')[:20],
+            )
+            db.add(cat)
+            db.flush()
+            cat_name_to_id[cname] = cat.id
+            stats['categories'] += 1
+        for t in ws_data.get('transactions') or []:
+            if not isinstance(t, dict) or t.get('amount_cents') is None:
+                continue
+            amount = int(t['amount_cents'])
+            if amount == 0:
+                continue
+            td = _parse_date(t.get('transaction_date'))
+            if not td:
+                continue
+            cat_name = t.get('category_name')
+            cat_id = cat_name_to_id.get(cat_name) if cat_name else None
+            tr = models.Transaction(
+                workspace_id=ws.id,
+                category_id=cat_id,
+                amount_cents=amount,
+                description=(t.get('description') or '')[:255],
+                transaction_date=td,
+            )
+            db.add(tr)
+            stats['transactions'] += 1
+        for r in ws_data.get('recurring_transactions') or []:
+            if not isinstance(r, dict) or r.get('description') is None or r.get('amount_cents') is None:
+                continue
+            day = int(r.get('day_of_month', 1))
+            if day < 1:
+                day = 1
+            if day > 28:
+                day = 28
+            cat_name = r.get('category_name')
+            cat_id = cat_name_to_id.get(cat_name) if cat_name else None
+            rec = models.RecurringTransaction(
+                workspace_id=ws.id,
+                category_id=cat_id,
+                description=(r.get('description') or '')[:255],
+                amount_cents=int(r['amount_cents']),
+                day_of_month=day,
+                is_active=bool(r.get('is_active', True)),
+                process_automatically=bool(r.get('process_automatically', False)),
+            )
+            db.add(rec)
+            stats['recurring'] += 1
+        for g in ws_data.get('savings_goals') or []:
+            if not isinstance(g, dict) or not g.get('name') or g.get('target_amount_cents') is None:
+                continue
+            gdate = _parse_date(g.get('target_date'))
+            if not gdate:
+                continue
+            goal = models.SavingsGoal(
+                workspace_id=ws.id,
+                name=(g.get('name') or 'Meta')[:100],
+                goal_type=(g.get('goal_type') or 'expense')[:20],
+                target_amount_cents=int(g['target_amount_cents']),
+                current_amount_cents=int(g.get('current_amount_cents', 0)),
+                target_date=gdate,
+                icon=(g.get('icon') or 'Target')[:50],
+                color_hex=(g.get('color_hex') or '#3B82F6')[:7],
+            )
+            db.add(goal)
+            stats['goals'] += 1
+    db.commit()
+    logger.info(f'Importação concluída para {current_user.email}: {stats}')
+    return {'ok': True, 'message': 'Dados importados com sucesso.', 'imported': stats}
+
+
 @router.delete('/account')
 async def delete_user_account(request: Request, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:

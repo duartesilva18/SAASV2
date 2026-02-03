@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Phone, Coins, UserCircle, 
-  CreditCard, Download, 
+  CreditCard, Download, Upload,
   Trash2, CheckCircle2, AlertCircle, Loader2,
   ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink,
   Lock, Mail, X
@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [purging, setPurging] = useState(false);
@@ -241,19 +242,47 @@ export default function SettingsPage() {
     }
   };
 
+  const importFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    setToast({ ...toast, isVisible: false });
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await api.post('/auth/import-data', data);
+      const imp = res.data?.imported || {};
+      const msg = (t.dashboard.settings as any).importSuccess ?? 'Dados importados.';
+      const detail = [imp.workspaces && `${imp.workspaces} workspace(s)`, imp.categories && `${imp.categories} categorias`, imp.transactions && `${imp.transactions} transações`, imp.recurring && `${imp.recurring} recorrentes`, imp.goals && `${imp.goals} metas`].filter(Boolean).join(', ');
+      setToast({ isVisible: true, message: detail ? `${msg} ${detail}` : msg, type: 'success' });
+    } catch (err: any) {
+      const message = err?.response?.data?.detail ?? (t.dashboard.settings as any).importError ?? 'Erro ao importar. Usa um ficheiro exportado pelo Finly.';
+      setToast({ isVisible: true, message, type: 'error' });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleExportData = async () => {
     setExporting(true);
+    setToast({ ...toast, isVisible: false });
     try {
       const res = await api.get('/auth/export-data');
       const dataStr = JSON.stringify(res.data, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
       const exportFileDefaultName = `finly_export_${new Date().toISOString().split('T')[0]}.json`;
-      
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
       linkElement.click();
+      setToast({
+        isVisible: true,
+        message: (t.dashboard.settings as any).exportSuccess ?? 'Ficheiro descarregado. Guarda-o em segurança para backup ou para usar noutra conta.',
+        type: 'success'
+      });
     } catch (err) {
       console.error(err);
       setAlertModal({ isOpen: true, title: 'Erro', message: t.dashboard.settings.exportError, type: 'error' });
@@ -597,6 +626,60 @@ export default function SettingsPage() {
             </button>
           </section>
 
+          {/* Exportar dados da conta — backup / usar noutra conta */}
+          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
+            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                <Download size={18} className="sm:w-5 sm:h-5" />
+              </div>
+              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-slate-400 uppercase tracking-widest min-w-0 truncate">
+                {(t.dashboard.settings as any).exportDataTitle ?? 'Exportar dados da conta'}
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 sm:mb-5 leading-relaxed">
+              {(t.dashboard.settings as any).exportDataDescription ?? 'Descarrega um ficheiro JSON com workspaces, categorias, transações, metas e transações recorrentes. Podes guardar como cópia de segurança ou usar depois noutra conta (importação disponível em breve).'}
+            </p>
+            <button
+              type="button"
+              onClick={handleExportData}
+              disabled={exporting}
+              className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
+            >
+              {exporting ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Download size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.export}</span></>}
+            </button>
+          </section>
+
+          {/* Importar dados da conta */}
+          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
+            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                <Upload size={18} className="sm:w-5 sm:h-5" />
+              </div>
+              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-slate-400 uppercase tracking-widest min-w-0 truncate">
+                {(t.dashboard.settings as any).importDataTitle ?? 'Importar dados da conta'}
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 sm:mb-5 leading-relaxed">
+              {(t.dashboard.settings as any).importDataDescription ?? 'Escolhe um ficheiro JSON exportado pelo Finly. Serão criados novos workspaces com as categorias, transações, recorrentes e metas desse ficheiro.'}
+            </p>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportData}
+              disabled={importing}
+            />
+            <button
+              type="button"
+              onClick={() => importFileInputRef.current?.click()}
+              disabled={importing}
+              className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
+            >
+              {importing ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Upload size={14} className="shrink-0" /> <span className="truncate">{(t.dashboard.settings as any).importButton ?? 'Escolher ficheiro e importar'}</span></>}
+            </button>
+          </section>
+
           {/* Danger Zone — responsiva para mobile */}
           <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/5 blur-[40px] rounded-full -z-10" />
@@ -611,13 +694,6 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-3 sm:space-y-4">
-              <button 
-                onClick={handleExportData}
-                disabled={exporting}
-                className="w-full min-h-[44px] py-3 sm:py-4 px-4 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
-              >
-                {exporting ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Download size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.export}</span></>}
-              </button>
               <button 
                 onClick={() => setShowPurgeConfirm(true)}
                 className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all border border-amber-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"

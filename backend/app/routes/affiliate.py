@@ -811,10 +811,9 @@ async def get_stripe_connect_dashboard(
             current_user.stripe_connect_account_id,
             redirect_url=f"{settings.FRONTEND_URL}/affiliate"
         )
-        
         return {
-            'dashboard_url': login_link.url,
-            'expires_at': login_link.expires_at
+            'dashboard_url': getattr(login_link, 'url', None),
+            'expires_at': getattr(login_link, 'expires_at', None),
         }
         
     except stripe.error.StripeError as e:

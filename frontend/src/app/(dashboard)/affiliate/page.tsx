@@ -939,13 +939,14 @@ export default function AffiliatePage() {
               <Info className="w-4 h-4" />
               {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
             </button>
-            {status?.stripe_connect_configured && (
+            {(status?.stripe_connect_configured || status?.stripe_connect_account_id) && (
               <button
                 type="button"
                 onClick={() => setShowDisconnectStripeModal(true)}
-                className="mt-2 w-full px-4 py-2 text-xs text-slate-500 hover:text-red-400 font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="mt-3 w-full px-4 py-3 rounded-xl border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 text-red-400 hover:text-red-300 font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                {(t.dashboard?.affiliate as Record<string, string>)?.['changeStripeAccount'] ?? "Trocar conta Stripe"}
+                <Trash2 className="w-4 h-4 shrink-0" />
+                {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeButton'] ?? "Desligar conta Stripe"}
               </button>
             )}
           </motion.div>
