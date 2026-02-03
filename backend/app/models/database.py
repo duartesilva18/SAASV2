@@ -235,6 +235,8 @@ class TelegramPendingTransaction(Base):
     inference_source = Column(String(50), nullable=True)
     decision_reason = Column(String(255), nullable=True)
     needs_review = Column(Boolean, nullable=False, default=False)
+    batch_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # Agrupa várias linhas da mesma mensagem (lista)
+    suggested_category_name = Column(String(100), nullable=True)  # Nome sugerido pela IA quando a categoria não existe
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     workspace = relationship('Workspace')

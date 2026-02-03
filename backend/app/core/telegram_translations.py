@@ -31,6 +31,7 @@ TELEGRAM_TRANSLATIONS = {
             "🎯 <b>Funcionalidades:</b>\n"
             "• Categorização automática com IA\n"
             "• Especifica categoria: <code>Descrição - Categoria Valor€</code>\n"
+            "• Data específica: <code>Almoço 15€ 28/01</code> ou <code>dia 28 Almoço 15€</code>\n"
             "• Múltiplas transações numa mensagem\n\n"
             "🧘‍♂️ <i>Simplicidade é a chave do controlo financeiro.</i>"
         ),
@@ -122,9 +123,10 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category}\n"
-            "📊 <b>Tipo:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
+            "📊 <b>Tipo:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "✅ Confirma esta transação?"
         ),
         'transaction_confirmed': (
@@ -133,9 +135,10 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category}\n"
-            "📊 <b>Tipo:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
+            "📊 <b>Tipo:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
         ),
         'transaction_registered': (
@@ -144,11 +147,14 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category}\n"
-            "📊 <b>Tipo:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
+            "📊 <b>Tipo:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
         ),
+        'date_line': "\n📅 <b>Data:</b> {date}\n",
+        'date_line_empty': "",
         'transaction_not_found': (
             "❌ Transação não encontrada ou já processada."
         ),
@@ -161,6 +167,24 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ <b>Transação não encontrada</b>\n\n"
             "💡 Esta transação já foi processada ou não existe.\n\n"
             "🧘‍♂️ <i>Podes enviar uma nova transação.</i>"
+        ),
+        'list_pending_header': (
+            "📋 <b>Lista de transações</b>\n\n"
+        ),
+        'list_pending_line': "• {description} — {amount}€ — {category}\n",
+        'list_pending_total': "━━━━━━━━━━\n💰 <b>Total:</b> {total}€\n\n",
+        'list_confirm_question': "✅ Confirma todas estas transações?",
+        'button_confirm_all': "✅ Confirmar tudo",
+        'button_cancel_all': "🚫 Cancelar tudo",
+        'list_confirmed': (
+            "✨ <b>Transações registadas!</b> ✨\n\n"
+            "💎 Todas as transações da lista foram guardadas.\n\n"
+            "🧘‍♂️ <i>O teu ecossistema Zen está atualizado.</i>"
+        ),
+        'list_cancelled': (
+            "🚫 <b>Lista cancelada</b>\n\n"
+            "💡 Nenhuma transação foi registada.\n\n"
+            "🧘‍♂️ <i>Podes enviar uma nova lista quando quiseres.</i>"
         ),
         'multiple_transactions_created': (
             "✨ <b>{count} Transação(ões) Criada(s)!</b> ✨\n\n"
@@ -186,6 +210,44 @@ TELEGRAM_TRANSLATIONS = {
         'type_income': 'Receita',
         'button_confirm': '✨ Confirmar',
         'button_cancel': '🚫 Cancelar',
+        'source_cache': 'Por cache',
+        'source_history': 'Por histórico',
+        'source_openai': 'Por IA',
+        'source_fallback': 'Por defeito',
+        'source_explicit': 'Por ti',
+        'origin_suffix': "(<i>{origin}</i>)",
+        'processing_photo': "⏳ A processar a imagem…",
+        'summary_today': (
+            "📊 <b>Resumo de hoje</b>\n\n"
+            "📉 Despesas: <b>{expenses}€</b>\n"
+            "📈 Receitas: <b>{income}€</b>\n"
+            "📝 Transações: <b>{count}</b>\n\n"
+            "🧘‍♂️ <i>Saldo do dia: {balance}€</i>"
+        ),
+        'summary_month': (
+            "📊 <b>Resumo do mês</b>\n\n"
+            "📉 Despesas: <b>{expenses}€</b>\n"
+            "📈 Receitas: <b>{income}€</b>\n"
+            "📝 Transações: <b>{count}</b>\n\n"
+            "🧘‍♂️ <i>Saldo do mês: {balance}€</i>"
+        ),
+        'summary_empty': "📊 Ainda sem transações neste período.",
+        'pendentes_list': "📋 <b>Transações pendentes</b> ({count})\n\n{lines}\n💡 Confirma ou cancela cada uma na mensagem original, ou usa /clear para limpar todas.",
+        'pendentes_empty': "✨ Não tens transações pendentes.",
+        'revoke_ok': "✅ Telegram desvinculado. Para voltar a usar, envia /start e o teu email.",
+        'language_set': "✅ Idioma definido para Português.",
+        'language_set_en': "✅ Language set to English.",
+        'help_short': "📖 Comandos: /info (formato) · /resumo (hoje) · /mes · /pendentes · /clear · /revoke (desvincular)",
+        'tip_multi': "💡 Dica: podes enviar várias assim: Almoço 15€ Gasolina 40€",
+        'too_many_pending': "⚠️ Tens muitas transações pendentes ({count}). Confirma ou usa /clear antes de adicionar mais.",
+        'ai_busy': "⏳ Muitos pedidos neste momento. Tenta daqui a um minuto.",
+        'create_category_prompt': "🏷️ A IA sugeriu a categoria <b>«{name}»</b> que não existe no teu workspace.\n\nQueres criar esta categoria e usar para esta transação?",
+        'button_create_category': "✅ Sim, criar",
+        'button_skip_category': "❌ Não, cancelar",
+        'category_created_confirm': "✅ Categoria <b>«{name}»</b> criada. Confirma a transação abaixo?",
+        'generic_error': "⚠️ Algo correu mal. Tenta de novo ou envia <code>/info</code>.",
+        'pending_duplicate': "💡 Já tens esta transação pendente. Confirma ou cancela na mensagem original.",
+        'pending_stale': "⏳ Tens transações pendentes há mais de 24h. Confirma ou usa /clear.",
     },
     'en': {
         'welcome_new': (
@@ -216,6 +278,7 @@ TELEGRAM_TRANSLATIONS = {
             "🎯 <b>Features:</b>\n"
             "• Automatic categorization with AI\n"
             "• Specify category: <code>Description - Category Value€</code>\n"
+            "• Specific date: <code>Lunch 15€ 28/01</code> or <code>day 28 Lunch 15€</code>\n"
             "• Multiple transactions in one message\n\n"
             "🧘‍♂️ <i>Simplicity is the key to financial control.</i>"
         ),
@@ -307,9 +370,10 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category}\n"
-            "📊 <b>Type:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Category:</b> {category} {origin_line}\n"
+            "📊 <b>Type:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "✅ Confirm this transaction?"
         ),
         'transaction_confirmed': (
@@ -318,9 +382,10 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category}\n"
-            "📊 <b>Type:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Category:</b> {category} {origin_line}\n"
+            "📊 <b>Type:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
         ),
         'transaction_registered': (
@@ -329,11 +394,14 @@ TELEGRAM_TRANSLATIONS = {
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
             "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category}\n"
-            "📊 <b>Type:</b> {type}\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
+            "🏷️ <b>Category:</b> {category} {origin_line}\n"
+            "📊 <b>Type:</b> {type}\n"
+            "{date_line}"
+            "\n━━━━━━━━━━━━━━━━━━\n"
             "🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
         ),
+        'date_line': "\n📅 <b>Date:</b> {date}\n",
+        'date_line_empty': "",
         'transaction_not_found': (
             "❌ Transaction not found or already processed."
         ),
@@ -346,6 +414,24 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ <b>Transaction not found</b>\n\n"
             "💡 This transaction has already been processed or doesn't exist.\n\n"
             "🧘‍♂️ <i>You can send a new transaction.</i>"
+        ),
+        'list_pending_header': (
+            "📋 <b>Transaction list</b>\n\n"
+        ),
+        'list_pending_line': "• {description} — {amount}€ — {category}\n",
+        'list_pending_total': "━━━━━━━━━━\n💰 <b>Total:</b> {total}€\n\n",
+        'list_confirm_question': "✅ Confirm all these transactions?",
+        'button_confirm_all': "✅ Confirm all",
+        'button_cancel_all': "🚫 Cancel all",
+        'list_confirmed': (
+            "✨ <b>Transactions registered!</b> ✨\n\n"
+            "💎 All transactions in the list were saved.\n\n"
+            "🧘‍♂️ <i>Your Zen ecosystem is updated.</i>"
+        ),
+        'list_cancelled': (
+            "🚫 <b>List cancelled</b>\n\n"
+            "💡 No transactions were registered.\n\n"
+            "🧘‍♂️ <i>You can send a new list whenever you want.</i>"
         ),
         'multiple_transactions_created': (
             "✨ <b>{count} Transaction(s) Created!</b> ✨\n\n"
@@ -371,6 +457,44 @@ TELEGRAM_TRANSLATIONS = {
         'type_income': 'Income',
         'button_confirm': '✨ Confirm',
         'button_cancel': '🚫 Cancel',
+        'source_cache': 'From cache',
+        'source_history': 'From history',
+        'source_openai': 'From AI',
+        'source_fallback': 'Default',
+        'source_explicit': 'By you',
+        'origin_suffix': "(<i>{origin}</i>)",
+        'processing_photo': "⏳ Processing image…",
+        'summary_today': (
+            "📊 <b>Today's summary</b>\n\n"
+            "📉 Expenses: <b>{expenses}€</b>\n"
+            "📈 Income: <b>{income}€</b>\n"
+            "📝 Transactions: <b>{count}</b>\n\n"
+            "🧘‍♂️ <i>Daily balance: {balance}€</i>"
+        ),
+        'summary_month': (
+            "📊 <b>Month summary</b>\n\n"
+            "📉 Expenses: <b>{expenses}€</b>\n"
+            "📈 Income: <b>{income}€</b>\n"
+            "📝 Transactions: <b>{count}</b>\n\n"
+            "🧘‍♂️ <i>Monthly balance: {balance}€</i>"
+        ),
+        'summary_empty': "📊 No transactions in this period yet.",
+        'pendentes_list': "📋 <b>Pending transactions</b> ({count})\n\n{lines}\n💡 Confirm or cancel each in the original message, or use /clear to clear all.",
+        'pendentes_empty': "✨ You have no pending transactions.",
+        'revoke_ok': "✅ Telegram unlinked. To use again, send /start and your email.",
+        'language_set': "✅ Language set to Portuguese.",
+        'language_set_en': "✅ Language set to English.",
+        'help_short': "📖 Commands: /info (format) · /resumo (today) · /mes · /pendentes · /clear · /revoke (unlink)",
+        'tip_multi': "💡 Tip: you can send several like this: Lunch 15€ Gas 40€",
+        'too_many_pending': "⚠️ You have too many pending transactions ({count}). Confirm or use /clear before adding more.",
+        'ai_busy': "⏳ Too many requests right now. Try again in a minute.",
+        'create_category_prompt': "🏷️ The AI suggested the category <b>«{name}»</b> which doesn't exist in your workspace.\n\nDo you want to create this category and use it for this transaction?",
+        'button_create_category': "✅ Yes, create",
+        'button_skip_category': "❌ No, cancel",
+        'category_created_confirm': "✅ Category <b>«{name}»</b> created. Confirm the transaction below?",
+        'generic_error': "⚠️ Something went wrong. Try again or send <code>/info</code>.",
+        'pending_duplicate': "💡 You already have this transaction pending. Confirm or cancel in the original message.",
+        'pending_stale': "⏳ You have pending transactions older than 24h. Confirm or use /clear.",
     }
 }
 

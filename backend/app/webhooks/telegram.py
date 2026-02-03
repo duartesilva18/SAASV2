@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 import requests
 import json
 import logging
@@ -37,7 +37,31 @@ def _telegram_lang(from_user: Optional[dict]) -> str:
     """Infer bot language from Telegram user (when app user has no language set)."""
     code = (from_user or {}).get("language_code") or "pt"
     return "en" if (code and code.lower().startswith("en")) else "pt"
-# Não adicionar handlers aqui - usar os do logging root para evitar duplicação
+
+
+def _origin_line(inference_source: Optional[str], t) -> str:
+    """Returns a short origin label for category (e.g. 'Por cache') or empty string."""
+    if not inference_source:
+        return ""
+    src = (inference_source or "").lower()
+    if "cache" in src or src == "cache_telegram":
+        key = "source_cache"
+    elif "history" in src or "similar" in src:
+        key = "source_history"
+    elif "openai" in src or "vision" in src:
+        key = "source_openai"
+    elif "explicit" in src:
+        key = "source_explicit"
+    else:
+        key = "source_fallback"
+    return t("origin_suffix", origin=t(key))
+
+
+def _date_line(transaction_date: date, t) -> str:
+    """Returns date line for message if date is not today, else empty."""
+    if transaction_date == date.today():
+        return ""
+    return t("date_line", date=transaction_date.strftime("%d/%m/%Y"))
 
 router = APIRouter(prefix='/telegram', tags=['webhooks'])
 
@@ -45,6 +69,25 @@ router = APIRouter(prefix='/telegram', tags=['webhooks'])
 _rate_limit_store = defaultdict(list)  # chat_id -> [timestamps]
 _rate_limit_window = timedelta(minutes=1)
 _rate_limit_max_messages = 10  # Máximo 10 mensagens por minuto
+
+# Idempotência: update_id já processados (TTL ~5 min)
+_processed_updates: Dict[int, datetime] = {}
+_processed_updates_ttl = timedelta(minutes=5)
+PENDING_STALE_HOURS = 24
+
+
+def _is_duplicate_update(update_id: int) -> bool:
+    """True se este update_id já foi processado (evitar duplicados)."""
+    if update_id is None:
+        return False
+    now = datetime.now()
+    for uid, ts in list(_processed_updates.items()):
+        if now - ts > _processed_updates_ttl:
+            del _processed_updates[uid]
+    if update_id in _processed_updates:
+        return True
+    _processed_updates[update_id] = now
+    return False
 
 def check_rate_limit(chat_id: str) -> bool:
     """Verifica se o chat_id está dentro do limite de rate"""
@@ -123,84 +166,55 @@ def find_best_category_match(user_input: str, categories: List[models.Category],
 
 def find_similar_transaction(text: str, workspace_id: uuid.UUID, db: Session, tipo: str) -> Optional[uuid.UUID]:
     """
-    Busca transações similares no histórico para usar categoria do cache.
-    Retorna category_id se encontrar match forte.
-    NÃO usa transações de seed (1 cêntimo) para cache.
+    Busca transações similares no histórico (dados históricos).
+    Prioridade máxima antes de IA: quanto mais hits, menos chamadas à OpenAI.
+    Usa chave canonical (igual ao motor) para consistência.
+    NÃO usa transações de seed (1 cêntimo).
     """
-    # Normalizar texto de entrada
-    text_normalized = normalize_text(text)
-    words = set(text_normalized.split())
-    
-    if not words:
-        logger.info(f"Texto vazio após normalização: '{text}'")
+    cache_key = _description_cache_key(text)
+    if not cache_key:
         return None
-    
-    # Buscar transações do histórico (últimos 180 dias para melhor aprendizagem)
-    # Quanto mais transações, melhor o sistema aprende os padrões do utilizador
+    words = set(cache_key.split())
+    if not words:
+        return None
+
     cutoff_date = date.today() - timedelta(days=180)
-    
     transactions = db.query(models.Transaction).filter(
         models.Transaction.workspace_id == workspace_id,
         models.Transaction.transaction_date >= cutoff_date,
-        models.Transaction.category_id.isnot(None)
-    ).order_by(models.Transaction.transaction_date.desc()).limit(500).all()  # Aumentado para 500 para mais dados
-    
-    # Filtrar por tipo (expense = negativo, income = positivo)
-    # E EXCLUIR transações de seed (1 cêntimo) - não devem ser usadas para cache
+        models.Transaction.category_id.isnot(None),
+    ).order_by(models.Transaction.transaction_date.desc()).limit(500).all()
+
     if tipo == "expense":
         transactions = [t for t in transactions if t.amount_cents < 0 and abs(t.amount_cents) != 1]
     else:
         transactions = [t for t in transactions if t.amount_cents > 0 and abs(t.amount_cents) != 1]
-    
-    logger.info(f"Buscando transações similares para '{text}' (tipo: {tipo}). Total de transações a verificar: {len(transactions)}")
-    
+
     best_match = None
     best_score = 0
     best_description = None
-    
+
     for trans in transactions:
         if not trans.description:
             continue
-        
-        # Normalizar descrição da transação
-        desc_normalized = normalize_text(trans.description)
-        desc_words = set(desc_normalized.split())
-        
-        # Calcular score (palavras em comum)
-        common_words = words.intersection(desc_words)
-        score = len(common_words)
-        
-        # Bonus para palavras importantes (>4 caracteres)
-        important_words = [w for w in common_words if len(w) > 4]
-        score += len(important_words) * 2  # Bonus maior para palavras importantes
-        
-        # Bonus por recência: transações mais recentes têm mais peso (aprendizagem contínua)
+        desc_can = _description_cache_key(trans.description)
+        desc_words = set(desc_can.split())
+        common = words.intersection(desc_words)
+        if not common:
+            continue
+        score = len(common) + sum(2 for w in common if len(w) > 4)
         days_ago = (date.today() - trans.transaction_date).days
-        if days_ago <= 7:
-            score += 3  # Muito recente (última semana)
-        elif days_ago <= 30:
-            score += 2  # Recente (último mês)
-        elif days_ago <= 90:
-            score += 1  # Moderado (últimos 3 meses)
-        # Transações antigas (90-180 dias) não têm bonus
-        
-        # Score mínimo mais rigoroso: precisa de pelo menos 2 palavras comuns E pelo menos 1 palavra importante (>4 chars)
-        # OU 3+ palavras comuns (mesmo que curtas)
-        has_important_word = any(len(w) > 4 for w in common_words)
-        min_words_required = 3 if not has_important_word else 2
-        
-        if score >= min_words_required and (has_important_word or len(common_words) >= 3):
-            if score > best_score:
-                best_score = score
-                best_match = trans.category_id
-                best_description = trans.description
-                logger.info(f"Match encontrado: '{trans.description}' (score: {score}, palavras comuns: {common_words}, dias atrás: {days_ago})")
-    
+        score += 3 if days_ago <= 7 else (2 if days_ago <= 30 else (1 if days_ago <= 90 else 0))
+        has_important = any(len(w) > 4 for w in common)
+        # Relaxado: 1 palavra importante OU 2+ palavras em comum (favorece histórico antes de IA)
+        accept = (has_important and len(common) >= 1) or len(common) >= 2
+        if accept and score >= 2 and score > best_score:
+            best_score = score
+            best_match = trans.category_id
+            best_description = trans.description
+
     if best_match:
-        logger.info(f"Melhor match no cache: '{best_description}' (score: {best_score}) -> category_id: {best_match}")
-    else:
-        logger.info(f"Nenhum match forte encontrado no cache para '{text}' (melhor score: {best_score})")
-    
+        logger.info("Histórico similar: '%s' -> category_id (score=%s)", best_description, best_score)
     return best_match
 
 def validate_email(email: str) -> bool:
@@ -208,35 +222,110 @@ def validate_email(email: str) -> bool:
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
 
+
+def _parse_date_from_text(text: str) -> Optional[date]:
+    """
+    Extrai uma data da mensagem para usar como transaction_date.
+    Suporta: "28/01", "28/01/25", "28/01/2025", "28-01", "dia 28", "28 jan", "28 janeiro".
+    Retorna None se não encontrar data válida.
+    """
+    if not text or not text.strip():
+        return None
+    text_clean = text.strip()
+    today = date.today()
+    # DD/MM ou DD/MM/YY ou DD/MM/YYYY
+    m = re.search(r'\b(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{2,4}))?\b', text_clean)
+    if m:
+        d, mo, y = int(m.group(1)), int(m.group(2)), m.group(3)
+        if y is None:
+            year = today.year
+        else:
+            year = int(y)
+            if year < 100:
+                year += 2000 if year < 50 else 1900
+        try:
+            return date(year, mo, d)
+        except ValueError:
+            pass
+    # "dia 28" / "day 28" (dia do mês atual)
+    m = re.search(r'\b(?:dia|day)\s+(\d{1,2})\b', text_clean, re.IGNORECASE)
+    if m:
+        try:
+            d = int(m.group(1))
+            return date(today.year, today.month, d)
+        except ValueError:
+            pass
+    # "28 jan" / "28 janeiro" / "15 dez"
+    months_map = [
+        (r'janeiro|january|jan', 1), (r'fevereiro|february|fev|feb', 2), (r'mar[cç]o|march|mar', 3),
+        (r'abril|april|abr|apr', 4), (r'maio|may|mai', 5), (r'junho|june|jun', 6),
+        (r'julho|july|jul', 7), (r'agosto|august|ago|aug', 8), (r'setembro|september|set|sep', 9),
+        (r'outubro|october|out|oct', 10), (r'novembro|november|nov', 11), (r'dezembro|december|dez|dec', 12),
+    ]
+    m = re.search(r'\b(\d{1,2})\s+([a-zàáâãäåèéêëìíîïòóôõöùúûüç]+)\b', text_clean, re.IGNORECASE)
+    if m:
+        d = int(m.group(1))
+        month_name = m.group(2).lower()
+        for pattern, mo in months_map:
+            if re.match(pattern, month_name, re.IGNORECASE):
+                try:
+                    return date(today.year, mo, d)
+                except ValueError:
+                    pass
+                break
+    return None
+
+def _strip_date_from_description(description: str) -> str:
+    """Remove padrões de data da descrição (28/01, dia 28, day 28, 28 jan, etc.) para não guardar na BD."""
+    if not description:
+        return description
+    s = description.strip()
+    s = re.sub(r'\b\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\b', '', s)
+    s = re.sub(r'\b(?:dia|day)\s+\d{1,2}\b', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b\d{1,2}\s+(?:jan|janeiro|fev|fevereiro|mar|março|marco|abr|abril|mai|maio|jun|junho|jul|julho|ago|agosto|set|setembro|out|outubro|nov|novembro|dez|dezembro|january|february|march|april|may|june|july|august|september|october|november|december)\b', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s or description.strip()
+
+
 def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Optional[Dict]:
     """
     Extrai valor, tipo e categoria de uma mensagem de texto.
     Suporta múltiplas transações separadas por espaço.
+    Aceita data na mensagem: "Almoço 15€ 28/01", "Almoço 28/01 15€", "dia 28 Almoço 15€".
     """
+    # Data opcional na mensagem (aplica-se a todas as transações da mensagem)
+    parsed_date = _parse_date_from_text(text)
+    default_transaction_date = parsed_date if parsed_date else date.today()
+
     # Suporta múltiplas transações: "Almoço 15€ Gasolina 10€"
     transactions = []
     
-    # Regex para encontrar valores monetários
-    # Suporta: "15€", "15.50€", "1.234,56€", "1 234€"
-    valor_pattern = r'(\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros|e)?'
-    
-    # Encontrar todos os valores na mensagem
+    # Regex para encontrar valores monetários (inclui -15€)
+    # Suporta: "15€", "15.50€", "-15€", "1.234,56€", "1 234€"
+    valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?'
     valor_matches = list(re.finditer(valor_pattern, text, re.IGNORECASE))
-    
     if not valor_matches:
         return None
     
     # Identificar tipo (despesa ou receita)
     text_lower = text.lower()
     income_keywords = [
-        'recebi', 'salário', 'ordenado', 'ganhei', 'vendi', 'rendimento', 
-        'bonus', 'vencimento', 'reembolso', 'subsídio', 'prémio', 'premio'
+        'recebi', 'salário', 'ordenado', 'ganhei', 'vendi', 'rendimento',
+        'bonus', 'vencimento', 'reembolso', 'subsídio', 'prémio', 'premio',
+        'venda', 'cashback', 'entrada', 'received', 'salary', 'income', 'refund'
     ]
-    # Keywords para resgate de vault (investimento/emergência)
+    expense_keywords = [
+        'pago', 'paguei', 'debitado', 'saída', 'gastei', 'paid', 'spent', 'debit'
+    ]
     vault_withdrawal_keywords = [
         'retirar', 'resgate', 'retirei', 'sacar', 'levantei', 'withdraw', 'withdrawal'
     ]
-    tipo = "income" if any(k in text_lower for k in income_keywords) else "expense"
+    if any(k in text_lower for k in income_keywords):
+        tipo = "income"
+    elif any(k in text_lower for k in expense_keywords):
+        tipo = "expense"
+    else:
+        tipo = "expense"
     is_vault_withdrawal = any(k in text_lower for k in vault_withdrawal_keywords)
     
     # Buscar categorias do workspace
@@ -294,14 +383,23 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
                         logger.info(f"✓ Categoria encontrada por similaridade na palavra '{word}': '{match.name}'")
                         break
     
+    # Limites de valor (evitar input acidental)
+    MAX_AMOUNT = 999_999.99
+
     # Processar cada valor encontrado
     for i, valor_match in enumerate(valor_matches):
-        # Extrair valor
+        # Extrair valor (suporta -15€)
         valor_str = valor_match.group(1).replace(' ', '').replace('.', '').replace(',', '.')
         try:
             amount = float(valor_str)
         except ValueError:
             continue
+        if abs(amount) > MAX_AMOUNT:
+            continue
+        # Valor negativo explícito = despesa
+        if amount < 0:
+            amount = abs(amount)
+            tipo = "expense"
         
         # Extrair descrição (texto antes do valor, ou texto entre valores)
         # Se há hífen no texto, a descrição é apenas a parte ANTES do hífen
@@ -355,6 +453,9 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             description = " ".join(final_desc_words).strip()
         else:
             description = "Transação Telegram"
+        description = _strip_date_from_description(description)[:255]
+        if not description:
+            description = "Transação Telegram"
         
         inference_source = "fallback"
         needs_review = True
@@ -367,56 +468,86 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             decision_reason = f"explicit:{specified_category_name}"
             logger.info(f"✓ Usando categoria especificada pelo utilizador: '{specified_category_name}' (id: {category_id})")
         else:
-            # Motor de categorização: regras, token-scoring, caches, Gemini fallback
-            try:
-                from ..core.categorization_engine import infer_category
-                from ..core.config import settings
-                cat_id, source, needs_review, conf, reason, explain = infer_category(
-                    description,
-                    workspace.id,
-                    tipo,
-                    categories,
-                    db,
-                    models,
-                    settings,
-                    explicit_category_id=None,
-                    use_gemini=True,
-                )
-                category_id = cat_id
-                inference_source = source
-                decision_reason = reason
+            # Prioridade: cache (exato) → histórico/similaridade → motor SEM IA → (opcional) IA só se nada acertar
+            # Objetivo: IA apenas para imagens; texto usa dados históricos e similaridade ao máximo.
+            cache_key = _description_cache_key(description)
+            category_id = None
+            inference_source = "legacy_fallback"
+            decision_reason = "legacy_fallback"
+
+            # 1) Cache privado/global (chave canonical = mesmo que o motor)
+            if cache_key:
+                category_id = get_cached_category(cache_key, workspace.id, tipo, categories, db)
                 if category_id:
-                    logger.info(f"Categorização: source={source}, confidence={conf:.2f}, needs_review={needs_review}")
-                    # Se OpenAI retornou sucesso, guardar no cache (o motor não faz save para openai)
-                    if source == 'openai' and category_id:
-                        description_normalized = normalize_text(description)
-                        category_obj = next((c for c in categories if c.id == category_id), None)
-                        cat_name = category_obj.name if category_obj else "Outros"
-                        save_cached_category(description_normalized, workspace.id, category_id, cat_name, tipo, db, is_common=True)
-            except Exception as e:
-                logger.warning(f"Motor de categorização falhou, usando fallback legado: {e}")
-                # Fallback legado
+                    inference_source = "cache_private"
+                    decision_reason = "cache_telegram"
+
+            # 2) Similaridade com histórico (transações passadas do utilizador)
+            if not category_id:
                 category_id = find_similar_transaction(description, workspace.id, db, tipo)
-                if not category_id:
-                    category_id = get_cached_category(normalize_text(description), workspace.id, tipo, categories, db)
-                if not category_id:
-                    category_id = categorize_with_ai(description, categories, tipo, text, workspace.id, db)
-                    if category_id:
-                        cat_obj = next((c for c in categories if c.id == category_id), None)
-                        save_cached_category(normalize_text(description), workspace.id, category_id, cat_obj.name if cat_obj else "Outros", tipo, db, is_common=True)
-                inference_source = "legacy_fallback"
-                decision_reason = "legacy_fallback"
-        
-        # Se ainda não encontrou (nem cache nem IA), usar primeira categoria do tipo
-        if not category_id and categories:
-            logger.info(f"Usando primeira categoria do tipo '{tipo}' como fallback")
-            category_id = categories[0].id
+                if category_id:
+                    inference_source = "history_similarity"
+                    decision_reason = "history_similarity_telegram"
+
+            # 3) Motor de categorização SEM IA (regras, token-scoring, cache do motor, similaridade do motor)
+            if not category_id:
+                try:
+                    from ..core.categorization_engine import infer_category
+                    from ..core.config import settings
+                    cat_id, source, needs_review, conf, reason, explain = infer_category(
+                        description,
+                        workspace.id,
+                        tipo,
+                        categories,
+                        db,
+                        models,
+                        settings,
+                        explicit_category_id=None,
+                        use_gemini=False,  # IA só para imagens; texto não chama OpenAI
+                    )
+                    category_id = cat_id
+                    inference_source = source
+                    decision_reason = reason
+                except Exception as e:
+                    logger.warning("Motor de categorização falhou: %s", e)
+
+            # 4) Último recurso: IA (só se não houver cache/histórico/motor) e circuit-breaker fechado
+            suggested_category_name = None
+            if not category_id:
+                try:
+                    from ..core.categorization_engine import check_gemini_circuit_breaker
+                    if check_gemini_circuit_breaker(db, models, workspace.id):
+                        logger.warning("Circuit-breaker IA aberto no Telegram; não chamar OpenAI")
+                        category_id = categories[0].id if categories else None
+                        inference_source = "fallback"
+                        decision_reason = "fallback:circuit_breaker"
+                    else:
+                        cat_id, suggested_name = categorize_with_ai(description, categories, tipo, text, workspace.id, db)
+                        if cat_id:
+                            category_id = cat_id
+                            inference_source = "openai"
+                            decision_reason = "openai:last_resort"
+                            cache_key_save = _description_cache_key(description)
+                            if cache_key_save:
+                                cat_obj = next((c for c in categories if c.id == category_id), None)
+                                save_cached_category(cache_key_save, workspace.id, category_id, cat_obj.name if cat_obj else "Outros", tipo, db, is_common=True)
+                        elif suggested_name:
+                            suggested_category_name = suggested_name[:100]
+                            inference_source = "openai"
+                            decision_reason = "openai:suggest_new"
+                except Exception as e:
+                    logger.warning("IA (último recurso) falhou: %s", e)
+
+            # 5) Fallback final: primeira categoria do tipo (só se não for "sugerir criar")
+            if not category_id and categories and not suggested_category_name:
+                logger.info("Sem cache/histórico/motor/IA: usando primeira categoria do tipo '%s'", tipo)
+                category_id = categories[0].id
+                inference_source = "fallback"
+                decision_reason = "fallback:first_category"
         
         # Verificar se a categoria é de vault (investimento/emergência)
-        # Buscar categoria diretamente da base de dados para garantir que temos todos os dados
-        category_obj = db.query(models.Category).filter(models.Category.id == category_id).first()
-        if not category_obj:
-            # Fallback: procurar na lista de categorias já carregadas
+        category_obj = db.query(models.Category).filter(models.Category.id == category_id).first() if category_id else None
+        if not category_obj and category_id:
             category_obj = next((cat for cat in categories if cat.id == category_id), None)
         is_vault_category = category_obj and category_obj.vault_type != 'none' if category_obj else False
         
@@ -429,7 +560,9 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
             "needs_review": needs_review,
             "decision_reason": decision_reason,
             "is_vault": is_vault_category,
-            "is_vault_withdrawal": is_vault_withdrawal if is_vault_category else False
+            "is_vault_withdrawal": is_vault_withdrawal if is_vault_category else False,
+            "suggested_category_name": suggested_category_name,
+            "transaction_date": default_transaction_date,
         })
     
     # Retornar primeira transação ou lista se múltiplas
@@ -437,11 +570,20 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
         return transactions[0]
     return {"multiple": True, "transactions": transactions}
 
+
+def _description_cache_key(description: str) -> str:
+    """
+    Chave de cache alinhada com o motor de categorização (canonicalize).
+    Assim o cache do Telegram e o do motor são o mesmo → menos IA.
+    """
+    from ..core.categorization_engine import canonicalize
+    return canonicalize(description) or ""
+
+
 def get_cached_category(description_normalized: str, workspace_id: uuid.UUID, tipo: str, categories: List[models.Category], db: Session) -> Optional[uuid.UUID]:
     """
     Verifica se existe uma categorização em cache para esta descrição.
-    Primeiro verifica cache do workspace (privado), depois cache global (partilhado).
-    Retorna category_id se encontrar.
+    description_normalized deve ser a chave canonical (canonicalize(description)) para alinhar com o motor.
     """
     # 1. Verificar cache privado do workspace
     cache_entry = db.query(models.CategoryMappingCache).filter(
@@ -546,26 +688,26 @@ def save_cached_category(description_normalized: str, workspace_id: uuid.UUID, c
         logger.error(f"Erro ao guardar no cache: {str(e)}")
         db.rollback()
 
-def categorize_with_ai(text: str, categories: List[models.Category], tipo: str, original_text: str, workspace_id: uuid.UUID, db: Session) -> Optional[uuid.UUID]:
+def categorize_with_ai(text: str, categories: List[models.Category], tipo: str, original_text: str, workspace_id: uuid.UUID, db: Session) -> tuple:
     """
     Usa OpenAI GPT-4o-mini para categorizar a transação quando não encontra no cache.
-    Retorna category_id ou None.
+    Retorna (category_id, suggested_category_name).
+    - Se a IA acertar numa categoria existente: (category_id, None).
+    - Se a IA sugerir um nome que não existe: (None, ai_category_name) para o bot perguntar se quer criar.
     """
     if not settings.OPENAI_API_KEY:
         logger.warning("OPENAI_API_KEY não configurada. Não é possível usar IA para categorizar.")
-        return None
+        return (None, None)
     
-    # Filtrar apenas categorias do tipo correto (já vem filtrado, mas garantir)
     filtered_categories = [cat for cat in categories if cat.type == tipo]
     if not filtered_categories:
         logger.warning(f"Nenhuma categoria do tipo '{tipo}' disponível")
-        return None
+        return (None, None)
     
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
         
-        # Preparar lista de categorias (apenas do tipo correto, formato compacto)
         categories_list = [cat.name for cat in filtered_categories]
         categories_text = ", ".join(categories_list)
         
@@ -589,33 +731,37 @@ Responde APENAS com o nome exato da categoria:"""
                 ai_category_name = response.choices[0].message.content.strip()
             logger.info(f"Resposta OpenAI: '{ai_category_name}'")
             
-            category_id_found = None
+            if not ai_category_name:
+                return (None, None)
             
+            # 1) Match exato
             for cat in filtered_categories:
                 if cat.name.lower() == ai_category_name.lower():
                     logger.info(f"Match exato: '{cat.name}' (id: {cat.id})")
-                    category_id_found = cat.id
-                    break
+                    return (cat.id, None)
             
-            if not category_id_found:
-                for cat in filtered_categories:
-                    if cat.name.lower() in ai_category_name.lower() or ai_category_name.lower() in cat.name.lower():
-                        logger.info(f"Match parcial: '{cat.name}' (id: {cat.id})")
-                        category_id_found = cat.id
-                        break
+            # 2) Match fuzzy (find_best_category_match)
+            fuzzy_match = find_best_category_match(ai_category_name, filtered_categories, threshold=0.6)
+            if fuzzy_match:
+                logger.info(f"Match fuzzy: '{fuzzy_match.name}' para IA '{ai_category_name}'")
+                return (fuzzy_match.id, None)
             
-            if not category_id_found and ai_category_name:
-                first_word = ai_category_name.split()[0]
-                for cat in filtered_categories:
-                    if first_word.lower() in cat.name.lower():
-                        logger.info(f"Match por palavra: '{cat.name}' (id: {cat.id})")
-                        category_id_found = cat.id
-                        break
+            # 3) Match parcial (substring)
+            for cat in filtered_categories:
+                if cat.name.lower() in ai_category_name.lower() or ai_category_name.lower() in cat.name.lower():
+                    logger.info(f"Match parcial: '{cat.name}' (id: {cat.id})")
+                    return (cat.id, None)
             
-            if category_id_found:
-                return category_id_found
-            logger.warning(f"Nenhuma categoria encontrada para: '{ai_category_name}'")
-            return None
+            # 4) Primeira palavra
+            first_word = ai_category_name.split()[0]
+            for cat in filtered_categories:
+                if first_word.lower() in cat.name.lower():
+                    logger.info(f"Match por palavra: '{cat.name}' (id: {cat.id})")
+                    return (cat.id, None)
+            
+            # Nenhum match: sugerir criar a categoria com o nome da IA
+            logger.warning(f"Nenhuma categoria encontrada para: '{ai_category_name}' -> sugerir criar")
+            return (None, ai_category_name[:100])
                         
         except Exception as e:
             err_str = (str(e) or "").lower()
@@ -626,16 +772,16 @@ Responde APENAS com o nome exato da categoria:"""
                 logger.warning(f"OpenAI indisponível (quota/limite): {str(e)}")
                 raise AIUnavailableError(str(e)) from e
             logger.error(f"Erro ao usar OpenAI: {str(e)}")
-            return None
+            return (None, None)
         
     except ImportError:
         logger.warning("openai não instalado. Instale com: pip install openai")
-        return None
+        return (None, None)
     except AIUnavailableError:
         raise
     except Exception as e:
         logger.error(f"Erro na categorização IA: {str(e)}")
-        return None
+        return (None, None)
 
 
 def _parsed_from_photo(
@@ -675,6 +821,7 @@ def _parsed_from_photo(
 
     # Se a Vision devolveu uma categoria, tentar usar (match exato ou por similaridade)
     category_id = None
+    suggested_category_name = None
     inference_source = "legacy_fallback"
     decision_reason = "legacy_fallback"
     needs_review = False
@@ -691,6 +838,8 @@ def _parsed_from_photo(
                 category_id = match.id
                 inference_source = "openai_vision"
                 decision_reason = "openai_vision"
+            else:
+                suggested_category_name = vision_category_name[:100]
 
     if not category_id:
         try:
@@ -713,9 +862,9 @@ def _parsed_from_photo(
         except Exception as e:
             logger.warning("Categorização falhou para foto: %s", e)
             category_id = categories[0].id if categories else None
-    if not category_id and categories:
+    if not category_id and categories and not suggested_category_name:
         category_id = categories[0].id
-    category_obj = db.query(models.Category).filter(models.Category.id == category_id).first()
+    category_obj = db.query(models.Category).filter(models.Category.id == category_id).first() if category_id else None
     is_vault_category = category_obj and getattr(category_obj, "vault_type", "none") != "none"
     result = {
         "amount": amount,
@@ -728,8 +877,9 @@ def _parsed_from_photo(
         "is_vault": is_vault_category,
         "is_vault_withdrawal": False,
         "transaction_date": transaction_date,
+        "suggested_category_name": suggested_category_name[:100] if suggested_category_name else None,
     }
-    logger.info("[_parsed_from_photo] OK: category_id=%s inference_source=%s", category_id, inference_source)
+    logger.info("[_parsed_from_photo] OK: category_id=%s inference_source=%s suggested=%s", category_id, inference_source, suggested_category_name)
     return result
 
 
@@ -1052,6 +1202,12 @@ async def telegram_webhook(
         data = await request.json()
         logger.info(f"Payload recebido: {json.dumps(data, indent=2, ensure_ascii=False)[:500]}...")  # Primeiros 500 chars
         
+        # Idempotência: ignorar update já processado (reenvios do Telegram)
+        update_id = data.get('update_id')
+        if _is_duplicate_update(update_id):
+            logger.info("Update %s já processado (idempotência), ignorar", update_id)
+            return {'status': 'duplicate'}
+        
         # Processar callback_query (botões inline)
         if 'callback_query' in data:
             logger.info("Processando callback_query (botão inline)")
@@ -1082,7 +1238,181 @@ async def telegram_webhook(
             t = get_telegram_t(language)
             
             # Processar callback
-            if callback_data.startswith("confirm_"):
+            if callback_data.startswith("confirm_batch_"):
+                batch_id_hex = callback_data.replace("confirm_batch_", "")
+                all_pending = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                batch_pendents = [p for p in all_pending if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
+                if not batch_pendents:
+                    send_telegram_msg(chat_id, t('transaction_not_found'))
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                            json={'callback_query_id': callback_query['id']},
+                            timeout=5,
+                        )
+                    except Exception:
+                        pass
+                    return {'status': 'not_found'}
+                for pending in batch_pendents:
+                    transaction = models.Transaction(
+                        workspace_id=pending.workspace_id,
+                        category_id=pending.category_id,
+                        amount_cents=pending.amount_cents,
+                        description=pending.description,
+                        inference_source=getattr(pending, 'inference_source', None),
+                        decision_reason=getattr(pending, 'decision_reason', None),
+                        needs_review=getattr(pending, 'needs_review', False),
+                        transaction_date=pending.transaction_date,
+                    )
+                    db.add(transaction)
+                    # Aprendizagem: guardar no cache para futuras mensagens (menos IA)
+                    cache_key = _description_cache_key(pending.description)
+                    if cache_key and pending.category_id:
+                        category = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
+                        cat_name = category.name if category else "Outros"
+                        tipo = "expense" if pending.amount_cents < 0 else "income"
+                        save_cached_category(cache_key, pending.workspace_id, pending.category_id, cat_name, tipo, db, is_common=True)
+                    db.delete(pending)
+                db.commit()
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                send_telegram_msg(chat_id, t('list_confirmed'))
+                return {'status': 'confirmed'}
+            elif callback_data.startswith("create_cat_"):
+                # User escolheu "Sim, criar" categoria sugerida pela IA
+                pending_id_hex = callback_data.replace("create_cat_", "")
+                all_pending = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id)
+                ).all()
+                pending = None
+                for p in all_pending:
+                    if p.id.hex[:16] == pending_id_hex and getattr(p, 'suggested_category_name', None):
+                        pending = p
+                        break
+                if not pending:
+                    send_telegram_msg(chat_id, t('transaction_not_found'))
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                            json={'callback_query_id': callback_query['id']},
+                            timeout=5,
+                        )
+                    except Exception:
+                        pass
+                    return {'status': 'not_found'}
+                suggested_name = (pending.suggested_category_name or "").strip()[:100]
+                if not suggested_name:
+                    send_telegram_msg(chat_id, t('transaction_not_found'))
+                    return {'status': 'not_found'}
+                tipo = "expense" if pending.amount_cents < 0 else "income"
+                existing = db.query(models.Category).filter(
+                    models.Category.workspace_id == pending.workspace_id,
+                    func.lower(models.Category.name) == suggested_name.lower(),
+                    models.Category.type == tipo,
+                ).first()
+                if existing:
+                    new_category_id = existing.id
+                    new_category_name = existing.name
+                else:
+                    new_cat = models.Category(
+                        workspace_id=pending.workspace_id,
+                        name=suggested_name,
+                        type=tipo,
+                        vault_type='none',
+                        monthly_limit_cents=0,
+                        color_hex='#3B82F6',
+                        icon='Tag',
+                        is_default=False,
+                    )
+                    db.add(new_cat)
+                    db.flush()
+                    new_category_id = new_cat.id
+                    new_category_name = new_cat.name
+                    logger.info("Categoria criada pelo user Telegram: %s (id=%s)", new_category_name, new_category_id)
+                pending.category_id = new_category_id
+                pending.suggested_category_name = None
+                db.commit()
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                msg = t('category_created_confirm').format(name=new_category_name)
+                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
+                tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
+                msg += "\n\n" + t('transaction_pending').format(
+                    description=pending.description,
+                    emoji=tipo_emoji,
+                    amount=abs(pending.amount_cents) / 100,
+                    category=new_category_name,
+                    type=tipo_texto,
+                    origin_line=_origin_line("openai", t),
+                    date_line=_date_line(pending.transaction_date, t),
+                )
+                pending_id_hex_new = pending.id.hex[:16]
+                reply_markup = {
+                    "inline_keyboard": [[
+                        {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex_new}"},
+                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex_new}"}
+                    ]]
+                }
+                send_telegram_msg(chat_id, msg, reply_markup)
+                return {'status': 'category_created'}
+            elif callback_data.startswith("skip_cat_"):
+                # User escolheu "Não, cancelar" - apagar pendente
+                pending_id_hex = callback_data.replace("skip_cat_", "")
+                all_pending = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id)
+                ).all()
+                pending = None
+                for p in all_pending:
+                    if p.id.hex[:16] == pending_id_hex and getattr(p, 'suggested_category_name', None):
+                        pending = p
+                        break
+                if pending:
+                    db.delete(pending)
+                    db.commit()
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                send_telegram_msg(chat_id, t('transaction_cancelled'))
+                return {'status': 'cancelled'}
+            elif callback_data.startswith("cancel_batch_"):
+                batch_id_hex = callback_data.replace("cancel_batch_", "")
+                all_pending = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                batch_pendents = [p for p in all_pending if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
+                for pending in batch_pendents:
+                    db.delete(pending)
+                db.commit()
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                send_telegram_msg(chat_id, t('list_cancelled'))
+                return {'status': 'cancelled'}
+            elif callback_data.startswith("confirm_"):
                 logger.info(f"Processando confirmacao de transacao: {callback_data}")
                 # Confirmar transação
                 pending_id_hex = callback_data.replace("confirm_", "")
@@ -1123,7 +1453,19 @@ async def telegram_webhook(
                 db.add(transaction)
                 db.flush()
                 logger.info(f"Transacao criada com ID: {transaction.id}, transaction_date: {transaction.transaction_date}, created_at: {transaction.created_at}")
-                
+                # Copiar para mensagem (save_cached_category faz commit e pode expirar pending)
+                desc_for_msg = pending.description
+                amount_cents_for_msg = pending.amount_cents
+                category_id_for_msg = pending.category_id
+                inference_source_for_msg = getattr(pending, 'inference_source', None)
+                transaction_date_for_msg = getattr(pending, 'transaction_date', None) or date.today()
+                # Aprendizagem: guardar no cache para futuras mensagens (menos IA)
+                cache_key = _description_cache_key(pending.description)
+                if cache_key and pending.category_id:
+                    category = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
+                    cat_name = category.name if category else "Outros"
+                    tipo = "expense" if pending.amount_cents < 0 else "income"
+                    save_cached_category(cache_key, pending.workspace_id, pending.category_id, cat_name, tipo, db, is_common=True)
                 db.delete(pending)
                 db.commit()
                 logger.info("Transacao confirmada e commitada com sucesso")
@@ -1138,18 +1480,27 @@ async def telegram_webhook(
                 except Exception as e:
                     logger.error(f"Erro ao responder callback: {str(e)}")
                 
-                # Editar mensagem
-                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
-                tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
-                category = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
+                # Mensagem de confirmação
+                tipo_emoji = "" if amount_cents_for_msg < 0 else "💰"
+                tipo_texto = t('type_expense') if amount_cents_for_msg < 0 else t('type_income')
+                category = db.query(models.Category).filter(models.Category.id == category_id_for_msg).first()
                 category_name = category.name if category else "Outros"
+                origin_line = _origin_line(inference_source_for_msg, t)
                 send_telegram_msg(chat_id, t('transaction_confirmed').format(
-                    description=pending.description,
+                    description=desc_for_msg,
                     emoji=tipo_emoji,
-                    amount=abs(pending.amount_cents)/100,
+                    amount=abs(amount_cents_for_msg)/100,
                     category=category_name,
-                    type=tipo_texto
+                    type=tipo_texto,
+                    origin_line=origin_line,
+                    date_line=_date_line(transaction_date_for_msg, t),
                 ))
+                # Dica após primeira transação (workspace com apenas 1 transação)
+                total_tx = db.query(models.Transaction).filter(
+                    models.Transaction.workspace_id == transaction.workspace_id
+                ).count()
+                if total_tx == 1:
+                    send_telegram_msg(chat_id, t('tip_multi'))
                 
                 logger.info("Callback de confirmacao processado com sucesso")
                 return {'status': 'confirmed'}
@@ -1240,9 +1591,141 @@ async def telegram_webhook(
                 send_telegram_msg(chat_id, t_start('welcome_return'), pin_message=True)
                 return {'status': 'ok'}
         
-        # Comandos /info e /help
-        if text.startswith('/info') or text.startswith('/help'):
+        # Comandos /info, /help e /ajuda
+        if text.startswith('/info') or text.startswith('/help') or text.startswith('/ajuda'):
             send_telegram_msg(chat_id, t('help_guide'))
+            return {'status': 'ok'}
+        
+        # Comando /resumo ou /hoje - Resumo do dia
+        if text.strip().lower() in ('/resumo', '/hoje'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t('workspace_not_found'))
+                return {'status': 'error'}
+            today = date.today()
+            q = db.query(
+                func.sum(case([(models.Transaction.amount_cents < 0, models.Transaction.amount_cents)], else_=0)),
+                func.sum(case([(models.Transaction.amount_cents > 0, models.Transaction.amount_cents)], else_=0)),
+                func.count(models.Transaction.id),
+            ).filter(
+                models.Transaction.workspace_id == workspace.id,
+                models.Transaction.transaction_date == today,
+            ).first()
+            expenses_cents = int(q[0] or 0)
+            income_cents = int(q[1] or 0)
+            count = int(q[2] or 0)
+            expenses = abs(expenses_cents) / 100
+            income = income_cents / 100
+            balance = income - abs(expenses_cents) / 100
+            lang = user.language if user.language else 'pt'
+            t_sum = get_telegram_t(lang)
+            if count == 0:
+                send_telegram_msg(chat_id, t_sum('summary_empty'))
+            else:
+                send_telegram_msg(chat_id, t_sum('summary_today').format(expenses=expenses, income=income, count=count, balance=balance))
+            return {'status': 'ok'}
+        
+        # Comando /mes - Resumo do mês
+        if text.strip().lower() == '/mes':
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t('workspace_not_found'))
+                return {'status': 'error'}
+            today = date.today()
+            first_day = today.replace(day=1)
+            q = db.query(
+                func.sum(case([(models.Transaction.amount_cents < 0, models.Transaction.amount_cents)], else_=0)),
+                func.sum(case([(models.Transaction.amount_cents > 0, models.Transaction.amount_cents)], else_=0)),
+                func.count(models.Transaction.id),
+            ).filter(
+                models.Transaction.workspace_id == workspace.id,
+                models.Transaction.transaction_date >= first_day,
+                models.Transaction.transaction_date <= today,
+            ).first()
+            expenses_cents = int(q[0] or 0)
+            income_cents = int(q[1] or 0)
+            count = int(q[2] or 0)
+            expenses = abs(expenses_cents) / 100
+            income = income_cents / 100
+            balance = income - abs(expenses_cents) / 100
+            lang = user.language if user.language else 'pt'
+            t_sum = get_telegram_t(lang)
+            if count == 0:
+                send_telegram_msg(chat_id, t_sum('summary_empty'))
+            else:
+                send_telegram_msg(chat_id, t_sum('summary_month').format(expenses=expenses, income=income, count=count, balance=balance))
+            return {'status': 'ok'}
+        
+        # Comando /pendentes - Listar transações pendentes
+        if text.strip().lower() == '/pendentes':
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            if not workspace:
+                send_telegram_msg(chat_id, t('workspace_not_found'))
+                return {'status': 'error'}
+            lang = user.language if user.language else 'pt'
+            t_pend = get_telegram_t(lang)
+            pendents = db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.chat_id == str(chat_id),
+                models.TelegramPendingTransaction.workspace_id == workspace.id,
+            ).order_by(models.TelegramPendingTransaction.created_at).all()
+            if not pendents:
+                send_telegram_msg(chat_id, t_pend('pendentes_empty'))
+                return {'status': 'ok'}
+            lines = []
+            for p in pendents:
+                cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
+                cat_name = cat.name if cat else "Outros"
+                lines.append(t_pend('list_pending_line').format(description=p.description, amount=abs(p.amount_cents) / 100, category=cat_name))
+            send_telegram_msg(chat_id, t_pend('pendentes_list').format(count=len(pendents), lines="".join(lines)))
+            return {'status': 'ok'}
+        
+        # Comando /revoke - Desvincular Telegram da conta
+        if text.strip().lower() == '/revoke':
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            lang = user.language if user.language else 'pt'
+            t_revoke = get_telegram_t(lang)
+            logger.info(f"[AÇÃO SENSÍVEL] /revoke: chat_id={chat_id}, user_id={user.id}, email={getattr(user, 'email', '')[:10]}***")
+            user.phone_number = None
+            db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.chat_id == str(chat_id),
+            ).delete(synchronize_session=False)
+            db.commit()
+            send_telegram_msg(chat_id, t_revoke('revoke_ok'))
+            return {'status': 'ok'}
+        
+        # Comando /idioma pt|en - Mudar idioma
+        if text.strip().lower().startswith('/idioma '):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            part = text.strip().split(maxsplit=1)
+            lang_arg = (part[1].strip().lower() if len(part) > 1 else "") or "pt"
+            if lang_arg in ("en", "english"):
+                user.language = "en"
+                db.commit()
+                t_lang = get_telegram_t("en")
+                send_telegram_msg(chat_id, t_lang('language_set_en'))
+            else:
+                user.language = "pt"
+                db.commit()
+                t_lang = get_telegram_t("pt")
+                send_telegram_msg(chat_id, t_lang('language_set'))
             return {'status': 'ok'}
         
         # Comando /clear - Limpar transações pendentes
@@ -1272,7 +1755,7 @@ async def telegram_webhook(
                 for pending in pending_transactions:
                     db.delete(pending)
                 db.commit()
-                logger.info(f"Eliminadas {count} transações pendentes para chat_id={chat_id}")
+                logger.info(f"[AÇÃO SENSÍVEL] /clear em massa: chat_id={chat_id}, user_id={user.id}, count={count}")
                 send_telegram_msg(chat_id, t_clear('clear_success').format(count=count))
             else:
                 send_telegram_msg(chat_id, t_clear('clear_empty'))
@@ -1360,6 +1843,8 @@ async def telegram_webhook(
         # Processar fotos (OpenAI Vision)
         if 'photo' in message:
             file_id = message['photo'][-1]['file_id']
+            # Resposta rápida "A processar..." para o user não achar que o bot não respondeu
+            send_telegram_msg(chat_id, t('processing_photo'))
             # Carregar todas as categorias do workspace para enviar no prompt da Vision
             all_categories = db.query(models.Category).filter(
                 models.Category.workspace_id == workspace.id
@@ -1392,8 +1877,12 @@ async def telegram_webhook(
             logger.info(f"Processando texto como transação: '{text}'")
             try:
                 parsed = parse_transaction(text, workspace, db)
-            except AIUnavailableError:
-                send_telegram_msg(chat_id, t('ai_unavailable'))
+            except AIUnavailableError as ae:
+                err_str = str(ae).lower()
+                if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                    send_telegram_msg(chat_id, t('ai_busy'))
+                else:
+                    send_telegram_msg(chat_id, t('ai_unavailable'))
                 return {'status': 'error'}
             logger.info(f"Resultado do parsing: {parsed}")
             
@@ -1406,10 +1895,31 @@ async def telegram_webhook(
             logger.info("Mensagem não processada (sem texto nem foto)")
             return {'status': 'ignored'}
         
-        # Processar múltiplas transações
+        # Limite de pendentes: máx 20; acima disso pedir para confirmar ou /clear
+        if not user.telegram_auto_confirm:
+            pending_count = db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.chat_id == str(chat_id),
+                models.TelegramPendingTransaction.workspace_id == workspace.id,
+            ).count()
+            if pending_count >= 20:
+                send_telegram_msg(chat_id, t('too_many_pending').format(count=pending_count))
+                return {'status': 'too_many_pending'}
+            # Aviso de pendentes antigos (>24h)
+            stale_cutoff = datetime.now(timezone.utc) - timedelta(hours=PENDING_STALE_HOURS)
+            stale_count = db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.chat_id == str(chat_id),
+                models.TelegramPendingTransaction.workspace_id == workspace.id,
+                models.TelegramPendingTransaction.created_at < stale_cutoff,
+            ).count()
+            if stale_count > 0:
+                send_telegram_msg(chat_id, t('pending_stale'))
+        
+        # Processar múltiplas transações (lista): uma mensagem com todas as linhas + total + Confirmar tudo / Cancelar tudo
         if parsed.get('multiple'):
             transactions = parsed['transactions']
             created_count = 0
+            batch_id = uuid.uuid4()
+            batch_id_hex = batch_id.hex[:16]
 
             for trans_data in transactions:
                 amount_cents = int(trans_data['amount'] * 100)
@@ -1423,6 +1933,7 @@ async def telegram_webhook(
                 else:
                     amount_cents = abs(amount_cents)
 
+                trans_date = trans_data.get('transaction_date') or date.today()
                 if user.telegram_auto_confirm:
                     transaction = models.Transaction(
                         workspace_id=workspace.id,
@@ -1432,7 +1943,7 @@ async def telegram_webhook(
                         inference_source=trans_data.get('inference_source'),
                         decision_reason=trans_data.get('decision_reason'),
                         needs_review=trans_data.get('needs_review', False),
-                        transaction_date=date.today()
+                        transaction_date=trans_date,
                     )
                     db.add(transaction)
                     created_count += 1
@@ -1446,42 +1957,99 @@ async def telegram_webhook(
                         inference_source=trans_data.get('inference_source'),
                         decision_reason=trans_data.get('decision_reason'),
                         needs_review=trans_data.get('needs_review', False),
-                        transaction_date=date.today()
+                        transaction_date=trans_date,
+                        batch_id=batch_id,
                     )
                     db.add(pending)
-                    db.flush()
-                    category = db.query(models.Category).filter(
-                        models.Category.id == trans_data['category_id']
-                    ).first()
-                    category_name = category.name if category else "Outros"
-                    tipo_emoji = "" if amount_cents < 0 else "💰"
-                    tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
-                    message_text = t('transaction_pending').format(
-                        description=trans_data['description'],
-                        emoji=tipo_emoji,
-                        amount=abs(amount_cents)/100,
-                        category=category_name,
-                        type=tipo_texto
-                    )
-                    pending_id_hex = pending.id.hex[:16]
-                    reply_markup = {
-                        "inline_keyboard": [[
-                            {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
-                            {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"}
-                        ]]
-                    }
-                    send_telegram_msg(chat_id, message_text, reply_markup)
 
             if user.telegram_auto_confirm:
                 db.commit()
                 send_telegram_msg(chat_id, t('multiple_transactions_created').format(count=created_count))
-            else:
-                db.commit()
+                return {'status': 'success'}
+
+            db.flush()
+            # Construir uma única mensagem: lista (descrição — valor — categoria) + total + botões
+            total_cents = 0
+            lines = []
+            pendents_batch = db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.batch_id == batch_id
+            ).order_by(models.TelegramPendingTransaction.created_at).all()
+            for p in pendents_batch:
+                total_cents += p.amount_cents
+                category = db.query(models.Category).filter(models.Category.id == p.category_id).first()
+                category_name = category.name if category else "Outros"
+                lines.append(t('list_pending_line').format(
+                    description=p.description,
+                    amount=abs(p.amount_cents) / 100,
+                    category=category_name,
+                ))
+            total_euros = abs(total_cents) / 100
+            message_text = (
+                t('list_pending_header')
+                + "".join(lines)
+                + t('list_pending_total').format(total=total_euros)
+                + t('list_confirm_question')
+            )
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": t('button_confirm_all'), "callback_data": f"confirm_batch_{batch_id_hex}"},
+                    {"text": t('button_cancel_all'), "callback_data": f"cancel_batch_{batch_id_hex}"},
+                ]]
+            }
+            send_telegram_msg(chat_id, message_text, reply_markup)
+            db.commit()
             return {'status': 'success'}
             
         # Processar transação única
         amount_cents = int(parsed['amount'] * 100)
         transaction_date = parsed.get('transaction_date') or date.today()
+        suggested_category_name = parsed.get('suggested_category_name')
+        if parsed.get('type') == 'expense':
+            amount_cents = -abs(amount_cents)
+        else:
+            amount_cents = abs(amount_cents)
+
+        # Deduplicação: já existe pendente com mesma descrição+valor+tipo?
+        if not parsed.get('multiple') and not user.telegram_auto_confirm and parsed.get('category_id') and not suggested_category_name:
+            cache_key = _description_cache_key(parsed.get('description') or "")
+            existing = db.query(models.TelegramPendingTransaction).filter(
+                models.TelegramPendingTransaction.chat_id == str(chat_id),
+                models.TelegramPendingTransaction.workspace_id == workspace.id,
+                models.TelegramPendingTransaction.amount_cents == amount_cents,
+                models.TelegramPendingTransaction.batch_id.is_(None),
+            ).all()
+            for ex in existing:
+                if _description_cache_key(ex.description) == cache_key:
+                    send_telegram_msg(chat_id, t('pending_duplicate'))
+                    return {'status': 'duplicate_pending'}
+        
+        # Se a IA sugeriu uma categoria que não existe: perguntar se quer criar
+        if suggested_category_name and not parsed.get('category_id'):
+            pending = models.TelegramPendingTransaction(
+                chat_id=str(chat_id),
+                workspace_id=workspace.id,
+                category_id=None,
+                amount_cents=amount_cents,
+                description=(parsed['description'] or "")[:255],
+                inference_source=parsed.get('inference_source'),
+                decision_reason=parsed.get('decision_reason'),
+                needs_review=True,
+                transaction_date=transaction_date,
+                suggested_category_name=suggested_category_name[:100],
+            )
+            db.add(pending)
+            db.commit()
+            message_text = t('create_category_prompt').format(name=suggested_category_name)
+            pending_id_hex = pending.id.hex[:16]
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": t('button_create_category'), "callback_data": f"create_cat_{pending_id_hex}"},
+                    {"text": t('button_skip_category'), "callback_data": f"skip_cat_{pending_id_hex}"}
+                ]]
+            }
+            send_telegram_msg(chat_id, message_text, reply_markup)
+            logger.info("Pendente com suggested_category_name criado; aguardando user criar ou cancelar")
+            return {'status': 'success'}
 
         category = db.query(models.Category).filter(
             models.Category.id == parsed['category_id']
@@ -1491,17 +2059,8 @@ async def telegram_webhook(
         # Lógica especial para categorias de vault (investimento/emergência)
         is_vault_category = category and category.vault_type != 'none'
         is_vault_withdrawal = parsed.get('is_vault_withdrawal', False) if is_vault_category else False
-
         if is_vault_category:
-            # Para vault: depósito = positivo, resgate = negativo
-            if is_vault_withdrawal:
-                amount_cents = -abs(amount_cents)
-            else:
-                amount_cents = abs(amount_cents)
-        elif parsed['type'] == 'expense':
-            amount_cents = -abs(amount_cents)
-        else:
-            amount_cents = abs(amount_cents)
+            amount_cents = -abs(amount_cents) if is_vault_withdrawal else abs(amount_cents)
 
         if user.telegram_auto_confirm:
             logger.info("Modo auto_confirm ativo - criando transacao diretamente")
@@ -1522,12 +2081,15 @@ async def telegram_webhook(
             logger.info("Transacao commitada com sucesso (auto_confirm)")
             tipo_emoji = "" if amount_cents < 0 else "💰"
             tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
+            origin_line = _origin_line(parsed.get('inference_source'), t)
             send_telegram_msg(chat_id, t('transaction_registered').format(
                 description=parsed['description'],
                 emoji=tipo_emoji,
                 amount=abs(parsed['amount']),
                 category=category_name,
-                type=tipo_texto
+                type=tipo_texto,
+                origin_line=origin_line,
+                date_line=_date_line(transaction_date, t),
             ))
         else:
             pending = models.TelegramPendingTransaction(
@@ -1545,12 +2107,15 @@ async def telegram_webhook(
             db.commit()
             tipo_emoji = "" if amount_cents < 0 else "💰"
             tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
+            origin_line = _origin_line(parsed.get('inference_source'), t)
             message_text = t('transaction_pending').format(
                 description=parsed['description'],
                 emoji=tipo_emoji,
                 amount=abs(parsed['amount']),
                 category=category_name,
-                type=tipo_texto
+                type=tipo_texto,
+                origin_line=origin_line,
+                date_line=_date_line(transaction_date, t),
             )
             pending_id_hex = pending.id.hex[:16]
             reply_markup = {
@@ -1568,4 +2133,13 @@ async def telegram_webhook(
         logger.error(f"Erro Telegram: {str(e)}", exc_info=True)
         import traceback
         logger.error(f"Traceback completo: {traceback.format_exc()}")
+        try:
+            chat_id = (data.get('message') or {}).get('chat', {}).get('id') or (data.get('callback_query') or {}).get('message', {}).get('chat', {}).get('id') if data else None
+            if chat_id and db:
+                user_temp = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+                lang = (user_temp.language if user_temp and user_temp.language else None) or 'pt'
+                t_err = get_telegram_t(lang)
+                send_telegram_msg(chat_id, t_err('generic_error'))
+        except Exception:
+            pass
         return {'status': 'error'}

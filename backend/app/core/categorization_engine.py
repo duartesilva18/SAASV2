@@ -250,12 +250,15 @@ def _find_similar_transaction(
         desc_can = canonicalize(t.description)
         desc_words = set(desc_can.split())
         common = words.intersection(desc_words)
+        if not common:
+            continue
         score = len(common) + sum(2 for w in common if len(w) > 4)
         days_ago = (date.today() - t.transaction_date).days
         score += 3 if days_ago <= 7 else (2 if days_ago <= 30 else (1 if days_ago <= 90 else 0))
         has_important = any(len(w) > 4 for w in common)
-        min_req = 3 if not has_important else 2
-        if score >= min_req and (has_important or len(common) >= 3) and score > best_score:
+        # Relaxado: 1 palavra importante OU 2+ palavras em comum (favorece dados históricos antes de IA)
+        accept = (has_important and len(common) >= 1) or len(common) >= 2
+        if accept and score >= 2 and score > best_score:
             best_score = score
             best_match = t.category_id
     return best_match
