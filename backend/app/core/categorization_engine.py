@@ -357,26 +357,26 @@ def infer_category(
             if c.name == global_entry.category_name:
                 return (c.id, 'cache_global', False, 0.95, f"cache_global:{canonical}", [canonical])
 
-    # 7. Gemini fallback (se permitido e circuit-breaker fechado)
-    if use_gemini and getattr(settings, 'GEMINI_API_KEY', None):
+    # 7. OpenAI fallback (se permitido e circuit-breaker fechado)
+    if use_gemini and getattr(settings, 'OPENAI_API_KEY', None):
         if check_gemini_circuit_breaker(db, models, workspace_id):
-            logger.warning("Circuit-breaker Gemini aberto. Usando fallback.")
+            logger.warning("Circuit-breaker AI aberto. Usando fallback.")
             return (filtered_categories[0].id, 'fallback', True, 0.0, "fallback:circuit_breaker", [])
 
         try:
-            cat_id, gemini_response = _call_gemini_fallback(
+            cat_id, ai_response = _call_openai_fallback(
                 description_raw, filtered_categories, tipo, workspace_id, db, models, settings
             )
             if cat_id:
-                return (cat_id, 'gemini', True, GEMINI_THRESHOLD, f"gemini:{gemini_response or ''}", [gemini_response] if gemini_response else [])
+                return (cat_id, 'openai', True, GEMINI_THRESHOLD, f"openai:{ai_response or ''}", [ai_response] if ai_response else [])
         except Exception as e:
-            logger.warning(f"Gemini fallback falhou: {e}")
+            logger.warning(f"OpenAI fallback falhou: {e}")
 
     # 8. Fallback final
     return (filtered_categories[0].id, 'fallback', True, 0.0, "fallback:default", [])
 
 
-def _call_gemini_fallback(
+def _call_openai_fallback(
     description: str,
     categories: List[Any],
     tipo: str,
@@ -385,10 +385,10 @@ def _call_gemini_fallback(
     models,
     settings,
 ) -> Tuple[Optional[UUID], Optional[str]]:
-    """Chama Gemini e regista em GeminiEvents. Retorna (category_id, response_text)."""
-    import google.generativeai as genai
+    """Chama OpenAI GPT-4o-mini e regista em GeminiEvents. Retorna (category_id, response_text)."""
+    from openai import OpenAI
 
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
     categories_list = [c.name for c in categories]
     categories_text = ", ".join(categories_list)
     prompt = f'''Categoriza: "{description}"
@@ -398,17 +398,22 @@ Responde APENAS com o nome exato da categoria:'''
     response_text = None
     status_code = 200
     try:
-        model = genai.GenerativeModel("gemini-flash-latest")
-        response = model.generate_content(prompt, generation_config={"temperature": 0.1, "max_output_tokens": 20})
-        response_text = response.text.strip() if response.text else None
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=20,
+            temperature=0.1,
+        )
+        if response.choices and response.choices[0].message.content:
+            response_text = response.choices[0].message.content.strip()
     except Exception as e:
-        logger.error(f"Gemini error: {e}")
+        logger.error(f"OpenAI error: {e}")
         status_code = 500
-        if "429" in str(e) or "quota" in str(e).lower():
+        if "429" in str(e) or "rate_limit" in str(e).lower() or "quota" in str(e).lower():
             status_code = 429
         raise
 
-    # Registar evento
+    # Registar evento (tabela GeminiEvent reutilizada para chamadas AI)
     try:
         ev = models.GeminiEvent(
             workspace_id=workspace_id,

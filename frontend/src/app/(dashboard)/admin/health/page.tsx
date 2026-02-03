@@ -131,9 +131,9 @@ export default function AdminHealthPage() {
                   {int.icon === 'database' && <Database size={28} className="text-slate-400 shrink-0" />}
                   {int.icon === 'stripe' && <CreditCard size={28} className="text-slate-400 shrink-0" />}
                   {int.icon === 'mail' && <Mail size={28} className="text-slate-400 shrink-0" />}
-                  {int.icon === 'gemini' && <Sparkles size={28} className="text-slate-400 shrink-0" />}
+                  {(int.icon === 'gemini' || int.icon === 'openai') && <Sparkles size={28} className="text-slate-400 shrink-0" />}
                   {int.icon === 'telegram' && <MessageCircle size={28} className="text-slate-400 shrink-0" />}
-                  {!['database','stripe','mail','gemini','telegram'].includes(int.icon) && <Activity size={28} className="text-slate-400 shrink-0" />}
+                  {!['database','stripe','mail','gemini','openai','telegram'].includes(int.icon) && <Activity size={28} className="text-slate-400 shrink-0" />}
                   <div>
                     <p className="font-bold text-white">{int.name}</p>
                     <p className="text-sm text-slate-500 mt-0.5">{int.message}</p>

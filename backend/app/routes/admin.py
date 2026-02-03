@@ -181,26 +181,26 @@ async def get_health_dashboard(db: Session = Depends(get_db), admin: models.User
         "icon": "mail"
     })
 
-    # Gemini (usa list_models para não gastar quota de geração)
-    gemini_ok = False
-    gemini_msg = ""
-    if settings.GEMINI_API_KEY:
+    # OpenAI (verifica chave com chamada mínima)
+    openai_ok = False
+    openai_msg = ""
+    if settings.OPENAI_API_KEY:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            list(genai.list_models())
-            gemini_ok = True
-            gemini_msg = "API operacional (chave válida)"
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            list(client.models.list())  # consome para verificar a chave
+            openai_ok = True
+            openai_msg = "API operacional (chave válida)"
         except Exception as e:
-            gemini_msg = str(e)[:200]
+            openai_msg = str(e)[:200]
     else:
-        gemini_msg = "Chave não configurada"
+        openai_msg = "Chave não configurada"
 
     integrations.append({
-        "name": "Gemini",
-        "status": "ok" if gemini_ok else ("skipped" if not settings.GEMINI_API_KEY else "error"),
-        "message": gemini_msg,
-        "icon": "gemini"
+        "name": "OpenAI",
+        "status": "ok" if openai_ok else ("skipped" if not settings.OPENAI_API_KEY else "error"),
+        "message": openai_msg,
+        "icon": "openai"
     })
 
     # Telegram

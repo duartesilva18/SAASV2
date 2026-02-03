@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     
     TELEGRAM_BOT_TOKEN: str = os.getenv('TELEGRAM_BOT_TOKEN', '').strip().strip('"')
     TELEGRAM_WEBHOOK_SECRET: str = os.getenv('TELEGRAM_WEBHOOK_SECRET', '').strip().strip('"')
-    GEMINI_API_KEY: str = os.getenv('GEMINI_API_KEY', '').strip().strip('"')
+    OPENAI_API_KEY: str = os.getenv('OPENAI_API_KEY', '').strip().strip('"')
     
     MAIL_USERNAME: str = os.getenv('MAIL_USERNAME', '').strip()
     MAIL_PASSWORD: str = os.getenv('MAIL_PASSWORD', '').strip()

@@ -48,10 +48,10 @@ TELEGRAM_BOT_TOKEN=seu_token_do_bot
 TELEGRAM_WEBHOOK_SECRET=seu_webhook_secret
 ```
 
-### 6. Gemini AI
+### 6. OpenAI (GPT-4o-mini)
 
 ```env
-GEMINI_API_KEY=sua_chave_gemini
+OPENAI_API_KEY=sua_chave_openai
 ```
 
 ### 7. Email (SMTP)

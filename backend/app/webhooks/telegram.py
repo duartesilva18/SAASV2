@@ -23,8 +23,8 @@ from ..core.telegram_translations import get_telegram_t
 logger = logging.getLogger("telegram_webhook")
 
 
-class GeminiUnavailableError(Exception):
-    """Levantada quando o Gemini não está disponível (quota/plano esgotado)."""
+class AIUnavailableError(Exception):
+    """Levantada quando a IA (OpenAI) não está disponível (quota/plano esgotado)."""
     pass
 
 
@@ -382,8 +382,8 @@ def parse_transaction(text: str, workspace: models.Workspace, db: Session) -> Op
                 decision_reason = reason
                 if category_id:
                     logger.info(f"Categorização: source={source}, confidence={conf:.2f}, needs_review={needs_review}")
-                    # Se Gemini retornou sucesso, guardar no cache (o motor não faz save para gemini)
-                    if source == 'gemini' and category_id:
+                    # Se OpenAI retornou sucesso, guardar no cache (o motor não faz save para openai)
+                    if source == 'openai' and category_id:
                         description_normalized = normalize_text(description)
                         category_obj = next((c for c in categories if c.id == category_id), None)
                         cat_name = category_obj.name if category_obj else "Outros"
@@ -543,11 +543,11 @@ def save_cached_category(description_normalized: str, workspace_id: uuid.UUID, c
 
 def categorize_with_ai(text: str, categories: List[models.Category], tipo: str, original_text: str, workspace_id: uuid.UUID, db: Session) -> Optional[uuid.UUID]:
     """
-    Usa Gemini AI para categorizar a transação quando não encontra no cache.
+    Usa OpenAI GPT-4o-mini para categorizar a transação quando não encontra no cache.
     Retorna category_id ou None.
     """
-    if not settings.GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY não configurada. Não é possível usar IA para categorizar.")
+    if not settings.OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY não configurada. Não é possível usar IA para categorizar.")
         return None
     
     # Filtrar apenas categorias do tipo correto (já vem filtrado, mas garantir)
@@ -557,47 +557,41 @@ def categorize_with_ai(text: str, categories: List[models.Category], tipo: str, 
         return None
     
     try:
-        import google.generativeai as genai
-        
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
         
         # Preparar lista de categorias (apenas do tipo correto, formato compacto)
         categories_list = [cat.name for cat in filtered_categories]
         categories_text = ", ".join(categories_list)
         
-        # Prompt otimizado e mais direto (menos tokens = mais rápido)
         prompt = f"""Categoriza: "{original_text}"
 
 Categorias: {categories_text}
 
 Responde APENAS com o nome exato da categoria:"""
         
-        logger.info(f"Consultando Gemini: '{original_text}' -> {categories_list}")
+        logger.info(f"Consultando OpenAI: '{original_text}' -> {categories_list}")
         
-        # Usar apenas gemini-flash-latest (mais rápido)
         try:
-            model = genai.GenerativeModel('gemini-flash-latest')
-            # Configurar para resposta rápida
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    'temperature': 0.1,  # Mais determinístico
-                    'max_output_tokens': 20,  # Resposta curta
-                }
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=20,
+                temperature=0.1,
             )
-            ai_category_name = response.text.strip()
-            logger.info(f"Resposta Gemini: '{ai_category_name}'")
+            ai_category_name = ""
+            if response.choices and response.choices[0].message.content:
+                ai_category_name = response.choices[0].message.content.strip()
+            logger.info(f"Resposta OpenAI: '{ai_category_name}'")
             
             category_id_found = None
             
-            # Procurar categoria correspondente (match exato primeiro)
             for cat in filtered_categories:
                 if cat.name.lower() == ai_category_name.lower():
                     logger.info(f"Match exato: '{cat.name}' (id: {cat.id})")
                     category_id_found = cat.id
                     break
             
-            # Match parcial (contém)
             if not category_id_found:
                 for cat in filtered_categories:
                     if cat.name.lower() in ai_category_name.lower() or ai_category_name.lower() in cat.name.lower():
@@ -605,40 +599,34 @@ Responde APENAS com o nome exato da categoria:"""
                         category_id_found = cat.id
                         break
             
-            # Match por primeira palavra
-            if not category_id_found:
-                first_word = ai_category_name.split()[0] if ai_category_name.split() else ""
-                if first_word:
-                    for cat in filtered_categories:
-                        if first_word.lower() in cat.name.lower():
-                            logger.info(f"Match por palavra: '{cat.name}' (id: {cat.id})")
-                            category_id_found = cat.id
-                            break
+            if not category_id_found and ai_category_name:
+                first_word = ai_category_name.split()[0]
+                for cat in filtered_categories:
+                    if first_word.lower() in cat.name.lower():
+                        logger.info(f"Match por palavra: '{cat.name}' (id: {cat.id})")
+                        category_id_found = cat.id
+                        break
             
             if category_id_found:
-                # Guardar no cache para futuras utilizações (já é guardado na função chamadora, mas garantir)
                 return category_id_found
-            else:
-                logger.warning(f"Nenhuma categoria encontrada para: '{ai_category_name}'")
-                return None
+            logger.warning(f"Nenhuma categoria encontrada para: '{ai_category_name}'")
+            return None
                         
         except Exception as e:
             err_str = (str(e) or "").lower()
-            # Quota / plano esgotado / rate limit (429, ResourceExhausted, etc.)
             if (
-                "429" in err_str or "quota" in err_str or "resource exhausted" in err_str
-                or "resource_exhausted" in err_str or "rate limit" in err_str
-                or "rate_limit" in err_str or "exceeded" in err_str
+                "429" in err_str or "quota" in err_str or "rate_limit" in err_str
+                or "rate limit" in err_str or "exceeded" in err_str
             ):
-                logger.warning(f"Gemini indisponível (quota/limite): {str(e)}")
-                raise GeminiUnavailableError(str(e)) from e
-            logger.error(f"Erro ao usar Gemini: {str(e)}")
+                logger.warning(f"OpenAI indisponível (quota/limite): {str(e)}")
+                raise AIUnavailableError(str(e)) from e
+            logger.error(f"Erro ao usar OpenAI: {str(e)}")
             return None
         
     except ImportError:
-        logger.warning("google-generativeai não instalado. Instale com: pip install google-generativeai")
+        logger.warning("openai não instalado. Instale com: pip install openai")
         return None
-    except GeminiUnavailableError:
+    except AIUnavailableError:
         raise
     except Exception as e:
         logger.error(f"Erro na categorização IA: {str(e)}")
@@ -1132,7 +1120,7 @@ async def telegram_webhook(
             logger.info(f"Processando texto como transação: '{text}'")
             try:
                 parsed = parse_transaction(text, workspace, db)
-            except GeminiUnavailableError:
+            except AIUnavailableError:
                 send_telegram_msg(chat_id, t('ai_unavailable'))
                 return {'status': 'error'}
             logger.info(f"Resultado do parsing: {parsed}")

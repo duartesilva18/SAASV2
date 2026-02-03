@@ -8,7 +8,7 @@ Este guia explica como fazer deploy do projeto FinanZen no Render.
 
 1. Conta no [Render](https://render.com)
 2. Repositório Git (GitHub, GitLab ou Bitbucket) - **a raiz do repositório deve ser a pasta `SaaS`**
-3. Todas as chaves de API necessárias (Stripe, Telegram, Gemini, etc.)
+3. Todas as chaves de API necessárias (Stripe, Telegram, OpenAI, etc.)
 
 ## 🔧 Passo 1: Preparar o Repositório
 
@@ -94,8 +94,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 TELEGRAM_BOT_TOKEN=seu_token_do_bot
 TELEGRAM_WEBHOOK_SECRET=seu_webhook_secret
 
-# Gemini AI
-GEMINI_API_KEY=sua_chave_gemini
+# OpenAI (GPT-4o-mini)
+OPENAI_API_KEY=sua_chave_openai
 
 # Email (SMTP)
 MAIL_USERNAME=seu_email@gmail.com
