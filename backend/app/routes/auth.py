@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from datetime import datetime, timedelta, timezone, date
+from typing import Optional
 import secrets
 import re
 import uuid
@@ -144,6 +145,22 @@ def _purge_expired_registration_verifications(db: Session):
         db.commit()
 
 
+def _get_referrer_by_code(db: Session, code: Optional[str]):
+    """Lookup afiliado por código: case-insensitive e trim. Devolve (referrer, affiliate_code_canonical) ou (None, None)."""
+    if not code or not str(code).strip():
+        return None, None
+    normalized = str(code).strip().lower()
+    referrer = db.query(models.User).filter(
+        and_(
+            models.User.is_affiliate == True,
+            func.lower(func.coalesce(models.User.affiliate_code, '')) == normalized
+        )
+    ).first()
+    if not referrer or not referrer.affiliate_code:
+        return None, None
+    return referrer, referrer.affiliate_code
+
+
 @router.post('/register', response_model=schemas.RegisterPendingResponse)
 @limiter.limit('30/hour')
 async def register(request: Request, user_in: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -165,7 +182,8 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
             raise HTTPException(status_code=400, detail='Este email já está registado. Inicia sessão na página de login.')
 
         hashed_pw = security.get_password_hash(user_in.password)
-        referral_code = getattr(user_in, 'referral_code', None)
+        referral_code_raw = getattr(user_in, 'referral_code', None)
+        referral_code = (referral_code_raw or '').strip() or None  # guardar limpo
         user_lang = getattr(user_in, 'language', 'pt') or 'pt'
         if user_lang not in ['pt', 'en']:
             user_lang = 'pt'
@@ -290,16 +308,12 @@ async def register_confirm(request: Request, data: schemas.RegisterConfirmReques
         raise HTTPException(status_code=400, detail='Código inválido ou expirado.')
 
     referrer_id = None
-    referral_code = getattr(rv, 'referral_code', None)
+    referral_code = (getattr(rv, 'referral_code', None) or '').strip() or None
     if referral_code:
-        referrer = db.query(models.User).filter(
-            and_(
-                models.User.affiliate_code == referral_code,
-                models.User.is_affiliate == True
-            )
-        ).first()
+        referrer, canonical_code = _get_referrer_by_code(db, referral_code)
         if referrer:
             referrer_id = referrer.id
+            referral_code = canonical_code  # usar valor canónico para AffiliateReferral
 
     user = models.User(
         email=email_normalized,
@@ -544,27 +558,23 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
     
     user = db.query(models.User).filter(models.User.email == verification.email).first()
     
-    # Processar referência se fornecida
+    # Processar referência se fornecida (lookup case-insensitive)
     referrer_id = None
     referral_code = None
-    if ref:
-        logger.info(f'🔍 Processando código de referência: {ref} para email: {verification.email}')
-        referrer = db.query(models.User).filter(
-            and_(
-                models.User.affiliate_code == ref,
-                models.User.is_affiliate == True
-            )
-        ).first()
+    ref_clean = (ref or '').strip() if ref else None
+    if ref_clean:
+        logger.info(f'🔍 Processando código de referência: {ref_clean} para email: {verification.email}')
+        referrer, canonical_code = _get_referrer_by_code(db, ref_clean)
         if referrer:
             # Prevenir auto-referência (mesmo utilizador)
             if referrer.email != verification.email:
                 referrer_id = referrer.id
-                referral_code = ref
-                logger.info(f'✅ Código de referência válido: {ref} -> afiliado {referrer.email} (ID: {referrer_id})')
+                referral_code = canonical_code
+                logger.info(f'✅ Código de referência válido: {ref_clean} -> afiliado {referrer.email} (ID: {referrer_id})')
             else:
                 logger.warning(f'🚫 Auto-referência bloqueada: {verification.email} tentou usar seu próprio código')
         else:
-            logger.warning(f'⚠️ Código de referência inválido ou afiliado não encontrado: {ref}')
+            logger.warning(f'⚠️ Código de referência inválido ou afiliado não encontrado: {ref_clean}')
     else:
         logger.info(f'ℹ️ Nenhum código de referência fornecido na URL (ref={ref})')
     
@@ -1087,6 +1097,16 @@ async def purge_user_data(request: Request, current_user: models.User = Depends(
         logger.error(f'Erro ao apagar dados de {current_user.email}: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao apagar dados da conta.')
 
+@router.get('/referral-code/validate')
+async def validate_referral_code(code: Optional[str] = None, db: Session = Depends(get_db)):
+    """Valida se um código de afiliado existe e está ativo. Público (sem auth)."""
+    code_clean = (code or '').strip()
+    if not code_clean:
+        return {'valid': False}
+    referrer, _ = _get_referrer_by_code(db, code_clean)
+    return {'valid': referrer is not None}
+
+
 @router.post('/login', response_model=schemas.Token)
 @limiter.limit('5/minute')
 async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
@@ -1302,21 +1322,17 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
             if user_language not in ['pt', 'en']:
                 user_language = 'pt'
             
-            # Validar código de referência se fornecido
+            # Validar código de referência se fornecido (lookup case-insensitive)
             referrer_id = None
-            referral_code = getattr(data, 'referral_code', None)
+            referral_code_raw = getattr(data, 'referral_code', None)
+            referral_code = (referral_code_raw or '').strip() or None
             if referral_code:
-                referrer = db.query(models.User).filter(
-                    and_(
-                        models.User.affiliate_code == referral_code,
-                        models.User.is_affiliate == True
-                    )
-                ).first()
+                referrer, canonical_code = _get_referrer_by_code(db, referral_code)
                 if referrer:
-                    # Prevenir auto-referência (verificar depois de criar o user)
                     referrer_id = referrer.id
+                    referral_code = canonical_code  # valor canónico para AffiliateReferral
                 else:
-                    logger.warning(f'Código de referência inválido no social login: {referral_code}')
+                    logger.warning(f'Código de referência inválido no social login: {referral_code_raw}')
             
             user = models.User(
                 email=email_normalized,

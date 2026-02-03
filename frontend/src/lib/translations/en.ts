@@ -343,7 +343,12 @@ export const en = {
           privacyLink: "Privacy Policy",
           successTitle: "Account created successfully!",
           successMessage: "Account created successfully! Logging you in automatically.",
-          passwordTooLong: "Password cannot exceed 72 characters"
+          passwordTooLong: "Password cannot exceed 72 characters",
+          referralCodeLabel: "Referral Code (Optional)",
+          referralCodePlaceholder: "E.g. MM2HQR2K",
+          referralCodeApplied: "Code applied",
+          referralCodeInvalid: "Invalid affiliate code",
+          referralCodeChecking: "Checking..."
       },
       verifyEmail: {
           processing: "Processing...",

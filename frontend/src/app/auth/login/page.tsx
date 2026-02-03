@@ -40,7 +40,7 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-2 3xl:gap-4 py-3 3xl:py-5 px-6 3xl:px-10 bg-slate-950 border border-slate-800 rounded-xl 3xl:rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[280px] 3xl:max-w-[300px]"
+      className="flex items-center justify-center gap-2.5 3xl:gap-4 py-3.5 3xl:py-5 px-6 3xl:px-10 bg-slate-950 border border-slate-800 rounded-xl 3xl:rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] 3xl:max-w-[300px]"
     >
       <svg viewBox="0 0 24 24" className="w-5 h-5 3xl:w-6 3xl:h-6 fill-current">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
@@ -48,7 +48,7 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
         <path d="M5.87 13.78c-.22-.65-.35-1.35-.35-2.08s.13-1.43.35-2.08V6.64H2.18C1.43 8.24 1 10.07 1 12s.43 3.76 1.18 5.36l3.69-2.98z" fill="#FBBC05" />
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.75 1 3.99 3.76 2.18 7.36l3.69 2.98c.86-2.59 3.28-4.51 6.13-4.51z" fill="#EA4335" />
       </svg>
-      <span className="text-[10px] 3xl:text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors">
+      <span className="text-[10px] sm:text-[11px] 3xl:text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors">
         {t.auth.login.googleLogin}
       </span>
     </button>
@@ -336,35 +336,35 @@ function LoginPageContent() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-4 lg:p-8 3xl:p-12 3xl:xl:p-24 relative z-10 bg-[#020617]/95 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="lg:hidden absolute top-4 sm:top-5 left-3 sm:left-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-5 lg:p-8 3xl:p-12 3xl:xl:p-24 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="lg:hidden absolute top-5 sm:top-6 left-4 sm:left-5">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-slate-500 hover:text-white transition-all text-[9px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] cursor-pointer min-h-[40px] min-w-[40px] -m-1.5 p-1.5 rounded-lg 3xl:rounded-xl active:scale-[0.98]"
+              className="flex items-center gap-2 text-slate-500 hover:text-white transition-all text-[10px] 3xl:text-[10px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.3em] cursor-pointer min-h-[42px] min-w-[42px] -m-2 p-2 rounded-lg 3xl:rounded-xl active:scale-[0.98]"
               aria-label={t.auth.login.back}
             >
-              <ChevronLeft size={12} className="3xl:w-3.5 3xl:h-3.5" />
+              <ChevronLeft size={14} className="3xl:w-3.5 3xl:h-3.5" />
               {t.auth.login.back}
             </Link>
           </div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[340px] sm:max-w-[380px] 3xl:max-w-[520px]">
-            <div className="mb-3 3xl:mb-8 3xl:lg:mb-12 text-center lg:text-left">
-              <div className="lg:hidden w-10 h-10 3xl:w-14 3xl:h-14 rounded-lg 3xl:rounded-xl flex items-center justify-center mx-auto mb-3 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-[360px] sm:max-w-[400px] 3xl:max-w-[520px]">
+            <div className="mb-4 3xl:mb-8 3xl:lg:mb-12 text-center lg:text-left">
+              <div className="lg:hidden w-11 h-11 3xl:w-14 3xl:h-14 rounded-xl 3xl:rounded-xl flex items-center justify-center mx-auto mb-4 3xl:mb-6 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl 3xl:text-4xl 3xl:lg:text-5xl font-black tracking-tighter mb-1.5 3xl:mb-3 3xl:lg:mb-4 text-white">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl 3xl:text-4xl 3xl:lg:text-5xl font-black tracking-tighter mb-2 3xl:mb-3 3xl:lg:mb-4 text-white">
                 {t.auth.login.title}
                 <span className="text-blue-500 italic ml-1 3xl:ml-2">{t.auth.login.titleAccent}</span>
               </h1>
-              <p className="text-slate-500 font-medium text-xs 3xl:text-base 3xl:lg:text-lg italic">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg italic">
                 {t.auth.login.subtitle}
               </p>
             </div>
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-4 sm:p-5 3xl:p-8 3xl:sm:p-10 3xl:lg:p-12 rounded-xl 3xl:rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-5 sm:p-6 3xl:p-8 3xl:sm:p-10 3xl:lg:p-12 rounded-xl 3xl:rounded-[32px] relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {error && (
@@ -372,34 +372,34 @@ function LoginPageContent() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="mb-3 3xl:mb-8 p-2.5 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-lg 3xl:rounded-2xl text-red-400 text-[9px] 3xl:text-xs font-black tracking-tight leading-tight"
+                    className="mb-4 3xl:mb-8 p-3 3xl:p-4 bg-red-500/10 border border-red-500/20 rounded-xl 3xl:rounded-2xl text-red-400 text-[10px] 3xl:text-xs font-black tracking-tight leading-tight"
                   >
-                    <div className="flex items-center gap-1.5 3xl:gap-3">
-                      <div className="w-5 h-5 3xl:w-8 3xl:h-8 bg-red-500/20 rounded 3xl:rounded-xl flex items-center justify-center shrink-0">
-                        <AlertCircle size={12} className="3xl:w-4 3xl:h-4" />
+                    <div className="flex items-center gap-2 3xl:gap-3">
+                      <div className="w-6 h-6 3xl:w-8 3xl:h-8 bg-red-500/20 rounded-lg 3xl:rounded-xl flex items-center justify-center shrink-0">
+                        <AlertCircle size={14} className="3xl:w-4 3xl:h-4" />
                       </div>
                       <span>{error}</span>
                     </div>
                     {showResendVerification && (
-                      <div className="mt-3 pt-3 3xl:mt-4 3xl:pt-4 border-t border-red-500/20 flex flex-col gap-1.5 3xl:gap-2">
-                        <p className="text-slate-400 text-[9px] 3xl:text-[10px] font-medium">{t.auth.login.resendVerificationPrompt}</p>
+                      <div className="mt-3 pt-3 3xl:mt-4 3xl:pt-4 border-t border-red-500/20 flex flex-col gap-2 3xl:gap-2">
+                        <p className="text-slate-400 text-[10px] 3xl:text-[10px] font-medium">{t.auth.login.resendVerificationPrompt}</p>
                         <button
                           type="button"
                           onClick={handleResendVerification}
                           disabled={resendLoading}
-                          className="text-blue-400 hover:text-blue-300 text-[9px] 3xl:text-[10px] font-black uppercase tracking-widest underline decoration-blue-500/30 underline-offset-2 w-fit cursor-pointer disabled:opacity-50 transition-colors"
+                          className="text-blue-400 hover:text-blue-300 text-[10px] 3xl:text-[10px] font-black uppercase tracking-widest underline decoration-blue-500/30 underline-offset-2 w-fit cursor-pointer disabled:opacity-50 transition-colors"
                         >
                           {resendLoading ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 3xl:w-3 3xl:h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                            <span className="inline-flex items-center gap-2">
+                              <span className="w-3 h-3 3xl:w-3 3xl:h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
                               {t.auth.login.resendVerificationLink}
                             </span>
                           ) : (
                             t.auth.login.resendVerificationLink
                           )}
                         </button>
-                        {resendSuccess && <p className="text-emerald-400 text-[9px] 3xl:text-[10px] font-medium">{resendSuccess}</p>}
-                        {resendError && <p className="text-red-400/90 text-[9px] 3xl:text-[10px] font-medium">{resendError}</p>}
+                        {resendSuccess && <p className="text-emerald-400 text-[10px] 3xl:text-[10px] font-medium">{resendSuccess}</p>}
+                        {resendError && <p className="text-red-400/90 text-[10px] 3xl:text-[10px] font-medium">{resendError}</p>}
                       </div>
                     )}
                   </motion.div>
@@ -495,38 +495,38 @@ function LoginPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-4 3xl:mt-10 3xl:lg:mt-14">
-                <div className="relative mb-4 3xl:mb-10 text-center">
+              <div className="mt-5 3xl:mt-10 3xl:lg:mt-14">
+                <div className="relative mb-5 3xl:mb-10 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
-                  <div className="relative flex justify-center text-[7px] 3xl:text-[9px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.4em]">
-                    <span className="bg-[#020617] px-2 3xl:px-4 text-slate-600">{t.auth.login.orContinueWith}</span>
+                  <div className="relative flex justify-center text-[8px] 3xl:text-[9px] font-black uppercase tracking-[0.25em] 3xl:tracking-[0.4em]">
+                    <span className="bg-[#020617] px-2.5 3xl:px-4 text-slate-600">{t.auth.login.orContinueWith}</span>
                   </div>
                 </div>
-                <div className="flex justify-center scale-[0.85] sm:scale-95 3xl:scale-100">
+                <div className="flex justify-center scale-[0.9] sm:scale-95 3xl:scale-100">
                   <GoogleLoginButton onLoginSuccess={(token) => handleSocialLogin(token, 'google')} />
                 </div>
               </div>
             </motion.div>
 
-            <div className="mt-4 3xl:mt-10 3xl:lg:mt-14 text-center">
-              <p className="text-slate-500 font-medium text-xs 3xl:text-base 3xl:lg:text-lg mb-2 3xl:mb-4 3xl:lg:mb-6 italic">
+            <div className="mt-5 3xl:mt-10 3xl:lg:mt-14 text-center">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm 3xl:text-base 3xl:lg:text-lg mb-3 3xl:mb-4 3xl:lg:mb-6 italic">
                 {t.auth.login.noAccount}
               </p>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-1.5 3xl:gap-3 3xl:lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-4 3xl:px-8 3xl:lg:px-12 py-2.5 3xl:py-4 3xl:lg:py-6 rounded-lg 3xl:rounded-[24px] font-black uppercase tracking-[0.12em] 3xl:tracking-[0.2em] text-[8px] 3xl:text-[10px] 3xl:lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+                className="inline-flex items-center gap-2 3xl:gap-3 3xl:lg:gap-4 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-5 3xl:px-8 3xl:lg:px-12 py-3 3xl:py-4 3xl:lg:py-6 rounded-xl 3xl:rounded-[24px] font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] text-[9px] 3xl:text-[10px] 3xl:lg:text-sm text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.login.registerCta}
-                <Sparkles size={12} className="text-blue-500 group-hover:rotate-12 transition-transform 3xl:w-[18px] 3xl:h-[18px] 3xl:lg:size-5" />
+                <Sparkles size={14} className="text-blue-500 group-hover:rotate-12 transition-transform 3xl:w-[18px] 3xl:h-[18px] 3xl:lg:size-5" />
               </Link>
             </div>
           </motion.div>
         </div>
 
-        <div className="absolute bottom-3 3xl:bottom-8 3xl:lg:bottom-12 left-1/2 -translate-x-1/2 lg:left-auto lg:right-8 3xl:lg:right-12 lg:translate-x-0 flex items-center gap-1 3xl:gap-2 3xl:lg:gap-3 text-[6px] 3xl:text-[8px] 3xl:lg:text-[10px] font-black text-slate-700 uppercase tracking-[0.2em] 3xl:tracking-[0.4em] 3xl:lg:tracking-[0.5em] opacity-50 whitespace-nowrap">
-          <ShieldCheck size={8} className="3xl:w-3 3xl:h-3 3xl:lg:size-[14px]" />
+        <div className="absolute bottom-4 3xl:bottom-8 3xl:lg:bottom-12 left-1/2 -translate-x-1/2 lg:left-auto lg:right-8 3xl:lg:right-12 lg:translate-x-0 flex items-center gap-1.5 3xl:gap-2 3xl:lg:gap-3 text-[7px] 3xl:text-[8px] 3xl:lg:text-[10px] font-black text-slate-700 uppercase tracking-[0.25em] 3xl:tracking-[0.4em] 3xl:lg:tracking-[0.5em] opacity-50 whitespace-nowrap">
+          <ShieldCheck size={10} className="3xl:w-3 3xl:h-3 3xl:lg:size-[14px]" />
           {t.auth.login.sslSecured}
         </div>
       </div>

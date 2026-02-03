@@ -343,7 +343,12 @@ export const pt = {
           privacyLink: "Política de Privacidade",
           successTitle: "Conta criada com sucesso!",
           successMessage: "Conta criada com sucesso! A iniciar sessão automaticamente.",
-          passwordTooLong: "A senha não pode ter mais de 72 caracteres"
+          passwordTooLong: "A senha não pode ter mais de 72 caracteres",
+          referralCodeLabel: "Código de Referência (Opcional)",
+          referralCodePlaceholder: "Ex: MM2HQR2K",
+          referralCodeApplied: "Código aplicado",
+          referralCodeInvalid: "Código de afiliado inválido",
+          referralCodeChecking: "A verificar..."
       },
       verifyEmail: {
           processing: "A Processar...",

@@ -63,7 +63,12 @@ function RegisterPageContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const p = new URLSearchParams(window.location.search);
+    return (p.get('ref') || '').trim();
+  });
+  const [referralCodeValid, setReferralCodeValid] = useState<'idle' | 'valid' | 'invalid' | 'checking'>('idle');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,13 +76,32 @@ function RegisterPageContent() {
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
 
-  // Pegar referral code da URL se existir
+  // Sincronizar ref da URL quando searchParams estiver disponível (ex.: após hydration)
   useEffect(() => {
     const ref = searchParams?.get('ref');
-    if (ref) {
-      setReferralCode(ref);
+    if (ref != null && ref.trim()) {
+      setReferralCode(ref.trim());
     }
   }, [searchParams]);
+
+  // Validar código de afiliado com debounce (ao escrever ou colar)
+  useEffect(() => {
+    const code = (referralCode || '').trim();
+    if (!code || code.length < 2) {
+      setReferralCodeValid('idle');
+      return;
+    }
+    setReferralCodeValid('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/auth/referral-code/validate', { params: { code } });
+        setReferralCodeValid(res.data?.valid ? 'valid' : 'invalid');
+      } catch {
+        setReferralCodeValid('invalid');
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [referralCode]);
 
   const registerBenefits = t.auth.register.registerBenefits;
 
@@ -119,7 +143,7 @@ function RegisterPageContent() {
         token,
         provider,
         language,
-        referral_code: referralCode || undefined
+        referral_code: (referralCode || '').trim() || undefined
       });
       const storage = localStorage;
       storage.setItem('token', response.data.access_token);
@@ -171,7 +195,7 @@ function RegisterPageContent() {
         email,
         password,
         language,
-        referral_code: referralCode || undefined
+        referral_code: (referralCode || '').trim() || undefined
       });
 
       setSuccess(true);
@@ -440,19 +464,37 @@ function RegisterPageContent() {
             {/* Referral Code Field */}
             <div className="mt-6 pt-6 border-t border-slate-800">
               <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-3 ml-2">
-                Código de Referência (Opcional)
+                {t.auth.register.referralCodeLabel ?? 'Código de Referência (Opcional)'}
               </label>
               <input
                 type="text"
                 value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-[24px] py-4 pl-5 pr-5 text-sm focus:outline-none focus:border-amber-500 transition-all placeholder:text-slate-800 font-medium"
-                placeholder="Ex: MM2HQR2K"
+                onChange={(e) => setReferralCode((e.target.value || '').trim().slice(0, 20))}
+                className={`w-full bg-slate-950/50 border rounded-[24px] py-4 pl-5 pr-5 text-sm focus:outline-none transition-all placeholder:text-slate-800 font-medium ${
+                  referralCodeValid === 'valid'
+                    ? 'border-emerald-500/50 focus:border-emerald-500'
+                    : referralCodeValid === 'invalid'
+                    ? 'border-red-500/50 focus:border-red-500'
+                    : 'border-slate-800 focus:border-amber-500'
+                }`}
+                placeholder={t.auth.register.referralCodePlaceholder ?? 'Ex: MM2HQR2K'}
                 maxLength={20}
               />
               {referralCode && (
-                <p className="text-xs text-amber-400 mt-2 ml-2 font-medium">
-                  Código aplicado: {referralCode}
+                <p className={`text-xs mt-2 ml-2 font-medium ${
+                  referralCodeValid === 'valid'
+                    ? 'text-emerald-400'
+                    : referralCodeValid === 'invalid'
+                    ? 'text-red-400'
+                    : 'text-amber-400'
+                }`}>
+                  {referralCodeValid === 'checking'
+                    ? (t.auth.register.referralCodeChecking ?? 'A verificar...')
+                    : referralCodeValid === 'valid'
+                    ? `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`
+                    : referralCodeValid === 'invalid'
+                    ? (t.auth.register.referralCodeInvalid ?? 'Código de afiliado inválido')
+                    : `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`}
                 </p>
               )}
             </div>

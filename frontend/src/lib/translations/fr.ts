@@ -343,7 +343,12 @@ export const fr = {
           privacyLink: "Politique de confidentialité",
           successTitle: "Compte créé avec succès !",
           successMessage: "Compte créé avec succès ! Connexion automatique en cours.",
-          passwordTooLong: "Le mot de passe ne peut pas dépasser 72 caractères"
+          passwordTooLong: "Le mot de passe ne peut pas dépasser 72 caractères",
+          referralCodeLabel: "Code de parrainage (optionnel)",
+          referralCodePlaceholder: "Ex : MM2HQR2K",
+          referralCodeApplied: "Code appliqué",
+          referralCodeInvalid: "Code d'affilié invalide",
+          referralCodeChecking: "Vérification..."
       },
       verifyEmail: {
           processing: "Traitement...",
