@@ -445,119 +445,96 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* Preferences Section */}
-            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 blur-[80px] rounded-full -z-10" />
-              
-              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 md:mb-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600/10 text-indigo-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                  <Coins size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <h2 className="text-xl font-black tracking-tighter text-white uppercase tracking-widest text-[11px] opacity-60">
-                  {t.dashboard.settings.preferences.title}
-                </h2>
-              </div>
-
-              <div className="space-y-4 sm:space-y-6 md:space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
-                  {/* Currency */}
-                  <div className="space-y-3">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
-                      {t.dashboard.settings.preferences.currency}
-                    </label>
-                    <div className="relative group/field">
-                      <Coins size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-indigo-500 transition-colors pointer-events-none z-10" />
-                      <select 
-                        value={formData.currency}
-                        onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-10 text-sm focus:outline-none focus:border-indigo-500 transition-all text-white font-medium appearance-none cursor-pointer"
-                      >
-                        <option value="EUR" className="bg-slate-900">Euro (€)</option>
-                        <option value="BRL" className="bg-slate-900">Real (R$)</option>
-                        <option value="USD" className="bg-slate-900">Dollar ($)</option>
-                      </select>
-                    </div>
+            {/* Preferências (mais espaço) + Alterar password (menos) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Preferences Section — 2/3 da largura */}
+              <section className="md:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                    <Coins size={20} />
                   </div>
-
-                  {/* Language */}
-                  <div className="space-y-3">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
-                      {t.dashboard.settings.preferences.language}
-                    </label>
-                    <div className="relative group/field">
-                      <Globe size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-indigo-500 transition-colors pointer-events-none z-10" />
-                      <select 
-                        value={language}
-                        onChange={e => {
-                          setLanguage(e.target.value as any);
-                        }}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-10 text-sm focus:outline-none focus:border-indigo-500 transition-all text-white font-medium appearance-none cursor-pointer"
-                      >
-                        {Object.values(availableLanguages).map((lang) => (
-                          <option 
-                            key={lang.code} 
-                            value={lang.code} 
-                            className="bg-slate-900"
-                          >
-                            {lang.flag} {lang.nativeName} ({lang.locale})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                  <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                    {t.dashboard.settings.preferences.title}
+                  </h2>
                 </div>
-
-                {/* Marketing */}
-                <div 
-                  onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
-                  className="flex items-center gap-4 py-4 px-5 bg-white/[0.02] border border-slate-800 rounded-2xl cursor-pointer group transition-all hover:bg-white/[0.04]"
-                >
-                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
-                    formData.marketing_opt_in 
-                    ? 'bg-blue-600 border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]' 
-                    : 'border-slate-700 bg-slate-950 group-hover:border-slate-500'
-                  }`}>
-                    <AnimatePresence>
-                      {formData.marketing_opt_in && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.5 }}
-                          transition={{ duration: 0.15 }}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        {t.dashboard.settings.preferences.currency}
+                      </label>
+                      <div className="relative group/field">
+                        <Coins size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
+                        <select 
+                          value={formData.currency}
+                          onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 text-white font-medium appearance-none cursor-pointer"
                         >
-                          <Check size={14} className="text-white stroke-[4]" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                          <option value="EUR" className="bg-slate-900">Euro (€)</option>
+                          <option value="BRL" className="bg-slate-900">Real (R$)</option>
+                          <option value="USD" className="bg-slate-900">Dollar ($)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                        {t.dashboard.settings.preferences.language}
+                      </label>
+                      <div className="relative group/field">
+                        <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
+                        <select 
+                          value={language}
+                          onChange={e => setLanguage(e.target.value as any)}
+                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 text-white font-medium appearance-none cursor-pointer"
+                        >
+                          {Object.values(availableLanguages).map((lang) => (
+                            <option key={lang.code} value={lang.code} className="bg-slate-900">
+                              {lang.flag} {lang.nativeName} ({lang.locale})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className={`text-sm font-bold transition-colors ${formData.marketing_opt_in ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
-                      {t.dashboard.settings.preferences.marketing}
-                    </p>
-                    <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
-                      {t.dashboard.settings.marketingChannels}
-                    </p>
+                  <div 
+                    onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
+                    className="flex items-center gap-3 py-3 px-4 bg-white/[0.02] border border-slate-800 rounded-xl cursor-pointer hover:bg-white/[0.04] transition-colors"
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
+                      formData.marketing_opt_in ? 'bg-blue-600 border-blue-600' : 'border-slate-600 bg-slate-950'
+                    }`}>
+                      {formData.marketing_opt_in && <Check size={12} className="text-white stroke-[3]" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{t.dashboard.settings.preferences.marketing}</p>
+                      <p className="text-[10px] text-slate-600 uppercase tracking-wider">{t.dashboard.settings.marketingChannels}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            {/* Alterar password — envia código ao email, depois altera no modal */}
-            <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-white/[0.02] border border-slate-800 rounded-xl sm:rounded-2xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
-              </p>
-              <p className="text-xs text-slate-500 mb-4">
-                {(t.dashboard.settings as any).accountSecurity?.changePasswordDescCode ?? 'Enviaremos um código de 6 dígitos para o teu email. Usa-o no modal para definir a nova password.'}
-              </p>
-              <button
-                type="button"
-                onClick={handleRequestPasswordCode}
-                disabled={sendingCode || !userEmail}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {sendingCode ? <Loader2 size={18} className="animate-spin" /> : t.dashboard.settings.personalData.changePassword}
-              </button>
+              {/* Alterar password — 1/3 da largura */}
+              <div className="md:col-span-1 p-5 rounded-2xl border border-slate-800 bg-slate-900/50">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                    <Lock size={20} />
+                  </div>
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300">
+                    {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">
+                  {(t.dashboard.settings as any).accountSecurity?.changePasswordDescCode ?? 'Enviaremos um código de 6 dígitos para o teu email. Usa-o no modal para definir a nova password.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRequestPasswordCode}
+                  disabled={sendingCode || !userEmail}
+                  className="h-10 px-5 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border-2 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 hover:border-amber-500/70 text-amber-400 hover:text-amber-300 transition-all w-fit"
+                >
+                  {sendingCode ? <Loader2 size={16} className="animate-spin" /> : <><Lock size={14} /> {t.dashboard.settings.personalData.changePassword}</>}
+                </button>
+              </div>
             </div>
 
             <button
@@ -628,59 +605,60 @@ export default function SettingsPage() {
             </button>
           </section>
 
-          {/* Exportar dados da conta — backup / usar noutra conta */}
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
-            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                <Download size={18} className="sm:w-5 sm:h-5" />
+          {/* Exportar e Importar lado a lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                  <Download size={20} />
+                </div>
+                <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  {(t.dashboard.settings as any).exportDataTitle ?? 'Exportar dados da conta'}
+                </h2>
               </div>
-              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-slate-400 uppercase tracking-widest min-w-0 truncate">
-                {(t.dashboard.settings as any).exportDataTitle ?? 'Exportar dados da conta'}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mb-4 sm:mb-5 leading-relaxed">
-              {(t.dashboard.settings as any).exportDataDescription ?? 'Descarrega um ficheiro JSON com workspaces, categorias, transações, metas e transações recorrentes. Podes guardar como cópia de segurança ou usar depois noutra conta (importação disponível em breve).'}
-            </p>
-            <button
-              type="button"
-              onClick={handleExportData}
-              disabled={exporting}
-              className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
-            >
-              {exporting ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Download size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.export}</span></>}
-            </button>
-          </section>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                {(t.dashboard.settings as any).exportDataDescription ?? 'Descarrega um ficheiro JSON com workspaces, categorias, transações, metas e transações recorrentes. Podes guardar como cópia de segurança ou importar noutra conta em Definições.'}
+              </p>
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exporting}
+                className="w-full h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
+              </button>
+            </section>
 
-          {/* Importar dados da conta */}
-          <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-slate-700 transition-all group shadow-xl">
-            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                <Upload size={18} className="sm:w-5 sm:h-5" />
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <Upload size={20} />
+                </div>
+                <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  {(t.dashboard.settings as any).importDataTitle ?? 'Importar dados da conta'}
+                </h2>
               </div>
-              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-slate-400 uppercase tracking-widest min-w-0 truncate">
-                {(t.dashboard.settings as any).importDataTitle ?? 'Importar dados da conta'}
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 mb-4 sm:mb-5 leading-relaxed">
-              {(t.dashboard.settings as any).importDataDescription ?? 'Escolhe um ficheiro JSON exportado pelo Finly. Serão criados novos workspaces com as categorias, transações, recorrentes e metas desse ficheiro.'}
-            </p>
-            <input
-              ref={importFileInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={handleImportData}
-              disabled={importing}
-            />
-            <button
-              type="button"
-              onClick={() => importFileInputRef.current?.click()}
-              disabled={importing}
-              className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-manipulation"
-            >
-              {importing ? <Loader2 size={14} className="animate-spin shrink-0" /> : <><Upload size={14} className="shrink-0" /> <span className="truncate">{(t.dashboard.settings as any).importButton ?? 'Escolher ficheiro e importar'}</span></>}
-            </button>
-          </section>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                {(t.dashboard.settings as any).importDataDescription ?? 'Escolhe um ficheiro JSON exportado pelo Finly. Serão criados novos workspaces com as categorias, transações, recorrentes e metas desse ficheiro.'}
+              </p>
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportData}
+                disabled={importing}
+              />
+              <button
+                type="button"
+                onClick={() => importFileInputRef.current?.click()}
+                disabled={importing}
+                className="w-full h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {importing ? <Loader2 size={14} className="animate-spin" /> : <><Upload size={14} /> <span>{(t.dashboard.settings as any).importButton ?? 'Escolher ficheiro e importar'}</span></>}
+              </button>
+            </section>
+          </div>
 
           {/* Danger Zone — responsiva para mobile */}
           <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
