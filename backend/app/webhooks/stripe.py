@@ -508,6 +508,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                             existing.commission_amount_cents += commission_amount_cents
                             existing.conversions_count += 1
                             logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{amount_paid} cêntimos')
+                            commission_obj = existing
                         else:
                             new_commission = models.AffiliateCommission(
                                 affiliate_id=referral.referrer_id,
@@ -521,6 +522,17 @@ def handle_invoice_paid(invoice: dict, db: Session):
                             )
                             db.add(new_commission)
                             logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {amount_paid} cêntimos')
+                            commission_obj = new_commission
+                        # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
+                        manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                            models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
+                        ).first()
+                        if manual_done and commission_obj:
+                            commission_obj.stripe_transfer_id = manual_done.transfer_id
+                            commission_obj.payment_reference = manual_done.transfer_id
+                            commission_obj.is_paid = True
+                            commission_obj.paid_at = datetime.now()
+                            logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
                     except Exception as e:
                         logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
 
