@@ -354,6 +354,7 @@ class AffiliateReferral(Base):
     referral_code = Column(String(20), nullable=False, index=True)  # Código usado no signup
     has_subscribed = Column(Boolean, nullable=False, default=False)  # Se o utilizador referido subscreveu Pro
     subscription_date = Column(DateTime(timezone=True), nullable=True)  # Data da subscrição Pro
+    subscription_canceled_at = Column(DateTime(timezone=True), nullable=True)  # Data de cancelamento/reembolso
     ip_address = Column(String(50), nullable=True)  # Para prevenir fraudes
     user_agent = Column(String(500), nullable=True)  # Para prevenir fraudes
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

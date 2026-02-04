@@ -1071,6 +1071,7 @@ async def get_affiliate_detail(
             'referred_user_full_name': referred_user.full_name if referred_user else None,
             'has_subscribed': ref.has_subscribed,
             'subscription_date': ref.subscription_date.isoformat() if ref.subscription_date else None,
+            'subscription_canceled_at': getattr(ref, 'subscription_canceled_at', None).isoformat() if getattr(ref, 'subscription_canceled_at', None) else None,
             'created_at': ref.created_at.isoformat() if ref.created_at else None,
             'payment_info': payment_info
         }

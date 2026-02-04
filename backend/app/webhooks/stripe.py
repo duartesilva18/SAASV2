@@ -81,6 +81,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == 'account.updated':
         account = event['data']['object']
         handle_account_updated(account, db)
+    elif event_type == 'charge.refunded':
+        charge = event['data']['object']
+        handle_charge_refunded(charge, db)
 
     return {'status': 'success'}
 
@@ -207,7 +210,7 @@ def handle_subscription_updated(subscription: dict, db: Session):
         logger.warning(f'Utilizador não encontrado para subscrição: {subscription_id}')
 
 def handle_subscription_deleted(subscription: dict, db: Session):
-    """Processa customer.subscription.deleted"""
+    """Processa customer.subscription.deleted - cancelamento ou reembolso; atualiza dados do afiliado."""
     subscription_id = subscription['id']
     
     logger.info(f'Subscrição eliminada: {subscription_id}')
@@ -215,11 +218,135 @@ def handle_subscription_deleted(subscription: dict, db: Session):
     user = db.query(models.User).filter(models.User.stripe_subscription_id == subscription_id).first()
     if user:
         user.subscription_status = 'canceled'
+        # Atualizar referência de afiliado: deixar de contar como conversão e registar cancelamento
+        referral = db.query(models.AffiliateReferral).filter(
+            models.AffiliateReferral.referred_user_id == user.id
+        ).first()
+        if referral:
+            referral.has_subscribed = False
+            referral.subscription_canceled_at = datetime.now()
+            logger.info(f'Afiliado: referência {user.email} marcada como cancelada (referrer_id={referral.referrer_id})')
+            # Ajustar comissão do mês da subscrição: menos uma conversão e estimativa de valor (9,99€, 25%)
+            if referral.subscription_date:
+                commission_month = referral.subscription_date.replace(day=1).date()
+                comm = db.query(models.AffiliateCommission).filter(
+                    models.AffiliateCommission.affiliate_id == referral.referrer_id,
+                    models.AffiliateCommission.month == commission_month
+                ).first()
+                if comm and comm.conversions_count > 0:
+                    est_revenue_cents = 999  # 9,99€
+                    est_commission_cents = int(est_revenue_cents * (float(comm.commission_percentage) / 100))
+                    comm.total_revenue_cents = max(0, comm.total_revenue_cents - est_revenue_cents)
+                    comm.commission_amount_cents = max(0, comm.commission_amount_cents - est_commission_cents)
+                    comm.conversions_count = max(0, comm.conversions_count - 1)
+                    logger.info(f'Afiliado: comissão ajustada (mês {commission_month}): -{est_revenue_cents} cêntimos receita, -{est_commission_cents} cêntimos comissão, -1 conversão')
         # Não eliminar o subscription_id para manter histórico
         db.commit()
         logger.info(f'Subscrição cancelada para {user.email}')
     else:
         logger.warning(f'Utilizador não encontrado para subscrição eliminada: {subscription_id}')
+
+
+def handle_charge_refunded(charge: dict, db: Session):
+    """Processa charge.refunded - reembolso; atualiza dados do afiliado e reverte o transfer no Stripe Connect."""
+    charge_id = charge.get('id')
+    amount_refunded = charge.get('amount_refunded') or charge.get('amount', 0)  # cêntimos (refund total ou parcial)
+    customer_id = charge.get('customer')
+    invoice_id = charge.get('invoice')
+    transfer_id = charge.get('transfer')  # transfer para a conta Connect do afiliado (se existir)
+
+    logger.info(f'Reembolso: charge={charge_id} amount_refunded={amount_refunded} customer={customer_id} transfer={transfer_id}')
+
+    user = None
+    if customer_id:
+        user = db.query(models.User).filter(models.User.stripe_customer_id == customer_id).first()
+    if not user and invoice_id and settings.STRIPE_API_KEY:
+        try:
+            inv = stripe.Invoice.retrieve(invoice_id)
+            sub_id = inv.get('subscription')
+            if sub_id:
+                user = db.query(models.User).filter(models.User.stripe_subscription_id == sub_id).first()
+        except Exception as e:
+            logger.warning(f'Erro ao obter invoice {invoice_id} para charge.refunded: {e}')
+
+    if not user:
+        logger.warning(f'Utilizador não encontrado para reembolso charge {charge_id}')
+        return
+
+    referral = db.query(models.AffiliateReferral).filter(
+        models.AffiliateReferral.referred_user_id == user.id
+    ).first()
+    if not referral:
+        logger.info(f'Reembolso para {user.email} sem referência de afiliado; nada a reverter.')
+        return
+
+    # Atualizar referência
+    referral.has_subscribed = False
+    referral.subscription_canceled_at = datetime.now()
+
+    # Mês da comissão: a partir da invoice ou da data do charge
+    commission_month = date.today().replace(day=1)
+    if invoice_id and settings.STRIPE_API_KEY:
+        try:
+            inv = stripe.Invoice.retrieve(invoice_id)
+            period_start = inv.get('period_start')
+            if period_start is not None:
+                commission_month = datetime.fromtimestamp(period_start).date().replace(day=1)
+        except Exception:
+            pass
+
+    # Obter percentagem de comissão (invoice price ou default 25%)
+    commission_pct = 25.0
+    if invoice_id and settings.STRIPE_API_KEY:
+        try:
+            inv = stripe.Invoice.retrieve(invoice_id, expand=['lines.data.price'])
+            lines = (inv.get('lines') or {}).get('data') or []
+            if lines:
+                price = lines[0].get('price')
+                price_id = price.get('id') if isinstance(price, dict) else price
+                if price_id:
+                    commission_pct = get_commission_percentage_for_price_id(price_id, db)
+        except Exception:
+            pass
+
+    commission_to_reverse_cents = int(amount_refunded * (commission_pct / 100))
+
+    # Ajustar comissão na BD
+    comm = db.query(models.AffiliateCommission).filter(
+        models.AffiliateCommission.affiliate_id == referral.referrer_id,
+        models.AffiliateCommission.month == commission_month
+    ).first()
+    if comm and comm.conversions_count > 0:
+        comm.total_revenue_cents = max(0, comm.total_revenue_cents - amount_refunded)
+        comm.commission_amount_cents = max(0, comm.commission_amount_cents - commission_to_reverse_cents)
+        comm.conversions_count = max(0, comm.conversions_count - 1)
+        logger.info(f'Afiliado: comissão ajustada (reembolso): -{amount_refunded} receita, -{commission_to_reverse_cents} comissão, -1 conversão')
+
+    # Reverter o transfer no Stripe Connect (tirar o valor da comissão ao afiliado)
+    if not transfer_id and settings.STRIPE_API_KEY:
+        # Fallback: em subscrições o transfer pode estar separado do charge; procurar por source_transaction
+        try:
+            transfers = stripe.Transfer.list(limit=100)
+            for t in transfers.get('data', []):
+                if t.get('source_transaction') == charge_id:
+                    transfer_id = t.get('id')
+                    logger.info(f'Transfer encontrado por source_transaction: {transfer_id}')
+                    break
+        except Exception as e:
+            logger.warning(f'Erro ao listar transfers para charge {charge_id}: {e}')
+
+    if transfer_id and commission_to_reverse_cents >= 1 and settings.STRIPE_API_KEY:
+        try:
+            stripe.Transfer.create_reversal(transfer_id, amount=commission_to_reverse_cents)
+            logger.info(f'Stripe Connect: transfer {transfer_id} revertido em {commission_to_reverse_cents} cêntimos (comissão devolvida à plataforma)')
+        except stripe.error.InvalidRequestError as e:
+            logger.warning(f'Não foi possível reverter transfer {transfer_id}: {e}. Pode já estar revertido ou ser de outro tipo.')
+        except Exception as e:
+            logger.error(f'Erro ao reverter transfer {transfer_id}: {e}', exc_info=True)
+
+    db.commit()
+    logger.info(f'Reembolso processado: {user.email}, afiliado referrer_id={referral.referrer_id}')
+
 
 def handle_invoice_payment_failed(invoice: dict, db: Session):
     """Processa invoice.payment_failed - quando um pagamento falha"""
