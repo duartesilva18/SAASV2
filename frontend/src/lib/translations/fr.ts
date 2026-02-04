@@ -700,7 +700,7 @@ export const fr = {
           simulationMode: "Vous êtes en mode simulation. Le portail Stripe n'est disponible que pour les abonnements réels.",
           simulationModeTitle: "Mode simulation",
           portalError: "Impossible d'ouvrir le portail Stripe.",
-          cancelSuccess: "L'abonnement sera annulé à la fin de la période en cours.",
+          cancelSuccess: "Abonnement annulé avec succès. Votre accès Pro est terminé.",
           cancelError: "Erreur lors de l'annulation de l'abonnement.",
           paid: "Payé",
           pending: "En attente",
@@ -708,7 +708,7 @@ export const fr = {
           void: "Annulé",
           cancelSubscription: "Annuler l'abonnement",
           cancelConfirm: "Êtes-vous sûr de vouloir annuler votre abonnement ?",
-          cancelWarning: "Votre abonnement sera annulé à la fin de la période en cours. Vous conserverez l'accès à toutes les fonctionnalités Pro jusqu'à cette date.",
+          cancelWarning: "L'annulation est immédiate. Vous perdrez l'accès aux fonctionnalités Pro dès que vous confirmez.",
           keepSubscription: "Garder l'abonnement",
           processing: "Traitement...",
           confirmCancel: "Confirmer l'annulation",
@@ -1673,7 +1673,7 @@ export const fr = {
                   },
                   cancellation: {
                       title: "4.4. Annulation",
-                      text: "Vous pouvez annuler votre abonnement à tout moment dans les paramètres du compte. L'annulation prend effet à la fin de la période déjà payée."
+                      text: "Vous pouvez annuler votre abonnement à tout moment dans les paramètres du compte. L'annulation est immédiate."
                   },
                   refunds: {
                       title: "4.5. Remboursements",

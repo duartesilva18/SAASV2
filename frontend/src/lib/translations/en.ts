@@ -700,7 +700,7 @@ export const en = {
           simulationMode: "You are in simulation mode. The Stripe portal is only available for real subscriptions.",
           simulationModeTitle: "Simulation Mode",
           portalError: "Could not open Stripe portal.",
-          cancelSuccess: "Subscription will be canceled at the end of the current period.",
+          cancelSuccess: "Subscription canceled successfully. Your Pro access has ended.",
           cancelError: "Error canceling subscription.",
           paid: "Paid",
           pending: "Pending",
@@ -708,7 +708,7 @@ export const en = {
           void: "Void",
           cancelSubscription: "Cancel Subscription",
           cancelConfirm: "Are you sure you want to cancel your subscription?",
-          cancelWarning: "Your subscription will be canceled at the end of the current period. You will continue to have access to all Pro features until that date.",
+          cancelWarning: "Cancellation is immediate. You will lose access to Pro features as soon as you confirm.",
           keepSubscription: "Keep Subscription",
           processing: "Processing...",
           confirmCancel: "Confirm Cancellation",
@@ -1703,7 +1703,7 @@ export const en = {
                   },
                   cancellation: {
                       title: "4.4. Cancellation",
-                      text: "You can cancel your subscription at any time through account settings. Cancellation takes effect at the end of the current paid period."
+                      text: "You can cancel your subscription at any time through account settings. Cancellation is immediate."
                   },
                   refunds: {
                       title: "4.5. Refunds",

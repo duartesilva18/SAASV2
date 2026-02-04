@@ -99,18 +99,11 @@ export default function BillingPage() {
       setShowCancelModal(false);
       setToast({
         isVisible: true,
-        message: b.cancelSuccess,
+        message: res.data?.message ?? b.cancelSuccess,
         type: 'success'
       });
-      // Recarregar dados do utilizador
-      const userRes = await api.get('/auth/me');
-      // Usar valores diretos das traduções para evitar dependências
-      const proPlan = t.dashboard.billing.proPlan;
-      const basePlan = t.dashboard.billing.basePlan;
-      setSubData({
-        status: userRes.data.subscription_status,
-        plan_name: ['active', 'trialing'].includes(userRes.data.subscription_status) ? proPlan : basePlan
-      });
+      // F5 na página para atualizar estado (user context, sidebar, etc.)
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err: any) {
       setToast({
         isVisible: true,

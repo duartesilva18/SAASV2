@@ -852,4 +852,3 @@ async def disconnect_stripe_connect(
 
     logger.info(f'Stripe Connect desligado para afiliado {current_user.email}')
     return {'ok': True, 'message': 'Conta Stripe desligada. Podes configurar outra conta quando quiseres.'}
-

@@ -15,6 +15,14 @@ STRIPE_WEBHOOK_SECRET = settings.STRIPE_WEBHOOK_SECRET
 
 logger = logging.getLogger(__name__)
 
+# Taxa Stripe UE: 1.5% + 0.25€. Para receber base_cents, cobrar (base_cents + 25) / 0.985.
+def _charge_amount_with_stripe_fee(base_cents: int) -> int:
+    """Valor em cêntimos a cobrar ao cliente para que, após taxa Stripe (1.5% + 0.25€), recebas base_cents."""
+    if base_cents <= 0:
+        return base_cents
+    import math
+    return int(math.ceil((base_cents + 25) / 0.985))
+
 @router.post('/create-checkout-session')
 async def create_checkout_session(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
@@ -147,11 +155,24 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             }
         }
         
+        # Guardar price_id original e valor base em metadata para webhooks (comissão só sobre o base, não sobre taxa Stripe)
+        subscription_data['metadata']['original_price_id'] = price_id
+        subscription_data['metadata']['base_amount_cents'] = str(total_amount_cents)
+        
+        # Total cobrado ao cliente: com taxa Stripe (duas linhas) ou só o preço base (uma linha)
+        total_charged_cents = _charge_amount_with_stripe_fee(total_amount_cents) if total_amount_cents >= 1 else total_amount_cents
+        
         # Adicionar divisão automática se aplicável (Stripe Connect)
         # application_fee_percent = % que a PLATAFORMA fica; afiliado recebe (100 - application_fee_percent)%.
-        # Ex.: application_fee_percent=80 → plataforma 80%, afiliado 20%.
+        # Afiliado NÃO ganha sobre a taxa Stripe: comissão só sobre o preço base (total_amount_cents).
         if application_fee_amount and transfer_data:
-            application_fee_percent = round(100 - commission_percentage, 2)
+            if total_charged_cents > total_amount_cents and total_charged_cents >= 1:
+                # Duas linhas: afiliado recebe commission_percentage% do BASE apenas
+                # (100 - application_fee_percent)/100 * total_charged = total_amount * commission_percentage/100
+                affiliate_share_percent = (total_amount_cents * commission_percentage) / total_charged_cents
+                application_fee_percent = round(100 - affiliate_share_percent, 2)
+            else:
+                application_fee_percent = round(100 - commission_percentage, 2)
             # Evitar 0 ou 100 que o Stripe pode rejeitar
             if application_fee_percent <= 0:
                 application_fee_percent = 0.01
@@ -162,17 +183,55 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             subscription_data['transfer_data'] = transfer_data
             subscription_data['metadata']['commission_percentage'] = str(commission_percentage)
             subscription_data['metadata']['commission_amount_cents'] = str(application_fee_amount)
-            logger.info(f'[Checkout] Session será criada COM divisão: application_fee_percent={application_fee_percent}, destination={transfer_data.get("destination")}')
+            logger.info(f'[Checkout] Session será criada COM divisão: application_fee_percent={application_fee_percent} (afiliado não ganha sobre taxa Stripe), destination={transfer_data.get("destination")}')
         else:
             logger.info(f'[Checkout] Session será criada SEM divisão (sem afiliado ou divisão não elegível). referrer_id={referrer_id or "vazio"}')
+        
+        # Duas linhas no checkout: plano (preço base) + taxa de processamento Stripe (cliente vê o breakdown)
+        if total_amount_cents >= 1:
+            fee_cents = total_charged_cents - total_amount_cents
+            logger.info(f'[Checkout] Taxa Stripe repassada ao cliente: base={total_amount_cents} cêntimos, taxa={fee_cents} cêntimos, total={total_charged_cents} cêntimos')
+            currency = getattr(price, 'currency', 'eur')
+            recurring = getattr(price, 'recurring', None)
+            if not recurring:
+                recurring = {'interval': 'month'}
+            interval = recurring.get('interval', 'month') if isinstance(recurring, dict) else getattr(recurring, 'interval', 'month')
+            interval_count = recurring.get('interval_count', 1) if isinstance(recurring, dict) else getattr(recurring, 'interval_count', 1)
+            product_name = 'Finly Pro'
+            try:
+                if getattr(price, 'product', None):
+                    prod = stripe.Product.retrieve(price.product) if isinstance(price.product, str) else price.product
+                    product_name = getattr(prod, 'name', product_name) or product_name
+            except Exception:
+                pass
+            # Duas linhas: plano (preço base) + taxa de processamento Stripe (cliente vê o breakdown)
+            line_items = [
+                {
+                    'quantity': 1,
+                    'price_data': {
+                        'currency': currency,
+                        'unit_amount': total_amount_cents,
+                        'product_data': {'name': product_name},
+                        'recurring': {'interval': interval, 'interval_count': interval_count},
+                    },
+                },
+                {
+                    'quantity': 1,
+                    'price_data': {
+                        'currency': currency,
+                        'unit_amount': fee_cents,
+                        'product_data': {'name': 'Taxa de processamento (Stripe)'},
+                        'recurring': {'interval': interval, 'interval_count': interval_count},
+                    },
+                },
+            ]
+        else:
+            line_items = [{'price': price_id, 'quantity': 1}]
         
         session_params = {
             'customer': customer_id,
             'payment_method_types': ['card'],
-            'line_items': [{
-                'price': price_id,
-                'quantity': 1,
-            }],
+            'line_items': line_items,
             'mode': 'subscription',
             'client_reference_id': str(current_user.id),
             'success_url': f"{settings.FRONTEND_URL}/dashboard?session_id={{CHECKOUT_SESSION_ID}}",
@@ -409,11 +468,14 @@ async def get_subscription_details(db: Session = Depends(get_db), current_user: 
             subscription = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
             price_id = None
             
-            # Obter price_id da subscrição (Stripe retorna items como dict-like)
-            items = subscription.get('items', {})
-            items_data = items.get('data', []) if isinstance(items, dict) else []
-            if items_data:
-                price_id = items_data[0].get('price', {}).get('id')
+            # Obter price_id da subscrição (ou original_price_id se checkout com taxa repassada)
+            meta = subscription.get('metadata') or {}
+            price_id = (meta.get('original_price_id') or '').strip() or None
+            if not price_id:
+                items = subscription.get('items', {})
+                items_data = items.get('data', []) if isinstance(items, dict) else []
+                if items_data:
+                    price_id = items_data[0].get('price', {}).get('id')
             
             return {
                 'has_subscription': True,
@@ -434,65 +496,62 @@ async def get_subscription_details(db: Session = Depends(get_db), current_user: 
 
 @router.post('/cancel-subscription')
 async def cancel_subscription(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Cancela a subscrição do utilizador (no final do período atual)"""
+    """Cancela a subscrição do utilizador de imediato."""
     try:
-        logger.info(f'Tentativa de cancelar subscrição para {current_user.email}, subscription_id: {current_user.stripe_subscription_id}')
+        logger.info(f'Tentativa de cancelar subscrição (imediato) para {current_user.email}, subscription_id: {current_user.stripe_subscription_id}')
         
         if not current_user.stripe_subscription_id:
             logger.warning(f'Utilizador {current_user.email} tentou cancelar mas não tem subscription_id')
             raise HTTPException(status_code=400, detail='Não tens uma subscrição ativa para cancelar.')
         
         # Verificar se a subscrição já está cancelada
-        if current_user.subscription_status == 'cancel_at_period_end':
-            logger.info(f'Subscrição já está marcada para cancelamento: {current_user.email}')
+        if current_user.subscription_status == 'canceled':
+            logger.info(f'Subscrição já cancelada: {current_user.email}')
             return {
                 'success': True,
-                'message': 'Subscrição já está marcada para cancelamento.',
-                'subscription_status': 'cancel_at_period_end'
+                'message': 'Subscrição já está cancelada.',
+                'subscription_status': 'canceled'
             }
         
         # Verificar se é subscrição de simulação/teste
         if current_user.stripe_customer_id and (current_user.stripe_customer_id.startswith('sim_') or current_user.stripe_customer_id.startswith('test_')):
-            logger.info(f'Subscrição de simulação - marcando como cancel_at_period_end sem chamar Stripe: {current_user.email}')
-            current_user.subscription_status = 'cancel_at_period_end'
+            logger.info(f'Subscrição de simulação - marcando como cancelada sem chamar Stripe: {current_user.email}')
+            current_user.subscription_status = 'canceled'
             db.commit()
             return {
                 'success': True,
-                'message': 'Subscrição será cancelada no final do período atual.',
-                'subscription_status': 'cancel_at_period_end'
+                'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
+                'subscription_status': 'canceled'
             }
         
-        # Cancelar subscrição no Stripe (cancel_at_period_end = True)
+        # Cancelar subscrição no Stripe de imediato (delete = fim imediato)
         try:
-            subscription = stripe.Subscription.modify(
-                current_user.stripe_subscription_id,
-                cancel_at_period_end=True
-            )
-            logger.info(f'Subscrição modificada no Stripe: {subscription.id}, cancel_at_period_end: {subscription.cancel_at_period_end}')
+            stripe.Subscription.delete(current_user.stripe_subscription_id)
+            logger.info(f'Subscrição eliminada no Stripe: {current_user.stripe_subscription_id}')
         except stripe.error.InvalidRequestError as e:
             logger.error(f'Erro Stripe InvalidRequestError: {str(e)}, code: {getattr(e, "code", None)}')
             # Se a subscrição não existe no Stripe, apenas atualizar na BD
             if getattr(e, 'code', None) == 'resource_missing':
                 logger.warning(f'Subscrição não encontrada no Stripe, atualizando apenas na BD: {current_user.email}')
-                current_user.subscription_status = 'cancel_at_period_end'
+                current_user.subscription_status = 'canceled'
                 db.commit()
                 return {
                     'success': True,
-                    'message': 'Subscrição será cancelada no final do período atual.',
-                    'subscription_status': 'cancel_at_period_end'
+                    'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
+                    'subscription_status': 'canceled'
                 }
             raise
         
-        # Atualizar status na base de dados
-        current_user.subscription_status = 'cancel_at_period_end'
+        # Atualizar status na base de dados (o webhook subscription.deleted também atualizará e tratará afiliados)
+        current_user.subscription_status = 'canceled'
         db.commit()
         
-        logger.info(f'Subscrição {current_user.stripe_subscription_id} marcada para cancelamento no final do período para {current_user.email}')
+        logger.info(f'Subscrição {current_user.stripe_subscription_id} cancelada de imediato para {current_user.email}')
         
         return {
             'success': True,
-            'message': 'Subscrição será cancelada no final do período atual.',
-            'subscription_status': 'cancel_at_period_end'
+            'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
+            'subscription_status': 'canceled'
         }
     except HTTPException:
         raise

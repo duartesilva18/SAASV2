@@ -19,6 +19,41 @@ from .stripe_connect_handlers import (
 router = APIRouter(prefix='/webhooks', tags=['webhooks'])
 logger = logging.getLogger(__name__)
 
+
+def _get_price_id_for_commission(invoice: dict) -> str | None:
+    """Price ID para cálculo de comissão. Usa subscription.metadata.original_price_id se existir (checkout com taxa repassada)."""
+    sub_id = invoice.get('subscription')
+    if sub_id and settings.STRIPE_API_KEY:
+        try:
+            sub = stripe.Subscription.retrieve(sub_id)
+            meta = sub.get('metadata') or {}
+            orig = meta.get('original_price_id', '').strip()
+            if orig:
+                return orig
+        except Exception:
+            pass
+    lines = (invoice.get('lines') or {}).get('data') or []
+    if lines:
+        price_obj = lines[0].get('price')
+        if price_obj:
+            return price_obj.get('id') if isinstance(price_obj, dict) else price_obj
+    return None
+
+
+def _get_base_amount_for_commission(invoice: dict) -> int:
+    """Valor base (cêntimos) para comissão. Usa subscription.metadata.base_amount_cents se existir (afiliado não ganha sobre taxa Stripe)."""
+    sub_id = invoice.get('subscription')
+    if sub_id and settings.STRIPE_API_KEY:
+        try:
+            sub = stripe.Subscription.retrieve(sub_id)
+            meta = sub.get('metadata') or {}
+            base_str = (meta.get('base_amount_cents') or '').strip()
+            if base_str and base_str.isdigit():
+                return int(base_str)
+        except Exception:
+            pass
+    return invoice.get('amount_paid') or 0
+
 @router.post('/stripe')
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
@@ -308,32 +343,33 @@ def handle_charge_refunded(charge: dict, db: Session):
         except Exception:
             pass
 
-    # Obter percentagem de comissão (invoice price ou default 25%)
+    # Obter percentagem de comissão e valor base (afiliado não ganhou sobre taxa Stripe)
     commission_pct = 25.0
+    base_amount_for_invoice = amount_refunded  # fallback: usar total se não houver invoice
     if invoice_id and settings.STRIPE_API_KEY:
         try:
             inv = stripe.Invoice.retrieve(invoice_id, expand=['lines.data.price'])
-            lines = (inv.get('lines') or {}).get('data') or []
-            if lines:
-                price = lines[0].get('price')
-                price_id = price.get('id') if isinstance(price, dict) else price
-                if price_id:
-                    commission_pct = get_commission_percentage_for_price_id(price_id, db)
+            price_id = _get_price_id_for_commission(inv)
+            if price_id:
+                commission_pct = get_commission_percentage_for_price_id(price_id, db)
+            base_amount_for_invoice = _get_base_amount_for_commission(inv)
         except Exception:
             pass
 
-    commission_to_reverse_cents = int(amount_refunded * (commission_pct / 100))
+    # Reverter comissão só sobre o valor base (não sobre a taxa Stripe repassada)
+    base_refunded = min(amount_refunded, base_amount_for_invoice)
+    commission_to_reverse_cents = int(base_refunded * (commission_pct / 100))
 
-    # Ajustar comissão na BD
+    # Ajustar comissão na BD (receita revertida = só a parte base)
     comm = db.query(models.AffiliateCommission).filter(
         models.AffiliateCommission.affiliate_id == referral.referrer_id,
         models.AffiliateCommission.month == commission_month
     ).first()
     if comm and comm.conversions_count > 0:
-        comm.total_revenue_cents = max(0, comm.total_revenue_cents - amount_refunded)
+        comm.total_revenue_cents = max(0, comm.total_revenue_cents - base_refunded)
         comm.commission_amount_cents = max(0, comm.commission_amount_cents - commission_to_reverse_cents)
         comm.conversions_count = max(0, comm.conversions_count - 1)
-        logger.info(f'Afiliado: comissão ajustada (reembolso): -{amount_refunded} receita, -{commission_to_reverse_cents} comissão, -1 conversão')
+        logger.info(f'Afiliado: comissão ajustada (reembolso): -{base_refunded} receita (base), -{commission_to_reverse_cents} comissão, -1 conversão')
 
     # Reverter o transfer no Stripe Connect (tirar o valor da comissão ao afiliado)
     if not transfer_id and settings.STRIPE_API_KEY:
@@ -426,7 +462,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 ).first()
                 referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first() if user.referrer_id else None
                 # Transfer manual só em invoice.paid (nunca em checkout.session.completed) — garante que o dinheiro existe.
-                # Comissão em cima de invoice.amount_paid (consistente; se acordo for "menos taxas Stripe", alterar aqui).
+                # Comissão em cima do valor base apenas (metadata.base_amount_cents; afiliado não ganha sobre taxa Stripe).
                 # Workaround: 1ª invoice (Checkout) pode ter sido criada sem split; Stripe não recalcula invoices.
                 billing_reason = invoice.get('billing_reason')
                 invoice_id = invoice.get('id')
@@ -447,14 +483,10 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                 has_transfer = bool(charge.get('transfer'))
                                 app_fee = charge.get('application_fee_amount') or 0
                                 if not has_transfer and app_fee == 0:
-                                    amount_paid = invoice.get('amount_paid') or 0  # base: amount_paid (consistente)
-                                    lines = (invoice.get('lines') or {}).get('data') or []
-                                    price_id = None
-                                    if lines:
-                                        price_obj = lines[0].get('price')
-                                        price_id = price_obj if isinstance(price_obj, str) else (price_obj.get('id') if price_obj else None)
+                                    base_amount = _get_base_amount_for_commission(invoice)  # só base, não taxa Stripe
+                                    price_id = _get_price_id_for_commission(invoice)
                                     commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
-                                    commission_cents = int(amount_paid * (commission_pct / 100))
+                                    commission_cents = int(base_amount * (commission_pct / 100))
                                     if commission_cents >= 1:
                                         currency = invoice.get('currency') or 'eur'
                                         t = stripe.Transfer.create(
@@ -494,7 +526,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 # Assim as comissões ficam registadas mesmo quando payment_intent.succeeded não traz user_id
                 if referral:
                     try:
-                        amount_paid = invoice.get('amount_paid') or 0  # cêntimos
+                        base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
                         period_start = invoice.get('period_start')
                         if period_start is not None:
                             period_dt = datetime.fromtimestamp(period_start)
@@ -502,14 +534,10 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         else:
                             commission_month = date.today().replace(day=1)
 
-                        # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice)
-                        price_id = None
-                        lines = (invoice.get('lines') or {}).get('data') or []
-                        if lines:
-                            price_obj = lines[0].get('price')
-                            price_id = price_obj if isinstance(price_obj, str) else (price_obj.get('id') if price_obj else None)
+                        # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice ou original_price_id na metadata)
+                        price_id = _get_price_id_for_commission(invoice)
                         commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
-                        commission_amount_cents = int(amount_paid * (commission_pct / 100))
+                        commission_amount_cents = int(base_amount * (commission_pct / 100))
 
                         existing = db.query(models.AffiliateCommission).filter(
                             models.AffiliateCommission.affiliate_id == referral.referrer_id,
@@ -517,16 +545,16 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         ).first()
 
                         if existing:
-                            existing.total_revenue_cents += amount_paid
+                            existing.total_revenue_cents += base_amount
                             existing.commission_amount_cents += commission_amount_cents
                             existing.conversions_count += 1
-                            logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{amount_paid} cêntimos')
+                            logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{base_amount} cêntimos')
                             commission_obj = existing
                         else:
                             new_commission = models.AffiliateCommission(
                                 affiliate_id=referral.referrer_id,
                                 month=commission_month,
-                                total_revenue_cents=amount_paid,
+                                total_revenue_cents=base_amount,
                                 commission_percentage=commission_pct,
                                 commission_amount_cents=commission_amount_cents,
                                 conversions_count=1,
@@ -534,7 +562,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                 is_paid=False,
                             )
                             db.add(new_commission)
-                            logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {amount_paid} cêntimos')
+                            logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {base_amount} cêntimos')
                             commission_obj = new_commission
                         # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
                         manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
