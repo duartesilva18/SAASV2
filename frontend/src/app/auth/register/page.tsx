@@ -61,12 +61,16 @@ function RegisterPageContent() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showReferralSection, setShowReferralSection] = useState(false);
   const [benefitIndex, setBenefitIndex] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     const ref = searchParams?.get('ref');
-    if (ref != null && ref.trim()) setReferralCode(ref.trim());
+    if (ref != null && ref.trim()) {
+      setReferralCode(ref.trim());
+      setShowReferralSection(true);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -260,8 +264,8 @@ function RegisterPageContent() {
             </Link>
           </div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl mx-auto mt-0 mb-4 sm:mb-5 lg:mb-6 [@media(max-height:700px)]:min-w-0 [@media(max-height:1600px)]:mb-4 [@media(max-height:1400px)]:mb-4 [@media(max-height:1200px)]:mb-4 [@media(max-height:1080px)]:mb-4 [@media(max-height:1000px)]:mb-3 [@media(max-height:900px)]:mb-3 [@media(max-height:800px)]:mb-2 [@media(max-height:600px)]:mb-2 text-center lg:text-left">
-            <div className="mb-4 sm:mb-5 lg:mb-6 xl:mb-8 2xl:mb-10 [@media(max-height:1600px)]:mb-5 [@media(max-height:1400px)]:mb-5 [@media(max-height:1200px)]:mb-5 [@media(max-height:1080px)]:mb-5 [@media(max-height:1000px)]:mb-4 [@media(max-height:900px)]:mb-4 [@media(max-height:800px)]:mb-3 [@media(max-height:700px)]:mb-3 [@media(max-height:600px)]:mb-2 text-center lg:text-left">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl mx-auto mt-0 mb-2 sm:mb-3 lg:mb-4 [@media(max-height:700px)]:min-w-0 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center lg:text-left">
+            <div className="mb-2 sm:mb-3 lg:mb-4 xl:mb-6 2xl:mb-8 [@media(max-height:1000px)]:mb-2 [@media(max-height:800px)]:mb-1.5 [@media(max-height:600px)]:mb-1 text-center lg:text-left">
               <div className="lg:hidden w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 [@media(max-height:1600px)]:mb-2 [@media(max-height:1400px)]:mb-2 [@media(max-height:1200px)]:mb-2 [@media(max-height:1080px)]:mb-2 [@media(max-height:800px)]:mb-1.5 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
@@ -276,7 +280,7 @@ function RegisterPageContent() {
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-7 sm:p-9 lg:p-11 xl:p-16 2xl:p-24 [@media(max-height:1600px)]:p-9 [@media(max-height:1400px)]:p-9 [@media(max-height:1200px)]:p-9 [@media(max-height:1080px)]:p-9 [@media(max-height:1000px)]:p-8 [@media(max-height:900px)]:p-7 [@media(max-height:800px)]:p-6 [@media(max-height:700px)]:p-6 [@media(max-height:600px)]:p-5 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-4 sm:p-5 lg:p-6 xl:p-10 2xl:p-16 [@media(max-height:1200px)]:p-5 [@media(max-height:1000px)]:p-4 [@media(max-height:800px)]:p-3.5 [@media(max-height:600px)]:p-3 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {success && (
@@ -316,7 +320,7 @@ function RegisterPageContent() {
 
               <form onSubmit={handleSubmit} noValidate className={`space-y-8 sm:space-y-9 lg:space-y-10 xl:space-y-12 2xl:space-y-16 [@media(max-height:1600px)]:space-y-8 [@media(max-height:1400px)]:space-y-8 [@media(max-height:1200px)]:space-y-8 [@media(max-height:1080px)]:space-y-8 [@media(max-height:1000px)]:space-y-7 [@media(max-height:900px)]:space-y-6 [@media(max-height:800px)]:space-y-5 [@media(max-height:700px)]:space-y-4 [@media(max-height:600px)]:space-y-3 ${success ? 'pointer-events-none opacity-50' : ''}`}>
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-2 lg:mb-3 2xl:mb-4 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-0.5 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.emailLabel}
                   </label>
                   <div className="relative group/input">
@@ -340,10 +344,10 @@ function RegisterPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-2.5 lg:mb-4 2xl:mb-5 [@media(max-height:700px)]:mb-1.5 ml-3 lg:ml-4 2xl:ml-5">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-0.5 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.passwordLabel}
                   </label>
-                  <div className="relative group/input mb-1.5 lg:mb-3 2xl:mb-4 [@media(max-height:700px)]:mb-1">
+                  <div className="relative group/input mb-0.5 lg:mb-1.5 2xl:mb-2 [@media(max-height:700px)]:mb-0">
                     <div className={`absolute left-3 lg:left-5 2xl:left-6 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error && password.length < 6 ? 'text-red-500' : 'text-slate-500 group-focus-within/input:text-emerald-500'}`}>
                       <Lock size={14} className="lg:w-5 lg:h-5 2xl:w-6 2xl:h-6" />
                     </div>
@@ -386,7 +390,7 @@ function RegisterPageContent() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-1 lg:gap-2 2xl:gap-2.5 px-1 lg:px-1.5 2xl:px-2 py-0.5 lg:py-1 2xl:py-1.5">
+                <div className="flex items-start gap-1 lg:gap-2 2xl:gap-2.5 px-1 lg:px-1.5 2xl:px-2 py-0 lg:py-0.5 2xl:py-1">
                   <ShieldCheck size={12} className="text-emerald-500 shrink-0 mt-0.5 lg:w-3.5 lg:h-3.5 2xl:w-4 2xl:h-4" />
                   <p className="text-[7px] lg:text-[9px] 2xl:text-[10px] text-slate-500 leading-relaxed uppercase font-black tracking-widest">
                     {t.auth.register.termsText}{' '}
@@ -399,7 +403,7 @@ function RegisterPageContent() {
                 <MagneticButton
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 sm:py-3 lg:py-3.5 xl:py-5 2xl:py-7 [@media(max-height:1600px)]:py-2.5 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 min-h-[36px] lg:min-h-[40px] 2xl:min-h-[54px] [@media(max-height:1600px)]:min-h-[38px] [@media(max-height:1400px)]:min-h-[38px] [@media(max-height:1200px)]:min-h-[38px] [@media(max-height:1080px)]:min-h-[36px] [@media(max-height:1000px)]:min-h-[36px] [@media(max-height:900px)]:min-h-[34px] [@media(max-height:800px)]:min-h-[32px] [@media(max-height:700px)]:min-h-[32px] [@media(max-height:600px)]:min-h-[30px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(16,185,129,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-1.5 lg:mt-3 2xl:mt-4 [@media(max-height:700px)]:mt-1 flex items-center justify-center gap-2 lg:gap-4 2xl:gap-5 text-[10px] lg:text-sm xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[9px] relative overflow-hidden cursor-pointer"
+                  className="w-full py-2.5 sm:py-3 lg:py-3.5 xl:py-5 2xl:py-7 [@media(max-height:1600px)]:py-2.5 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 min-h-[36px] lg:min-h-[40px] 2xl:min-h-[54px] [@media(max-height:1600px)]:min-h-[38px] [@media(max-height:1400px)]:min-h-[38px] [@media(max-height:1200px)]:min-h-[38px] [@media(max-height:1080px)]:min-h-[36px] [@media(max-height:1000px)]:min-h-[36px] [@media(max-height:900px)]:min-h-[34px] [@media(max-height:800px)]:min-h-[32px] [@media(max-height:700px)]:min-h-[32px] [@media(max-height:600px)]:min-h-[30px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(16,185,129,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-0.5 lg:mt-2 2xl:mt-3 [@media(max-height:700px)]:mt-0.5 flex items-center justify-center gap-2 lg:gap-4 2xl:gap-5 text-[10px] lg:text-sm xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[9px] relative overflow-hidden cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-4 h-4 lg:w-6 lg:h-6 2xl:w-7 2xl:h-7 border-2 lg:border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
@@ -411,40 +415,49 @@ function RegisterPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-4 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:1600px)]:mt-4 [@media(max-height:1400px)]:mt-4 [@media(max-height:1200px)]:mt-4 [@media(max-height:1080px)]:mt-3.5 [@media(max-height:1000px)]:mt-3 [@media(max-height:900px)]:mt-3 [@media(max-height:800px)]:mt-2.5 [@media(max-height:700px)]:mt-2 [@media(max-height:600px)]:mt-1.5 pt-3 lg:pt-4 2xl:pt-6 [@media(max-height:900px)]:pt-2.5 [@media(max-height:800px)]:pt-2 [@media(max-height:600px)]:pt-1.5 border-t border-slate-800">
-                <label className="block text-[7px] lg:text-[9px] 2xl:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.25em] 2xl:tracking-[0.3em] text-slate-500 mb-1.5 lg:mb-2 2xl:mb-2.5 [@media(max-height:700px)]:mb-1 ml-2 lg:ml-3 2xl:ml-4">
-                  {t.auth.register.referralCodeLabel ?? 'Código de Referência (Opcional)'}
-                </label>
-                <input
-                  type="text"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode((e.target.value || '').trim().slice(0, 20))}
-                  className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-2xl py-1.5 lg:py-2.5 2xl:py-3 [@media(max-height:700px)]:py-1.5 [@media(max-height:600px)]:py-1 pl-2.5 lg:pl-4 2xl:pl-5 pr-2.5 lg:pr-4 2xl:pr-5 text-[10px] lg:text-xs 2xl:text-sm focus:outline-none transition-all placeholder:text-slate-800 font-medium ${
-                    referralCodeValid === 'valid' ? 'border-emerald-500/50 focus:border-emerald-500' :
-                    referralCodeValid === 'invalid' ? 'border-red-500/50 focus:border-red-500' :
-                    'border-slate-800 focus:border-amber-500'
-                  }`}
-                  placeholder={t.auth.register.referralCodePlaceholder ?? 'Ex: MM2HQR2K'}
-                  maxLength={20}
-                />
-                {referralCode && (
-                  <p className={`text-[8px] lg:text-[10px] 2xl:text-xs mt-0.5 lg:mt-1 2xl:mt-1.5 ml-1 lg:ml-1.5 2xl:ml-2 font-medium ${
-                    referralCodeValid === 'valid' ? 'text-emerald-400' :
-                    referralCodeValid === 'invalid' ? 'text-red-400' : 'text-amber-400'
-                  }`}>
-                    {referralCodeValid === 'checking'
-                      ? (t.auth.register.referralCodeChecking ?? 'A verificar...')
-                      : referralCodeValid === 'valid'
-                        ? `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`
-                        : referralCodeValid === 'invalid'
-                          ? (t.auth.register.referralCodeInvalid ?? 'Código de afiliado inválido')
-                          : `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`}
-                  </p>
+              <div className="mt-2 lg:mt-3 xl:mt-4 2xl:mt-6 [@media(max-height:800px)]:mt-1.5 [@media(max-height:600px)]:mt-1 pt-2 lg:pt-3 2xl:pt-4 [@media(max-height:600px)]:pt-1.5 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowReferralSection(!showReferralSection)}
+                  className="w-full text-left text-[7px] lg:text-[9px] 2xl:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-slate-400 mb-0 py-0.5 flex items-center justify-between"
+                >
+                  <span>{t.auth.register.referralCodeLabel ?? 'Código de Referência (Opcional)'}</span>
+                  <span className="text-slate-600">{showReferralSection ? '−' : '+'}</span>
+                </button>
+                {showReferralSection && (
+                  <div className="mt-1 lg:mt-1.5 space-y-0.5 lg:space-y-1">
+                    <input
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode((e.target.value || '').trim().slice(0, 20))}
+                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl py-1.5 lg:py-2 pl-2.5 lg:pl-3 pr-2.5 lg:pr-3 text-[10px] lg:text-xs focus:outline-none transition-all placeholder:text-slate-800 font-medium ${
+                        referralCodeValid === 'valid' ? 'border-emerald-500/50 focus:border-emerald-500' :
+                        referralCodeValid === 'invalid' ? 'border-red-500/50 focus:border-red-500' :
+                        'border-slate-800 focus:border-amber-500'
+                      }`}
+                      placeholder={t.auth.register.referralCodePlaceholder ?? 'Ex: MM2HQR2K'}
+                      maxLength={20}
+                    />
+                    {referralCode && (
+                      <p className={`text-[8px] lg:text-[10px] ml-0.5 font-medium ${
+                        referralCodeValid === 'valid' ? 'text-emerald-400' :
+                        referralCodeValid === 'invalid' ? 'text-red-400' : 'text-amber-400'
+                      }`}>
+                        {referralCodeValid === 'checking'
+                          ? (t.auth.register.referralCodeChecking ?? 'A verificar...')
+                          : referralCodeValid === 'valid'
+                            ? `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`
+                            : referralCodeValid === 'invalid'
+                              ? (t.auth.register.referralCodeInvalid ?? 'Código de afiliado inválido')
+                              : `${t.auth.register.referralCodeApplied ?? 'Código aplicado'}: ${referralCode}`}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
-              <div className="mt-2.5 lg:mt-4 xl:mt-5 2xl:mt-8 [@media(max-height:1600px)]:mt-3 [@media(max-height:1400px)]:mt-3 [@media(max-height:1200px)]:mt-3 [@media(max-height:1080px)]:mt-3 [@media(max-height:1000px)]:mt-2.5 [@media(max-height:900px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:700px)]:mt-1.5 [@media(max-height:600px)]:mt-1">
-                <div className="relative mb-2.5 lg:mb-4 2xl:mb-8 [@media(max-height:1600px)]:mb-3 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-1.5 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 text-center">
+              <div className="mt-2 lg:mt-3 xl:mt-4 2xl:mt-6 [@media(max-height:1000px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:600px)]:mt-1">
+                <div className="relative mb-2 lg:mb-3 2xl:mb-5 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
@@ -458,8 +471,8 @@ function RegisterPageContent() {
               </div>
             </motion.div>
 
-            <div className="mt-7 lg:mt-8 xl:mt-10 2xl:mt-14 [@media(max-height:1600px)]:mt-6 [@media(max-height:1400px)]:mt-6 [@media(max-height:1200px)]:mt-6 [@media(max-height:1080px)]:mt-6 [@media(max-height:1000px)]:mt-5 [@media(max-height:900px)]:mt-4 [@media(max-height:800px)]:mt-3.5 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2 text-center flex flex-col items-center">
-              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl mb-4 lg:mb-5 xl:mb-7 2xl:mb-10 [@media(max-height:1600px)]:mb-3 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-1.5 [@media(max-height:700px)]:mb-1 [@media(max-height:600px)]:mb-0.5 italic">
+            <div className="mt-4 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:1000px)]:mt-3 [@media(max-height:600px)]:mt-2 text-center flex flex-col items-center">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl mb-2 lg:mb-3 xl:mb-4 2xl:mb-6 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1 italic">
                 {t.auth.register.alreadyHaveAccount}
               </p>
               <Link
