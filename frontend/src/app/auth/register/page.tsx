@@ -252,7 +252,7 @@ function RegisterPageContent() {
         </div>
 
         {/* Painel direito: scrollável se não couber; centrado verticalmente em ecrãs muito grandes */}
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-start pt-5 sm:pt-6 lg:pt-7 xl:pt-9 2xl:pt-12 pb-6 sm:pb-8 lg:pb-10 xl:pb-12 2xl:pb-16 px-3 sm:px-4 lg:px-6 xl:px-10 2xl:px-16 [@media(max-height:1600px)]:pt-6 [@media(max-height:1400px)]:pt-6 [@media(max-height:1200px)]:pt-6 [@media(max-height:1080px)]:pt-6 [@media(max-height:1000px)]:pt-5 [@media(max-height:900px)]:pt-4 [@media(max-height:800px)]:pt-3.5 [@media(max-height:700px)]:pt-3 [@media(max-height:600px)]:pt-2.5 2xl:justify-center [@media(min-height:900px)]:justify-center relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center lg:justify-start pt-5 sm:pt-6 lg:pt-7 xl:pt-9 2xl:pt-12 pb-6 sm:pb-8 lg:pb-10 xl:pb-12 2xl:pb-16 px-3 sm:px-4 lg:px-6 xl:px-10 2xl:px-16 [@media(max-height:1600px)]:pt-6 [@media(max-height:1400px)]:pt-6 [@media(max-height:1200px)]:pt-6 [@media(max-height:1080px)]:pt-6 [@media(max-height:1000px)]:pt-5 [@media(max-height:900px)]:pt-4 [@media(max-height:800px)]:pt-3.5 [@media(max-height:700px)]:pt-3 [@media(max-height:600px)]:pt-2.5 2xl:justify-center [@media(min-height:900px)]:justify-center relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="lg:hidden absolute top-5 sm:top-6 left-4 sm:left-5 z-20">
             <Link
               href="/"
