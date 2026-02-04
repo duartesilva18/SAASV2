@@ -312,7 +312,7 @@ export default function LandingPage() {
                       })}
                     </div>
                     <div
-                      className="p-2.5 sm:p-3 3xl:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-3 3xl:pb-4 bg-slate-800 border-t border-white/5 flex items-center gap-1.5 sm:gap-3 min-h-[48px] sm:min-h-0"
+                      className="p-2.5 sm:p-3 3xl:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-3 3xl:pb-4 pr-[max(0.5rem,env(safe-area-inset-right))] sm:pr-3 3xl:pr-4 bg-slate-800 border-t border-white/5 flex items-center gap-1.5 sm:gap-3 min-h-[48px] sm:min-h-0 min-w-0 overflow-hidden"
                     >
                       <input
                         type="text"
@@ -331,7 +331,7 @@ export default function LandingPage() {
                           }
                         }}
                         placeholder={(t.dashboard?.guide as any)?.writeExample ?? 'Escreve "Biscoitos 10€" ou "Iogurte - Alimentação 5€"...'}
-                        className="flex-1 min-h-[40px] sm:min-h-0 h-10 sm:h-10 bg-slate-900 rounded-full px-3 sm:px-4 text-white text-[9px] sm:text-[10px] 3xl:text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                        className="flex-1 min-w-0 min-h-[40px] sm:min-h-0 h-10 sm:h-10 bg-slate-900 rounded-full px-3 sm:px-4 text-white text-[9px] sm:text-[10px] 3xl:text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
                       />
                       <button
                         type="button"

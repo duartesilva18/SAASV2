@@ -10,8 +10,7 @@ import {
   Users, TrendingUp, Copy, CheckCircle2, 
   ExternalLink, DollarSign, Calendar, AlertCircle,
   Sparkles, ArrowRight, Loader2, Clock, LineChart as LineChartIcon,
-  CreditCard, Info, X, Share2, Gift, Target, Trash2,
-  RefreshCw, Download, MessageCircle
+  CreditCard, Info, X, Share2, Gift, Target, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -90,8 +89,6 @@ export default function AffiliatePage() {
   const [showDisconnectStripeModal, setShowDisconnectStripeModal] = useState(false);
   const [stripeConnectLoading, setStripeConnectLoading] = useState(false);
   const [disconnectStripeLoading, setDisconnectStripeLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
   const hasLoadedData = useRef(false); // Flag para garantir que só carrega uma vez
 
   useEffect(() => {
@@ -199,51 +196,6 @@ export default function AffiliatePage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const refreshData = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      const statusRes = await api.get('/affiliate/status');
-      setStatus(statusRes.data);
-      if (statusRes.data.is_affiliate) {
-        const statsRes = await api.get('/affiliate/stats');
-        setStats(statsRes.data);
-      }
-      setToast({ isVisible: true, message: t.dashboard?.affiliate?.refreshed ?? 'Dados atualizados.', type: 'success' });
-    } catch (err) {
-      setToast({ isVisible: true, message: (t.dashboard?.affiliate as any)?.loadError ?? 'Erro ao atualizar.', type: 'error' });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const exportCsv = async () => {
-    if (exportingCsv || !status?.is_affiliate) return;
-    setExportingCsv(true);
-    try {
-      const res = await api.get('/affiliate/export/csv', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      const disposition = res.headers['content-disposition'];
-      const filenameMatch = disposition?.match(/filename="?([^";]+)"?/);
-      a.download = filenameMatch?.[1] ?? `afiliado_export_${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      setToast({ isVisible: true, message: t.dashboard?.affiliate?.exportSuccess ?? 'CSV descarregado.', type: 'success' });
-    } catch (err) {
-      setToast({ isVisible: true, message: (t.dashboard?.affiliate as any)?.loadError ?? 'Erro ao exportar.', type: 'error' });
-    } finally {
-      setExportingCsv(false);
-    }
-  };
-
-  const shareLink = status?.affiliate_link ?? '';
-  const shareText = t.dashboard?.affiliate?.shareText ?? 'Experimenta o Finly para gerir as tuas finanças de forma simples.';
-  const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareLink)}`, '_blank');
-  const shareTwitter = () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareLink)}`, '_blank');
-  const shareEmail = () => window.location.href = `mailto:?subject=${encodeURIComponent('Finly - Gestão financeira')}&body=${encodeURIComponent(shareText + '\n\n' + shareLink)}`;
 
   const formatPrice = (cents: number) => formatCurrency(cents / 100);
 
@@ -460,38 +412,14 @@ export default function AffiliatePage() {
             <p className="text-xs text-slate-400 font-medium truncate">Ganha comissões ao referir novos utilizadores</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {status.affiliate_code && (
-            <>
-              <button type="button" onClick={shareWhatsApp} className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-all" title="Partilhar no WhatsApp">
-                <MessageCircle className="w-4 h-4" />
-              </button>
-              <button type="button" onClick={shareTwitter} className="p-2.5 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30 transition-all" title="Partilhar no X / Twitter">
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button type="button" onClick={shareEmail} className="p-2.5 rounded-xl bg-slate-500/20 border border-slate-500/30 text-slate-400 hover:bg-slate-500/30 transition-all" title="Partilhar por email">
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          <button type="button" onClick={refreshData} disabled={refreshing} className="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-50 transition-all" title={t.dashboard?.affiliate?.refresh ?? 'Atualizar dados'}>
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-          {status.is_affiliate && (
-            <button type="button" onClick={exportCsv} disabled={exportingCsv} className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-all flex items-center gap-2" title={t.dashboard?.affiliate?.exportCsv ?? 'Exportar CSV'}>
-              <Download className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase hidden sm:inline">CSV</span>
+        {status.affiliate_code && (
+          <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/50 border border-amber-500/20 rounded-xl px-3 sm:px-4 py-2 min-w-0 shrink-0">
+            <code className="text-sm sm:text-lg font-black text-amber-400 tracking-tighter truncate">{status.affiliate_code}</code>
+            <button onClick={() => copyToClipboard(status.affiliate_code!)} className="p-1.5 hover:bg-white/10 rounded-lg transition-all">
+              {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-slate-400 hover:text-amber-400" />}
             </button>
-          )}
-          {status.affiliate_code && (
-            <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/50 border border-amber-500/20 rounded-xl px-3 sm:px-4 py-2 min-w-0 shrink-0">
-              <code className="text-sm sm:text-lg font-black text-amber-400 tracking-tighter truncate">{status.affiliate_code}</code>
-              <button onClick={() => copyToClipboard(status.affiliate_code!)} className="p-1.5 hover:bg-white/10 rounded-lg transition-all">
-                {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-slate-400 hover:text-amber-400" />}
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Stats Cards - Compact */}
