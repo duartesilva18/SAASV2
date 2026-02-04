@@ -247,8 +247,8 @@ function RegisterPageContent() {
           </div>
         </div>
 
-        {/* Painel direito: formulário — sempre visível, centralizado; ecrã grande (2xl) aumenta; ecrã curto reduz paddings */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-12 2xl:p-16 [@media(max-height:700px)]:py-4 [@media(max-height:600px)]:py-3 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Painel direito: scrollável se não couber; compacto em ecrãs curtos */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center p-3 sm:p-4 lg:p-6 xl:p-10 2xl:p-16 [@media(max-height:1400px)]:py-5 [@media(max-height:1200px)]:py-5 [@media(max-height:1080px)]:py-5 [@media(max-height:1000px)]:py-4 [@media(max-height:900px)]:py-3 [@media(max-height:800px)]:py-3 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="lg:hidden absolute top-5 sm:top-6 left-4 sm:left-5 z-20">
             <Link
               href="/"
@@ -260,12 +260,12 @@ function RegisterPageContent() {
             </Link>
           </div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl mx-auto [@media(max-height:700px)]:min-w-0">
-            <div className="mb-3 sm:mb-4 lg:mb-5 xl:mb-6 2xl:mb-8 [@media(max-height:800px)]:mb-3 [@media(max-height:700px)]:mb-2 [@media(max-height:600px)]:mb-2 text-center lg:text-left">
-              <div className="lg:hidden w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 [@media(max-height:700px)]:mb-2 overflow-hidden bg-slate-800/90 shadow-xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl mx-auto my-2 [@media(max-height:700px)]:min-w-0 [@media(max-height:1400px)]:my-1.5 [@media(max-height:1200px)]:my-1.5 [@media(max-height:1080px)]:my-1.5 [@media(max-height:1000px)]:my-1 [@media(max-height:900px)]:my-1 [@media(max-height:800px)]:my-1">
+            <div className="mb-2 sm:mb-3 lg:mb-4 xl:mb-6 2xl:mb-8 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-1.5 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 text-center lg:text-left">
+              <div className="lg:hidden w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 [@media(max-height:1400px)]:mb-2 [@media(max-height:1200px)]:mb-2 [@media(max-height:1080px)]:mb-2 [@media(max-height:800px)]:mb-1.5 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl 2xl:text-6xl font-black tracking-tighter mb-1.5 sm:mb-2 lg:mb-3 2xl:mb-5 [@media(max-height:700px)]:mb-1.5 text-white">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl 2xl:text-6xl font-black tracking-tighter mb-1 sm:mb-1.5 lg:mb-2 xl:mb-3 2xl:mb-5 [@media(max-height:1400px)]:mb-1.5 [@media(max-height:1200px)]:mb-1.5 [@media(max-height:1080px)]:mb-1.5 [@media(max-height:1000px)]:mb-1 [@media(max-height:900px)]:mb-1 [@media(max-height:800px)]:mb-1 [@media(max-height:700px)]:mb-1 text-white">
                 {t.auth.register.title}
                 <span className="text-emerald-500 italic font-black ml-1 lg:ml-2 2xl:ml-3">{t.auth.register.titleAccent}</span>
               </h1>
@@ -276,7 +276,7 @@ function RegisterPageContent() {
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-4 sm:p-5 lg:p-6 xl:p-8 2xl:p-12 [@media(max-height:800px)]:p-4 [@media(max-height:700px)]:p-3 [@media(max-height:600px)]:p-2.5 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-6 sm:p-8 lg:p-10 xl:p-14 2xl:p-20 [@media(max-height:1400px)]:p-8 [@media(max-height:1200px)]:p-8 [@media(max-height:1080px)]:p-8 [@media(max-height:1000px)]:p-7 [@media(max-height:900px)]:p-6 [@media(max-height:800px)]:p-5 [@media(max-height:700px)]:p-5 [@media(max-height:600px)]:p-4 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {success && (
@@ -314,9 +314,9 @@ function RegisterPageContent() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSubmit} noValidate className={`space-y-2.5 sm:space-y-3 lg:space-y-4 xl:space-y-5 2xl:space-y-6 [@media(max-height:800px)]:space-y-2.5 [@media(max-height:700px)]:space-y-2 [@media(max-height:600px)]:space-y-1.5 ${success ? 'pointer-events-none opacity-50' : ''}`}>
+              <form onSubmit={handleSubmit} noValidate className={`space-y-5 sm:space-y-6 lg:space-y-7 xl:space-y-9 2xl:space-y-12 [@media(max-height:1400px)]:space-y-5 [@media(max-height:1200px)]:space-y-5 [@media(max-height:1080px)]:space-y-5 [@media(max-height:1000px)]:space-y-4 [@media(max-height:900px)]:space-y-4 [@media(max-height:800px)]:space-y-3 [@media(max-height:700px)]:space-y-2.5 [@media(max-height:600px)]:space-y-2 ${success ? 'pointer-events-none opacity-50' : ''}`}>
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-1.5 lg:ml-2 2xl:ml-3">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.emailLabel}
                   </label>
                   <div className="relative group/input">
@@ -327,7 +327,7 @@ function RegisterPageContent() {
                       type="email"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
-                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-5 xl:py-6 2xl:py-7 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-9 lg:pl-14 2xl:pl-16 pr-3 lg:pr-5 2xl:pr-6 text-[11px] sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2 sm:py-2.5 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1400px)]:py-2 [@media(max-height:1200px)]:py-2 [@media(max-height:1080px)]:py-2 [@media(max-height:1000px)]:py-1.5 [@media(max-height:900px)]:py-1.5 [@media(max-height:800px)]:py-1.5 [@media(max-height:700px)]:py-1.5 [@media(max-height:600px)]:py-1 pl-9 lg:pl-14 2xl:pl-16 pr-3 lg:pr-5 2xl:pr-6 text-[11px] sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
                       placeholder={t.auth.register.emailPlaceholder}
                       required
                     />
@@ -340,7 +340,7 @@ function RegisterPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-1.5 lg:ml-2 2xl:ml-3">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.passwordLabel}
                   </label>
                   <div className="relative group/input mb-1.5 lg:mb-3 2xl:mb-4 [@media(max-height:700px)]:mb-1">
@@ -351,7 +351,7 @@ function RegisterPageContent() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-5 xl:py-6 2xl:py-7 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-9 lg:pl-14 2xl:pl-16 pr-9 lg:pr-12 2xl:pr-14 text-[11px] sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2 sm:py-2.5 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1400px)]:py-2 [@media(max-height:1200px)]:py-2 [@media(max-height:1080px)]:py-2 [@media(max-height:1000px)]:py-1.5 [@media(max-height:900px)]:py-1.5 [@media(max-height:800px)]:py-1.5 [@media(max-height:700px)]:py-1.5 [@media(max-height:600px)]:py-1 pl-9 lg:pl-14 2xl:pl-16 pr-9 lg:pr-12 2xl:pr-14 text-[11px] sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 6 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-emerald-500'}`}
                       placeholder="••••••••••••"
                       required
                     />
@@ -399,7 +399,7 @@ function RegisterPageContent() {
                 <MagneticButton
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 sm:py-3 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 min-h-[36px] lg:min-h-[42px] 2xl:min-h-[52px] [@media(max-height:700px)]:min-h-[34px] [@media(max-height:600px)]:min-h-[30px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(16,185,129,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-1.5 lg:mt-3 2xl:mt-4 [@media(max-height:700px)]:mt-1 flex items-center justify-center gap-1.5 lg:gap-4 2xl:gap-5 text-[9px] lg:text-xs xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[9px] relative overflow-hidden cursor-pointer"
+                  className="w-full py-2 sm:py-2.5 lg:py-3 xl:py-5 2xl:py-7 [@media(max-height:1400px)]:py-2 [@media(max-height:1200px)]:py-2 [@media(max-height:1080px)]:py-2 [@media(max-height:1000px)]:py-1.5 [@media(max-height:900px)]:py-1.5 [@media(max-height:800px)]:py-1.5 [@media(max-height:700px)]:py-1.5 [@media(max-height:600px)]:py-1 min-h-[34px] lg:min-h-[38px] 2xl:min-h-[52px] [@media(max-height:1400px)]:min-h-[36px] [@media(max-height:1200px)]:min-h-[36px] [@media(max-height:1080px)]:min-h-[36px] [@media(max-height:1000px)]:min-h-[34px] [@media(max-height:900px)]:min-h-[32px] [@media(max-height:800px)]:min-h-[30px] [@media(max-height:700px)]:min-h-[30px] [@media(max-height:600px)]:min-h-[28px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(16,185,129,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.5)] active:scale-[0.98] mt-1.5 lg:mt-3 2xl:mt-4 [@media(max-height:700px)]:mt-1 flex items-center justify-center gap-1.5 lg:gap-4 2xl:gap-5 text-[9px] lg:text-xs xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[9px] relative overflow-hidden cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-4 h-4 lg:w-6 lg:h-6 2xl:w-7 2xl:h-7 border-2 lg:border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
@@ -411,8 +411,8 @@ function RegisterPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-3 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:800px)]:mt-2.5 [@media(max-height:700px)]:mt-2 [@media(max-height:600px)]:mt-1.5 pt-3 lg:pt-4 2xl:pt-6 [@media(max-height:700px)]:pt-2 [@media(max-height:600px)]:pt-1.5 border-t border-slate-800">
-                <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-1.5 lg:ml-2 2xl:ml-3">
+              <div className="mt-2.5 lg:mt-4 xl:mt-5 2xl:mt-8 [@media(max-height:1400px)]:mt-3 [@media(max-height:1200px)]:mt-3 [@media(max-height:1080px)]:mt-3 [@media(max-height:1000px)]:mt-2.5 [@media(max-height:900px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:700px)]:mt-1.5 [@media(max-height:600px)]:mt-1 pt-2.5 lg:pt-3 2xl:pt-6 [@media(max-height:1400px)]:pt-2.5 [@media(max-height:1200px)]:pt-2.5 [@media(max-height:1080px)]:pt-2.5 [@media(max-height:900px)]:pt-2 [@media(max-height:800px)]:pt-1.5 [@media(max-height:600px)]:pt-1 border-t border-slate-800">
+                <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
                   {t.auth.register.referralCodeLabel ?? 'Código de Referência (Opcional)'}
                 </label>
                 <input
@@ -443,8 +443,8 @@ function RegisterPageContent() {
                 )}
               </div>
 
-              <div className="mt-3 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:800px)]:mt-2.5 [@media(max-height:700px)]:mt-2 [@media(max-height:600px)]:mt-1.5">
-                <div className="relative mb-3 lg:mb-6 2xl:mb-8 [@media(max-height:700px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center">
+              <div className="mt-2.5 lg:mt-4 xl:mt-5 2xl:mt-8 [@media(max-height:1400px)]:mt-3 [@media(max-height:1200px)]:mt-3 [@media(max-height:1080px)]:mt-3 [@media(max-height:1000px)]:mt-2.5 [@media(max-height:900px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:700px)]:mt-1.5 [@media(max-height:600px)]:mt-1">
+                <div className="relative mb-2.5 lg:mb-4 2xl:mb-8 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-1.5 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
@@ -458,8 +458,8 @@ function RegisterPageContent() {
               </div>
             </motion.div>
 
-            <div className="mt-3 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:800px)]:mt-2.5 [@media(max-height:700px)]:mt-2 [@media(max-height:600px)]:mt-1.5 text-center flex flex-col items-center">
-              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl mb-2 lg:mb-3 xl:mb-4 2xl:mb-6 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 italic">
+            <div className="mt-2.5 lg:mt-4 xl:mt-5 2xl:mt-8 [@media(max-height:1400px)]:mt-3 [@media(max-height:1200px)]:mt-3 [@media(max-height:1080px)]:mt-3 [@media(max-height:1000px)]:mt-2.5 [@media(max-height:900px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:700px)]:mt-1.5 [@media(max-height:600px)]:mt-1 text-center flex flex-col items-center">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl mb-1.5 lg:mb-2 xl:mb-4 2xl:mb-6 [@media(max-height:1400px)]:mb-1.5 [@media(max-height:1200px)]:mb-1.5 [@media(max-height:1080px)]:mb-1.5 [@media(max-height:1000px)]:mb-1 [@media(max-height:900px)]:mb-1 [@media(max-height:800px)]:mb-1 [@media(max-height:700px)]:mb-1 [@media(max-height:600px)]:mb-0.5 italic">
                 {t.auth.register.alreadyHaveAccount}
               </p>
               <Link
