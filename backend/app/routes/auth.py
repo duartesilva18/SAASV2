@@ -1026,7 +1026,7 @@ async def import_user_data(
                 amount_cents=int(r['amount_cents']),
                 day_of_month=day,
                 is_active=bool(r.get('is_active', True)),
-                process_automatically=bool(r.get('process_automatically', False)),
+                process_automatically=bool(r.get('process_automatically', True)),
             )
             db.add(rec)
             stats['recurring'] += 1

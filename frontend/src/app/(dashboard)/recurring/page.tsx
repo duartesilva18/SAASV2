@@ -10,7 +10,7 @@ import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
 import { 
   Plus, Trash2, Calendar, CreditCard, 
-  Sparkles, AlertCircle, CheckCircle2, Clock,
+  Sparkles, AlertCircle, CheckCircle2,
   ChevronRight, ArrowRight, Check, TrendingUp,
   Bell, Info, Wallet, PieChart as PieChartIcon,
   Zap, CalendarDays, MousePointer2, ChevronDown,
@@ -54,7 +54,7 @@ export default function RecurringPage() {
     amount: '',
     day_of_month: 1,
     category_id: '',
-    process_automatically: false,
+    process_automatically: true,
     type: 'expense' as 'income' | 'expense'
   });
 
@@ -116,7 +116,7 @@ export default function RecurringPage() {
       amount: (item.amount_cents / 100).toString(),
       day_of_month: item.day_of_month,
       category_id: item.category_id || '',
-      process_automatically: item.process_automatically,
+      process_automatically: true,
       type: type as 'income' | 'expense'
     });
     setActiveTab(type as 'income' | 'expense');
@@ -144,7 +144,7 @@ export default function RecurringPage() {
         amount_cents: amount_cents,
         day_of_month: formData.day_of_month,
         category_id: formData.category_id || null,
-        process_automatically: formData.process_automatically
+        process_automatically: true
       };
 
       let response: { data: any };
@@ -169,7 +169,7 @@ export default function RecurringPage() {
         amount: '', 
         day_of_month: 1, 
         category_id: '', 
-        process_automatically: false,
+        process_automatically: true,
         type: activeTab 
       });
       
@@ -222,14 +222,7 @@ export default function RecurringPage() {
   const currentList = activeTab === 'expense' ? recurringExpenses : recurringIncomes;
   const sortedByDay = [...currentList].sort((a: any, b: any) => a.day_of_month - b.day_of_month);
 
-  const pendingItems = recurringExpenses.filter(r => {
-    const alreadyPaid = transactions.some(t => 
-      t.description === r.description && 
-      Math.abs(t.amount_cents) === Math.abs(r.amount_cents) &&
-      new Date(t.transaction_date) >= currentMonthStart
-    );
-    return !alreadyPaid && today >= r.day_of_month && !r.process_automatically;
-  });
+  const pendingItems: RecurringTransaction[] = [];
 
   const weeklyPressure = [
     { name: 'Sem 1', value: Math.abs(currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
@@ -261,10 +254,8 @@ export default function RecurringPage() {
 
   const filteredRecurring = currentList.filter(item => {
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'auto') return item.process_automatically;
-    if (activeFilter === 'manual') return !item.process_automatically;
-    const alreadyPaid = transactions.some(t => 
-      t.description === item.description && 
+    const alreadyPaid = transactions.some(t =>
+      (t.description === item.description || t.description === `(R) ${item.description}`) &&
       Math.abs(t.amount_cents) === Math.abs(item.amount_cents) &&
       new Date(t.transaction_date) >= currentMonthStart
     );
@@ -370,7 +361,7 @@ export default function RecurringPage() {
             <button
               onClick={() => {
                 setEditingId(null);
-                setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: false, type: activeTab });
+                setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: true, type: activeTab });
                 setShowAddModal(true);
               }}
               className="self-center sm:self-end shrink-0 flex items-center gap-3 px-6 py-4 md:px-8 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer h-fit"
@@ -587,7 +578,7 @@ export default function RecurringPage() {
             <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 cursor-pointer hover:border-blue-500/50 transition-all">
               <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
-                  {item.process_automatically ? <Zap size={20} className="sm:w-6 sm:h-6" /> : <Clock size={20} className="sm:w-6 sm:h-6" />}
+                  <Zap size={20} className="sm:w-6 sm:h-6" />
                 </div>
                 <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-700 hover:text-red-500 cursor-pointer">
                   <Trash2 size={18} />
@@ -595,7 +586,7 @@ export default function RecurringPage() {
               </div>
               <h3 className="text-lg font-black text-white uppercase truncate mb-1">{item.description}</h3>
               <p className={`text-2xl font-black mb-4 ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>{formatCurrency(Math.abs(item.amount_cents) / 100)}</p>
-              <span className="text-[10px] font-black uppercase text-slate-600">Dia {item.day_of_month} • {item.process_automatically ? 'Auto' : 'Manual'}</span>
+              <span className="text-[10px] font-black uppercase text-slate-600">Dia {item.day_of_month} • Auto</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -758,21 +749,6 @@ export default function RecurringPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">PROCESSAMENTO AUTOMÁTICO</label>
-                  <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl cursor-pointer" onClick={() => setFormData({...formData, process_automatically: !formData.process_automatically})}>
-                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
-                      formData.process_automatically 
-                        ? 'bg-blue-600 border-blue-600' 
-                        : 'bg-transparent border-slate-700'
-                    }`}>
-                      {formData.process_automatically && (
-                        <Check size={16} className="text-white" />
-                      )}
-                    </div>
-                    <span className="text-xs font-black uppercase text-white">Processamento Automático</span>
-                  </div>
-                </div>
                 <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all cursor-pointer">Guardar</button>
               </form>
             </motion.div>

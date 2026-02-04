@@ -30,8 +30,7 @@ def process_automatic_recurring(db: Session, workspace_id: UUID):
 
     rules = db.query(models.RecurringTransaction).filter(
         models.RecurringTransaction.workspace_id == workspace_id,
-        models.RecurringTransaction.is_active == True,
-        models.RecurringTransaction.process_automatically == True
+        models.RecurringTransaction.is_active == True
     ).all()
 
     for rule in rules:

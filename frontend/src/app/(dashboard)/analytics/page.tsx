@@ -37,7 +37,6 @@ export default function AnalyticsPage() {
   const [isTopInfoOpen, setIsTopInfoOpen] = useState(false);
   const [isEvoInfoOpen, setIsEvoInfoOpen] = useState(false);
   const [isVaultInfoOpen, setIsVaultInfoOpen] = useState(false);
-  const [recurringToConfirm, setRecurringToConfirm] = useState<any>(null);
   const [vaultModal, setVaultModal] = useState<{ open: boolean; category: any; action: 'add' | 'withdraw' } | null>(null);
   const [vaultAmount, setVaultAmount] = useState('');
   const [vaultLoading, setVaultLoading] = useState(false);
@@ -205,17 +204,6 @@ export default function AnalyticsPage() {
     
     return () => clearInterval(interval);
   }, []); // Array vazio - só executa uma vez no mount
-
-  const handleConfirmRecurring = async (recurringId: string) => {
-    try {
-      await api.post(`/recurring/${recurringId}/confirm`);
-      setRecurringToConfirm(null);
-      // Forçar atualização após confirmar pagamento
-      fetchAnalytics(true);
-    } catch (err) {
-      console.error('Erro ao confirmar pagamento:', err);
-    }
-  };
 
   const handleVaultTransaction = async () => {
     if (!vaultModal || !vaultAmount || parseFloat(vaultAmount) <= 0) {
@@ -1275,21 +1263,9 @@ export default function AnalyticsPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-black text-white">-{formatCurrency(p.amount_cents / 100)}</span>
                   {p.type === 'recurring' && (
-                    p.process_automatically ? (
-                      <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl" title={t.dashboard.analytics.processingAutomatic}>
-                        <Zap size={16} className="animate-pulse" />
-                      </div>
-                    ) : (
-                      p.canConfirm && (
-                        <button 
-                          onClick={() => setRecurringToConfirm(p)}
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 rounded-xl transition-all cursor-pointer group/pay"
-                        >
-                          <span className="text-[10px] font-black uppercase tracking-widest">{t.dashboard.analytics.confirmPayment}</span>
-                          <CheckCircle2 size={16} className="group-hover/pay:scale-110 transition-transform" />
-                        </button>
-                      )
-                    )
+                    <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl" title={t.dashboard.analytics.processingAutomatic}>
+                      <Zap size={16} className="animate-pulse" />
+                    </div>
                   )}
                 </div>
               </div>
@@ -1605,70 +1581,6 @@ export default function AnalyticsPage() {
                     }`}
                   >
                     {vaultLoading ? t.dashboard.analytics.processing : vaultModal.action === 'add' ? t.dashboard.analytics.add : t.dashboard.analytics.withdraw}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Confirmation Modal for Payment */}
-      <AnimatePresence>
-        {recurringToConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setRecurringToConfirm(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 shadow-2xl overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/10 blur-[80px] rounded-full -z-10" />
-              
-              <div className="flex flex-col items-center text-center gap-6">
-                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                  <CreditCard size={32} />
-                </div>
-                
-                <div>
-                  <h2 className="text-2xl font-black text-white tracking-tighter mb-2">
-                    {t.dashboard.analytics.confirmPaymentTitle}
-                  </h2>
-                  <p className="text-slate-500 text-sm font-medium italic">
-                    {t.dashboard.analytics.confirmPaymentText}
-                  </p>
-                </div>
-
-                <div className="w-full bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.recurring.description}</span>
-                    <span className="text-sm font-black text-white">{recurringToConfirm.description}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.recurring.amount}</span>
-                    <span className="text-sm font-black text-emerald-400">{formatCurrency(recurringToConfirm.amount_cents / 100)}</span>
-                  </div>
-                </div>
-
-                <div className="w-full grid grid-cols-2 gap-3 mt-4">
-                  <button
-                    onClick={() => setRecurringToConfirm(null)}
-                    className="px-6 py-4 border border-slate-800 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all cursor-pointer"
-                  >
-                    {t.dashboard.analytics.cancel}
-                  </button>
-                  <button
-                    onClick={() => handleConfirmRecurring(recurringToConfirm.id)}
-                    className="px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
-                  >
-                    {t.dashboard.analytics.confirmPaymentBtn}
                   </button>
                 </div>
               </div>

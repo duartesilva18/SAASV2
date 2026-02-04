@@ -90,7 +90,7 @@ export const DEMO_RECURRING = [
   { id: 'r1', description: 'Renda Casa', amount_cents: 85000, day_of_month: 5, process_automatically: true },
   { id: 'r2', description: 'Netflix', amount_cents: 1499, day_of_month: 10, process_automatically: true },
   { id: 'r3', description: 'Spotify', amount_cents: 999, day_of_month: 15, process_automatically: true },
-  { id: 'r4', description: 'Ginásio', amount_cents: 3500, day_of_month: 2, process_automatically: false },
+  { id: 'r4', description: 'Ginásio', amount_cents: 3500, day_of_month: 2, process_automatically: true },
   { id: 'r5', description: 'Internet/TV', amount_cents: 4500, day_of_month: 20, process_automatically: true },
 ];
 

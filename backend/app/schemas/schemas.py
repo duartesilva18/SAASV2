@@ -197,7 +197,7 @@ class RecurringTransactionBase(BaseModel):
     day_of_month: int
     category_id: Optional[UUID] = None
     is_active: bool = True
-    process_automatically: bool = False
+    process_automatically: bool = True
 
 class RecurringTransactionCreate(RecurringTransactionBase):
     pass
