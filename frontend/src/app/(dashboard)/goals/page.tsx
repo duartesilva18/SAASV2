@@ -26,10 +26,7 @@ const ICONS = [
   { name: 'Trophy', icon: Trophy }
 ];
 
-const COLORS = [
-  '#3B82F6', '#EF4444', '#10B981', '#F59E0B', 
-  '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'
-];
+const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
 
 export default function GoalsPage() {
   const { t, formatCurrency } = useTranslation();
@@ -461,17 +458,20 @@ export default function GoalsPage() {
       {/* Modal Nova/Editar Meta */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-4"
+            style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowNotifications(false)}
               className="fixed inset-0 bg-black/70 backdrop-blur-md"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-white/10 rounded-2xl sm:rounded-[28px] p-5 sm:p-8 md:p-10 shadow-[0_25px_80px_-40px_rgba(59,130,246,0.35)] overflow-hidden max-h-[90vh] overflow-y-auto"
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-white/10 rounded-t-2xl sm:rounded-2xl sm:rounded-[28px] p-4 sm:p-8 md:p-10 shadow-[0_25px_80px_-40px_rgba(59,130,246,0.35)] overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
               
@@ -565,25 +565,15 @@ export default function GoalsPage() {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block ml-2">{t.dashboard.goals.iconAndColor}</label>
-                    <div className="flex flex-wrap gap-3 mb-6">
-                      {ICONS.map((item) => (
-                        <button
-                          key={item.name} type="button"
-                          onClick={() => setFormData({ ...formData, icon: item.name })}
-                          className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all cursor-pointer ${formData.icon === item.name ? 'bg-blue-600 text-white scale-110 shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'}`}
-                        >
-                          <item.icon size={20} />
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-3">
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 sm:mb-3 block ml-2">{t.dashboard.goals.color ?? 'Cor'}</label>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
                       {COLORS.map((color) => (
                         <button
                           key={color} type="button"
                           onClick={() => setFormData({ ...formData, color_hex: color })}
-                          className={`w-10 h-10 rounded-full border-2 transition-all cursor-pointer ${formData.color_hex === color ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all cursor-pointer shrink-0 ${formData.color_hex === color ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
                           style={{ backgroundColor: color }}
+                          aria-label={t.dashboard.goals.color ?? 'Cor'}
                         />
                       ))}
                     </div>
