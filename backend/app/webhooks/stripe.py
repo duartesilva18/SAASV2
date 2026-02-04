@@ -261,7 +261,7 @@ def handle_subscription_deleted(subscription: dict, db: Session):
             referral.has_subscribed = False
             referral.subscription_canceled_at = datetime.now()
             logger.info(f'Afiliado: referência {user.email} marcada como cancelada (referrer_id={referral.referrer_id})')
-            # Ajustar comissão do mês da subscrição: menos uma conversão e estimativa de valor (9,99€, 25%)
+            # Ajustar comissão do mês da subscrição: menos uma conversão e valores proporcionais ao mês
             if referral.subscription_date:
                 commission_month = referral.subscription_date.replace(day=1).date()
                 comm = db.query(models.AffiliateCommission).filter(
@@ -269,8 +269,9 @@ def handle_subscription_deleted(subscription: dict, db: Session):
                     models.AffiliateCommission.month == commission_month
                 ).first()
                 if comm and comm.conversions_count > 0:
-                    est_revenue_cents = 999  # 9,99€
-                    est_commission_cents = int(est_revenue_cents * (float(comm.commission_percentage) / 100))
+                    # Usar média por conversão do mês (em vez de 999 fixo) para planos diferentes (mensal/anual)
+                    est_revenue_cents = comm.total_revenue_cents // comm.conversions_count
+                    est_commission_cents = comm.commission_amount_cents // comm.conversions_count
                     comm.total_revenue_cents = max(0, comm.total_revenue_cents - est_revenue_cents)
                     comm.commission_amount_cents = max(0, comm.commission_amount_cents - est_commission_cents)
                     comm.conversions_count = max(0, comm.conversions_count - 1)
@@ -523,57 +524,78 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
 
                 # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)
-                # Assim as comissões ficam registadas mesmo quando payment_intent.succeeded não traz user_id
+                # Idempotência: não creditar duas vezes a mesma invoice se o webhook for reenviado
                 if referral:
                     try:
-                        base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
-                        period_start = invoice.get('period_start')
-                        if period_start is not None:
-                            period_dt = datetime.fromtimestamp(period_start)
-                            commission_month = period_dt.replace(day=1).date()
+                        invoice_id_commission = invoice.get('id')
+                        already_credited = (
+                            invoice_id_commission
+                            and db.query(models.AffiliateCommissionInvoice).filter(
+                                models.AffiliateCommissionInvoice.invoice_id == invoice_id_commission
+                            ).first()
+                        )
+                        if already_credited:
+                            logger.info(f'Comissão já creditada para invoice {invoice_id_commission}, a ignorar (idempotência)')
                         else:
-                            commission_month = date.today().replace(day=1)
+                            base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
+                            period_start = invoice.get('period_start')
+                            if period_start is not None:
+                                period_dt = datetime.fromtimestamp(period_start)
+                                commission_month = period_dt.replace(day=1).date()
+                            else:
+                                commission_month = date.today().replace(day=1)
 
-                        # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice ou original_price_id na metadata)
-                        price_id = _get_price_id_for_commission(invoice)
-                        commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
-                        commission_amount_cents = int(base_amount * (commission_pct / 100))
+                            # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice ou original_price_id na metadata)
+                            price_id = _get_price_id_for_commission(invoice)
+                            commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
+                            commission_amount_cents = int(base_amount * (commission_pct / 100))
 
-                        existing = db.query(models.AffiliateCommission).filter(
-                            models.AffiliateCommission.affiliate_id == referral.referrer_id,
-                            models.AffiliateCommission.month == commission_month
-                        ).first()
+                            existing = db.query(models.AffiliateCommission).filter(
+                                models.AffiliateCommission.affiliate_id == referral.referrer_id,
+                                models.AffiliateCommission.month == commission_month
+                            ).first()
 
-                        if existing:
-                            existing.total_revenue_cents += base_amount
-                            existing.commission_amount_cents += commission_amount_cents
-                            existing.conversions_count += 1
-                            logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{base_amount} cêntimos')
-                            commission_obj = existing
-                        else:
-                            new_commission = models.AffiliateCommission(
-                                affiliate_id=referral.referrer_id,
-                                month=commission_month,
-                                total_revenue_cents=base_amount,
-                                commission_percentage=commission_pct,
-                                commission_amount_cents=commission_amount_cents,
-                                conversions_count=1,
-                                referrals_count=1,
-                                is_paid=False,
-                            )
-                            db.add(new_commission)
-                            logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {base_amount} cêntimos')
-                            commission_obj = new_commission
-                        # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
-                        manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
-                            models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
-                        ).first()
-                        if manual_done and commission_obj:
-                            commission_obj.stripe_transfer_id = manual_done.transfer_id
-                            commission_obj.payment_reference = manual_done.transfer_id
-                            commission_obj.is_paid = True
-                            commission_obj.paid_at = datetime.now()
-                            logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
+                            if existing:
+                                existing.total_revenue_cents += base_amount
+                                existing.commission_amount_cents += commission_amount_cents
+                                existing.conversions_count += 1
+                                logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{base_amount} cêntimos')
+                                commission_obj = existing
+                            else:
+                                new_commission = models.AffiliateCommission(
+                                    affiliate_id=referral.referrer_id,
+                                    month=commission_month,
+                                    total_revenue_cents=base_amount,
+                                    commission_percentage=commission_pct,
+                                    commission_amount_cents=commission_amount_cents,
+                                    conversions_count=1,
+                                    referrals_count=1,
+                                    is_paid=False,
+                                )
+                                db.add(new_commission)
+                                logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {base_amount} cêntimos')
+                                commission_obj = new_commission
+
+                            # Registo para idempotência (evitar duplicar em reenvios do webhook)
+                            if invoice_id_commission:
+                                db.add(models.AffiliateCommissionInvoice(
+                                    invoice_id=invoice_id_commission,
+                                    affiliate_id=referral.referrer_id,
+                                    month=commission_month,
+                                    base_amount_cents=base_amount,
+                                    commission_cents=commission_amount_cents,
+                                ))
+
+                            # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
+                            manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                                models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
+                            ).first()
+                            if manual_done and commission_obj:
+                                commission_obj.stripe_transfer_id = manual_done.transfer_id
+                                commission_obj.payment_reference = manual_done.transfer_id
+                                commission_obj.is_paid = True
+                                commission_obj.paid_at = datetime.now()
+                                logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
                     except Exception as e:
                         logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
 

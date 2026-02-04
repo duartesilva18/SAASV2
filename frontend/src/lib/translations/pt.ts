@@ -1093,7 +1093,13 @@ export const pt = {
           disconnectStripeMessage: "Vais desligar a conta Stripe atual. As comissões já geradas não são afetadas. Depois podes configurar outra conta Stripe quando quiseres.",
           disconnectStripeCancel: "Cancelar",
           disconnectStripeConfirm: "Desligar conta",
-          disconnectStripeSuccess: "Conta desligada. Podes configurar outra quando quiseres."
+          disconnectStripeSuccess: "Conta desligada. Podes configurar outra quando quiseres.",
+          refresh: "Atualizar dados",
+          refreshed: "Dados atualizados.",
+          exportCsv: "Exportar CSV",
+          exportSuccess: "CSV descarregado.",
+          shareText: "Experimenta o Finly para gerir as tuas finanças de forma simples.",
+          paidOn: "Pago em"
       },
       support: {
           tooltip: "Contactar suporte",

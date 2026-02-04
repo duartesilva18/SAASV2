@@ -1630,7 +1630,13 @@ export const en = {
           disconnectStripeMessage: "You will disconnect your current Stripe account. Existing commissions are not affected. You can then connect a different Stripe account when you want.",
           disconnectStripeCancel: "Cancel",
           disconnectStripeConfirm: "Disconnect account",
-          disconnectStripeSuccess: "Account disconnected. You can connect another one when you want."
+          disconnectStripeSuccess: "Account disconnected. You can connect another one when you want.",
+          refresh: "Refresh data",
+          refreshed: "Data updated.",
+          exportCsv: "Export CSV",
+          exportSuccess: "CSV downloaded.",
+          shareText: "Try Finly to manage your finances simply.",
+          paidOn: "Paid on"
       }
   },
   legal: {

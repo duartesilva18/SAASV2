@@ -407,6 +407,21 @@ class AffiliateInvoiceManualTransfer(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class AffiliateCommissionInvoice(Base):
+    """
+    Invoices já creditadas em AffiliateCommission (idempotência).
+    Evita duplicar comissão se o webhook invoice.paid for reenviado.
+    """
+    __tablename__ = 'affiliate_commission_invoices'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    invoice_id = Column(String(255), unique=True, nullable=False, index=True)  # Stripe invoice id (in_xxx)
+    affiliate_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    month = Column(Date, nullable=False)  # Mês da comissão (YYYY-MM-01)
+    base_amount_cents = Column(Integer, nullable=False)
+    commission_cents = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class AdminProjectExpense(Base):
     """
     Despesas do projeto e manutenção (apenas admins).

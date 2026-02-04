@@ -1600,7 +1600,13 @@ export const fr = {
           disconnectStripeMessage: "Vous allez déconnecter votre compte Stripe actuel. Les commissions déjà générées ne sont pas affectées. Vous pourrez ensuite configurer un autre compte Stripe quand vous voudrez.",
           disconnectStripeCancel: "Annuler",
           disconnectStripeConfirm: "Déconnecter le compte",
-          disconnectStripeSuccess: "Compte déconnecté. Vous pouvez en connecter un autre quand vous voulez."
+          disconnectStripeSuccess: "Compte déconnecté. Vous pouvez en connecter un autre quand vous voulez.",
+          refresh: "Actualiser les données",
+          refreshed: "Données mises à jour.",
+          exportCsv: "Exporter CSV",
+          exportSuccess: "CSV téléchargé.",
+          shareText: "Essayez Finly pour gérer vos finances simplement.",
+          paidOn: "Payé le"
       }
   },
   legal: {

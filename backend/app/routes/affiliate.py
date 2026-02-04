@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from typing import List, Tuple
 from uuid import UUID
 from datetime import datetime, timedelta, date, timezone
 from collections import defaultdict
+import csv
+import io
 from ..core.dependencies import get_db
 from ..models import database as models
 from .. import schemas
@@ -89,22 +92,31 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
         
         # Plano básico (1 mês) - verificar se tem 3 meses consecutivos pagos
         if current_price_id == plan_basic:
-            # Buscar todas as invoices pagas do customer
+            # Buscar todas as invoices pagas do customer (expandir subscription para metadata original_price_id)
             invoices = stripe.Invoice.list(
                 customer=user.stripe_customer_id,
                 status='paid',
-                limit=100
+                limit=100,
+                expand=['data.subscription']
             )
-            
-            # Filtrar apenas invoices do plano básico mensal
+
+            # Filtrar apenas invoices do plano básico: price_id nas linhas OU metadata.original_price_id na subscrição
+            # (checkout com taxa Stripe usa price_data dinâmico; o plano fica em subscription.metadata.original_price_id)
             basic_invoices = []
             for inv in invoices.data:
-                # Verificar se a invoice tem o price_id do plano básico
+                is_basic = False
                 for line_item in inv.lines.data:
-                    if hasattr(line_item, 'price') and line_item.price and line_item.price.id == plan_basic:
-                        basic_invoices.append(inv)
+                    if hasattr(line_item, 'price') and line_item.price and getattr(line_item.price, 'id', None) == plan_basic:
+                        is_basic = True
                         break
-            
+                if not is_basic and getattr(inv, 'subscription', None):
+                    sub = inv.subscription
+                    meta = getattr(sub, 'metadata', None) or {}
+                    if isinstance(meta, dict) and meta.get('original_price_id') == plan_basic:
+                        is_basic = True
+                if is_basic:
+                    basic_invoices.append(inv)
+
             if len(basic_invoices) < 3:
                 months_paid = len(basic_invoices)
                 return (False, f'Plano básico: precisas de 3 meses consecutivos pagos. Tens {months_paid} mês(es) pago(s).')
@@ -465,15 +477,27 @@ async def get_affiliate_stats(
                     items_data = (getattr(items_obj, 'data', None) or []) if items_obj else []
                     plan_info = items_data[0].price if len(items_data) > 0 else None
 
-                    # Buscar última invoice paga
+                    # Buscar última invoice paga (expandir charge para valor líquido sem reembolsos)
                     invoices = stripe.Invoice.list(
                         subscription=subscription.id,
                         status='paid',
-                        limit=1
+                        limit=1,
+                        expand=['data.charge']
                     )
                     if invoices.data:
                         invoice = invoices.data[0]
-                        amount_paid_cents = invoice.amount_paid
+                        # Valor líquido (excluir reembolsos) para não mostrar receita já devolvida
+                        amount_paid_cents = getattr(invoice, 'amount_paid', 0) or 0
+                        charge = getattr(invoice, 'charge', None)
+                        if charge:
+                            if isinstance(charge, str):
+                                try:
+                                    charge = stripe.Charge.retrieve(charge)
+                                except Exception:
+                                    pass
+                            if charge:
+                                amount_refunded = getattr(charge, 'amount_refunded', 0) or 0
+                                amount_paid_cents = max(0, amount_paid_cents - amount_refunded)
                         commission_cents = int(amount_paid_cents * (commission_percentage / 100))
                         payment_info = {
                             'amount_paid_cents': amount_paid_cents,
@@ -538,7 +562,8 @@ async def get_affiliate_stats(
             'revenue_cents': comm.total_revenue_cents,
             'commission_cents': comm.commission_amount_cents,
             'conversions': comm.conversions_count,
-            'is_paid': comm.is_paid
+            'is_paid': comm.is_paid,
+            'paid_at': comm.paid_at.isoformat() if comm.paid_at else None,
         })
     
     # Calcular faturamento semanal (últimas 8 semanas)
@@ -609,6 +634,48 @@ async def get_affiliate_stats(
         referrals=referrals_data,
         monthly_commissions=monthly_commissions,
         weekly_revenue=weekly_revenue
+    )
+
+
+@router.get('/export/csv')
+async def export_affiliate_csv(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Exporta referências e comissões mensais em CSV (idem aos dados da dashboard, sem chamadas Stripe extra)."""
+    if not current_user.is_affiliate:
+        raise HTTPException(status_code=403, detail='Não és afiliado.')
+    referrals = db.query(models.AffiliateReferral).filter(
+        models.AffiliateReferral.referrer_id == current_user.id
+    ).order_by(models.AffiliateReferral.created_at.desc()).all()
+    commissions = db.query(models.AffiliateCommission).filter(
+        models.AffiliateCommission.affiliate_id == current_user.id
+    ).order_by(models.AffiliateCommission.month.desc()).all()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['email', 'nome', 'subscrito', 'data_subscricao', 'data_registo'])
+    for ref in referrals:
+        u = db.query(models.User).filter(models.User.id == ref.referred_user_id).first()
+        email = u.email if u else 'N/A'
+        name = (u.full_name or '').strip() or ''
+        sub = 'Sim' if ref.has_subscribed else 'Não'
+        sub_date = ref.subscription_date.strftime('%Y-%m-%d') if ref.subscription_date else ''
+        created = ref.created_at.strftime('%Y-%m-%d %H:%M') if ref.created_at else ''
+        w.writerow([email, name, sub, sub_date, created])
+    buf.write('\n')
+    w.writerow(['mes', 'receita_eur', 'comissao_eur', 'conversoes', 'pago', 'data_pagamento'])
+    for c in commissions:
+        rev_eur = f'{c.total_revenue_cents / 100:.2f}'
+        com_eur = f'{c.commission_amount_cents / 100:.2f}'
+        pago = 'Sim' if c.is_paid else 'Não'
+        paid_at = c.paid_at.strftime('%Y-%m-%d') if c.paid_at else ''
+        w.writerow([c.month.strftime('%Y-%m'), rev_eur, com_eur, c.conversions_count, pago, paid_at])
+    buf.seek(0)
+    filename = f"afiliado_{current_user.affiliate_code or 'export'}_{date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
 
 
