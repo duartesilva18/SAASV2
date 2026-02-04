@@ -273,11 +273,24 @@ def handle_charge_refunded(charge: dict, db: Session):
         logger.warning(f'Utilizador não encontrado para reembolso charge {charge_id}')
         return
 
+    # Bloquear acesso de imediato: sincronizar subscription_status com o Stripe (reembolso pode ter cancelado a sub)
+    if invoice_id and settings.STRIPE_API_KEY:
+        try:
+            inv = stripe.Invoice.retrieve(invoice_id)
+            sub_id = inv.get('subscription')
+            if sub_id and user.stripe_subscription_id == sub_id:
+                sub = stripe.Subscription.retrieve(sub_id)
+                user.subscription_status = sub.status  # 'canceled', 'incomplete_expired', etc.
+                logger.info(f'Reembolso: acesso atualizado para {user.email} → subscription_status={sub.status}')
+        except Exception as e:
+            logger.warning(f'Erro ao obter subscription no reembolso: {e}')
+
     referral = db.query(models.AffiliateReferral).filter(
         models.AffiliateReferral.referred_user_id == user.id
     ).first()
     if not referral:
-        logger.info(f'Reembolso para {user.email} sem referência de afiliado; nada a reverter.')
+        db.commit()
+        logger.info(f'Reembolso para {user.email} sem referência de afiliado; acesso já atualizado (subscription_status).')
         return
 
     # Atualizar referência
