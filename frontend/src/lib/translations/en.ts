@@ -967,7 +967,8 @@ export const en = {
           validation: {
               nameRequired: "Give your cycle a name.",
               positiveAmount: "The amount must be positive.",
-              validDay: "The day must be between 1 and 31."
+              validDay: "The day must be between 1 and 31.",
+              categoryRequired: "You must select a category."
           },
           netZenBalance: "Net Zen Balance",
           zenEquilibrium: "Zen Equilibrium",

@@ -860,7 +860,8 @@ export const pt = {
           validation: {
               nameRequired: "O nome é obrigatório",
               positiveAmount: "O valor deve ser maior que zero",
-              validDay: "O dia deve estar entre 1 e 31"
+              validDay: "O dia deve estar entre 1 e 31",
+              categoryRequired: "Tens de escolher uma categoria"
           },
           incomeLabel: "Receitas",
           expenseLabel: "Despesas",

@@ -58,11 +58,12 @@ export default function RecurringPage() {
     type: 'expense' as 'income' | 'expense'
   });
 
-  // Função de validação hoisted
+  // Função de validação: nome, valor, categoria e dia obrigatórios
   function validate() {
     const newErrors: Record<string, string> = {};
     if (!formData.description.trim()) newErrors.description = t.dashboard.recurring.validation.nameRequired;
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = t.dashboard.recurring.validation.positiveAmount;
+    if (!formData.category_id || !String(formData.category_id).trim()) newErrors.category_id = t.dashboard.recurring.validation.categoryRequired;
     if (!formData.day_of_month || formData.day_of_month < 1 || formData.day_of_month > 31) {
       newErrors.day_of_month = t.dashboard.recurring.validation.validDay;
     }
@@ -94,15 +95,14 @@ export default function RecurringPage() {
     fetchData();
   }, []);
 
-  // Sincronizar categorias com base no tipo (Receita/Despesa)
+  // Sincronizar categorias com base no tipo (Receita/Despesa); não auto-selecionar — obrigar a escolher
   useEffect(() => {
     const targetType = editingId ? formData.type : activeTab;
     const filtered = allCategories.filter(c => c.type === targetType);
     setCategories(filtered);
-    
-    // Auto-selecionar categoria se estiver vazio ou se mudarmos de tipo
-    if (filtered.length > 0 && (!formData.category_id || !filtered.find(c => c.id === formData.category_id))) {
-      setFormData(prev => ({ ...prev, category_id: filtered[0].id }));
+    // Ao mudar de tipo, limpar categoria se a atual não pertencer ao tipo (obrigar a escolher de novo)
+    if (formData.category_id && filtered.length > 0 && !filtered.find(c => c.id === formData.category_id)) {
+      setFormData(prev => ({ ...prev, category_id: '' }));
     }
   }, [activeTab, allCategories, formData.type, editingId]);
 
@@ -625,7 +625,7 @@ export default function RecurringPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">NOME DE SUBSCRIÇÃO</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">NOME DE SUBSCRIÇÃO <span className="text-red-500">*</span></label>
                   <motion.div
                     animate={errors.description ? { x: [-2, 2, -2, 2, 0] } : {}}
                     transition={{ duration: 0.4 }}
@@ -653,7 +653,7 @@ export default function RecurringPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">VALOR</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">VALOR <span className="text-red-500">*</span></label>
                     <motion.div
                       animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -681,7 +681,7 @@ export default function RecurringPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">DIA</label>
+                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">DIA <span className="text-red-500">*</span></label>
                     <motion.div
                       animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
@@ -710,14 +710,19 @@ export default function RecurringPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA</label>
+                  <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA <span className="text-red-500">*</span></label>
                   <div className="relative group">
                     <Tag size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                     <select
                       required
                       value={formData.category_id}
-                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
+                      onChange={(e) => {
+                        setFormData({ ...formData, category_id: e.target.value });
+                        if (errors.category_id) setErrors(prev => ({ ...prev, category_id: '' }));
+                      }}
+                      className={`w-full bg-slate-950/50 border rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px] ${
+                        errors.category_id ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800'
+                      }`}
                     >
                       <option value="">{t.dashboard.recurring.selectCategory}</option>
                       {(() => {
@@ -747,6 +752,11 @@ export default function RecurringPage() {
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>
+                  {errors.category_id && (
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1">
+                      <AlertCircle size={10} /> {errors.category_id}
+                    </p>
+                  )}
                 </div>
 
                 <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all cursor-pointer">Guardar</button>
