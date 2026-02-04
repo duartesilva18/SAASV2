@@ -357,24 +357,49 @@ def handle_charge_refunded(charge: dict, db: Session):
         except Exception:
             pass
 
-    # Reverter comissão só sobre o valor base (não sobre a taxa Stripe repassada)
-    base_refunded = min(amount_refunded, base_amount_for_invoice)
-    commission_to_reverse_cents = int(base_refunded * (commission_pct / 100))
+    # Refund parcial múltiplo: amount_refunded é acumulado no charge; só revertemos o delta por charge
+    base_refunded_total_now = min(amount_refunded, base_amount_for_invoice)
+    tracking = db.query(models.AffiliateChargeRefundTracking).filter(
+        models.AffiliateChargeRefundTracking.charge_id == charge_id
+    ).first()
+    already_reversed = tracking.base_refunded_reversed_cents if tracking else 0
+    delta_base = base_refunded_total_now - already_reversed
+    if delta_base <= 0:
+        logger.info(f'Replay ou sem novo refund: charge {charge_id} amount_refunded={amount_refunded} já_revertido={already_reversed}, ignorar')
+        db.commit()
+        return
 
-    # Ajustar comissão na BD (receita revertida = só a parte base)
+    commission_to_reverse_cents = int(delta_base * (commission_pct / 100))
+    conversions_decrement = False
+    if base_refunded_total_now >= base_amount_for_invoice and (not tracking or not tracking.conversions_decremented):
+        conversions_decrement = True
+
+    # Ajustar comissão na BD (só o delta)
     comm = db.query(models.AffiliateCommission).filter(
         models.AffiliateCommission.affiliate_id == referral.referrer_id,
         models.AffiliateCommission.month == commission_month
     ).first()
-    if comm and comm.conversions_count > 0:
-        comm.total_revenue_cents = max(0, comm.total_revenue_cents - base_refunded)
+    if comm and (delta_base > 0 or conversions_decrement):
+        comm.total_revenue_cents = max(0, comm.total_revenue_cents - delta_base)
         comm.commission_amount_cents = max(0, comm.commission_amount_cents - commission_to_reverse_cents)
-        comm.conversions_count = max(0, comm.conversions_count - 1)
-        logger.info(f'Afiliado: comissão ajustada (reembolso): -{base_refunded} receita (base), -{commission_to_reverse_cents} comissão, -1 conversão')
+        if conversions_decrement and comm.conversions_count > 0:
+            comm.conversions_count = max(0, comm.conversions_count - 1)
+        logger.info(f'Afiliado: comissão ajustada (reembolso): -{delta_base} receita (base), -{commission_to_reverse_cents} comissão' + (', -1 conversão' if conversions_decrement else ''))
 
-    # Reverter o transfer no Stripe Connect (tirar o valor da comissão ao afiliado)
+    # Atualizar tracking (soma acumulada; conversions_count só 1x por charge)
+    if tracking:
+        tracking.base_refunded_reversed_cents = base_refunded_total_now
+        if conversions_decrement:
+            tracking.conversions_decremented = True
+    else:
+        db.add(models.AffiliateChargeRefundTracking(
+            charge_id=charge_id,
+            base_refunded_reversed_cents=base_refunded_total_now,
+            conversions_decremented=conversions_decrement,
+        ))
+
+    # Reverter o transfer no Stripe Connect (só o delta da comissão)
     if not transfer_id and settings.STRIPE_API_KEY:
-        # Fallback: em subscrições o transfer pode estar separado do charge; procurar por source_transaction
         try:
             transfers = stripe.Transfer.list(limit=100)
             for t in transfers.get('data', []):
@@ -457,147 +482,158 @@ def handle_invoice_paid(invoice: dict, db: Session):
                     logger.error(f'Erro ao verificar subscrição após pagamento: {str(e)}')
             
             # Marcar conversão de afiliado e criar/atualizar comissão (subscrições)
+            # Replay-safe: se esta invoice já foi processada (comissão creditada), ignorar todo o bloco
             if user.referrer_id:
-                referral = db.query(models.AffiliateReferral).filter(
-                    models.AffiliateReferral.referred_user_id == user.id
-                ).first()
-                referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first() if user.referrer_id else None
-                # Transfer manual só em invoice.paid (nunca em checkout.session.completed) — garante que o dinheiro existe.
-                # Comissão em cima do valor base apenas (metadata.base_amount_cents; afiliado não ganha sobre taxa Stripe).
-                # Workaround: 1ª invoice (Checkout) pode ter sido criada sem split; Stripe não recalcula invoices.
-                billing_reason = invoice.get('billing_reason')
-                invoice_id = invoice.get('id')
-                if billing_reason == 'subscription_create' and referral and referrer and getattr(referrer, 'stripe_connect_account_id', None) and invoice_id:
-                    # Evitar pagamento duplo: só fazemos Transfer se ainda não registámos para esta invoice
-                    existing = db.query(models.AffiliateInvoiceManualTransfer).filter(
-                        models.AffiliateInvoiceManualTransfer.invoice_id == invoice_id
+                invoice_id_replay = invoice.get('id')
+                already_processed = (
+                    invoice_id_replay
+                    and db.query(models.AffiliateCommissionInvoice).filter(
+                        models.AffiliateCommissionInvoice.invoice_id == invoice_id_replay
                     ).first()
-                    if existing:
-                        logger.info(f'Transfer manual já feito para invoice {invoice_id}, a ignorar (evitar duplicado)')
-                    else:
-                        charge_id = invoice.get('charge')
-                        if charge_id and settings.STRIPE_API_KEY:
-                            try:
-                                stripe.api_key = settings.STRIPE_API_KEY
-                                charge = stripe.Charge.retrieve(charge_id)
-                                # Só Transfer manual se: sem transfer associado E sem application_fee (split não foi aplicado)
-                                has_transfer = bool(charge.get('transfer'))
-                                app_fee = charge.get('application_fee_amount') or 0
-                                if not has_transfer and app_fee == 0:
-                                    base_amount = _get_base_amount_for_commission(invoice)  # só base, não taxa Stripe
-                                    price_id = _get_price_id_for_commission(invoice)
-                                    commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
-                                    commission_cents = int(base_amount * (commission_pct / 100))
-                                    if commission_cents >= 1:
-                                        currency = invoice.get('currency') or 'eur'
-                                        t = stripe.Transfer.create(
-                                            amount=commission_cents,
-                                            currency=currency,
-                                            destination=referrer.stripe_connect_account_id,
-                                            metadata={'invoice_id': invoice_id, 'reason': 'first_invoice_split_fix'},
-                                            idempotency_key=f"first_invoice_split_{invoice_id}"
-                                        )
-                                        db.add(models.AffiliateInvoiceManualTransfer(
-                                            invoice_id=invoice_id,
-                                            transfer_id=t.id,
-                                            affiliate_id=referrer.id,
-                                            amount_cents=commission_cents,
-                                            currency=currency,
-                                        ))
-                                        db.commit()
-                                        logger.info(f'✅ Transfer manual (1ª invoice sem split): {commission_cents} {currency} → afiliado {referrer.email} (invoice {invoice_id})')
-                                elif has_transfer:
-                                    logger.info(f'Invoice {invoice_id} já tem transfer; não criar Transfer manual')
-                                else:
-                                    logger.info(f'Invoice {invoice_id} tem application_fee_amount={app_fee}; não criar Transfer manual')
-                            except Exception as e:
-                                logger.error(f'Erro ao criar Transfer manual para 1ª invoice: {e}', exc_info=True)
-                                db.rollback()
-                if referral and not referral.has_subscribed:
-                    referral.has_subscribed = True
-                    referral.subscription_date = datetime.now()
-                    logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
-                elif referral and user.subscription_status in ['active', 'trialing']:
-                    if not referral.has_subscribed:
+                )
+                if already_processed:
+                    logger.info(f'Replay invoice.paid {invoice_id_replay}, ignorar (replay-safe)')
+                else:
+                    referral = db.query(models.AffiliateReferral).filter(
+                        models.AffiliateReferral.referred_user_id == user.id
+                    ).first()
+                    referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first() if user.referrer_id else None
+                    # Transfer manual só em invoice.paid (nunca em checkout.session.completed) — garante que o dinheiro existe.
+                    # Comissão em cima do valor base apenas (metadata.base_amount_cents; afiliado não ganha sobre taxa Stripe).
+                    # Workaround: 1ª invoice (Checkout) pode ter sido criada sem split; Stripe não recalcula invoices.
+                    billing_reason = invoice.get('billing_reason')
+                    invoice_id = invoice.get('id')
+                    if billing_reason == 'subscription_create' and referral and referrer and getattr(referrer, 'stripe_connect_account_id', None) and invoice_id:
+                        # Evitar pagamento duplo: só fazemos Transfer se ainda não registámos para esta invoice
+                        existing = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                            models.AffiliateInvoiceManualTransfer.invoice_id == invoice_id
+                        ).first()
+                        if existing:
+                            logger.info(f'Transfer manual já feito para invoice {invoice_id}, a ignorar (evitar duplicado)')
+                        else:
+                            charge_id = invoice.get('charge')
+                            if charge_id and settings.STRIPE_API_KEY:
+                                try:
+                                    stripe.api_key = settings.STRIPE_API_KEY
+                                    charge = stripe.Charge.retrieve(charge_id)
+                                    # Só Transfer manual se: sem transfer associado E sem application_fee (split não foi aplicado)
+                                    has_transfer = bool(charge.get('transfer'))
+                                    app_fee = charge.get('application_fee_amount') or 0
+                                    if not has_transfer and app_fee == 0:
+                                        base_amount = _get_base_amount_for_commission(invoice)  # só base, não taxa Stripe
+                                        price_id = _get_price_id_for_commission(invoice)
+                                        commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
+                                        commission_cents = int(base_amount * (commission_pct / 100))
+                                        if commission_cents >= 1:
+                                            currency = invoice.get('currency') or 'eur'
+                                            t = stripe.Transfer.create(
+                                                amount=commission_cents,
+                                                currency=currency,
+                                                destination=referrer.stripe_connect_account_id,
+                                                metadata={'invoice_id': invoice_id, 'reason': 'first_invoice_split_fix'},
+                                                idempotency_key=f"first_invoice_split_{invoice_id}"
+                                            )
+                                            db.add(models.AffiliateInvoiceManualTransfer(
+                                                invoice_id=invoice_id,
+                                                transfer_id=t.id,
+                                                affiliate_id=referrer.id,
+                                                amount_cents=commission_cents,
+                                                currency=currency,
+                                            ))
+                                            db.commit()
+                                            logger.info(f'✅ Transfer manual (1ª invoice sem split): {commission_cents} {currency} → afiliado {referrer.email} (invoice {invoice_id})')
+                                    elif has_transfer:
+                                        logger.info(f'Invoice {invoice_id} já tem transfer; não criar Transfer manual')
+                                    else:
+                                        logger.info(f'Invoice {invoice_id} tem application_fee_amount={app_fee}; não criar Transfer manual')
+                                except Exception as e:
+                                    logger.error(f'Erro ao criar Transfer manual para 1ª invoice: {e}', exc_info=True)
+                                    db.rollback()
+                    if referral and not referral.has_subscribed:
                         referral.has_subscribed = True
                         referral.subscription_date = datetime.now()
-                        logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
+                        logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
+                    elif referral and user.subscription_status in ['active', 'trialing']:
+                        if not referral.has_subscribed:
+                            referral.has_subscribed = True
+                            referral.subscription_date = datetime.now()
+                            logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
 
-                # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)
-                # Idempotência: não creditar duas vezes a mesma invoice se o webhook for reenviado
-                if referral:
-                    try:
-                        invoice_id_commission = invoice.get('id')
-                        already_credited = (
-                            invoice_id_commission
-                            and db.query(models.AffiliateCommissionInvoice).filter(
-                                models.AffiliateCommissionInvoice.invoice_id == invoice_id_commission
-                            ).first()
-                        )
-                        if already_credited:
-                            logger.info(f'Comissão já creditada para invoice {invoice_id_commission}, a ignorar (idempotência)')
-                        else:
-                            base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
-                            period_start = invoice.get('period_start')
-                            if period_start is not None:
-                                period_dt = datetime.fromtimestamp(period_start)
-                                commission_month = period_dt.replace(day=1).date()
+                    # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)
+                    # Idempotência: não creditar duas vezes a mesma invoice se o webhook for reenviado
+                    if referral:
+                        try:
+                            invoice_id_commission = invoice.get('id')
+                            already_credited = (
+                                invoice_id_commission
+                                and db.query(models.AffiliateCommissionInvoice).filter(
+                                    models.AffiliateCommissionInvoice.invoice_id == invoice_id_commission
+                                ).first()
+                            )
+                            if already_credited:
+                                logger.info(f'Comissão já creditada para invoice {invoice_id_commission}, a ignorar (idempotência)')
                             else:
-                                commission_month = date.today().replace(day=1)
+                                base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
+                                period_start = invoice.get('period_start')
+                                if period_start is not None:
+                                    period_dt = datetime.fromtimestamp(period_start)
+                                    commission_month = period_dt.replace(day=1).date()
+                                else:
+                                    commission_month = date.today().replace(day=1)
 
-                            # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice ou original_price_id na metadata)
-                            price_id = _get_price_id_for_commission(invoice)
-                            commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
-                            commission_amount_cents = int(base_amount * (commission_pct / 100))
+                                # Comissão por plano: Plus 20%, Pro 25% (a partir do price da invoice ou original_price_id na metadata)
+                                price_id = _get_price_id_for_commission(invoice)
+                                commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
+                                commission_amount_cents = int(base_amount * (commission_pct / 100))
 
-                            existing = db.query(models.AffiliateCommission).filter(
-                                models.AffiliateCommission.affiliate_id == referral.referrer_id,
-                                models.AffiliateCommission.month == commission_month
-                            ).first()
+                                existing = db.query(models.AffiliateCommission).filter(
+                                    models.AffiliateCommission.affiliate_id == referral.referrer_id,
+                                    models.AffiliateCommission.month == commission_month
+                                ).first()
 
-                            if existing:
-                                existing.total_revenue_cents += base_amount
-                                existing.commission_amount_cents += commission_amount_cents
-                                existing.conversions_count += 1
-                                logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{base_amount} cêntimos')
-                                commission_obj = existing
-                            else:
-                                new_commission = models.AffiliateCommission(
-                                    affiliate_id=referral.referrer_id,
-                                    month=commission_month,
-                                    total_revenue_cents=base_amount,
-                                    commission_percentage=commission_pct,
-                                    commission_amount_cents=commission_amount_cents,
-                                    conversions_count=1,
-                                    referrals_count=1,
-                                    is_paid=False,
-                                )
-                                db.add(new_commission)
-                                logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {base_amount} cêntimos')
-                                commission_obj = new_commission
+                                if existing:
+                                    existing.total_revenue_cents += base_amount
+                                    existing.commission_amount_cents += commission_amount_cents
+                                    existing.conversions_count += 1
+                                    logger.info(f'Comissão atualizada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, +{base_amount} cêntimos')
+                                    commission_obj = existing
+                                else:
+                                    new_commission = models.AffiliateCommission(
+                                        affiliate_id=referral.referrer_id,
+                                        month=commission_month,
+                                        total_revenue_cents=base_amount,
+                                        commission_percentage=commission_pct,
+                                        commission_amount_cents=commission_amount_cents,
+                                        conversions_count=1,
+                                        referrals_count=1,
+                                        is_paid=False,
+                                    )
+                                    db.add(new_commission)
+                                    logger.info(f'Comissão criada (invoice.paid): afiliado {referral.referrer_id}, mês {commission_month}, {base_amount} cêntimos')
+                                    commission_obj = new_commission
 
-                            # Registo para idempotência (evitar duplicar em reenvios do webhook)
-                            if invoice_id_commission:
-                                db.add(models.AffiliateCommissionInvoice(
-                                    invoice_id=invoice_id_commission,
-                                    affiliate_id=referral.referrer_id,
-                                    month=commission_month,
-                                    base_amount_cents=base_amount,
-                                    commission_cents=commission_amount_cents,
-                                ))
+                                # Registo para idempotência (evitar duplicar em reenvios do webhook)
+                                if invoice_id_commission:
+                                    db.add(models.AffiliateCommissionInvoice(
+                                        invoice_id=invoice_id_commission,
+                                        affiliate_id=referral.referrer_id,
+                                        month=commission_month,
+                                        base_amount_cents=base_amount,
+                                        commission_cents=commission_amount_cents,
+                                    ))
 
-                            # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
-                            manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
-                                models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
-                            ).first()
-                            if manual_done and commission_obj:
-                                commission_obj.stripe_transfer_id = manual_done.transfer_id
-                                commission_obj.payment_reference = manual_done.transfer_id
-                                commission_obj.is_paid = True
-                                commission_obj.paid_at = datetime.now()
-                                logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
-                    except Exception as e:
-                        logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
+                                # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
+                                manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                                    models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
+                                ).first()
+                                if manual_done and commission_obj:
+                                    commission_obj.stripe_transfer_id = manual_done.transfer_id
+                                    commission_obj.payment_reference = manual_done.transfer_id
+                                    commission_obj.is_paid = True
+                                    commission_obj.paid_at = datetime.now()
+                                    logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
+                        except Exception as e:
+                            logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
 
             db.commit()
 

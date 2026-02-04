@@ -422,6 +422,20 @@ class AffiliateCommissionInvoice(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class AffiliateChargeRefundTracking(Base):
+    """
+    Por charge: base já revertida e se já decrementámos conversions_count.
+    Refund parcial múltiplo: amount_refunded é acumulado; só revertemos o delta.
+    """
+    __tablename__ = 'affiliate_charge_refund_tracking'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    charge_id = Column(String(255), unique=True, nullable=False, index=True)  # Stripe charge id (ch_xxx)
+    base_refunded_reversed_cents = Column(Integer, nullable=False, default=0)  # Base já revertido na BD
+    conversions_decremented = Column(Boolean, nullable=False, default=False)  # Só decrementar 1x por charge
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
 class AdminProjectExpense(Base):
     """
     Despesas do projeto e manutenção (apenas admins).
