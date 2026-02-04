@@ -1460,6 +1460,7 @@ export const pt = {
               amountPositive: "Valor deve ser maior que zero"
           },
           iconAndColor: "Ícone & Cor",
+          color: "Cor",
           saveChanges: "Guardar Alterações",
           activateGoal: "Ativar Meta",
           updateSuccess: "Meta atualizada com sucesso!",

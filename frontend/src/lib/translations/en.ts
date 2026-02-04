@@ -1368,6 +1368,7 @@ export const en = {
               amountPositive: "Amount must be greater than zero"
           },
           iconAndColor: "Icon & Color",
+          color: "Color",
           saveChanges: "Save Changes",
           activateGoal: "Activate Goal",
           updateSuccess: "Goal updated successfully!",

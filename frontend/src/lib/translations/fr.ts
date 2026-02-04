@@ -1368,6 +1368,7 @@ export const fr = {
               amountPositive: "Le montant doit être supérieur à zéro"
           },
           iconAndColor: "Icône et couleur",
+          color: "Couleur",
           saveChanges: "Enregistrer les modifications",
           activateGoal: "Activer l'objectif",
           updateSuccess: "Objectif mis à jour avec succès !",
