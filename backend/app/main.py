@@ -173,6 +173,37 @@ def create_default_admin():
         db.close()
 
 
+def _job_affiliate_first_invoices_pending():
+    """Job diário: verifica 1ª invoices sem Transfer manual (para o admin tratar)."""
+    db = SessionLocal()
+    try:
+        from .routes.admin import get_affiliate_first_invoices_pending_list
+        pending = get_affiliate_first_invoices_pending_list(db, limit=80)
+        if pending:
+            logger.warning(
+                "[Job diário] 1ª invoices pendentes (Transfer manual): %d. "
+                "Ver GET /admin/affiliates/first-invoices-pending",
+                len(pending)
+            )
+    except Exception as e:
+        logger.exception(f"Erro no job first-invoices-pending: {e}")
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def start_scheduler():
+    """Agenda job diário: 1ª invoices pendentes (1x por dia, 9:00 UTC)."""
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(_job_affiliate_first_invoices_pending, "cron", hour=9, minute=0)
+        scheduler.start()
+        logger.info("Job diário 'first-invoices-pending' agendado (9:00 UTC)")
+    except Exception as e:
+        logger.warning(f"Não foi possível iniciar scheduler: {e}")
+
+
 # Novo endpoint público para as definições básicas do sistema
 @app.get('/api/settings/public')
 async def get_public_settings(db: Session = Depends(get_db)):

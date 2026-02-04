@@ -411,6 +411,62 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 referral = db.query(models.AffiliateReferral).filter(
                     models.AffiliateReferral.referred_user_id == user.id
                 ).first()
+                referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first() if user.referrer_id else None
+                # Transfer manual só em invoice.paid (nunca em checkout.session.completed) — garante que o dinheiro existe.
+                # Comissão em cima de invoice.amount_paid (consistente; se acordo for "menos taxas Stripe", alterar aqui).
+                # Workaround: 1ª invoice (Checkout) pode ter sido criada sem split; Stripe não recalcula invoices.
+                billing_reason = invoice.get('billing_reason')
+                invoice_id = invoice.get('id')
+                if billing_reason == 'subscription_create' and referral and referrer and getattr(referrer, 'stripe_connect_account_id', None) and invoice_id:
+                    # Evitar pagamento duplo: só fazemos Transfer se ainda não registámos para esta invoice
+                    existing = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                        models.AffiliateInvoiceManualTransfer.invoice_id == invoice_id
+                    ).first()
+                    if existing:
+                        logger.info(f'Transfer manual já feito para invoice {invoice_id}, a ignorar (evitar duplicado)')
+                    else:
+                        charge_id = invoice.get('charge')
+                        if charge_id and settings.STRIPE_API_KEY:
+                            try:
+                                stripe.api_key = settings.STRIPE_API_KEY
+                                charge = stripe.Charge.retrieve(charge_id)
+                                # Só Transfer manual se: sem transfer associado E sem application_fee (split não foi aplicado)
+                                has_transfer = bool(charge.get('transfer'))
+                                app_fee = charge.get('application_fee_amount') or 0
+                                if not has_transfer and app_fee == 0:
+                                    amount_paid = invoice.get('amount_paid') or 0  # base: amount_paid (consistente)
+                                    lines = (invoice.get('lines') or {}).get('data') or []
+                                    price_id = None
+                                    if lines:
+                                        price_obj = lines[0].get('price')
+                                        price_id = price_obj if isinstance(price_obj, str) else (price_obj.get('id') if price_obj else None)
+                                    commission_pct = get_commission_percentage_for_price_id(price_id or '', db) if price_id else 20.0
+                                    commission_cents = int(amount_paid * (commission_pct / 100))
+                                    if commission_cents >= 1:
+                                        currency = invoice.get('currency') or 'eur'
+                                        t = stripe.Transfer.create(
+                                            amount=commission_cents,
+                                            currency=currency,
+                                            destination=referrer.stripe_connect_account_id,
+                                            metadata={'invoice_id': invoice_id, 'reason': 'first_invoice_split_fix'},
+                                            idempotency_key=f"first_invoice_split_{invoice_id}"
+                                        )
+                                        db.add(models.AffiliateInvoiceManualTransfer(
+                                            invoice_id=invoice_id,
+                                            transfer_id=t.id,
+                                            affiliate_id=referrer.id,
+                                            amount_cents=commission_cents,
+                                            currency=currency,
+                                        ))
+                                        db.commit()
+                                        logger.info(f'✅ Transfer manual (1ª invoice sem split): {commission_cents} {currency} → afiliado {referrer.email} (invoice {invoice_id})')
+                                elif has_transfer:
+                                    logger.info(f'Invoice {invoice_id} já tem transfer; não criar Transfer manual')
+                                else:
+                                    logger.info(f'Invoice {invoice_id} tem application_fee_amount={app_fee}; não criar Transfer manual')
+                            except Exception as e:
+                                logger.error(f'Erro ao criar Transfer manual para 1ª invoice: {e}', exc_info=True)
+                                db.rollback()
                 if referral and not referral.has_subscribed:
                     referral.has_subscribed = True
                     referral.subscription_date = datetime.now()

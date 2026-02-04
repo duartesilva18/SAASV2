@@ -137,6 +137,9 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                     logger.info(f'[Checkout] Sem afiliado: utilizador {current_user.email} não foi referido (sem referrer_id).')
         
         # Criar checkout session
+        # IMPORTANTE (Stripe): A primeira invoice é criada IMEDIATAMENTE quando a subscription é criada.
+        # Invoices não são recalculadas depois de criadas — metadata pode mudar, o split financeiro não.
+        # Por isso transfer_data e application_fee_percent TÊM de estar aqui no Session; não há "aplicar depois".
         subscription_data = {
             'metadata': {
                 'user_id': str(current_user.id),
@@ -144,10 +147,9 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             }
         }
         
-        # Adicionar divisão automática se aplicável
-        # Para subscriptions, usar subscription_data com application_fee_percent
-        # application_fee_percent = percentagem que a PLATAFORMA fica (o resto vai para transfer_data.destination)
-        # Queremos afiliado a receber commission_percentage (ex: 20%), logo plataforma fica 100 - commission (ex: 80%)
+        # Adicionar divisão automática se aplicável (Stripe Connect)
+        # application_fee_percent = % que a PLATAFORMA fica; afiliado recebe (100 - application_fee_percent)%.
+        # Ex.: application_fee_percent=80 → plataforma 80%, afiliado 20%.
         if application_fee_amount and transfer_data:
             application_fee_percent = round(100 - commission_percentage, 2)
             # Evitar 0 ou 100 que o Stripe pode rejeitar
@@ -185,6 +187,38 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
+def _get_connect_params_for_subscription(user: models.User, price_id: str, db: Session):
+    """Retorna (transfer_data, application_fee_percent) para Subscription.modify quando o user tem afiliado com Connect ativo. Caso contrário (None, None)."""
+    referrer = None
+    if user.referrer_id:
+        referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first()
+    if not referrer:
+        ref_row = db.query(models.AffiliateReferral).filter(
+            models.AffiliateReferral.referred_user_id == user.id
+        ).first()
+        if ref_row:
+            referrer = db.query(models.User).filter(models.User.id == ref_row.referrer_id).first()
+    if not referrer or not referrer.is_affiliate or not referrer.stripe_connect_account_id:
+        return None, None
+    try:
+        if settings.STRIPE_API_KEY:
+            account = stripe.Account.retrieve(referrer.stripe_connect_account_id)
+            if not (account.get('details_submitted') and account.get('charges_enabled')):
+                return None, None
+    except Exception:
+        return None, None
+    commission_percentage = get_commission_percentage_for_price_id(price_id, db)
+    if commission_percentage <= 0:
+        return None, None
+    application_fee_percent = round(100 - commission_percentage, 2)
+    if application_fee_percent <= 0:
+        application_fee_percent = 0.01
+    elif application_fee_percent >= 100:
+        application_fee_percent = 99.99
+    transfer_data = {'destination': referrer.stripe_connect_account_id}
+    return transfer_data, application_fee_percent
+
+
 @router.post('/change-plan')
 async def change_plan(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Altera o plano da subscrição ativa do utilizador para o novo price_id (upgrade/downgrade com proration)."""
@@ -207,10 +241,14 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
         if not items:
             raise HTTPException(status_code=400, detail='Subscrição sem itens. Contacta o suporte.')
         item_id = items[0]['id']
-        stripe.Subscription.modify(
-            current_user.stripe_subscription_id,
-            items=[{'id': item_id, 'price': price_id}]
-        )
+        # Manter divisão Connect em alterações de plano: repassar transfer_data e application_fee_percent
+        transfer_data, application_fee_percent = _get_connect_params_for_subscription(current_user, price_id, db)
+        modify_params = {'items': [{'id': item_id, 'price': price_id}]}
+        if transfer_data is not None and application_fee_percent is not None:
+            modify_params['transfer_data'] = transfer_data
+            modify_params['application_fee_percent'] = application_fee_percent
+            logger.info(f'[Change-plan] Com divisão Connect: application_fee_percent={application_fee_percent}, destination={transfer_data.get("destination")}')
+        stripe.Subscription.modify(current_user.stripe_subscription_id, **modify_params)
         # Atualizar localmente para resposta imediata (o webhook subscription.updated também atualiza)
         sub_after = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
         current_user.subscription_status = sub_after.status

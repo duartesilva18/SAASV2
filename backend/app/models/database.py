@@ -392,6 +392,21 @@ class AffiliateCommission(Base):
     )
 
 
+class AffiliateInvoiceManualTransfer(Base):
+    """
+    Registo de Transfer manual por invoice (1ª invoice sem split).
+    Evita pagamento duplo: só fazemos um Transfer por invoice_id.
+    """
+    __tablename__ = 'affiliate_invoice_manual_transfers'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    invoice_id = Column(String(255), unique=True, nullable=False, index=True)  # Stripe invoice id (in_xxx)
+    transfer_id = Column(String(255), nullable=False, index=True)  # Stripe transfer id (tr_xxx)
+    affiliate_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    amount_cents = Column(Integer, nullable=False)
+    currency = Column(String(3), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class AdminProjectExpense(Base):
     """
     Despesas do projeto e manutenção (apenas admins).

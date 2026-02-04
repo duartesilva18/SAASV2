@@ -10,6 +10,7 @@ from ..models import database as models
 from .. import schemas
 from .auth import get_current_user
 from ..core.audit import log_action
+from ..core.affiliate_commission import get_commission_percentage_for_price_id
 import stripe
 from ..core.config import settings
 from fastapi_mail import FastMail, MessageSchema, MessageType
@@ -761,7 +762,7 @@ async def get_affiliates_stats(
         # Se não houver comissões calculadas, calcular a partir das referrals
         if total_revenue_cents == 0 and total_conversions > 0:
             logger.info('Nenhuma comissão calculada encontrada, calculando a partir das referrals...')
-            # Fallback: média das comissões Plus (20%) e Pro (25%)
+            # Fallback: média Plus/Pro (estimativa; o Stripe usa 20%/25% por plano)
             plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
             pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
             plus_pct = float(plus_s.value) if plus_s and plus_s.value else 20.0
@@ -850,7 +851,7 @@ async def get_affiliates_revenue_timeline(
                 func.date_trunc('month', models.AffiliateReferral.subscription_date).desc()
             ).limit(12).all()
             
-            # Fallback: média das comissões Plus e Pro
+            # Fallback: média Plus/Pro (estimativa; Stripe usa 20%/25% por plano)
             plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
             pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
             commission_percentage = ((float(plus_s.value) if plus_s and plus_s.value else 20.0) + (float(pro_s.value) if pro_s and pro_s.value else 25.0)) / 2
@@ -918,6 +919,7 @@ async def get_revenue_by_affiliate(
         # Se não houver comissões calculadas, buscar dados das referrals diretamente
         if not affiliates_data:
             logger.info('Nenhuma comissão calculada encontrada, buscando dados das referrals...')
+            # Estimativa: média Plus/Pro (Stripe usa 20%/25% por plano)
             plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
             pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
             commission_percentage = ((float(plus_s.value) if plus_s and plus_s.value else 20.0) + (float(pro_s.value) if pro_s and pro_s.value else 25.0)) / 2
@@ -1103,6 +1105,90 @@ async def get_affiliate_detail(
         'commissions': [schemas.AffiliateCommissionResponse.from_orm(c).dict() for c in commissions]
     }
 
+
+def get_affiliate_first_invoices_pending_list(db: Session, limit: int = 80) -> list:
+    """
+    Lista 1ª invoices (billing_reason=subscription_create) com referrer Connect onde
+    não existe linha em affiliate_invoice_manual_transfers e o charge não tem transfer.
+    Usado pelo endpoint admin e pelo job diário.
+    """
+    if not settings.STRIPE_API_KEY:
+        return []
+    pending = []
+    for user in db.query(models.User).filter(
+        models.User.stripe_subscription_id.isnot(None),
+        models.User.referrer_id.isnot(None),
+    ).limit(limit).all():
+        referrer = db.query(models.User).filter(models.User.id == user.referrer_id).first()
+        if not referrer or not referrer.stripe_connect_account_id:
+            continue
+        try:
+            invoices = stripe.Invoice.list(
+                subscription=user.stripe_subscription_id,
+                status='paid',
+                limit=20
+            )
+            first_invoice = None
+            for inv in invoices.data:
+                br = getattr(inv, 'billing_reason', None) or (inv.get('billing_reason') if isinstance(inv, dict) else None)
+                if br == 'subscription_create':
+                    first_invoice = inv
+                    break
+            if not first_invoice:
+                continue
+            invoice_id = first_invoice.id if hasattr(first_invoice, 'id') else first_invoice.get('id')
+            existing = db.query(models.AffiliateInvoiceManualTransfer).filter(
+                models.AffiliateInvoiceManualTransfer.invoice_id == invoice_id
+            ).first()
+            if existing:
+                continue
+            charge_id = first_invoice.charge if hasattr(first_invoice, 'charge') else first_invoice.get('charge')
+            if not charge_id:
+                continue
+            charge = stripe.Charge.retrieve(charge_id)
+            if charge.get('transfer'):
+                continue
+            amount_paid = first_invoice.amount_paid if hasattr(first_invoice, 'amount_paid') else first_invoice.get('amount_paid', 0)
+            currency = first_invoice.currency if hasattr(first_invoice, 'currency') else first_invoice.get('currency', 'eur')
+            created_ts = first_invoice.created if hasattr(first_invoice, 'created') else first_invoice.get('created')
+            pending.append({
+                'user_email': user.email,
+                'referred_user_id': str(user.id),
+                'subscription_id': user.stripe_subscription_id,
+                'invoice_id': invoice_id,
+                'amount_paid_cents': amount_paid,
+                'currency': currency,
+                'referrer_email': referrer.email,
+                'referrer_id': str(referrer.id),
+                'referrer_connect_account_id': referrer.stripe_connect_account_id,
+                'invoice_created_at': datetime.fromtimestamp(created_ts).isoformat() if created_ts else None,
+                'needs_manual_transfer': True,
+            })
+        except stripe.error.StripeError as e:
+            logger.warning(f'Stripe error ao verificar 1ª invoice para user {user.email}: {e}')
+        except Exception as e:
+            logger.warning(f'Erro ao verificar 1ª invoice para user {user.email}: {e}', exc_info=True)
+    return pending
+
+
+@router.get('/affiliates/first-invoices-pending')
+async def get_affiliate_first_invoices_pending(
+    limit: int = Query(80, ge=1, le=200),
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(check_admin)
+):
+    """
+    Lista 1ª invoices (billing_reason=subscription_create) com referrer Connect onde:
+    - não existe linha em affiliate_invoice_manual_transfers
+    - e o charge não tem transfer (split não foi aplicado).
+    Para tratar manualmente os que falharam (pagamento duplo evitado pelo resto do fluxo).
+    """
+    if not settings.STRIPE_API_KEY:
+        return {'pending': [], 'message': 'STRIPE_API_KEY não configurado'}
+    pending = get_affiliate_first_invoices_pending_list(db, limit=limit)
+    return {'pending': pending, 'count': len(pending)}
+
+
 @router.post('/affiliates/promote', response_model=schemas.AdminAffiliateResponse)
 async def promote_to_affiliate(
     request: Request,
@@ -1166,13 +1252,6 @@ async def calculate_monthly_commissions(
     
     month_date = datetime.strptime(month, '%Y-%m').date().replace(day=1)
     
-    # Média das comissões Plus e Pro para cálculo manual
-    plus_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_plus').first()
-    pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
-    plus_pct = float(plus_s.value) if plus_s and plus_s.value else 20.0
-    pro_pct = float(pro_s.value) if pro_s and pro_s.value else 25.0
-    commission_percentage = Decimal(str((plus_pct + pro_pct) / 2))
-    
     # Buscar todos os afiliados
     affiliates = db.query(models.User).filter(models.User.is_affiliate == True).all()
     
@@ -1202,12 +1281,14 @@ async def calculate_monthly_commissions(
         if not referrals:
             continue
 
-        # Calcular receita total: buscar valor real de cada subscrição no Stripe
+        # Receita e comissão por referral: usar percentagem por plano (Plus 20%, Pro 25%) como no Stripe
         total_revenue = 0
+        total_commission = 0
         DEFAULT_PRICE_CENTS = 999  # 9.99€ fallback se Stripe não disponível
         for ref in referrals:
             ref_user = db.query(models.User).filter(models.User.id == ref.referred_user_id).first()
             amount_cents = DEFAULT_PRICE_CENTS
+            price_id = None
             if ref_user and ref_user.stripe_subscription_id and settings.STRIPE_API_KEY:
                 try:
                     sub = stripe.Subscription.retrieve(ref_user.stripe_subscription_id)
@@ -1215,23 +1296,25 @@ async def calculate_monthly_commissions(
                     if items and hasattr(items, 'data') and items.data:
                         price = getattr(items.data[0], 'price', None) or (items.data[0].get('price') if isinstance(items.data[0], dict) else None)
                         if price:
+                            price_id = getattr(price, 'id', None) or (price.get('id') if isinstance(price, dict) else None)
                             amt = getattr(price, 'unit_amount', None) or (price.get('unit_amount') if isinstance(price, dict) else None)
                             if amt is not None:
                                 amount_cents = int(amt)
                 except Exception as e:
                     logger.debug(f"Stripe subscription retrieve falhou para referral {ref.id}, usando fallback: {e}")
+            pct = get_commission_percentage_for_price_id(price_id or '', db)
             total_revenue += amount_cents
+            total_commission += int(amount_cents * (pct / 100))
 
-        # Calcular comissão
-        commission_amount = int((total_revenue * commission_percentage / 100))
+        # Percentagem efetiva (para exibição) = total_commission / total_revenue * 100
+        effective_pct = (total_commission / total_revenue * 100) if total_revenue else 0.0
         
-        # Criar comissão
         commission = models.AffiliateCommission(
             affiliate_id=affiliate.id,
             month=month_date,
             total_revenue_cents=total_revenue,
-            commission_percentage=float(commission_percentage),
-            commission_amount_cents=commission_amount,
+            commission_percentage=round(effective_pct, 2),
+            commission_amount_cents=total_commission,
             referrals_count=len(referrals),
             conversions_count=len(referrals)
         )
