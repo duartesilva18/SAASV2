@@ -23,16 +23,29 @@ logger = logging.getLogger(__name__)
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
-    
+    secret = (settings.STRIPE_WEBHOOK_SECRET or '').strip()
+
+    if not secret:
+        logger.error('STRIPE_WEBHOOK_SECRET não está definido. Define a variável no .env / Render com o "Signing secret" (whsec_...) do endpoint em Stripe → Developers → Webhooks.')
+        raise HTTPException(status_code=500, detail='Webhook secret not configured')
+    if not sig_header:
+        logger.error('Pedido Stripe sem header stripe-signature. Verifica que a URL do webhook no Stripe aponta para este servidor.')
+        raise HTTPException(status_code=400, detail='Missing stripe-signature header')
+
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            payload, sig_header, secret
         )
     except ValueError as e:
         logger.error(f'Erro ao validar payload do Stripe: {str(e)}')
         raise HTTPException(status_code=400, detail='Invalid payload')
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f'Erro ao verificar assinatura do Stripe: {str(e)}')
+        logger.error(
+            f'Erro ao verificar assinatura do Stripe: {str(e)}. '
+            'Solução: no Stripe Dashboard → Developers → Webhooks → seleciona o endpoint desta URL → "Reveal" no Signing secret → '
+            'copia o valor (whsec_...) e define STRIPE_WEBHOOK_SECRET no ambiente (Render/.env) exatamente com esse valor. '
+            'Se usas modo Test vs Live, o secret tem de ser do endpoint correto.'
+        )
         raise HTTPException(status_code=400, detail='Invalid signature')
 
     event_type = event['type']

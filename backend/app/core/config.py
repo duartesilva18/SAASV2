@@ -17,6 +17,17 @@ def _get_stripe_api_key() -> str:
     return (os.getenv('STRIPE_API_KEY_LIVE') or '').strip()
 
 
+def _get_stripe_webhook_secret() -> str:
+    """Usa STRIPE_WEBHOOK_SECRET ou, em alternativa, STRIPE_WEBHOOK_SECRET_TEST/STRIPE_WEBHOOK_SECRET_LIVE conforme STRIPE_MODE."""
+    secret = os.getenv('STRIPE_WEBHOOK_SECRET', '').strip()
+    if secret:
+        return secret
+    mode = (os.getenv('STRIPE_MODE') or 'test').lower()
+    if mode == 'test':
+        return (os.getenv('STRIPE_WEBHOOK_SECRET_TEST') or '').strip()
+    return (os.getenv('STRIPE_WEBHOOK_SECRET_LIVE') or '').strip()
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra='ignore')
     PROJECT_NAME: str = 'FinSaaS - Gestão Financeira'
@@ -50,7 +61,8 @@ class Settings(BaseSettings):
     
     # Stripe: suporta STRIPE_API_KEY ou STRIPE_API_KEY_TEST/STRIPE_API_KEY_LIVE + STRIPE_MODE
     STRIPE_API_KEY: str = ''
-    STRIPE_WEBHOOK_SECRET: str = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+    # Webhook: STRIPE_WEBHOOK_SECRET ou STRIPE_WEBHOOK_SECRET_TEST/STRIPE_WEBHOOK_SECRET_LIVE + STRIPE_MODE
+    STRIPE_WEBHOOK_SECRET: str = ''
     # Price IDs dos planos (Live)
     STRIPE_PRICE_BASIC_MONTHLY: str = 'price_1SvKuoLtWlVpaXrbf1krzn1r'
     STRIPE_PRICE_PLUS: str = 'price_1SvKumLtWlVpaXrbh45T3Vez'
@@ -62,6 +74,13 @@ class Settings(BaseSettings):
         if v and isinstance(v, str) and v.strip():
             return v.strip()
         return _get_stripe_api_key()
+
+    @field_validator('STRIPE_WEBHOOK_SECRET', mode='before')
+    @classmethod
+    def set_stripe_webhook_secret(cls, v: str) -> str:
+        if v and isinstance(v, str) and v.strip():
+            return v.strip()
+        return _get_stripe_webhook_secret()
     
     WHATSAPP_TOKEN: str = os.getenv('WHATSAPP_TOKEN', '').strip().strip('"')
     WHATSAPP_PHONE_NUMBER_ID: str = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '').strip().strip('"')
