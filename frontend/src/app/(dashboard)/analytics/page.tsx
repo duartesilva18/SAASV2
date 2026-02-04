@@ -444,26 +444,32 @@ export default function AnalyticsPage() {
         alreadyPaid: false
       }));
 
+    const lastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+    const effectiveDay = (y: number, m: number, day: number) => Math.min(day, lastDayOfMonth(y, m));
+
     const upcomingFromRecurring = (rawData.recurring || []).map(r => {
       const today = now.getDate();
-      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      // Verificar se já existe uma transação este mês para esta regra
-      const alreadyPaidThisMonth = rawData.transactions.some(t => 
-        t.description === r.description && 
-        Math.abs(t.amount_cents) === Math.abs(r.amount_cents) &&
-        new Date(t.transaction_date) >= currentMonthStart
-      );
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const currentMonthStart = new Date(year, month, 1);
+      const effective = effectiveDay(year, month, r.day_of_month);
 
-      let nextDate = new Date(now.getFullYear(), now.getMonth(), r.day_of_month);
-      
-      // Se já foi pago este mês, projetamos para o próximo mês
+      // Já pago: transação este mês com mesma descrição (ou "(R) descrição") e valor
+      const alreadyPaidThisMonth = rawData.transactions.some((t: any) => {
+        const sameDesc = t.description === r.description || t.description === `(R) ${r.description}`;
+        return sameDesc &&
+          Math.abs(t.amount_cents) === Math.abs(r.amount_cents) &&
+          new Date(t.transaction_date) >= currentMonthStart;
+      });
+
+      let nextDate = new Date(year, month, effective);
       if (alreadyPaidThisMonth) {
         nextDate.setMonth(nextDate.getMonth() + 1);
+        nextDate.setDate(Math.min(r.day_of_month, lastDayOfMonth(nextDate.getFullYear(), nextDate.getMonth())));
       }
-      
-      const isToday = today === r.day_of_month;
-      const isPastDue = today > r.day_of_month && !alreadyPaidThisMonth;
+
+      // Mostrar botão "Confirmar" quando já passou o dia (ou é hoje) e ainda não foi pago
+      const canConfirm = !alreadyPaidThisMonth && today >= effective;
 
       return {
         id: r.id,
@@ -472,7 +478,7 @@ export default function AnalyticsPage() {
         transaction_date: nextDate.toISOString().split('T')[0],
         type: 'recurring',
         process_automatically: r.process_automatically,
-        canConfirm: (isToday || isPastDue) && !alreadyPaidThisMonth, // Mostrar botão se for hoje ou estiver atrasado
+        canConfirm,
         alreadyPaid: alreadyPaidThisMonth
       };
     });

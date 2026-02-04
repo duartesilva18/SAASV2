@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from typing import List
 from ..core.dependencies import get_db
 from ..core.audit import log_action
@@ -9,42 +9,63 @@ from .. import schemas
 from .auth import get_current_user
 from uuid import UUID
 from datetime import date
+import calendar
 
 router = APIRouter(prefix='/transactions', tags=['transactions'])
 
+
+def _last_day_of_month(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
+def _effective_day_for_month(year: int, month: int, day_of_month: int) -> int:
+    """Dia a usar neste mês (ex.: 31 em fev -> 28 ou 29)."""
+    return min(day_of_month, _last_day_of_month(year, month))
+
+
 def process_automatic_recurring(db: Session, workspace_id: UUID):
+    """Cria transações automáticas para regras recorrentes do mês atual (se já passou o dia)."""
     today = date.today()
-    
+    start_of_month = date(today.year, today.month, 1)
+
     rules = db.query(models.RecurringTransaction).filter(
         models.RecurringTransaction.workspace_id == workspace_id,
         models.RecurringTransaction.is_active == True,
         models.RecurringTransaction.process_automatically == True
     ).all()
-    
+
     for rule in rules:
-        if today.day >= rule.day_of_month:
-            start_of_month = date(today.year, today.month, 1)
-            
-            existing = db.query(models.Transaction).filter(
-                models.Transaction.workspace_id == workspace_id,
+        effective_day = _effective_day_for_month(today.year, today.month, rule.day_of_month)
+        target_date = date(today.year, today.month, effective_day)
+
+        if today < target_date:
+            continue
+
+        # Evitar duplicado: já existe transação este mês com mesma descrição (ou "(R) descrição") e valor
+        existing = db.query(models.Transaction).filter(
+            models.Transaction.workspace_id == workspace_id,
+            or_(
                 models.Transaction.description == rule.description,
-                models.Transaction.amount_cents == rule.amount_cents,
-                models.Transaction.transaction_date >= start_of_month
-            ).first()
-            
-            if existing:
-                continue
-            
-            new_t = models.Transaction(
-                workspace_id=workspace_id,
-                category_id=rule.category_id,
-                amount_cents=rule.amount_cents,
-                description=rule.description,
-                transaction_date=date(today.year, today.month, rule.day_of_month),
-                is_installment=False
-            )
-            db.add(new_t)
-    
+                models.Transaction.description == f"(R) {rule.description}"
+            ),
+            models.Transaction.amount_cents == rule.amount_cents,
+            models.Transaction.transaction_date >= start_of_month
+        ).first()
+
+        if existing:
+            continue
+
+        # Mesmo formato da confirmação manual para consistência
+        new_t = models.Transaction(
+            workspace_id=workspace_id,
+            category_id=rule.category_id,
+            amount_cents=rule.amount_cents,
+            description=f"(R) {rule.description}",
+            transaction_date=target_date,
+            is_installment=False
+        )
+        db.add(new_t)
+
     db.commit()
 
 @router.get('/', response_model=List[schemas.TransactionResponse])

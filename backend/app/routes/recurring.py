@@ -8,6 +8,7 @@ from .. import schemas
 from .auth import get_current_user
 from uuid import UUID
 from datetime import date
+from .transactions import _effective_day_for_month
 
 router = APIRouter(prefix='/recurring', tags=['recurring'])
 
@@ -71,12 +72,27 @@ async def confirm_recurring_transaction(request: Request, recurring_id: UUID, db
         raise HTTPException(status_code=404, detail='Recurring transaction not found')
     
     today = date.today()
+    start_of_month = date(today.year, today.month, 1)
+    from sqlalchemy import or_
+    existing = db.query(models.Transaction).filter(
+        models.Transaction.workspace_id == workspace.id,
+        or_(
+            models.Transaction.description == db_recurring.description,
+            models.Transaction.description == f"(R) {db_recurring.description}"
+        ),
+        models.Transaction.amount_cents == db_recurring.amount_cents,
+        models.Transaction.transaction_date >= start_of_month
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail='Este mês já foi registado um pagamento para esta recorrente.')
+    
+    effective_day = _effective_day_for_month(today.year, today.month, db_recurring.day_of_month)
     new_t = models.Transaction(
         workspace_id=workspace.id,
         category_id=db_recurring.category_id,
         amount_cents=db_recurring.amount_cents,
         description=f"(R) {db_recurring.description}",
-        transaction_date=date(today.year, today.month, db_recurring.day_of_month),
+        transaction_date=date(today.year, today.month, effective_day),
         is_installment=False
     )
     db.add(new_t)

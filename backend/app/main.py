@@ -191,15 +191,34 @@ def _job_affiliate_first_invoices_pending():
         db.close()
 
 
+def _job_recurring_transactions():
+    """Job diário: cria transações automáticas para todas as recorrentes (despesas/receitas mensais)."""
+    from .routes.transactions import process_automatic_recurring
+    db = SessionLocal()
+    try:
+        workspaces = db.query(Workspace).with_entities(Workspace.id).all()
+        for (ws_id,) in workspaces:
+            try:
+                process_automatic_recurring(db, ws_id)
+            except Exception as e:
+                logger.exception(f"Erro ao processar recorrentes do workspace {ws_id}: {e}")
+        logger.info("[Job diário] Recorrentes processadas para %d workspace(s)", len(workspaces))
+    except Exception as e:
+        logger.exception(f"Erro no job recurring-transactions: {e}")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def start_scheduler():
-    """Agenda job diário: 1ª invoices pendentes (1x por dia, 9:00 UTC)."""
+    """Agenda jobs diários: 1ª invoices pendentes (9:00 UTC), recorrentes (2:00 UTC)."""
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         scheduler = BackgroundScheduler()
         scheduler.add_job(_job_affiliate_first_invoices_pending, "cron", hour=9, minute=0)
+        scheduler.add_job(_job_recurring_transactions, "cron", hour=2, minute=0)
         scheduler.start()
-        logger.info("Job diário 'first-invoices-pending' agendado (9:00 UTC)")
+        logger.info("Jobs diários agendados: first-invoices-pending (9:00 UTC), recurring-transactions (2:00 UTC)")
     except Exception as e:
         logger.warning(f"Não foi possível iniciar scheduler: {e}")
 
