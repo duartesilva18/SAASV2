@@ -24,14 +24,18 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Finly - Gestão Financeira Pessoal | Telegram Bot",
+    default: "Finly (finlybot) - Gestão Financeira Pessoal | Telegram Bot",
     template: "%s | Finly"
   },
-  description: "Registe despesas no Telegram em 3 segundos. O Finly elimina a confusão das contas e ajuda-te a alcançar a paz financeira. Gráficos inteligentes, categorização automática e insights de IA.",
+  description: "Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas e ajuda-te a alcançar a paz financeira. Gráficos inteligentes, categorização automática e insights de IA. App finanças Portugal.",
   keywords: [
+    "Finly",
+    "finlybot",
+    "Finly Bot",
     "gestão financeira",
     "controlo de despesas",
     "telegram bot",
+    "telegram bot finanças",
     "finanças pessoais",
     "orçamento",
     "poupança",
@@ -71,8 +75,8 @@ export const metadata: Metadata = {
     alternateLocale: ['en_US', 'fr_FR'],
     url: '/',
     siteName: 'Finly',
-    title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
-    description: 'Registe despesas no Telegram em 3 segundos. O Finly elimina a confusão das contas e ajuda-te a alcançar a paz financeira.',
+    title: 'Finly (finlybot) - Gestão Financeira Pessoal | Telegram Bot',
+    description: 'Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas e ajuda-te a alcançar a paz financeira.',
     images: [
       {
         url: '/og-image.png',
@@ -84,8 +88,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Finly - Gestão Financeira Pessoal',
-    description: 'Registe despesas no Telegram em 3 segundos. O Finly elimina a confusão das contas.',
+    title: 'Finly (finlybot) - Gestão Financeira Pessoal | Telegram Bot',
+    description: 'Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas.',
     images: ['/og-image.png'],
     creator: '@finlypt',
   },

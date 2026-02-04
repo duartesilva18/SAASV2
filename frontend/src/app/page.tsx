@@ -68,6 +68,7 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Finly",
+    "alternateName": ["finlybot", "Finly Bot"],
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Telegram",
     "offers": { "@type": "Offer", "price": "9.99", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
@@ -89,7 +90,7 @@ export default function LandingPage() {
           style={{ paddingLeft: 'max(0.75rem, env(safe-area-inset-left))', paddingRight: 'max(0.75rem, env(safe-area-inset-right))' }}
         >
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
-          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white/95 relative z-10 truncate">
+          <p className="text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-widest text-white/95 relative z-10 truncate">
             {t.banner}
           </p>
         </motion.div>
@@ -105,7 +106,7 @@ export default function LandingPage() {
           <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 flex items-center justify-between gap-3 min-h-[64px] sm:min-h-[72px]">
             <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0 -m-2 p-2 rounded-xl active:scale-[0.98]">
               <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-9 w-9 sm:h-14 sm:w-14 md:h-16 md:w-16 object-contain shrink-0" draggable={false} />
-              <span className="text-white font-bold tracking-tight text-lg sm:text-2xl md:text-3xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
+              <span className="text-white font-bold tracking-tight text-lg sm:text-2xl md:text-3xl 3xl:text-4xl 4xl:text-5xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
                 Finly
               </span>
             </Link>
@@ -182,22 +183,22 @@ export default function LandingPage() {
               <Sparkles size={12} className="sm:w-4 sm:h-4 3xl:w-[18px] 3xl:h-[18px] shrink-0" />
               <span className="truncate max-w-[160px] sm:max-w-none">{t.hero.badge}</span>
             </motion.div>
-            <motion.h1 {...fadeUp} {...stagger(1)} className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl 3xl:text-7xl font-black tracking-tighter leading-[1.08] max-w-5xl mx-auto mb-3 sm:mb-5 3xl:mb-7 px-1">
+            <motion.h1 {...fadeUp} {...stagger(1)} className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl 3xl:text-7xl 4xl:text-8xl font-black tracking-tighter leading-[1.08] max-w-5xl mx-auto mb-3 sm:mb-5 3xl:mb-7 4xl:mb-9 px-1">
               {t.hero.title1}
               <span className="italic bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">{' '}{t.hero.titleAccent}</span>
               {t.hero.title2}
             </motion.h1>
-            <motion.p {...fadeUp} {...stagger(2)} className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg max-w-2xl mx-auto mb-4 sm:mb-8 3xl:mb-10 px-1 leading-relaxed">
+            <motion.p {...fadeUp} {...stagger(2)} className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl max-w-2xl mx-auto mb-4 sm:mb-8 3xl:mb-10 4xl:mb-12 px-1 leading-relaxed">
               {t.hero.description.split('Telegram').map((part, i, arr) => (
                 <React.Fragment key={i}>{part}{i < arr.length - 1 && <AnimatedTelegram />}</React.Fragment>
               ))}
             </motion.p>
             <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 max-w-sm sm:max-w-none mx-auto">
-              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 sm:px-6 3xl:px-8 py-3 sm:py-3.5 3xl:py-4 min-h-[44px] 3xl:min-h-[48px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
+              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 sm:px-6 3xl:px-8 4xl:px-10 py-3 sm:py-3.5 3xl:py-4 4xl:py-5 min-h-[44px] 3xl:min-h-[48px] 4xl:min-h-[52px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
                 {t.hero.cta}
                 <ArrowRight size={16} className="sm:w-4 sm:h-4 3xl:w-5 3xl:h-5 group-hover:translate-x-0.5 transition-transform shrink-0" />
               </Link>
-              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-6 3xl:px-8 py-3 sm:py-3.5 3xl:py-4 min-h-[44px] 3xl:min-h-[48px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
+              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-6 3xl:px-8 4xl:px-10 py-3 sm:py-3.5 3xl:py-4 4xl:py-5 min-h-[44px] 3xl:min-h-[48px] 4xl:min-h-[52px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
                 {t.hero.seeHow}
               </Link>
             </motion.div>
@@ -221,7 +222,7 @@ export default function LandingPage() {
                     <Send size={11} className="sm:w-3.5 sm:h-3.5 3xl:w-4 3xl:h-4 shrink-0" />
                     <span className="truncate">{(t.dashboard?.guide as any)?.telegramBot ?? 'Bot Telegram'}</span>
                   </div>
-                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl 3xl:text-5xl font-black text-white uppercase tracking-tighter leading-tight">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl 3xl:text-5xl 4xl:text-6xl font-black text-white uppercase tracking-tighter leading-tight">
                     {(t.dashboard?.guide as any)?.registerInTelegram ?? 'Regista em '}
                     <span className="text-blue-400 italic">{(t.dashboard?.guide as any)?.registerInTelegramAccent ?? 'Telegram'}</span>
                     {' '}{(t.dashboard?.guide as any)?.registerInTelegramSeconds ?? 'em segundos.'}
@@ -230,8 +231,8 @@ export default function LandingPage() {
                     {(t.dashboard?.guide as any)?.multipleWays ?? 'Múltiplas formas de escrever. Especifica a categoria com um hífen ou deixa a IA categorizar.'}
                   </p>
                   <div className="bg-slate-900/50 rounded-lg sm:rounded-xl 3xl:rounded-2xl p-2.5 sm:p-3 md:p-4 3xl:p-5 border border-slate-800">
-                    <h3 className="text-white font-black text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm uppercase tracking-wider mb-1.5 sm:mb-2 md:mb-3 3xl:mb-4">{(t.dashboard?.guide as any)?.waysToWrite ?? 'Formas de escrever:'}</h3>
-                    <ul className="space-y-1 sm:space-y-1.5 md:space-y-2 3xl:space-y-3 text-slate-400 text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm leading-snug">
+                    <h3 className="text-white font-black text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm 4xl:text-base uppercase tracking-wider mb-1.5 sm:mb-2 md:mb-3 3xl:mb-4 4xl:mb-5">{(t.dashboard?.guide as any)?.waysToWrite ?? 'Formas de escrever:'}</h3>
+                    <ul className="space-y-1 sm:space-y-1.5 md:space-y-2 3xl:space-y-3 4xl:space-y-4 text-slate-400 text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm 4xl:text-base leading-snug">
                       <li className="flex items-start gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
                         <span><strong className="text-slate-200">{(t.dashboard?.guide as any)?.simpleFormat ?? 'Simples'}:</strong> {(t.dashboard?.guide as any)?.simpleFormatExample ?? 'Biscoitos 10€'}</span>
@@ -358,13 +359,13 @@ export default function LandingPage() {
         <section id="pricing" className="py-10 sm:py-20 md:py-24 3xl:py-32 relative overflow-visible" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/[0.02] to-transparent pointer-events-none" />
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 relative">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-6 sm:mb-12 md:mb-16 3xl:mb-20">
-              <h2 className="text-lg sm:text-3xl md:text-4xl 3xl:text-5xl font-black tracking-tighter mb-2 sm:mb-3 3xl:mb-4 leading-tight">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-6 sm:mb-12 md:mb-16 3xl:mb-20 4xl:mb-24">
+              <h2 className="text-lg sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black tracking-tighter mb-2 sm:mb-3 3xl:mb-4 4xl:mb-5 leading-tight">
                 {t.pricingSection.title}
                 <span className="text-blue-400 italic"> {t.pricingSection.titleAccent}</span>?
               </h2>
-              <p className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg max-w-2xl mx-auto mb-1 sm:mb-2 leading-relaxed">{t.pricingSection.subtitle1}</p>
-              <p className="text-white font-semibold text-xs sm:text-sm md:text-base 3xl:text-lg leading-snug">{t.pricingSection.subtitle2}</p>
+              <p className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl max-w-2xl mx-auto mb-1 sm:mb-2 4xl:mb-3 leading-relaxed">{t.pricingSection.subtitle1}</p>
+              <p className="text-white font-semibold text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl leading-snug">{t.pricingSection.subtitle2}</p>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 3xl:gap-8 items-stretch max-w-5xl md:max-w-none mx-auto">
@@ -400,21 +401,21 @@ export default function LandingPage() {
                         <plan.icon size={20} className={`sm:w-6 sm:h-6 3xl:w-7 3xl:h-7 ${plan.popular ? 'text-blue-300' : 'text-slate-300'}`} />
                       </div>
                       <div className="text-right min-w-0 flex-1">
-                        <p className="text-[9px] sm:text-[10px] 3xl:text-xs font-bold uppercase tracking-widest text-slate-400 truncate">{planData.name}</p>
-                        <p className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl font-black text-white tracking-tight drop-shadow-sm whitespace-nowrap tabular-nums">{planData.price}</p>
-                        <p className="text-[10px] sm:text-xs 3xl:text-sm text-slate-400">{planData.priceSuffix}</p>
+                        <p className="text-[9px] sm:text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-widest text-slate-400 truncate">{planData.name}</p>
+                        <p className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black text-white tracking-tight drop-shadow-sm whitespace-nowrap tabular-nums">{planData.price}</p>
+                        <p className="text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base text-slate-400">{planData.priceSuffix}</p>
                         {planData.priceSecondary && <p className="text-[11px] sm:text-sm text-emerald-400 font-semibold mt-0.5">{planData.priceSecondary}</p>}
                       </div>
                     </div>
 
-                    <p className="text-slate-200 text-[11px] sm:text-xs 3xl:text-sm font-semibold mb-0.5 sm:mb-1 leading-snug">{planData.tagline}</p>
-                    <p className="text-slate-400 text-[10px] sm:text-xs 3xl:text-sm italic mb-2 sm:mb-4 3xl:mb-6 leading-relaxed">&quot;{planData.quote}&quot;</p>
+                    <p className="text-slate-200 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-semibold mb-0.5 sm:mb-1 4xl:mb-2 leading-snug">{planData.tagline}</p>
+                    <p className="text-slate-400 text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base italic mb-2 sm:mb-4 3xl:mb-6 4xl:mb-8 leading-relaxed">&quot;{planData.quote}&quot;</p>
 
                     <ul className="space-y-1.5 sm:space-y-2 3xl:space-y-3 mb-3 sm:mb-4 3xl:mb-6 flex-1 min-h-0">
                       {planData.features.map((f: string, i: number) => (
                         <li key={i} className="flex items-start gap-1.5 sm:gap-2 3xl:gap-3">
                           <Check size={14} className="text-emerald-400 shrink-0 mt-0.5 sm:w-4 sm:h-4 3xl:w-[18px] 3xl:h-[18px]" />
-                          <span className="text-slate-200 text-[11px] sm:text-xs 3xl:text-base leading-snug">{f}</span>
+                          <span className="text-slate-200 text-[11px] sm:text-xs 3xl:text-base 4xl:text-lg leading-snug">{f}</span>
                         </li>
                       ))}
                     </ul>
@@ -452,17 +453,17 @@ export default function LandingPage() {
             <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-8 sm:mt-14 md:mt-20 3xl:mt-24 max-w-4xl mx-auto">
               <div className="relative rounded-2xl 3xl:rounded-3xl border-2 border-amber-500/30 bg-gradient-to-b from-amber-500/10 to-amber-500/5 p-4 sm:p-6 3xl:p-10 text-center overflow-hidden shadow-[0_0_60px_rgba(245,158,11,0.08)]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                <span className="relative inline-flex items-center justify-center gap-1.5 sm:gap-2 text-amber-400 text-xs sm:text-sm 3xl:text-base font-black uppercase tracking-widest mb-3 sm:mb-4 3xl:mb-5">
+                <span className="relative inline-flex items-center justify-center gap-1.5 sm:gap-2 text-amber-400 text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-black uppercase tracking-widest mb-3 sm:mb-4 3xl:mb-5 4xl:mb-6">
                   <Trophy size={10} className="sm:w-3.5 sm:h-3.5 3xl:w-4 3xl:h-4 shrink-0" />
                   {t.pricingSection.affiliate.badge}
                 </span>
                 <h3 className="relative text-lg sm:text-2xl md:text-3xl 3xl:text-4xl font-black text-white mb-2 sm:mb-3 3xl:mb-4 tracking-tight leading-tight">
                   {t.pricingSection.affiliate.title}
                 </h3>
-                <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-lg mb-4 sm:mb-5 3xl:mb-6 max-w-2xl mx-auto leading-relaxed">
+                <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl mb-4 sm:mb-5 3xl:mb-6 4xl:mb-8 max-w-2xl mx-auto leading-relaxed">
                   {t.pricingSection.affiliate.description}
                 </p>
-                <ul className="relative space-y-1.5 sm:space-y-2 3xl:space-y-3 mb-4 sm:mb-6 3xl:mb-8 text-slate-200 text-xs sm:text-sm 3xl:text-base flex flex-wrap justify-center gap-x-3 sm:gap-x-4 3xl:gap-x-6 gap-y-1.5 3xl:gap-y-2">
+                <ul className="relative space-y-1.5 sm:space-y-2 3xl:space-y-3 4xl:space-y-4 mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10 text-slate-200 text-xs sm:text-sm 3xl:text-base 4xl:text-lg flex flex-wrap justify-center gap-x-3 sm:gap-x-4 3xl:gap-x-6 4xl:gap-x-8 gap-y-1.5 3xl:gap-y-2 4xl:gap-y-3">
                   {t.pricingSection.affiliate.benefits.map((b: string, i: number) => (
                     <li key={i} className="flex items-center gap-1.5 3xl:gap-2">
                       <Check size={14} className="text-emerald-400 shrink-0 sm:w-4 sm:h-4 3xl:w-[18px] 3xl:h-[18px]" />
@@ -471,23 +472,23 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <div className="relative rounded-xl 3xl:rounded-2xl bg-slate-800/80 border border-slate-600/80 p-3 sm:p-4 3xl:p-6 text-left shadow-inner">
-                  <p className="text-amber-400/90 text-xs sm:text-sm font-bold uppercase tracking-widest mb-1.5 sm:mb-2 3xl:mb-3">
+                  <p className="text-amber-400/90 text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-bold uppercase tracking-widest mb-1.5 sm:mb-2 3xl:mb-3 4xl:mb-4">
                     {t.pricingSection.affiliate.example.title}
                   </p>
-                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg font-semibold mb-1 3xl:mb-2 leading-snug">
+                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl font-semibold mb-1 3xl:mb-2 4xl:mb-3 leading-snug">
                     {t.pricingSection.affiliate.example.line1}
                   </p>
-                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg font-semibold mb-1.5 sm:mb-2 3xl:mb-3 leading-snug">
+                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl font-semibold mb-1.5 sm:mb-2 3xl:mb-3 4xl:mb-4 leading-snug">
                     {t.pricingSection.affiliate.example.line2}
                   </p>
-                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm">{t.pricingSection.affiliate.example.footer}</p>
+                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base">{t.pricingSection.affiliate.example.footer}</p>
                 </div>
               </div>
             </motion.div>
 
             {/* Garantias — compacto abaixo de 3xl */}
             <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-8 sm:mt-14 3xl:mt-20 pt-8 sm:pt-10 3xl:pt-14 border-t border-white/10">
-              <p className="text-center text-slate-400 text-[11px] sm:text-xs 3xl:text-sm font-bold uppercase tracking-widest mb-4 sm:mb-6 3xl:mb-8">
+              <p className="text-center text-slate-400 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-widest mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10">
                 {t.pricingSection.guarantee.title}
               </p>
               <div className="flex flex-wrap justify-center gap-3 sm:gap-8 3xl:gap-12 gap-y-2 3xl:gap-y-3">
@@ -519,7 +520,7 @@ export default function LandingPage() {
                   transition={{ delay: i * 0.08, duration: 0.4 }}
                   className="sm:px-6 3xl:px-8"
                 >
-                  <p className="text-2xl sm:text-4xl md:text-5xl 3xl:text-6xl font-black tracking-tighter mb-1.5 3xl:mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400">
+                  <p className="text-2xl sm:text-4xl md:text-5xl 3xl:text-6xl 4xl:text-7xl font-black tracking-tighter mb-1.5 3xl:mb-2 4xl:mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400">
                     {stat.value}
                   </p>
                   <p className="text-[9px] sm:text-[10px] 3xl:text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{stat.label}</p>
@@ -532,7 +533,7 @@ export default function LandingPage() {
         {/* Steps — 3 passos com cards destacados; compacto abaixo de 3xl */}
         <section id="steps" className="py-12 sm:py-20 md:py-28 3xl:py-32 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8">
-            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl font-black tracking-tighter text-center mb-8 sm:mb-14 3xl:mb-20">
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black tracking-tighter text-center mb-8 sm:mb-14 3xl:mb-20 4xl:mb-24">
               {t.steps.title}
               <span className="text-blue-400 italic"> {t.steps.titleAccent}</span>
             </motion.h2>
@@ -560,8 +561,8 @@ export default function LandingPage() {
                       {i === 0 ? <Phone size={22} className="3xl:w-[26px] 3xl:h-[26px]" /> : i === 1 ? <MessageSquare size={22} className="3xl:w-[26px] 3xl:h-[26px]" /> : <Zap size={22} className="3xl:w-[26px] 3xl:h-[26px]" />}
                     </div>
                   </div>
-                  <h3 className="relative text-base sm:text-lg 3xl:text-xl font-black text-white mb-2 3xl:mb-3 uppercase tracking-tight">{step.t}</h3>
-                  <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-base leading-relaxed">{step.d}</p>
+                  <h3 className="relative text-base sm:text-lg 3xl:text-xl 4xl:text-2xl font-black text-white mb-2 3xl:mb-3 4xl:mb-4 uppercase tracking-tight">{step.t}</h3>
+                  <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-base 4xl:text-lg leading-relaxed">{step.d}</p>
                 </motion.div>
               ))}
             </div>
@@ -581,7 +582,7 @@ export default function LandingPage() {
                 {t.resources.title}
                 <span className="text-blue-400 italic"> {t.resources.titleAccent}</span>
               </h2>
-              <p className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg max-w-2xl mx-auto leading-relaxed">
+              <p className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl max-w-2xl mx-auto leading-relaxed">
                 {(t.resources as { subtitle?: string }).subtitle ?? 'Tudo o que precisas para dominar as tuas finanças, num só sítio.'}
               </p>
             </motion.div>
@@ -603,8 +604,8 @@ export default function LandingPage() {
                         {i === 0 ? <Phone size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 1 ? <BarChart3 size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 2 ? <Globe size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 3 ? <ShieldCheck size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 4 ? <Trophy size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : <Star size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs sm:text-base 3xl:text-lg font-black uppercase tracking-wider text-white mb-1 3xl:mb-2 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
-                        <p className="text-slate-300 text-[11px] sm:text-sm 3xl:text-base leading-relaxed">{item.d}</p>
+                        <h4 className="text-xs sm:text-base 3xl:text-lg 4xl:text-xl font-black uppercase tracking-wider text-white mb-1 3xl:mb-2 4xl:mb-3 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
+                        <p className="text-slate-300 text-[11px] sm:text-sm 3xl:text-base 4xl:text-lg leading-relaxed">{item.d}</p>
                       </div>
                     </div>
                 </motion.div>
@@ -618,10 +619,10 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-[#020617] to-slate-950/80 pointer-events-none" />
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 relative">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-14 3xl:mb-20">
-              <span className="inline-block text-amber-400 text-[11px] sm:text-xs 3xl:text-sm font-black uppercase tracking-widest mb-3 3xl:mb-4">
+              <span className="inline-block text-amber-400 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-black uppercase tracking-widest mb-3 3xl:mb-4 4xl:mb-5">
                 {(t.testimonials as { badge?: string }).badge ?? 'Opiniões'}
               </span>
-              <h2 className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl font-black tracking-tighter">
+              <h2 className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black tracking-tighter">
                 {(t.testimonials as { title?: string }).title ?? 'O que dizem '}
                 <span className="text-blue-400 italic"> {(t.testimonials as { titleAccent?: string }).titleAccent ?? 'os nossos clientes.'}</span>
               </h2>
@@ -650,8 +651,8 @@ export default function LandingPage() {
                       {item.initial}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-bold text-xs sm:text-sm 3xl:text-base truncate">{item.name}</p>
-                      <p className="text-slate-400 text-[10px] sm:text-xs 3xl:text-sm truncate">{(item.role as string).toUpperCase()}</p>
+                      <p className="text-white font-bold text-xs sm:text-sm 3xl:text-base 4xl:text-lg truncate">{item.name}</p>
+                      <p className="text-slate-400 text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base truncate">{(item.role as string).toUpperCase()}</p>
                     </div>
                   </div>
                   <div className="flex gap-0.5 mb-3 3xl:mb-4">
@@ -659,7 +660,7 @@ export default function LandingPage() {
                       <Star key={s} size={14} className="fill-amber-400 text-amber-400 shrink-0 3xl:w-4 3xl:h-4" />
                     ))}
                   </div>
-                  <p className="relative text-slate-200 text-xs sm:text-sm md:text-base 3xl:text-lg leading-relaxed flex-1">
+                  <p className="relative text-slate-200 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl leading-relaxed flex-1">
                     <span className="absolute -top-1 -left-1 text-3xl sm:text-4xl font-serif text-blue-500/25 leading-none select-none">&quot;</span>
                     <span className="pl-3 sm:pl-4">{item.text}</span>
                   </p>
@@ -672,7 +673,7 @@ export default function LandingPage() {
         {/* FAQ — estático; compacto abaixo de 3xl */}
         <section id="faq" className="py-10 sm:py-20 md:py-24 3xl:py-32 border-t border-white/5" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-4xl mx-auto px-4 sm:px-5 lg:px-8">
-            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-lg sm:text-3xl 3xl:text-4xl font-black tracking-tighter text-center mb-6 sm:mb-10 3xl:mb-12">
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-lg sm:text-3xl 3xl:text-4xl 4xl:text-5xl font-black tracking-tighter text-center mb-6 sm:mb-10 3xl:mb-12 4xl:mb-14">
               {t.faq.title}
               <span className="text-blue-400 italic"> {t.faq.titleAccent}</span>
             </motion.h2>
@@ -691,7 +692,7 @@ export default function LandingPage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     <span className="min-w-0">{item.q}</span>
                   </h4>
-                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm leading-relaxed pl-3 3xl:pl-3.5">{item.a}</p>
+                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base leading-relaxed pl-3 3xl:pl-3.5 4xl:pl-4">{item.a}</p>
                 </motion.div>
               ))}
             </div>
@@ -704,22 +705,22 @@ export default function LandingPage() {
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 text-center relative">
             <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-4 3xl:mb-6">
               <motion.div whileHover={{ scale: 1.05 }} className="shrink-0">
-                <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-8 w-8 sm:h-10 sm:w-10 3xl:h-12 3xl:w-12 object-contain" draggable={false} loading="lazy" />
+                <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-8 w-8 sm:h-10 sm:w-10 3xl:h-12 3xl:w-12 4xl:h-14 4xl:w-14 object-contain" draggable={false} loading="lazy" />
               </motion.div>
               <span className="text-base sm:text-lg 3xl:text-xl font-black tracking-tight text-white">Finly</span>
             </div>
-            <p className="text-slate-600 text-[9px] sm:text-[10px] 3xl:text-xs font-bold uppercase tracking-[0.3em] mb-4 sm:mb-6 3xl:mb-8">{t.footer.slogan}</p>
+            <p className="text-slate-600 text-[9px] sm:text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-[0.3em] mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10">{t.footer.slogan}</p>
             <div className="flex flex-wrap justify-center gap-3 sm:gap-6 3xl:gap-10 mb-4 sm:mb-6 3xl:mb-8">
               {t.footer.links.map((link: string, i: number) => {
                 const hrefMap: Record<string, string> = { 'Termos': '/terms', 'Terms': '/terms', 'Privacidade': '/privacy', 'Privacy': '/privacy', 'Cookies': '#' };
                 return (
-                  <Link key={i} href={hrefMap[link] || '#'} className="inline-flex items-center min-h-[40px] 3xl:min-h-[44px] text-slate-500 hover:text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-colors">
+                  <Link key={i} href={hrefMap[link] || '#'} className="inline-flex items-center min-h-[40px] 3xl:min-h-[44px] 4xl:min-h-[48px] text-slate-500 hover:text-white text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-wider transition-colors">
                     {link}
                   </Link>
                 );
               })}
             </div>
-            <p className="flex items-center justify-center gap-1.5 3xl:gap-2 text-slate-700 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
+            <p className="flex items-center justify-center gap-1.5 3xl:gap-2 4xl:gap-3 text-slate-700 text-[9px] sm:text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-widest">
               <CheckCircle2 size={10} className="3xl:w-3 3xl:h-3" />
               {t.footer.badge}
             </p>

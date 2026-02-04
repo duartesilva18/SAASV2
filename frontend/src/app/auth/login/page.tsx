@@ -30,7 +30,7 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-3 xl:gap-4 2xl:gap-5 py-3.5 sm:py-4 lg:py-3.5 xl:py-5 2xl:py-6 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 px-6 sm:px-8 lg:px-7 xl:px-10 2xl:px-12 [@media(max-height:700px)]:px-5 [@media(max-height:600px)]:px-4 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[260px] xl:max-w-[300px] 2xl:max-w-[340px]"
+      className="flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-2.5 xl:gap-4 2xl:gap-5 py-3.5 sm:py-4 lg:py-2.5 xl:py-5 2xl:py-6 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 px-6 sm:px-8 lg:px-6 xl:px-10 2xl:px-12 [@media(max-height:700px)]:px-5 [@media(max-height:600px)]:px-4 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[260px] xl:max-w-[300px] 2xl:max-w-[340px]"
     >
       <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-5 sm:h-5 lg:w-5 lg:h-5 xl:w-6 xl:h-6 2xl:w-7 2xl:h-7 fill-current shrink-0">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
@@ -267,8 +267,8 @@ function LoginPageContent() {
           </div>
         </div>
 
-        {/* Painel direito: scrollável se não couber; compacto em ecrãs curtos */}
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-start pt-5 sm:pt-6 lg:pt-7 xl:pt-9 2xl:pt-12 pb-6 sm:pb-8 lg:pb-10 xl:pb-12 2xl:pb-16 px-3 sm:px-4 lg:px-6 xl:px-10 2xl:px-16 [@media(max-height:1400px)]:pt-6 [@media(max-height:1200px)]:pt-6 [@media(max-height:1080px)]:pt-6 [@media(max-height:1000px)]:pt-5 [@media(max-height:900px)]:pt-4 [@media(max-height:800px)]:pt-3.5 [@media(max-height:700px)]:pt-3 [@media(max-height:600px)]:pt-2.5 relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Painel direito: scrollável se não couber; centrado verticalmente em ecrãs muito grandes */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-start pt-5 sm:pt-6 lg:pt-7 xl:pt-9 2xl:pt-12 pb-6 sm:pb-8 lg:pb-10 xl:pb-12 2xl:pb-16 px-3 sm:px-4 lg:px-6 xl:px-10 2xl:px-16 [@media(max-height:1600px)]:pt-6 [@media(max-height:1400px)]:pt-6 [@media(max-height:1200px)]:pt-6 [@media(max-height:1080px)]:pt-6 [@media(max-height:1000px)]:pt-5 [@media(max-height:900px)]:pt-4 [@media(max-height:800px)]:pt-3.5 [@media(max-height:700px)]:pt-3 [@media(max-height:600px)]:pt-2.5 2xl:justify-center [@media(min-height:900px)]:justify-center relative z-10 bg-[#020617]/95 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {/* Botão Voltar: só mobile/tablet */}
           <div className="lg:hidden absolute top-5 sm:top-6 left-4 sm:left-5 z-20">
             <Link
@@ -282,11 +282,11 @@ function LoginPageContent() {
           </div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl mx-auto my-2 [@media(max-height:700px)]:min-w-0 [@media(max-height:1400px)]:my-1.5 [@media(max-height:1200px)]:my-1.5 [@media(max-height:1080px)]:my-1.5 [@media(max-height:1000px)]:my-1 [@media(max-height:900px)]:my-1 [@media(max-height:800px)]:my-1">
-            <div className="mb-3 sm:mb-4 lg:mb-6 xl:mb-10 2xl:mb-14 [@media(max-height:1400px)]:mb-4 [@media(max-height:1200px)]:mb-4 [@media(max-height:1080px)]:mb-4 [@media(max-height:1000px)]:mb-3 [@media(max-height:900px)]:mb-3 [@media(max-height:800px)]:mb-2 [@media(max-height:700px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center lg:text-left">
-              <div className="lg:hidden w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 [@media(max-height:1400px)]:mb-2.5 [@media(max-height:1200px)]:mb-2.5 [@media(max-height:1080px)]:mb-2.5 [@media(max-height:800px)]:mb-2 overflow-hidden bg-slate-800/90 shadow-xl">
+            <div className="mb-3 sm:mb-4 lg:mb-6 xl:mb-10 2xl:mb-14 [@media(max-height:1600px)]:mb-4 [@media(max-height:1400px)]:mb-4 [@media(max-height:1200px)]:mb-4 [@media(max-height:1080px)]:mb-4 [@media(max-height:1000px)]:mb-3 [@media(max-height:900px)]:mb-3 [@media(max-height:800px)]:mb-2 [@media(max-height:700px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center lg:text-left">
+              <div className="lg:hidden w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 [@media(max-height:1600px)]:mb-2.5 [@media(max-height:1400px)]:mb-2.5 [@media(max-height:1200px)]:mb-2.5 [@media(max-height:1080px)]:mb-2.5 [@media(max-height:800px)]:mb-2 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-3xl xl:text-5xl 2xl:text-6xl font-black tracking-tighter mb-1.5 sm:mb-2 lg:mb-3 xl:mb-4 2xl:mb-5 [@media(max-height:1400px)]:mb-2 [@media(max-height:1200px)]:mb-2 [@media(max-height:1080px)]:mb-2 [@media(max-height:1000px)]:mb-1.5 [@media(max-height:900px)]:mb-1.5 [@media(max-height:800px)]:mb-1 text-white">
+              <h1 className="text-2xl sm:text-3xl lg:text-3xl xl:text-5xl 2xl:text-6xl font-black tracking-tighter mb-1.5 sm:mb-2 lg:mb-3 xl:mb-4 2xl:mb-5 [@media(max-height:1600px)]:mb-2 [@media(max-height:1400px)]:mb-2 [@media(max-height:1200px)]:mb-2 [@media(max-height:1080px)]:mb-2 [@media(max-height:1000px)]:mb-1.5 [@media(max-height:900px)]:mb-1.5 [@media(max-height:800px)]:mb-1 text-white">
                 {t.auth.login.title}
                 <span className="text-blue-500 italic ml-1 lg:ml-2 2xl:ml-3">{t.auth.login.titleAccent}</span>
               </h1>
@@ -297,7 +297,7 @@ function LoginPageContent() {
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-7 sm:p-9 lg:p-11 xl:p-16 2xl:p-24 [@media(max-height:1400px)]:p-9 [@media(max-height:1200px)]:p-9 [@media(max-height:1080px)]:p-9 [@media(max-height:1000px)]:p-8 [@media(max-height:900px)]:p-7 [@media(max-height:800px)]:p-6 [@media(max-height:700px)]:p-6 [@media(max-height:600px)]:p-5 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-7 sm:p-9 lg:p-11 xl:p-16 2xl:p-24 [@media(max-height:1600px)]:p-9 [@media(max-height:1400px)]:p-9 [@media(max-height:1200px)]:p-9 [@media(max-height:1080px)]:p-9 [@media(max-height:1000px)]:p-8 [@media(max-height:900px)]:p-7 [@media(max-height:800px)]:p-6 [@media(max-height:700px)]:p-6 [@media(max-height:600px)]:p-5 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {error && (
@@ -339,7 +339,7 @@ function LoginPageContent() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSubmit} noValidate className="space-y-8 sm:space-y-9 lg:space-y-10 xl:space-y-12 2xl:space-y-16 [@media(max-height:1400px)]:space-y-8 [@media(max-height:1200px)]:space-y-8 [@media(max-height:1080px)]:space-y-8 [@media(max-height:1000px)]:space-y-7 [@media(max-height:900px)]:space-y-6 [@media(max-height:800px)]:space-y-5 [@media(max-height:700px)]:space-y-4 [@media(max-height:600px)]:space-y-3">
+              <form onSubmit={handleSubmit} noValidate className="space-y-8 sm:space-y-9 lg:space-y-10 xl:space-y-12 2xl:space-y-16 [@media(max-height:1600px)]:space-y-8 [@media(max-height:1400px)]:space-y-8 [@media(max-height:1200px)]:space-y-8 [@media(max-height:1080px)]:space-y-8 [@media(max-height:1000px)]:space-y-7 [@media(max-height:900px)]:space-y-6 [@media(max-height:800px)]:space-y-5 [@media(max-height:700px)]:space-y-4 [@media(max-height:600px)]:space-y-3">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-3 lg:mb-5 2xl:mb-6 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.login.emailLabel}
@@ -352,7 +352,7 @@ function LoginPageContent() {
                       type="email"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); if (error) { setError(''); setShowResendVerification(false); setResendSuccess(''); setResendError(''); } }}
-                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-10 lg:pl-14 2xl:pl-16 pr-3 lg:pr-5 2xl:pr-6 text-xs sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1600px)]:py-2.5 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-10 lg:pl-14 2xl:pl-16 pr-3 lg:pr-5 2xl:pr-6 text-xs sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && !validateEmail(email) ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
                       placeholder="o-teu-email@exemplo.com"
                       required
                     />
@@ -384,7 +384,7 @@ function LoginPageContent() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-10 lg:pl-14 2xl:pl-16 pr-9 lg:pr-12 2xl:pr-14 text-xs sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 4 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
+                      className={`w-full bg-slate-950/50 border rounded-lg lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl py-2.5 sm:py-3 lg:py-4 xl:py-5 2xl:py-7 [@media(max-height:1600px)]:py-2.5 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 pl-10 lg:pl-14 2xl:pl-16 pr-9 lg:pr-12 2xl:pr-14 text-xs sm:text-sm lg:text-base 2xl:text-lg focus:outline-none transition-all placeholder:text-slate-800 font-medium ${error && password.length < 4 ? 'border-red-500/50 bg-red-500/5' : 'border-slate-800 focus:border-blue-500'}`}
                       placeholder="••••••••••••"
                       required
                     />
@@ -416,7 +416,7 @@ function LoginPageContent() {
                 <MagneticButton
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 sm:py-3 lg:py-4 xl:py-6 2xl:py-8 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 min-h-[40px] lg:min-h-[44px] 2xl:min-h-[56px] [@media(max-height:1400px)]:min-h-[40px] [@media(max-height:1200px)]:min-h-[40px] [@media(max-height:1080px)]:min-h-[40px] [@media(max-height:1000px)]:min-h-[38px] [@media(max-height:900px)]:min-h-[38px] [@media(max-height:800px)]:min-h-[36px] [@media(max-height:700px)]:min-h-[36px] [@media(max-height:600px)]:min-h-[32px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(37,99,235,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-2 lg:mt-4 2xl:mt-5 flex items-center justify-center gap-2 lg:gap-3 xl:gap-4 2xl:gap-5 text-xs lg:text-sm 2xl:text-base [@media(max-height:600px)]:text-xs relative overflow-hidden cursor-pointer"
+                  className="w-full py-2.5 sm:py-3 lg:py-4 xl:py-6 2xl:py-8 [@media(max-height:1400px)]:py-2.5 [@media(max-height:1200px)]:py-2.5 [@media(max-height:1080px)]:py-2.5 [@media(max-height:1000px)]:py-2 [@media(max-height:900px)]:py-2 [@media(max-height:800px)]:py-2 [@media(max-height:700px)]:py-2 [@media(max-height:600px)]:py-1.5 min-h-[40px] lg:min-h-[44px] 2xl:min-h-[56px] [@media(max-height:1600px)]:min-h-[40px] [@media(max-height:1400px)]:min-h-[40px] [@media(max-height:1200px)]:min-h-[40px] [@media(max-height:1080px)]:min-h-[40px] [@media(max-height:1000px)]:min-h-[38px] [@media(max-height:900px)]:min-h-[38px] [@media(max-height:800px)]:min-h-[36px] [@media(max-height:700px)]:min-h-[36px] [@media(max-height:600px)]:min-h-[32px] bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-2xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] transition-all shadow-[0_12px_24px_-8px_rgba(37,99,235,0.5)] lg:shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] active:scale-[0.98] mt-2 lg:mt-4 2xl:mt-5 flex items-center justify-center gap-2 lg:gap-3 xl:gap-4 2xl:gap-5 text-xs lg:text-sm 2xl:text-base [@media(max-height:600px)]:text-xs relative overflow-hidden cursor-pointer"
                 >
                   {loading ? (
                     <div className="w-4 h-4 lg:w-6 lg:h-6 2xl:w-7 2xl:h-7 border-2 lg:border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
@@ -428,7 +428,7 @@ function LoginPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-8 lg:mt-10 xl:mt-14 2xl:mt-24 [@media(max-height:1400px)]:mt-7 [@media(max-height:1200px)]:mt-7 [@media(max-height:1080px)]:mt-7 [@media(max-height:1000px)]:mt-6 [@media(max-height:900px)]:mt-5 [@media(max-height:800px)]:mt-4 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2.5">
+              <div className="mt-8 lg:mt-10 xl:mt-14 2xl:mt-24 [@media(max-height:1600px)]:mt-7 [@media(max-height:1400px)]:mt-7 [@media(max-height:1200px)]:mt-7 [@media(max-height:1080px)]:mt-7 [@media(max-height:1000px)]:mt-6 [@media(max-height:900px)]:mt-5 [@media(max-height:800px)]:mt-4 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2.5">
                 <div className="relative mb-6 lg:mb-8 2xl:mb-16 [@media(max-height:1400px)]:mb-5 [@media(max-height:1200px)]:mb-5 [@media(max-height:1080px)]:mb-5 [@media(max-height:1000px)]:mb-4 [@media(max-height:900px)]:mb-4 [@media(max-height:800px)]:mb-3 [@media(max-height:700px)]:mb-2.5 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
@@ -443,13 +443,13 @@ function LoginPageContent() {
               </div>
             </motion.div>
 
-            <div className="mt-8 lg:mt-10 xl:mt-14 2xl:mt-24 [@media(max-height:1400px)]:mt-7 [@media(max-height:1200px)]:mt-7 [@media(max-height:1080px)]:mt-7 [@media(max-height:1000px)]:mt-6 [@media(max-height:900px)]:mt-5 [@media(max-height:800px)]:mt-4 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2.5 text-center flex flex-col items-center">
-              <p className="text-slate-500 font-medium text-sm sm:text-base lg:text-base xl:text-lg 2xl:text-xl mb-4 lg:mb-5 xl:mb-8 2xl:mb-12 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-2 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 italic">
+            <div className="mt-8 lg:mt-10 xl:mt-14 2xl:mt-24 [@media(max-height:1600px)]:mt-7 [@media(max-height:1400px)]:mt-7 [@media(max-height:1200px)]:mt-7 [@media(max-height:1080px)]:mt-7 [@media(max-height:1000px)]:mt-6 [@media(max-height:900px)]:mt-5 [@media(max-height:800px)]:mt-4 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2.5 text-center flex flex-col items-center">
+              <p className="text-slate-500 font-medium text-sm sm:text-base lg:text-base xl:text-lg 2xl:text-xl mb-4 lg:mb-5 xl:mb-8 2xl:mb-12 [@media(max-height:1600px)]:mb-3 [@media(max-height:1400px)]:mb-3 [@media(max-height:1200px)]:mb-3 [@media(max-height:1080px)]:mb-3 [@media(max-height:1000px)]:mb-2.5 [@media(max-height:900px)]:mb-2 [@media(max-height:800px)]:mb-2 [@media(max-height:700px)]:mb-1.5 [@media(max-height:600px)]:mb-1 italic">
                 {t.auth.login.noAccount}
               </p>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center justify-center gap-2 lg:gap-2.5 xl:gap-4 2xl:gap-5 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-6 lg:px-6 xl:px-12 2xl:px-14 py-3.5 lg:py-3 xl:py-6 2xl:py-7 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-3 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2.5 rounded-xl lg:rounded-xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] 2xl:tracking-[0.25em] text-[10px] sm:text-xs lg:text-xs xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[10px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 lg:gap-2 xl:gap-4 2xl:gap-5 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-6 lg:px-5 xl:px-12 2xl:px-14 py-3.5 lg:py-2.5 xl:py-6 2xl:py-7 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-3 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2.5 rounded-xl lg:rounded-xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] 2xl:tracking-[0.25em] text-[10px] sm:text-xs lg:text-[10px] xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[10px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.login.registerCta}
                 <Sparkles size={14} className="text-blue-500 group-hover:rotate-12 transition-transform lg:w-4 lg:h-4 xl:size-5 2xl:size-6 [@media(max-height:600px)]:w-3.5 [@media(max-height:600px)]:h-3.5" />
