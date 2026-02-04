@@ -35,45 +35,68 @@ async def check_admin(current_user: models.User = Depends(get_current_user)):
         )
     return current_user
 
+def _invoice_net_paid(inv) -> int:
+    """Receita líquida da fatura (amount_paid menos reembolsos)."""
+    if getattr(inv, 'status', None) != 'paid':
+        return 0
+    amount_paid = getattr(inv, 'amount_paid', 0) or 0
+    charge = getattr(inv, 'charge', None)
+    if not charge:
+        return amount_paid
+    # charge pode ser id (string) ou objeto expandido
+    if isinstance(charge, str):
+        try:
+            charge = stripe.Charge.retrieve(charge)
+        except Exception:
+            return amount_paid
+    amount_refunded = getattr(charge, 'amount_refunded', 0) or 0
+    return max(0, amount_paid - amount_refunded)
+
+
 @router.get('/finance/stats')
 async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
     try:
         from datetime import datetime, timedelta
         from collections import defaultdict
-        
-        subscriptions = stripe.Subscription.list(limit=100)
-        invoices = stripe.Invoice.list(limit=100)
-        
-        total_mrr = sum(sub.plan.amount for sub in subscriptions.data if sub.plan)
-        total_revenue = sum(inv.amount_paid for inv in invoices.data if inv.status == 'paid')
-        
+
+        subscriptions = stripe.Subscription.list(limit=100, status='all')
+        # Expandir charge para obter amount_refunded sem N+1 requests
+        invoices = stripe.Invoice.list(limit=100, expand=['data.charge'])
+
+        # MRR: apenas subscrições ativas ou em trial
+        total_mrr = sum(
+            sub.plan.amount for sub in subscriptions.data
+            if sub.plan and sub.status in ('active', 'trialing')
+        )
+        # Receita total: apenas valor líquido (excluir reembolsos)
+        total_revenue = sum(_invoice_net_paid(inv) for inv in invoices.data)
+
         pending_invoices = [inv for inv in invoices.data if inv.status == 'open' and inv.attempt_count > 0]
-        
+
         # Contar apenas utilizadores únicos com subscrições ativas (não subscrições múltiplas)
         unique_customers = set()
         for sub in subscriptions.data:
             if sub.status in ['active', 'trialing']:
                 unique_customers.add(sub.customer)
-        
-        # Calcular faturamento mensal dos últimos 12 meses
+
+        # Faturamento mensal dos últimos 12 meses (receita líquida, sem reembolsos)
         monthly_revenue = defaultdict(int)
         now = datetime.now()
-        
+
         for inv in invoices.data:
             if inv.status == 'paid' and inv.created:
-                # Converter timestamp Unix para datetime (Stripe retorna Unix timestamp)
+                net = _invoice_net_paid(inv)
+                if net <= 0:
+                    continue
                 if isinstance(inv.created, (int, float)):
                     inv_date = datetime.fromtimestamp(inv.created)
                 else:
-                    # Se já for datetime object
                     inv_date = inv.created
-                # Agrupar por mês/ano
                 month_key = inv_date.strftime('%Y-%m')
-                monthly_revenue[month_key] += inv.amount_paid
-        
-        # Criar lista dos últimos 12 meses com valores
+                monthly_revenue[month_key] += net
+
         monthly_data = []
-        for i in range(11, -1, -1):  # Últimos 12 meses
+        for i in range(11, -1, -1):
             month_date = now - timedelta(days=30 * i)
             month_key = month_date.strftime('%Y-%m')
             month_label = month_date.strftime('%b %Y')
@@ -81,11 +104,11 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
                 'month': month_label,
                 'revenue_cents': monthly_revenue.get(month_key, 0)
             })
-        
+
         return {
             'total_mrr_cents': total_mrr,
             'total_revenue_cents': total_revenue,
-            'active_subscriptions': len(unique_customers),  # Contar utilizadores únicos
+            'active_subscriptions': len(unique_customers),
             'pending_invoices_count': len(pending_invoices),
             'monthly_revenue': monthly_data
         }
