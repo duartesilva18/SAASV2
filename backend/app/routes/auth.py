@@ -1057,11 +1057,10 @@ async def import_user_data(
 async def delete_user_account(request: Request, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
         user_email = current_user.email
-        user_id = current_user.id
+        # user_id=None: o user vai ser apagado; audit_logs.user_id tem FK CASCADE — gravar com NULL evita violação e o log não é apagado
+        await log_action(db, action='account_delete', user_id=None, details=f'Conta eliminada por utilizador: {user_email}', request=request)
         db.delete(current_user)
         db.commit()
-        
-        await log_action(db, action='account_delete', user_id=user_id, details=f'Conta eliminada por utilizador: {user_email}', request=request)
         logger.info(f'Utilizador eliminou a conta: {user_email}')
         return {'message': 'Account deleted successfully'}
     except Exception as e:
