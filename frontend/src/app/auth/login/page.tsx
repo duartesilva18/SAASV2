@@ -30,15 +30,15 @@ function GoogleLoginButton({ onLoginSuccess }: { onLoginSuccess: (token: string)
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-2.5 xl:gap-4 2xl:gap-5 py-3.5 sm:py-4 lg:py-2.5 xl:py-5 2xl:py-6 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 px-6 sm:px-8 lg:px-6 xl:px-10 2xl:px-12 [@media(max-height:700px)]:px-5 [@media(max-height:600px)]:px-4 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl lg:rounded-xl xl:rounded-2xl 2xl:rounded-3xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[260px] xl:max-w-[300px] 2xl:max-w-[340px]"
+      className="flex items-center justify-center gap-2 sm:gap-2.5 lg:gap-2.5 xl:gap-3 py-3 sm:py-3.5 lg:py-3 xl:py-4 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 px-5 sm:px-6 lg:px-6 xl:px-8 [@media(max-height:700px)]:px-5 [@media(max-height:600px)]:px-4 bg-slate-950 border border-slate-800 rounded-lg lg:rounded-lg xl:rounded-xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[260px] xl:max-w-[300px] 2xl:max-w-[320px]"
     >
-      <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-5 sm:h-5 lg:w-5 lg:h-5 xl:w-6 xl:h-6 2xl:w-7 2xl:h-7 fill-current shrink-0">
+      <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-4 sm:h-4 lg:w-4 lg:h-4 xl:w-5 xl:h-5 fill-current shrink-0">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-2.64-2.81c-.73.48-1.66.76-2.64.76-2.85 0-5.27-1.92-6.13-4.51H2.18v2.98C3.99 20.24 7.75 23 12 23z" fill="#34A853" />
         <path d="M5.87 13.78c-.22-.65-.35-1.35-.35-2.08s.13-1.43.35-2.08V6.64H2.18C1.43 8.24 1 10.07 1 12s.43 3.76 1.18 5.36l3.69-2.98z" fill="#FBBC05" />
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.75 1 3.99 3.76 2.18 7.36l3.69 2.98c.86-2.59 3.28-4.51 6.13-4.51z" fill="#EA4335" />
       </svg>
-      <span className="text-[10px] sm:text-[11px] lg:text-[10px] xl:text-[11px] 2xl:text-xs font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors">
+      <span className="text-xs sm:text-xs lg:text-sm xl:text-sm font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors [@media(max-height:600px)]:text-[10px]">
         {t.auth.login.googleLogin}
       </span>
     </button>
@@ -297,7 +297,7 @@ function LoginPageContent() {
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-7 sm:p-9 lg:p-11 xl:p-16 2xl:p-24 [@media(max-height:1600px)]:p-9 [@media(max-height:1400px)]:p-9 [@media(max-height:1200px)]:p-9 [@media(max-height:1080px)]:p-9 [@media(max-height:1000px)]:p-8 [@media(max-height:900px)]:p-7 [@media(max-height:800px)]:p-6 [@media(max-height:700px)]:p-6 [@media(max-height:600px)]:p-5 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-9 sm:p-11 lg:p-14 xl:p-20 2xl:p-28 [@media(max-height:1600px)]:p-11 [@media(max-height:1400px)]:p-11 [@media(max-height:1200px)]:p-11 [@media(max-height:1080px)]:p-11 [@media(max-height:1000px)]:p-10 [@media(max-height:900px)]:p-9 [@media(max-height:800px)]:p-8 [@media(max-height:700px)]:p-8 [@media(max-height:600px)]:p-7 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-colors duration-500 group/card ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {error && (
@@ -339,9 +339,9 @@ function LoginPageContent() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSubmit} noValidate className="space-y-8 sm:space-y-9 lg:space-y-10 xl:space-y-12 2xl:space-y-16 [@media(max-height:1600px)]:space-y-8 [@media(max-height:1400px)]:space-y-8 [@media(max-height:1200px)]:space-y-8 [@media(max-height:1080px)]:space-y-8 [@media(max-height:1000px)]:space-y-7 [@media(max-height:900px)]:space-y-6 [@media(max-height:800px)]:space-y-5 [@media(max-height:700px)]:space-y-4 [@media(max-height:600px)]:space-y-3">
+              <form onSubmit={handleSubmit} noValidate className="space-y-11 sm:space-y-12 lg:space-y-14 xl:space-y-16 2xl:space-y-20 [@media(max-height:1600px)]:space-y-11 [@media(max-height:1400px)]:space-y-11 [@media(max-height:1200px)]:space-y-11 [@media(max-height:1080px)]:space-y-11 [@media(max-height:1000px)]:space-y-10 [@media(max-height:900px)]:space-y-9 [@media(max-height:800px)]:space-y-8 [@media(max-height:700px)]:space-y-7 [@media(max-height:600px)]:space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-3 lg:mb-5 2xl:mb-6 ml-3 lg:ml-4 2xl:ml-5">
+                  <label className="block text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-2 lg:mb-3 2xl:mb-4 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.login.emailLabel}
                   </label>
                   <div className="relative group/input">
@@ -365,13 +365,13 @@ function LoginPageContent() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-3 lg:mb-5 2xl:mb-6 ml-3 lg:ml-4 2xl:ml-5">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500">
+                  <div className="flex justify-between items-center mb-2 lg:mb-3 2xl:mb-4 ml-3 lg:ml-4 2xl:ml-5">
+                    <label className="block text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500">
                       {t.auth.login.passwordLabel}
                     </label>
                     <Link
                       href="/auth/forgot-password"
-                      className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors underline decoration-blue-500/20 underline-offset-1 lg:underline-offset-4 2xl:text-[10px] cursor-pointer"
+                      className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors underline decoration-blue-500/20 underline-offset-1 lg:underline-offset-4 2xl:text-xs cursor-pointer"
                     >
                       {t.auth.login.forgotPassword}
                     </Link>
@@ -398,7 +398,7 @@ function LoginPageContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 lg:gap-3 2xl:gap-4 ml-2 lg:ml-3 2xl:ml-4 group cursor-pointer w-fit" onClick={() => setRememberMe(!rememberMe)}>
+                <div className="flex items-center gap-2 lg:gap-3 2xl:gap-4 ml-2 lg:ml-3 2xl:ml-4 group cursor-pointer w-fit -mt-4 sm:-mt-5 lg:-mt-6 xl:-mt-8 2xl:-mt-10 [@media(max-height:1000px)]:-mt-4 [@media(max-height:800px)]:-mt-3 [@media(max-height:600px)]:-mt-2" onClick={() => setRememberMe(!rememberMe)}>
                   <div className={`w-4 h-4 lg:w-5 lg:h-5 2xl:w-6 2xl:h-6 rounded border flex items-center justify-center transition-all ${rememberMe ? 'bg-blue-600 border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]' : 'bg-slate-950/50 border-slate-800'}`}>
                     <AnimatePresence>
                       {rememberMe && (
@@ -428,8 +428,8 @@ function LoginPageContent() {
                 </MagneticButton>
               </form>
 
-              <div className="mt-8 lg:mt-10 xl:mt-14 2xl:mt-24 [@media(max-height:1600px)]:mt-7 [@media(max-height:1400px)]:mt-7 [@media(max-height:1200px)]:mt-7 [@media(max-height:1080px)]:mt-7 [@media(max-height:1000px)]:mt-6 [@media(max-height:900px)]:mt-5 [@media(max-height:800px)]:mt-4 [@media(max-height:700px)]:mt-3 [@media(max-height:600px)]:mt-2.5">
-                <div className="relative mb-6 lg:mb-8 2xl:mb-16 [@media(max-height:1400px)]:mb-5 [@media(max-height:1200px)]:mb-5 [@media(max-height:1080px)]:mb-5 [@media(max-height:1000px)]:mb-4 [@media(max-height:900px)]:mb-4 [@media(max-height:800px)]:mb-3 [@media(max-height:700px)]:mb-2.5 text-center">
+              <div className="mt-10 lg:mt-12 xl:mt-16 2xl:mt-28 [@media(max-height:1600px)]:mt-9 [@media(max-height:1400px)]:mt-9 [@media(max-height:1200px)]:mt-9 [@media(max-height:1080px)]:mt-8 [@media(max-height:1000px)]:mt-7 [@media(max-height:900px)]:mt-6 [@media(max-height:800px)]:mt-5 [@media(max-height:700px)]:mt-4 [@media(max-height:600px)]:mt-3">
+                <div className="relative mb-6 lg:mb-8 2xl:mb-16 [@media(max-height:1400px)]:mb-5 [@media(max-height:1200px)]:mb-5 [@media(max-height:1080px)]:mb-5 [@media(max-height:1000px)]:mb-4 [@media(max-height:900px)]:mb-4 [@media(max-height:800px)]:mb-3 [@media(max-height:700px)]:mb-3 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
@@ -437,7 +437,7 @@ function LoginPageContent() {
                     <span className="bg-[#020617] px-3 lg:px-4 2xl:px-5 text-slate-600">{t.auth.login.orContinueWith}</span>
                   </div>
                 </div>
-                <div className="flex justify-center scale-[0.95] sm:scale-100 lg:scale-95 xl:scale-100 2xl:scale-105">
+                <div className="flex justify-center scale-[0.95] sm:scale-100 lg:scale-95 xl:scale-100 2xl:scale-105 -mt-1 lg:-mt-2">
                   <GoogleLoginButton onLoginSuccess={(token) => handleSocialLogin(token, 'google')} />
                 </div>
               </div>
@@ -449,10 +449,10 @@ function LoginPageContent() {
               </p>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center justify-center gap-2 lg:gap-2 xl:gap-4 2xl:gap-5 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-6 lg:px-5 xl:px-12 2xl:px-14 py-3.5 lg:py-2.5 xl:py-6 2xl:py-7 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-3 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2.5 rounded-xl lg:rounded-xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] 2xl:tracking-[0.25em] text-[10px] sm:text-xs lg:text-[10px] xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[10px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 sm:gap-2.5 lg:gap-2.5 xl:gap-3 bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 px-5 sm:px-6 lg:px-6 xl:px-8 py-3 sm:py-3.5 lg:py-3 xl:py-4 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2 rounded-xl lg:rounded-xl xl:rounded-2xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] text-xs sm:text-xs lg:text-sm xl:text-sm [@media(max-height:600px)]:text-[10px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.login.registerCta}
-                <Sparkles size={14} className="text-blue-500 group-hover:rotate-12 transition-transform lg:w-4 lg:h-4 xl:size-5 2xl:size-6 [@media(max-height:600px)]:w-3.5 [@media(max-height:600px)]:h-3.5" />
+                <Sparkles size={14} className="text-blue-500 group-hover:rotate-12 transition-transform w-4 h-4 sm:w-4 sm:h-4 lg:w-4 lg:h-4 xl:w-5 xl:h-5 [@media(max-height:600px)]:w-3.5 [@media(max-height:600px)]:h-3.5" />
               </Link>
             </div>
           </motion.div>

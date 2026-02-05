@@ -29,15 +29,15 @@ function GoogleRegisterButton({ onLoginSuccess, referralCode }: { onLoginSuccess
     <button
       type="button"
       onClick={() => login()}
-      className="flex items-center justify-center gap-2.5 sm:gap-3 lg:gap-2.5 xl:gap-4 py-3.5 sm:py-4 lg:py-2.5 xl:py-5 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:py-2 px-6 sm:px-8 lg:px-6 xl:px-10 [@media(max-height:700px)]:px-5 [@media(max-height:600px)]:px-4 bg-slate-950 border border-slate-800 rounded-xl sm:rounded-2xl lg:rounded-xl xl:rounded-2xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[260px] xl:max-w-[300px]"
+      className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-2 xl:gap-2.5 py-3.5 sm:py-4 lg:py-3.5 xl:py-4.5 [@media(max-height:700px)]:py-3 [@media(max-height:600px)]:py-2.5 px-4 sm:px-5 lg:px-5 xl:px-6 [@media(max-height:700px)]:px-4 [@media(max-height:600px)]:px-3.5 bg-slate-950 border border-slate-800 rounded-lg lg:rounded-lg xl:rounded-xl hover:bg-slate-900 hover:border-slate-700 transition-all group/btn shadow-lg cursor-pointer w-full max-w-[240px] sm:max-w-[260px] lg:max-w-[240px] xl:max-w-[280px] 2xl:max-w-[300px]"
     >
-      <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-5 sm:h-5 lg:w-6 lg:h-6 fill-current shrink-0">
+      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-4 lg:h-4 xl:w-4 xl:h-4 fill-current shrink-0">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.18 1-.78 1.85-1.63 2.42v2.81h2.64c1.55-1.42 2.43-3.5 2.43-5.24z" fill="#4285F4" />
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-2.64-2.81c-.73.48-1.66.76-2.64.76-2.85 0-5.27-1.92-6.13-4.51H2.18v2.98C3.99 20.24 7.75 23 12 23z" fill="#34A853" />
         <path d="M5.87 13.78c-.22-.65-.35-1.35-.35-2.08s.13-1.43.35-2.08V6.64H2.18C1.43 8.24 1 10.07 1 12s.43 3.76 1.18 5.36l3.69-2.98z" fill="#FBBC05" />
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.75 1 3.99 3.76 2.18 7.36l3.69 2.98c.86-2.59 3.28-4.51 6.13-4.51z" fill="#EA4335" />
       </svg>
-      <span className="text-[10px] sm:text-[11px] lg:text-[10px] xl:text-[11px] 2xl:text-xs font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors">
+      <span className="text-[10px] sm:text-xs lg:text-[10px] xl:text-xs font-black uppercase tracking-widest text-slate-500 group-hover/btn:text-white transition-colors [@media(max-height:600px)]:text-[9px]">
         Continuar com Google
       </span>
     </button>
@@ -269,18 +269,18 @@ function RegisterPageContent() {
               <div className="lg:hidden w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 [@media(max-height:1600px)]:mb-2 [@media(max-height:1400px)]:mb-2 [@media(max-height:1200px)]:mb-2 [@media(max-height:1080px)]:mb-2 [@media(max-height:800px)]:mb-1.5 overflow-hidden bg-slate-800/90 shadow-xl">
                 <img src="/images/logo/icon.jpeg" alt="Finly" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-2xl xl:text-4xl 2xl:text-6xl font-black tracking-tighter mb-1 sm:mb-1.5 lg:mb-2 xl:mb-3 2xl:mb-5 [@media(max-height:1600px)]:mb-1.5 [@media(max-height:1400px)]:mb-1.5 [@media(max-height:1200px)]:mb-1.5 [@media(max-height:1080px)]:mb-1.5 [@media(max-height:1000px)]:mb-1 [@media(max-height:900px)]:mb-1 [@media(max-height:800px)]:mb-1 [@media(max-height:700px)]:mb-1 text-white">
+              <h1 className="text-xl sm:text-2xl lg:text-2xl xl:text-4xl 2xl:text-4xl 4xl:text-6xl font-black tracking-tighter mb-1 sm:mb-1.5 lg:mb-2 xl:mb-3 2xl:mb-5 [@media(max-height:1600px)]:mb-1.5 [@media(max-height:1400px)]:mb-1.5 [@media(max-height:1200px)]:mb-1.5 [@media(max-height:1080px)]:mb-1.5 [@media(max-height:1000px)]:mb-1 [@media(max-height:900px)]:mb-1 [@media(max-height:800px)]:mb-1 [@media(max-height:700px)]:mb-1 text-white">
                 {t.auth.register.title}
                 <span className="text-emerald-500 italic font-black ml-1 lg:ml-2 2xl:ml-3">{t.auth.register.titleAccent}</span>
               </h1>
-              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl italic">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-lg 4xl:text-xl italic">
                 {t.auth.register.subtitle}
               </p>
             </div>
 
             <motion.div
               animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
-              className={`bg-slate-900/60 border p-4 sm:p-5 lg:p-6 xl:p-10 2xl:p-16 [@media(max-height:1200px)]:p-5 [@media(max-height:1000px)]:p-4 [@media(max-height:800px)]:p-3.5 [@media(max-height:600px)]:p-3 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
+              className={`bg-slate-900/60 border p-6 sm:p-7 lg:p-10 xl:p-14 2xl:p-20 [@media(max-height:1200px)]:p-7 [@media(max-height:1000px)]:p-6 [@media(max-height:800px)]:p-5 [@media(max-height:600px)]:p-4 rounded-xl lg:rounded-2xl xl:rounded-[28px] 2xl:rounded-3xl relative overflow-hidden transition-all duration-500 ${error ? 'border-red-500/30 bg-red-500/5' : 'border-slate-800'}`}
             >
               <AnimatePresence mode="wait">
                 {success && (
@@ -318,9 +318,9 @@ function RegisterPageContent() {
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSubmit} noValidate className={`space-y-8 sm:space-y-9 lg:space-y-10 xl:space-y-12 2xl:space-y-16 [@media(max-height:1600px)]:space-y-8 [@media(max-height:1400px)]:space-y-8 [@media(max-height:1200px)]:space-y-8 [@media(max-height:1080px)]:space-y-8 [@media(max-height:1000px)]:space-y-7 [@media(max-height:900px)]:space-y-6 [@media(max-height:800px)]:space-y-5 [@media(max-height:700px)]:space-y-4 [@media(max-height:600px)]:space-y-3 ${success ? 'pointer-events-none opacity-50' : ''}`}>
+              <form onSubmit={handleSubmit} noValidate className={`space-y-10 sm:space-y-11 lg:space-y-12 xl:space-y-14 2xl:space-y-20 [@media(max-height:1600px)]:space-y-10 [@media(max-height:1400px)]:space-y-10 [@media(max-height:1200px)]:space-y-10 [@media(max-height:1080px)]:space-y-10 [@media(max-height:1000px)]:space-y-9 [@media(max-height:900px)]:space-y-8 [@media(max-height:800px)]:space-y-7 [@media(max-height:700px)]:space-y-6 [@media(max-height:600px)]:space-y-5 ${success ? 'pointer-events-none opacity-50' : ''}`}>
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-0.5 ml-3 lg:ml-4 2xl:ml-5">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-2 lg:mb-3 2xl:mb-4 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.emailLabel}
                   </label>
                   <div className="relative group/input">
@@ -344,7 +344,7 @@ function RegisterPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-1 lg:mb-2 2xl:mb-3 [@media(max-height:700px)]:mb-0.5 ml-3 lg:ml-4 2xl:ml-5">
+                  <label className="block text-[8px] lg:text-[10px] 2xl:text-xs font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] 2xl:tracking-[0.35em] text-slate-500 mb-2 lg:mb-3 2xl:mb-4 [@media(max-height:700px)]:mb-1 ml-3 lg:ml-4 2xl:ml-5">
                     {t.auth.register.passwordLabel}
                   </label>
                   <div className="relative group/input mb-0.5 lg:mb-1.5 2xl:mb-2 [@media(max-height:700px)]:mb-0">
@@ -456,8 +456,8 @@ function RegisterPageContent() {
                 )}
               </div>
 
-              <div className="mt-2 lg:mt-3 xl:mt-4 2xl:mt-6 [@media(max-height:1000px)]:mt-2 [@media(max-height:800px)]:mt-1.5 [@media(max-height:600px)]:mt-1">
-                <div className="relative mb-2 lg:mb-3 2xl:mb-5 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1.5 text-center">
+              <div className="mt-4 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:1000px)]:mt-3 [@media(max-height:800px)]:mt-2.5 [@media(max-height:600px)]:mt-2">
+                <div className="relative mb-5 lg:mb-6 2xl:mb-8 [@media(max-height:1000px)]:mb-4 [@media(max-height:600px)]:mb-3 text-center">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-slate-800" />
                   </div>
@@ -465,19 +465,19 @@ function RegisterPageContent() {
                     <span className="bg-[#020617] px-2 lg:px-4 2xl:px-5 text-slate-600">ou</span>
                   </div>
                 </div>
-                <div className="flex justify-center scale-[0.9] sm:scale-95 lg:scale-95 xl:scale-100 2xl:scale-105">
+                <div className="flex justify-center scale-[0.95] sm:scale-100 lg:scale-95 xl:scale-100 2xl:scale-105">
                   <GoogleRegisterButton onLoginSuccess={(token) => handleSocialLogin(token, 'google')} referralCode={referralCode} />
                 </div>
               </div>
             </motion.div>
 
             <div className="mt-4 lg:mt-5 xl:mt-6 2xl:mt-8 [@media(max-height:1000px)]:mt-3 [@media(max-height:600px)]:mt-2 text-center flex flex-col items-center">
-              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl mb-2 lg:mb-3 xl:mb-4 2xl:mb-6 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1 italic">
+              <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-lg 4xl:text-xl mb-2 lg:mb-3 xl:mb-4 2xl:mb-6 [@media(max-height:1000px)]:mb-2 [@media(max-height:600px)]:mb-1 italic">
                 {t.auth.register.alreadyHaveAccount}
               </p>
               <Link
                 href="/auth/login"
-                className="inline-flex items-center justify-center gap-2 lg:gap-2 xl:gap-4 2xl:gap-5 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-5 lg:px-5 xl:px-12 2xl:px-14 py-3 lg:py-2.5 xl:py-6 2xl:py-7 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-3 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2.5 rounded-xl lg:rounded-xl xl:rounded-[24px] 2xl:rounded-3xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] 2xl:tracking-[0.25em] text-[9px] lg:text-[10px] xl:text-sm 2xl:text-base [@media(max-height:600px)]:text-[9px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
+        className="inline-flex items-center justify-center gap-2 sm:gap-2.5 lg:gap-2.5 xl:gap-3 bg-slate-900/60 border border-slate-800 hover:border-emerald-500/50 px-5 sm:px-6 lg:px-6 xl:px-8 py-3 sm:py-3.5 lg:py-3 xl:py-4 [@media(max-height:700px)]:px-5 [@media(max-height:700px)]:py-2.5 [@media(max-height:600px)]:px-4 [@media(max-height:600px)]:py-2 rounded-xl lg:rounded-xl xl:rounded-2xl font-black uppercase tracking-[0.15em] lg:tracking-[0.2em] text-xs sm:text-xs lg:text-sm xl:text-sm [@media(max-height:600px)]:text-[10px] text-white transition-all hover:scale-105 active:scale-95 group shadow-xl cursor-pointer"
               >
                 {t.auth.register.loginCta}
                 <ArrowRight size={12} className="text-emerald-500 group-hover:translate-x-1 transition-transform lg:w-4 lg:h-4 xl:size-5 2xl:size-6 [@media(max-height:600px)]:w-3.5 [@media(max-height:600px)]:h-3.5" />
