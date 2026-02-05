@@ -708,7 +708,7 @@ export const fr = {
           void: "Annulé",
           cancelSubscription: "Annuler l'abonnement",
           cancelConfirm: "Êtes-vous sûr de vouloir annuler votre abonnement ?",
-          cancelWarning: "L'annulation est immédiate. Vous perdrez l'accès aux fonctionnalités Pro dès que vous confirmez.",
+          cancelInfo7Days: "Si vous vous êtes abonné il y a moins de 7 jours, l'abonnement se termine maintenant et vous perdez l'accès Pro. Sinon, il se termine à la fin de la période en cours (vous ne serez pas facturé le mois prochain) et vous gardez l'accès Pro jusqu'à cette date.",
           keepSubscription: "Garder l'abonnement",
           processing: "Traitement...",
           confirmCancel: "Confirmer l'annulation",

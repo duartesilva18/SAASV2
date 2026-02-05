@@ -708,7 +708,7 @@ export const en = {
           void: "Void",
           cancelSubscription: "Cancel Subscription",
           cancelConfirm: "Are you sure you want to cancel your subscription?",
-          cancelWarning: "Cancellation is immediate. You will lose access to Pro features as soon as you confirm.",
+          cancelInfo7Days: "If you subscribed less than 7 days ago, the subscription ends now and you lose Pro access. If 7 or more days have passed, it ends at the end of the current period (you won't be charged next month) and you keep Pro access until then.",
           keepSubscription: "Keep Subscription",
           processing: "Processing...",
           confirmCancel: "Confirm Cancellation",

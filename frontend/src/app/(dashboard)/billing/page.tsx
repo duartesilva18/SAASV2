@@ -381,7 +381,7 @@ export default function BillingPage() {
                   </p>
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
                     <p className="text-sm text-amber-400 font-medium">
-                      {b.cancelWarning}
+                      {(b as Record<string, unknown>).cancelInfo7Days as string || 'Se subscreveste há menos de 7 dias, a subscrição termina agora. Caso contrário, termina no fim do período e não serás cobrado no próximo mês.'}
                     </p>
                   </div>
                 </div>

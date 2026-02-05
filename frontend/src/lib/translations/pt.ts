@@ -674,7 +674,7 @@ export const pt = {
           void: "Anulado",
           cancelSubscription: "Cancelar Subscrição",
           cancelConfirm: "Tens a certeza que queres cancelar a tua subscrição?",
-          cancelWarning: "O cancelamento é imediato. Perderás o acesso às funcionalidades Pro assim que confirmares.",
+          cancelInfo7Days: "Se subscreveste há menos de 7 dias, a subscrição termina agora e perdes o acesso Pro. Se já passaram 7 ou mais dias, a subscrição termina no fim do período atual (não serás cobrado no próximo mês) e manténs acesso Pro até lá.",
           keepSubscription: "Manter Subscrição",
           processing: "A processar...",
           confirmCancel: "Confirmar Cancelamento",

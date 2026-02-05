@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.orm import Session
 import stripe
+from datetime import datetime, timezone, timedelta
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
@@ -494,17 +495,25 @@ async def get_subscription_details(db: Session = Depends(get_db), current_user: 
         logger.error(f'Erro ao buscar detalhes da subscrição: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao buscar detalhes da subscrição')
 
+def _subscription_within_refund_window(subscription) -> bool:
+    """True se o período atual começou há menos de 7 dias (permite cancelamento imediato)."""
+    period_start = subscription.get('current_period_start')
+    if not period_start:
+        return False
+    start_dt = datetime.fromtimestamp(period_start, tz=timezone.utc)
+    return (datetime.now(timezone.utc) - start_dt) < timedelta(days=7)
+
+
 @router.post('/cancel-subscription')
 async def cancel_subscription(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Cancela a subscrição do utilizador de imediato."""
+    """Cancela a subscrição: se passaram menos de 7 dias desde o início do período, cancela de imediato; senão, cancela só no fim do período (sem cobrança no próximo mês)."""
     try:
-        logger.info(f'Tentativa de cancelar subscrição (imediato) para {current_user.email}, subscription_id: {current_user.stripe_subscription_id}')
+        logger.info(f'Tentativa de cancelar subscrição para {current_user.email}, subscription_id: {current_user.stripe_subscription_id}')
         
         if not current_user.stripe_subscription_id:
             logger.warning(f'Utilizador {current_user.email} tentou cancelar mas não tem subscription_id')
             raise HTTPException(status_code=400, detail='Não tens uma subscrição ativa para cancelar.')
         
-        # Verificar se a subscrição já está cancelada
         if current_user.subscription_status == 'canceled':
             logger.info(f'Subscrição já cancelada: {current_user.email}')
             return {
@@ -513,9 +522,16 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
                 'subscription_status': 'canceled'
             }
         
-        # Verificar se é subscrição de simulação/teste
+        if current_user.subscription_status == 'cancel_at_period_end':
+            return {
+                'success': True,
+                'message': 'A subscrição já está marcada para terminar no fim do período atual.',
+                'subscription_status': 'cancel_at_period_end'
+            }
+        
+        # Simulação/teste: cancelar de imediato
         if current_user.stripe_customer_id and (current_user.stripe_customer_id.startswith('sim_') or current_user.stripe_customer_id.startswith('test_')):
-            logger.info(f'Subscrição de simulação - marcando como cancelada sem chamar Stripe: {current_user.email}')
+            logger.info(f'Subscrição de simulação - marcando como cancelada: {current_user.email}')
             current_user.subscription_status = 'canceled'
             db.commit()
             return {
@@ -524,34 +540,47 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
                 'subscription_status': 'canceled'
             }
         
-        # Cancelar subscrição no Stripe de imediato (delete = fim imediato)
-        try:
-            stripe.Subscription.delete(current_user.stripe_subscription_id)
-            logger.info(f'Subscrição eliminada no Stripe: {current_user.stripe_subscription_id}')
-        except stripe.error.InvalidRequestError as e:
-            logger.error(f'Erro Stripe InvalidRequestError: {str(e)}, code: {getattr(e, "code", None)}')
-            # Se a subscrição não existe no Stripe, apenas atualizar na BD
-            if getattr(e, 'code', None) == 'resource_missing':
-                logger.warning(f'Subscrição não encontrada no Stripe, atualizando apenas na BD: {current_user.email}')
-                current_user.subscription_status = 'canceled'
-                db.commit()
-                return {
-                    'success': True,
-                    'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
-                    'subscription_status': 'canceled'
-                }
-            raise
+        subscription = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        within_7_days = _subscription_within_refund_window(subscription)
         
-        # Atualizar status na base de dados (o webhook subscription.deleted também atualizará e tratará afiliados)
-        current_user.subscription_status = 'canceled'
+        if within_7_days:
+            # Menos de 7 dias: cancelar de imediato (acesso termina já)
+            try:
+                stripe.Subscription.delete(current_user.stripe_subscription_id)
+                logger.info(f'Subscrição eliminada no Stripe (dentro de 7 dias): {current_user.stripe_subscription_id}')
+            except stripe.error.InvalidRequestError as e:
+                if getattr(e, 'code', None) == 'resource_missing':
+                    logger.warning(f'Subscrição não encontrada no Stripe, atualizando apenas na BD: {current_user.email}')
+                    current_user.subscription_status = 'canceled'
+                    db.commit()
+                    return {
+                        'success': True,
+                        'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
+                        'subscription_status': 'canceled'
+                    }
+                raise
+            current_user.subscription_status = 'canceled'
+            db.commit()
+            return {
+                'success': True,
+                'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
+                'subscription_status': 'canceled'
+            }
+        
+        # 7 ou mais dias: cancelar só no fim do período (não cobrar no próximo mês)
+        stripe.Subscription.modify(
+            current_user.stripe_subscription_id,
+            cancel_at_period_end=True
+        )
+        current_user.subscription_status = 'cancel_at_period_end'
         db.commit()
-        
-        logger.info(f'Subscrição {current_user.stripe_subscription_id} cancelada de imediato para {current_user.email}')
-        
+        period_end_ts = subscription.get('current_period_end')
+        logger.info(f'Subscrição marcada para terminar no fim do período: {current_user.email}')
         return {
             'success': True,
-            'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
-            'subscription_status': 'canceled'
+            'message': 'A tua subscrição termina no fim do período atual. Não serás cobrado no próximo mês. Manténs acesso Pro até lá.',
+            'subscription_status': 'cancel_at_period_end',
+            'current_period_end': period_end_ts
         }
     except HTTPException:
         raise
