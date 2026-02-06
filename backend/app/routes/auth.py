@@ -207,45 +207,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         db.commit()
 
         t = get_email_translation(user_lang, 'register_verify')
-        html = f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
-                .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
-                .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
-                .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
-                .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
-                .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
-                .code-box {{ background-color: #020617; border: 2px dashed #1e293b; border-radius: 24px; padding: 45px; text-align: center; margin: 35px 0; }}
-                .code {{ font-size: 52px; font-weight: 900; color: #10b981; letter-spacing: 12px; margin: 0; text-shadow: 0 0 30px rgba(16, 185, 129, 0.4); }}
-                .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
-                .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="logo">Finly</div>
-                </div>
-                <div class="content">
-                    <h2>{t['title']}</h2>
-                    <p>{t['message']}</p>
-                    <div class="code-box">
-                        <p style="margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #475569; font-weight: 800;">{t['code_label']}</p>
-                        <div class="code">{code}</div>
-                    </div>
-                    <p class="security-notice">{t['security_notice']}</p>
-                </div>
-                <div class="footer">
-                    {t['footer']}
-                </div>
-            </div>
-        </body>
-        </html>
-        '''
+        html = f'''<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body,table,td{{margin:0;padding:0;-webkit-text-size-adjust:100%}}img{{border:0;display:block}}table{{border-collapse:collapse}}@media only screen and (max-width:600px){{.mpad{{padding:16px 12px!important}}.card{{max-width:100%!important;width:100%!important;border-radius:20px!important}}.hpad{{padding:28px 20px!important}}.ctpad{{padding:24px 20px 28px!important}}.ctpad h2{{font-size:20px!important}}.codebox{{padding:28px 20px!important}}.code{{font-size:40px!important;letter-spacing:8px!important}}.fpad{{padding:20px 16px!important;font-size:9px!important}}}}</style></head><body style="margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0f172a;min-height:100vh"><tr><td align="center" class="mpad" style="padding:32px 20px"><table role="presentation" class="card" width="520" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;width:100%;background:#0f172a;border-radius:24px;overflow:hidden;border:1px solid #1e293b;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)"><tr><td style="height:4px;background:linear-gradient(90deg,#10b981 0%,#3b82f6 100%)"></td></tr><tr><td class="hpad" style="background:#020617;padding:36px 28px;text-align:center;border-bottom:1px solid #1e293b"><img src="https://app.finlybot.com/images/logo/logo-semfundo.png" alt="" width="72" height="72" style="display:block;margin:0 auto 8px;width:72px;height:72px;object-fit:contain" /><p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">Finly</p></td></tr><tr><td class="ctpad" style="padding:32px 28px 36px;color:#94a3b8;line-height:1.65;font-size:15px;text-align:center"><h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">{t['title']}</h2><p style="margin:0 0 24px;color:#94a3b8">{t['message']}</p><div class="codebox" style="background:#020617;border:2px dashed #1e293b;border-radius:20px;padding:36px 24px;text-align:center;margin:0 0 24px"><p style="margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#64748b;font-weight:700">{t['code_label']}</p><p class="code" style="font-size:48px;font-weight:800;color:#10b981;letter-spacing:10px;margin:0;font-family:ui-monospace,monospace">{code}</p></div><p style="margin:0;font-size:12px;color:#64748b;font-style:italic">{t['security_notice']}</p></td></tr><tr><td class="fpad" style="background:#020617;padding:24px 28px;text-align:center;border-top:1px solid #1e293b;color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em">{t['footer']}</td></tr></table></td></tr></table></body></html>'''
         env = getattr(settings, 'ENVIRONMENT', 'development')
         if not (getattr(settings, 'MAIL_USERNAME', '') or '').strip() or not (getattr(settings, 'MAIL_PASSWORD', '') or '').strip():
             logger.warning('MAIL_USERNAME ou MAIL_PASSWORD vazios no .env – o email de verificação pode não ser enviado.')
@@ -409,8 +371,11 @@ async def resend_verification(
     verify_url = f"{base}/auth/verify-email?token={new_token}"
     if getattr(ev, 'referral_code', None):
         verify_url += f"&ref={ev.referral_code}"
-    btn_style = 'display:inline-block;margin:30px auto;background:#3b82f6;color:#ffffff !important;text-decoration:none;padding:16px 28px;border-radius:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;font-size:12px;'
-    html = f'''<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{{font-family:Segoe UI,Roboto,sans-serif;background:#020617;margin:0;padding:0}}.c{{max-width:600px;margin:40px auto;background:#0f172a;border-radius:32px;border:1px solid #1e293b}}.h{{background:#020617;padding:60px 20px;text-align:center;border-bottom:1px solid #1e293b}}.logo{{font-size:36px;font-weight:900;color:#fff}}.ct{{padding:50px;color:#94a3b8;line-height:1.8;text-align:center}}.ct h2{{color:#fff;font-size:28px}}.ft{{background:#020617;padding:40px;text-align:center;color:#475569;font-size:10px;font-weight:800;text-transform:uppercase}}.sn{{font-size:12px;color:#334155;margin-top:30px;font-style:italic}}</style></head><body><div class="c"><div class="h"><div class="logo">Finly</div></div><div class="ct"><h2>{t["title"]}</h2><p>{t["welcome"]}</p><p><a href="{verify_url}" style="{btn_style}">{t["button"]}</a></p><p class="sn">{t["security_notice"]}</p></div><div class="ft">{t["footer"]}</div></div></body></html>'''
+    btn_style = (
+        'display:inline-block;margin:24px 0 0;background:#3b82f6;color:#ffffff !important;text-decoration:none;'
+        'padding:14px 28px;border-radius:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;font-size:12px;'
+    )
+    html = f'''<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body,table,td{{margin:0;padding:0;-webkit-text-size-adjust:100%}}img{{border:0;display:block}}table{{border-collapse:collapse}}@media only screen and (max-width:600px){{.mpad{{padding:16px 12px!important}}.card{{max-width:100%!important;width:100%!important;border-radius:20px!important}}.hpad{{padding:28px 20px!important}}.ctpad{{padding:24px 20px 28px!important}}.ctpad h2{{font-size:20px!important}}.ctpad p,.ctpad a{{font-size:14px!important}}.fpad{{padding:20px 16px!important;font-size:9px!important}}}}</style></head><body style="margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0f172a;min-height:100vh"><tr><td align="center" class="mpad" style="padding:32px 20px"><table role="presentation" class="card" width="520" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;width:100%;background:#0f172a;border-radius:24px;overflow:hidden;border:1px solid #1e293b;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)"><tr><td style="height:4px;background:linear-gradient(90deg,#3b82f6 0%,#6366f1 100%)"></td></tr><tr><td class="hpad" style="background:#020617;padding:36px 28px;text-align:center;border-bottom:1px solid #1e293b"><img src="https://app.finlybot.com/images/logo/logo-semfundo.png" alt="" width="72" height="72" style="display:block;margin:0 auto 8px;width:72px;height:72px;object-fit:contain" /><p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">Finly</p></td></tr><tr><td class="ctpad" style="padding:32px 28px 36px;color:#94a3b8;line-height:1.65;font-size:15px;text-align:center"><h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">{t["title"]}</h2><p style="margin:0 0 16px;color:#94a3b8">{t["welcome"]}</p><p style="margin:0"><a href="{verify_url}" style="{btn_style}">{t["button"]}</a></p><p style="margin:20px 0 0;font-size:12px;color:#64748b;font-style:italic">{t["security_notice"]}</p></td></tr><tr><td class="fpad" style="background:#020617;padding:24px 28px;text-align:center;border-top:1px solid #1e293b;color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em">{t["footer"]}</td></tr></table></td></tr></table></body></html>'''
 
     background_tasks.add_task(_send_verification_email_background, email_lower, t['subject'], html)
     logger.info(f'Link de verificação reenviado para {email_lower}')
@@ -1162,46 +1127,7 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
         user_lang = 'pt'
     t = get_email_translation(user_lang, 'password_reset')
     
-    html = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
-            .container {{ max-width: 600px; margin: 40px auto; background-color: #0f172a; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); }}
-            .header {{ background: #020617; padding: 60px 20px; text-align: center; border-bottom: 1px solid #1e293b; }}
-            .logo {{ font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1.5px; }}
-            .logo span {{ color: #3b82f6; font-style: italic; }}
-            .content {{ padding: 50px; color: #94a3b8; line-height: 1.8; text-align: center; }}
-            .content h2 {{ color: #ffffff; margin-top: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; }}
-            .code-box {{ background-color: #020617; border: 2px dashed #1e293b; border-radius: 24px; padding: 45px; text-align: center; margin: 35px 0; }}
-            .code {{ font-size: 52px; font-weight: 900; color: #3b82f6; letter-spacing: 12px; margin: 0; text-shadow: 0 0 30px rgba(59, 130, 246, 0.4); }}
-            .footer {{ background-color: #020617; padding: 40px; text-align: center; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; }}
-            .security-notice {{ font-size: 12px; color: #334155; margin-top: 30px; font-style: italic; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">Finly</div>
-            </div>
-            <div class="content">
-                <h2>{t['title']}</h2>
-                <p>{t['message']}</p>
-                <div class="code-box">
-                    <p style="margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #475569; font-weight: 800;">{t['code_label']}</p>
-                    <div class="code">{code}</div>
-                </div>
-                <p class="security-notice">{t['security_notice']}</p>
-            </div>
-            <div class="footer">
-                {t['footer']}
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
+    html = f'''<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body,table,td{{margin:0;padding:0;-webkit-text-size-adjust:100%}}img{{border:0;display:block}}table{{border-collapse:collapse}}@media only screen and (max-width:600px){{.mpad{{padding:16px 12px!important}}.card{{max-width:100%!important;width:100%!important;border-radius:20px!important}}.hpad{{padding:28px 20px!important}}.ctpad{{padding:24px 20px 28px!important}}.ctpad h2{{font-size:20px!important}}.codebox{{padding:28px 20px!important}}.code{{font-size:40px!important;letter-spacing:8px!important}}.fpad{{padding:20px 16px!important;font-size:9px!important}}}}</style></head><body style="margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0f172a;min-height:100vh"><tr><td align="center" class="mpad" style="padding:32px 20px"><table role="presentation" class="card" width="520" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;width:100%;background:#0f172a;border-radius:24px;overflow:hidden;border:1px solid #1e293b;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)"><tr><td style="height:4px;background:linear-gradient(90deg,#3b82f6 0%,#6366f1 100%)"></td></tr><tr><td class="hpad" style="background:#020617;padding:36px 28px;text-align:center;border-bottom:1px solid #1e293b"><img src="https://app.finlybot.com/images/logo/logo-semfundo.png" alt="" width="72" height="72" style="display:block;margin:0 auto 8px;width:72px;height:72px;object-fit:contain" /><p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">Finly</p></td></tr><tr><td class="ctpad" style="padding:32px 28px 36px;color:#94a3b8;line-height:1.65;font-size:15px;text-align:center"><h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">{t['title']}</h2><p style="margin:0 0 24px;color:#94a3b8">{t['message']}</p><div class="codebox" style="background:#020617;border:2px dashed #1e293b;border-radius:20px;padding:36px 24px;text-align:center;margin:0 0 24px"><p style="margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#64748b;font-weight:700">{t['code_label']}</p><p class="code" style="font-size:48px;font-weight:800;color:#3b82f6;letter-spacing:10px;margin:0;font-family:ui-monospace,monospace">{code}</p></div><p style="margin:0;font-size:12px;color:#64748b;font-style:italic">{t['security_notice']}</p></td></tr><tr><td class="fpad" style="background:#020617;padding:24px 28px;text-align:center;border-top:1px solid #1e293b;color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em">{t['footer']}</td></tr></table></td></tr></table></body></html>'''
     
     current_conf = ConnectionConfig(
         MAIL_USERNAME=settings.MAIL_USERNAME.strip(),
