@@ -396,6 +396,7 @@ export const fr = {
           passwordPlaceholder: "••••••••••••",
           passwordError: "Le nouveau mot de passe doit contenir au moins 6 caractères.",
           submit: "Confirmer le nouveau mot de passe",
+          loadingConfirming: "Enregistrement…",
           successMessage: "Mot de passe modifié avec succès ! Redirection...",
           invalidCode: "Code invalide ou expiré."
       },
