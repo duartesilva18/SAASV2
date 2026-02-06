@@ -9,9 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       screens: {
+        'xs': '375px',    // telemóveis maiores
         'custom': {'max': '1450px'},
-        '3xl': '1600px',  // ecrãs ≥1600px = tamanho grande
-        '4xl': '1920px',  // ecrãs muito grandes = textos ainda maiores
+        '3xl': '1600px',
+        '4xl': '1920px',
       },
     },
   },

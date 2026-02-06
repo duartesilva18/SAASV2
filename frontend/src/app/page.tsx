@@ -80,7 +80,7 @@ export default function LandingPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <div className="min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden">
+      <div className="min-h-[100dvh] bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden">
 
         {/* Banner — compacto em mobile; safe-area horizontal */}
         <motion.div
@@ -163,8 +163,8 @@ export default function LandingPage() {
           </div>
         </motion.nav>
 
-        {/* Barra de progresso — abaixo do notch em mobile */}
-        <div className="fixed left-0 right-0 z-[60] h-1.5 bg-slate-800/80 overflow-hidden" style={{ top: 'env(safe-area-inset-top)' }}>
+        {/* Barra de progresso — no topo, safe area; fina em mobile */}
+        <div className="fixed left-0 right-0 z-[60] h-0.5 sm:h-1.5 bg-slate-800/80 overflow-hidden pointer-events-none" style={{ top: 'env(safe-area-inset-top)' }}>
           <motion.div
             className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
             style={{ width: `${scrollProgress}%` }}
@@ -615,7 +615,7 @@ export default function LandingPage() {
         </section>
 
         {/* Testimonials — feedback redesenhado; compacto abaixo de 3xl */}
-        <section id="testimonials" className="py-12 sm:py-22 md:py-28 3xl:py-36 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+        <section id="testimonials" className="py-12 sm:py-24 md:py-28 3xl:py-36 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-[#020617] to-slate-950/80 pointer-events-none" />
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 relative">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-14 3xl:mb-20">
