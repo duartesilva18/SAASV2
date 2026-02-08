@@ -169,10 +169,10 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Podes enviar uma nova transação.</i>"
         ),
         'list_pending_header': (
-            "📋 <b>Lista de transações</b>\n\n"
+            "📋 <b>Lista de transações</b><br><br>"
         ),
-        'list_pending_line': "• {description} — {amount}€ — {category}\n",
-        'list_pending_total': "━━━━━━━━━━\n💰 <b>Total:</b> {total}€\n\n",
+        'list_pending_line': "• {description} — {amount}€ — {category}<br>",
+        'list_pending_total': "━━━━━━━━━━<br>💰 <b>Total:</b> {total}€<br><br>",
         'list_confirm_question': "✅ Confirma todas estas transações?",
         'button_confirm_all': "✅ Confirmar tudo",
         'button_cancel_all': "🚫 Cancelar tudo",
@@ -274,7 +274,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Saldo do mês: {balance}€</i>"
         ),
         'summary_empty': "📊 Ainda sem transações neste período.",
-        'pendentes_list': "📋 <b>Transações pendentes</b> ({count})\n\n{lines}\n💡 Confirma ou cancela cada uma na mensagem original, ou usa /clear para limpar todas.",
+        'pendentes_list': "📋 <b>Transações pendentes</b> ({count})<br><br>{lines}💡 Confirma ou cancela cada uma na mensagem original, ou usa /clear para limpar todas.",
         'pendentes_empty': "✨ Não tens transações pendentes.",
         'revoke_ok': "✅ Telegram desvinculado. Para voltar a usar, envia /start e o teu email.",
         'language_set': "✅ Idioma definido para Português.",
@@ -458,10 +458,10 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>You can send a new transaction.</i>"
         ),
         'list_pending_header': (
-            "📋 <b>Transaction list</b>\n\n"
+            "📋 <b>Transaction list</b><br><br>"
         ),
-        'list_pending_line': "• {description} — {amount}€ — {category}\n",
-        'list_pending_total': "━━━━━━━━━━\n💰 <b>Total:</b> {total}€\n\n",
+        'list_pending_line': "• {description} — {amount}€ — {category}<br>",
+        'list_pending_total': "━━━━━━━━━━<br>💰 <b>Total:</b> {total}€<br><br>",
         'list_confirm_question': "✅ Confirm all these transactions?",
         'button_confirm_all': "✅ Confirm all",
         'button_cancel_all': "🚫 Cancel all",
@@ -573,7 +573,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Monthly balance: {balance}€</i>"
         ),
         'summary_empty': "📊 No transactions in this period yet.",
-        'pendentes_list': "📋 <b>Pending transactions</b> ({count})\n\n{lines}\n💡 Confirm or cancel each in the original message, or use /clear to clear all.",
+        'pendentes_list': "📋 <b>Pending transactions</b> ({count})<br><br>{lines}💡 Confirm or cancel each in the original message, or use /clear to clear all.",
         'pendentes_empty': "✨ You have no pending transactions.",
         'revoke_ok': "✅ Telegram unlinked. To use again, send /start and your email.",
         'language_set': "✅ Language set to Portuguese.",

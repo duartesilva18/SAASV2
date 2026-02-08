@@ -1118,7 +1118,6 @@ export default function AnalyticsPage() {
         {/* Vault (Reservas e Investimentos) */}
         {isVaultOpen && (
         <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden group">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full group-hover:bg-blue-600/20 transition-all" />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6 md:mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
@@ -1333,7 +1332,6 @@ export default function AnalyticsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles className="text-blue-400" size={20} />
@@ -1431,13 +1429,6 @@ export default function AnalyticsPage() {
                 'border-slate-800'
               }`}
             >
-              {(insight.type === 'warning' || insight.type === 'danger') && (
-                <div className={`absolute top-0 right-0 w-24 h-24 ${insight.type === 'danger' ? 'bg-red-500/10' : 'bg-red-500/5'} blur-[40px] rounded-full`} />
-              )}
-              {insight.type === 'success' && (
-                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
-              )}
-              
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
                   insight.type === 'warning' ? 'bg-red-500/10 text-red-500' : 

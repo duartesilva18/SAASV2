@@ -45,6 +45,38 @@ def _telegram_lang(from_user: Optional[dict]) -> str:
     return "en" if (code and code.lower().startswith("en")) else "pt"
 
 
+def _html_escape(s: str) -> str:
+    """Escape for Telegram HTML parse_mode (evita que descrições quebrem a mensagem)."""
+    if not s:
+        return ""
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
+def _shorten_description_for_list(description: str, max_len: int = 45) -> str:
+    """
+    Para a lista de transações no Telegram: descrições muito longas ou texto de extrato
+    (Titular, ContaPT, Saldo disponível, Movimentos sua conta) são reduzidas para a mensagem ficar legível.
+    """
+    if not description or not description.strip():
+        return "—"
+    d = description.strip()
+    # Texto típico de extrato bancário → label curta
+    bank_keywords = (
+        "titular", "contapt", "saldo disponível", "movimentos sua conta",
+        "movimento", "movimentos", "conta ", "saldo"
+    )
+    d_lower = d.lower()
+    if any(k in d_lower for k in bank_keywords) and len(d) > 40:
+        return "Movimento conta"
+    if len(d) <= max_len:
+        return d
+    return d[: max_len - 1].rstrip() + "…"
+
+
 def _origin_line(inference_source: Optional[str], t) -> str:
     """Returns a short origin label for category (e.g. 'Por cache') or empty string."""
     if not inference_source:
@@ -1757,9 +1789,11 @@ def _build_batch_message_and_keyboard(
         total_cents += p.amount_cents
         cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
         cat_name = cat.name if cat else "Outros"
+        desc_display = _html_escape(_shorten_description_for_list(p.description))
+        amount_display = "{:.2f}".format(abs(p.amount_cents) / 100).replace(".", ",")
         lines.append(t('list_pending_line').format(
-            description=p.description,
-            amount=abs(p.amount_cents) / 100,
+            description=desc_display,
+            amount=amount_display,
             category=cat_name,
         ))
         keyboard.append([
@@ -1767,10 +1801,11 @@ def _build_batch_message_and_keyboard(
             {"text": "❌", "callback_data": f"cancel_{p.id.hex[:16]}"},
         ])
     total_euros = abs(total_cents) / 100
+    total_display = "{:.2f}".format(total_euros).replace(".", ",")
     message_text = (
         t('list_pending_header')
         + "".join(lines)
-        + t('list_pending_total').format(total=total_euros)
+        + t('list_pending_total').format(total=total_display)
         + t('list_confirm_question')
     )
     keyboard.append([
@@ -2509,7 +2544,9 @@ async def telegram_webhook(
             for p in pendents:
                 cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
                 cat_name = cat.name if cat else "Outros"
-                lines.append(t_pend('list_pending_line').format(description=p.description, amount=abs(p.amount_cents) / 100, category=cat_name))
+                desc_display = _html_escape(_shorten_description_for_list(p.description))
+                amount_display = "{:.2f}".format(abs(p.amount_cents) / 100).replace(".", ",")
+                lines.append(t_pend('list_pending_line').format(description=desc_display, amount=amount_display, category=cat_name))
             send_telegram_msg(chat_id, t_pend('pendentes_list').format(count=len(pendents), lines="".join(lines)))
             return {'status': 'ok'}
         
