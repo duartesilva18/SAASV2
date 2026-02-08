@@ -100,35 +100,35 @@ export default function LandingPage() {
           </p>
         </motion.div>
 
-        {/* Nav — sticky, limpo e proporcional */}
+        {/* Nav — sticky; compacto no mobile, proporcional no desktop */}
         <motion.nav
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.3 }}
-          className="sticky top-0 z-50 mx-4 sm:mx-6 lg:mx-8 mt-2 sm:mt-3 rounded-2xl border border-slate-700/50 bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-black/20"
-          style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))', marginLeft: 'max(1rem, env(safe-area-inset-left))', marginRight: 'max(1rem, env(safe-area-inset-right))' }}
+          className="sticky top-0 z-50 mx-2 sm:mx-6 lg:mx-8 mt-2 sm:mt-3 rounded-xl sm:rounded-2xl border border-slate-700/50 bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-black/20"
+          style={{ paddingTop: 'max(0.375rem, env(safe-area-inset-top))', marginLeft: 'max(0.5rem, env(safe-area-inset-left))', marginRight: 'max(0.5rem, env(safe-area-inset-right))' }}
         >
-          <div className="max-w-[90rem] mx-auto px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-4">
+          <div className="max-w-[90rem] mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 min-h-[44px] sm:min-h-0">
             <Link
               href="/"
-              className="flex items-center gap-2.5 shrink-0 min-w-0 rounded-xl py-1.5 pr-2 -ml-1.5 active:scale-[0.98] transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              className="flex items-center gap-2 shrink-0 min-w-0 rounded-lg py-1 pr-1 -ml-1 active:scale-[0.98] transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 touch-manipulation"
             >
-              <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-10 w-10 sm:h-11 sm:w-11 object-contain shrink-0" draggable={false} />
-              <span className="text-white font-bold tracking-tight text-2xl sm:text-3xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
+              <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-8 w-8 sm:h-11 sm:w-11 object-contain shrink-0" draggable={false} />
+              <span className="text-white font-bold tracking-tight text-xl sm:text-3xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
                 Finly
               </span>
             </Link>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                  className="flex items-center gap-1.5 h-9 sm:h-10 min-w-[36px] px-2.5 sm:px-3 rounded-lg border border-slate-600/60 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                  className="flex items-center justify-center h-10 w-10 sm:h-10 sm:w-auto sm:min-w-[36px] sm:px-3 rounded-lg border border-slate-600/60 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 touch-manipulation"
                   aria-label="Language"
                 >
                   <img src={FLAG_IMAGE_URLS[language]} alt="" className="w-4 h-3 sm:w-[18px] sm:h-3.5 object-cover rounded-sm shrink-0" width={24} height={16} />
-                  <span className="text-[10px] sm:text-xs font-medium hidden xs:inline sm:inline">{availableLanguages[language]?.code.toUpperCase()}</span>
+                  <span className="text-[10px] sm:text-xs font-medium hidden sm:inline ml-1.5">{availableLanguages[language]?.code.toUpperCase()}</span>
                 </button>
                 <AnimatePresence>
                   {showLanguageMenu && (
@@ -147,7 +147,7 @@ export default function LandingPage() {
                               key={lang.code}
                               type="button"
                               onClick={() => { setLanguage(lang.code as LanguageCode); setShowLanguageMenu(false); }}
-                              className={`w-full px-3 sm:px-4 py-2.5 text-left flex items-center gap-2.5 hover:bg-white/5 transition-colors cursor-pointer ${language === lang.code ? 'bg-blue-500/15 text-blue-400' : 'text-slate-300'}`}
+                              className={`w-full px-3 sm:px-4 py-2.5 text-left flex items-center gap-2.5 hover:bg-white/5 transition-colors cursor-pointer touch-manipulation ${language === lang.code ? 'bg-blue-500/15 text-blue-400' : 'text-slate-300'}`}
                             >
                               <img src={FLAG_IMAGE_URLS[lang.code]} alt="" className="w-5 h-3.5 object-cover rounded-sm shrink-0" width={24} height={16} />
                               <span className="text-sm font-medium">{lang.nativeName}</span>
@@ -159,16 +159,16 @@ export default function LandingPage() {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Link
                   href="/auth/login"
-                  className="h-9 sm:h-10 min-h-[40px] flex items-center justify-center px-4 rounded-lg font-semibold text-sm text-slate-300 hover:text-white border border-slate-600/60 hover:border-slate-500/60 hover:bg-slate-700/40 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                  className="h-10 min-h-[44px] flex items-center justify-center px-3 sm:px-4 rounded-lg font-semibold text-xs sm:text-sm text-slate-300 hover:text-white border border-slate-600/60 hover:border-slate-500/60 hover:bg-slate-700/40 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 touch-manipulation shrink-0"
                 >
                   {(t.nav as { loginButton?: string })?.loginButton ?? 'Entrar'}
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="h-9 sm:h-10 min-h-[40px] flex items-center justify-center px-4 rounded-lg font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/30 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                  className="h-10 min-h-[44px] flex items-center justify-center px-3 sm:px-4 rounded-lg font-bold text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/30 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 touch-manipulation shrink-0"
                 >
                   {t.nav.register}
                 </Link>

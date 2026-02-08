@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Wallet, Calendar, Tag, ChevronDown } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -115,45 +115,60 @@ export default function TransactionAddModal({
     }
   };
 
+  // Bloquear scroll do body no mobile quando o modal está aberto
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = prev;
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"
+            aria-hidden
           />
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            className="relative w-full max-w-lg max-h-[95dvh] sm:max-h-[90vh] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ type: 'tween', duration: 0.25 }}
+            className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] min-h-[65dvh] sm:min-h-0"
+            style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1 min-h-0 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-              <div className="flex justify-between items-center mb-5 sm:mb-6 gap-2">
+            <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <div className="flex justify-between items-center mb-4 sm:mb-6 gap-2 shrink-0">
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">{t.dashboard.transactions.newRecord}</h2>
-                <button onClick={onClose} className="p-2 shrink-0 text-slate-500 hover:text-white transition-colors cursor-pointer rounded-lg -m-2" type="button" aria-label="Fechar">
-                  <X size={20} />
+                <button onClick={onClose} className="p-2 shrink-0 text-slate-500 hover:text-white transition-colors cursor-pointer rounded-lg -m-2 touch-manipulation" type="button" aria-label="Fechar">
+                  <X size={22} />
                 </button>
               </div>
               <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.table.description}</label>
                   <div className="relative">
-                    <Activity size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <Activity size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0" />
                     <input
                       required
                       type="text"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder={t.dashboard.transactions.descriptionPlaceholder}
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-3 text-base sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[48px]"
                     />
                   </div>
                 </div>
@@ -161,29 +176,30 @@ export default function TransactionAddModal({
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.value}</label>
                     <div className="relative">
-                      <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <Wallet size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0" />
                       <input
                         required
                         type="number"
                         step="0.01"
+                        inputMode="decimal"
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                         placeholder="0.00"
-                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-3 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[48px]"
                       />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.date}</label>
                     <div className="relative">
-                      <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0" />
                       <input
                         required
                         type="date"
                         max={new Date().toISOString().split('T')[0]}
                         value={formData.transaction_date}
                         onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-3 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[48px] [color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -191,12 +207,12 @@ export default function TransactionAddModal({
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.category}</label>
                   <div className="relative">
-                    <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <Tag size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0 z-10" />
                     <select
                       required
                       value={formData.category_id}
                       onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-10 text-base sm:text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer min-h-[48px] [color-scheme:dark]"
                     >
                       <option value="">{t.dashboard.transactions.selectCategory}</option>
                       <optgroup label={t.dashboard.transactions.filters.income} className="bg-slate-900">
@@ -218,12 +234,12 @@ export default function TransactionAddModal({
                         ))}
                       </optgroup>
                     </select>
-                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0" />
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer"
+                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer touch-manipulation min-h-[48px]"
                 >
                   {t.dashboard.transactions.registerTransaction}
                 </button>
