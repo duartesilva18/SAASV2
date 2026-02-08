@@ -240,21 +240,23 @@ export default function DashboardLayout({
           onRestoreSupport={restoreSupport}
         />
 
-        {/* Desktop Header – menu secundário (tabs) ao centro; Bot Telegram, Guia, idioma à direita */}
-        <header className="hidden lg:flex flex-col gap-3 p-4 border-b border-slate-700/60 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40">
+        {/* Desktop Header – menu secundário (tabs) ao centro só quando existir; Bot Telegram, Guia, idioma à direita */}
+        <header className={`hidden lg:flex flex-col gap-3 p-4 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40 ${secondaryTabs && secondaryTabs.length > 0 ? 'border-b border-slate-700/60' : ''}`}>
           <div className="flex items-center w-full">
             <div className="flex-1 min-w-0" />
-            <nav className="flex items-center justify-center gap-1 shrink-0 px-4 bg-slate-900/50 border border-slate-700/60 rounded-2xl py-1.5" aria-label="Menu secundário">
-              {secondaryTabs?.map((tab) => (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </nav>
+            {secondaryTabs && secondaryTabs.length > 0 ? (
+              <nav className="flex items-center justify-center gap-1 shrink-0 px-4 bg-slate-900/50 border border-slate-700/60 rounded-2xl py-1.5" aria-label="Menu secundário">
+                {secondaryTabs.map((tab) => (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
+                  >
+                    {tab.label}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
             <div className="flex-1 flex justify-end items-center gap-2 shrink-0">
               {supportHidden && (
                 <button
@@ -395,7 +397,7 @@ function MobileHeaderWithNotifications({
 
   return (
     <>
-      <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-slate-700/60 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <header className={`lg:hidden flex flex-col gap-3 px-4 py-3 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40 ${secondaryTabs && secondaryTabs.length > 0 ? 'border-b border-slate-700/60' : ''}`} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <div className="flex items-center justify-between gap-3 min-h-[56px]">
           <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
             <img
