@@ -2588,7 +2588,7 @@ async def telegram_webhook(
             doc = message['document']
             logger.info(f"Mensagem recebida: chat_id={chat_id}, document={doc.get('file_name', '')} (mime={doc.get('mime_type', '')})")
         elif message.get('photo'):
-            logger.info(f"Mensagem recebida: chat_id={chat_id}, photo ({} bytes)", message['photo'][-1].get('file_size') or '?')
+            logger.info(f"Mensagem recebida: chat_id={chat_id}, photo ({message['photo'][-1].get('file_size') or '?'} bytes)")
         else:
             logger.info(f"Mensagem recebida: chat_id={chat_id}, text='{text[:100] if text else ''}'")
         
