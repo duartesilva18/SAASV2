@@ -1099,22 +1099,26 @@ def parse_document_with_openai(
     if len(text) > max_chars:
         text = text[:max_chars] + "\n[... texto truncado ...]"
     today_str = date.today().strftime("%Y-%m-%d")
-    prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações.
+    prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações, sem omitir nenhuma.
 
 Regras:
-- Cada linha/movimento com valor em euros (ex: 15,00€; 202€; -10.5€) = uma transação.
+- Cada linha/movimento com valor em euros (ex: 15,00€; 202€; -10.5€) = uma transação. Inclui SEMPRE:
+  • "Trf. Mb Way Para [nome]" = envio (expense)
+  • "Trf. Mb Way De [nome]" = recebimento (income)
+  • Compras, Via Verde, subscrições (Google One, etc.), pagamentos, transferências.
+- Se uma linha tiver dois valores em € (ex: 37,00€ 96,28€), o primeiro é o valor do movimento; o segundo costuma ser saldo — usa o primeiro para amount.
 - amount: número positivo (valor absoluto em euros).
-- type: "expense" para débitos/saídas, "income" para créditos/entradas.
-- date: data no formato YYYY-MM-DD se aparecer no texto; senão usa "{today_str}".
-- description: descrição curta e útil (ex: "Supermercado", "Transferência", "MB Way"). Se for texto genérico de banco (Titular, Conta, Saldo disponível, Movimentos) usa "Movimento conta".
-- category: escolhe UMA categoria da lista que melhor se adequa. Usa o nome EXATO da lista. Se não souberes, usa "{default_cat_name or (expense_names[0] if expense_names else (income_names[0] if income_names else 'Outros'))}" para despesas.
+- type: "expense" para débitos/saídas, "income" para créditos/entradas (incluindo "Mb Way De" = recebimento).
+- date: se aparecer no texto em formato "DD mmm YYYY" (ex: 06 fev 2026) converte para YYYY-MM-DD (2026-02-06). Senão usa "{today_str}".
+- description: descrição curta (ex: "Trf. Mb Way De Bruna Rosa Silva", "Via Verde"). Evita "Movimento conta" só para texto genérico (Titular, Saldo disponível).
+- category: escolhe UMA categoria da lista. Nome EXATO. Despesas: "{default_cat_name or (expense_names[0] if expense_names else 'Outros')}" como fallback.
 
 Categorias disponíveis (nome EXATO):
 Despesas: {cats_expense}
 Receitas: {cats_income}
 
-Responde APENAS com um JSON válido, sem markdown nem texto extra:
-{{"transactions":[{{"amount":n,"description":"...","type":"expense","date":"YYYY-MM-DD","category":"NomeExato"}}]}}
+Responde APENAS com um JSON válido, sem markdown:
+{{"transactions":[{{"amount":n,"description":"...","type":"expense|income","date":"YYYY-MM-DD","category":"NomeExato"}}]}}
 
 Texto do ficheiro:
 ---
