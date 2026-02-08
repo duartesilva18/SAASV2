@@ -2124,12 +2124,15 @@ async def telegram_webhook(
             
             # Processar callback
             if callback_data.startswith("confirm_batch_"):
-                batch_id_hex = callback_data.replace("confirm_batch_", "")
+                batch_id_hex = callback_data.replace("confirm_batch_", "").strip()
+                logger.info("[Telegram] confirm_batch: batch_id_hex=%r chat_id=%s", batch_id_hex, chat_id)
                 all_pending = db.query(models.TelegramPendingTransaction).filter(
                     models.TelegramPendingTransaction.chat_id == str(chat_id),
                 ).all()
-                batch_pendents = [p for p in all_pending if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
-                if not batch_pendents:
+                # Match por prefixo do batch_id (16 primeiros chars do hex)
+                batch_pendents = [p for p in all_pending if p.batch_id and (p.batch_id.hex[:16] == batch_id_hex or p.batch_id.hex.startswith(batch_id_hex))]
+                logger.info("[Telegram] confirm_batch: all_pending=%s batch_pendents=%s", len(all_pending), len(batch_pendents))
+                if not batch_id_hex or not batch_pendents:
                     send_telegram_msg(chat_id, t('transaction_not_found'))
                     try:
                         requests.post(
@@ -2149,7 +2152,7 @@ async def telegram_webhook(
                         inference_source=getattr(pending, 'inference_source', None),
                         decision_reason=getattr(pending, 'decision_reason', None),
                         needs_review=getattr(pending, 'needs_review', False),
-                        transaction_date=pending.transaction_date,
+                        transaction_date=getattr(pending, 'transaction_date', None) or date.today(),
                     )
                     db.add(transaction)
                     # Aprendizagem: guardar no cache para futuras mensagens (menos IA)
@@ -2161,6 +2164,7 @@ async def telegram_webhook(
                         save_cached_category(cache_key, pending.workspace_id, pending.category_id, cat_name, tipo, db, is_common=True)
                     db.delete(pending)
                 db.commit()
+                logger.info("[Telegram] confirm_batch: criadas %s transações para chat_id=%s", len(batch_pendents), chat_id)
                 try:
                     requests.post(
                         f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
@@ -2250,7 +2254,6 @@ async def telegram_webhook(
                     "inline_keyboard": [[
                         {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex_new}"},
                         {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex_new}"},
-                        {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex_new}"},
                     ]]
                 }
                 send_telegram_msg(chat_id, msg, reply_markup)
@@ -2378,7 +2381,6 @@ async def telegram_webhook(
                     "inline_keyboard": [[
                         {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
                         {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
-                        {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
                     ]]
                 }
                 edit_telegram_message(chat_id, callback_query["message"]["message_id"], msg, reply_markup)
@@ -3261,7 +3263,6 @@ async def telegram_webhook(
                 "inline_keyboard": [[
                     {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
                     {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
-                    {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
                 ]]
             }
             send_telegram_msg(chat_id, message_text, reply_markup)
