@@ -12,6 +12,16 @@ from datetime import date
 
 router = APIRouter(prefix='/categories', tags=['categories'])
 
+# Categorias Salário e Despesas gerais (e equivalentes PT/EN/FR) — não podem ser editadas nem apagadas
+PROTECTED_SYSTEM_CATEGORY_NAMES = {
+    'Salário', 'Salary', 'Salaire',
+    'Despesas gerais', 'General expenses', "Dépenses générales",
+}
+
+
+def _is_protected_system_category(category_name: str) -> bool:
+    return (category_name or '').strip() in PROTECTED_SYSTEM_CATEGORY_NAMES
+
 
 @router.get('/suggestions')
 async def get_category_suggestions(
@@ -162,7 +172,8 @@ async def update_category(request: Request, category_id: UUID, category_in: sche
     
     if not db_category:
         raise HTTPException(status_code=404, detail='Categoria não encontrada')
-    
+    if _is_protected_system_category(db_category.name):
+        raise HTTPException(status_code=400, detail='Não é possível editar a categoria Salário ou Despesas gerais.')
     update_data = category_in.dict(exclude_unset=True)
     
     # Bloquear alteração de vault_type para investment/emergency se já existir
@@ -205,7 +216,8 @@ async def delete_category(request: Request, category_id: UUID, db: Session = Dep
     
     if not db_category:
         raise HTTPException(status_code=404, detail='Categoria não encontrada')
-    
+    if _is_protected_system_category(db_category.name):
+        raise HTTPException(status_code=400, detail='Não é possível eliminar a categoria Salário ou Despesas gerais.')
     # Proteção especial: categorias de Cofre principais (novas e antigas para compatibilidade)
     vault_investment_names = ['INVESTIMENTO', 'INVESTIMENTOS', 'COFRE INVESTIMENTOS', 'COFRE INVESTIMENTO']
     vault_emergency_names = ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA', 'COFRE EMERGÊNCIA', 'COFRE EMERGENCIA']
@@ -213,7 +225,6 @@ async def delete_category(request: Request, category_id: UUID, db: Session = Dep
         (db_category.vault_type == 'investment' and db_category.name.upper() in vault_investment_names) or
         (db_category.vault_type == 'emergency' and db_category.name.upper() in vault_emergency_names)
     )
-    
     if db_category.is_default or is_protected_name:
         raise HTTPException(status_code=400, detail='Não é possível eliminar as categorias de Cofre principais ou categorias padrão')
     
@@ -248,11 +259,13 @@ async def bulk_delete_categories(request: Request, category_ids: List[UUID], db:
     vault_investment_names = ['INVESTIMENTO', 'INVESTIMENTOS', 'COFRE INVESTIMENTOS', 'COFRE INVESTIMENTO']
     vault_emergency_names = ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA', 'COFRE EMERGÊNCIA', 'COFRE EMERGENCIA']
     for cat in categories:
+        if _is_protected_system_category(cat.name):
+            errors.append(f"Não é possível eliminar '{cat.name}' (categoria protegida)")
+            continue
         is_protected_name = (
             (cat.vault_type == 'investment' and cat.name.upper() in vault_investment_names) or
             (cat.vault_type == 'emergency' and cat.name.upper() in vault_emergency_names)
         )
-        
         if cat.is_default or is_protected_name:
             errors.append(f"Não é possível eliminar '{cat.name}' (categoria protegida)")
             continue

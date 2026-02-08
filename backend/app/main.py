@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate, support
+from .routes.auth import create_default_categories
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
 from .models.database import Base, SystemSetting, User, Workspace
@@ -165,6 +166,8 @@ def create_default_admin():
         workspace = Workspace(owner_id=admin_user.id, name="Meu Workspace")
         db.add(workspace)
         db.commit()
+        db.refresh(workspace)
+        create_default_categories(db, workspace.id, "pt")
         logger.info(f"Utilizador admin criado: {DEFAULT_ADMIN_EMAIL}. Altera a password após o primeiro login em produção.")
     except Exception as e:
         logger.exception(f"Erro ao criar admin por defeito: {e}")

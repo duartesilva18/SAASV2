@@ -1102,7 +1102,25 @@ def parse_document_with_openai(
     # Categoria padrão para transferências recebidas (receita) e enviadas (despesa)
     first_income_cat = income_names[0] if income_names else "Outros"
     first_expense_cat = expense_names[0] if expense_names else "Outros"
-    transfer_expense_cat = next((n for n in expense_names if "transfer" in n.lower() or "transferência" in n.lower()), first_expense_cat)
+    _aliment = re.compile(r"alimenta[cç]", re.IGNORECASE)
+    # Nomes da categoria "Despesas gerais" por língua (criada por defeito) — preferir para transferências "Para"
+    GENERAL_EXPENSE_NAMES = {"Despesas gerais", "General expenses", "Dépenses générales"}
+    transfer_expense_cat = next(
+        (n for n in expense_names if n and n.strip() and n in GENERAL_EXPENSE_NAMES),
+        None,
+    )
+    if not transfer_expense_cat:
+        transfer_expense_cat = next(
+            (n for n in expense_names if ("transfer" in n.lower() or "transferência" in n.lower()) and not _aliment.search(n)),
+            None,
+        )
+    if not transfer_expense_cat:
+        transfer_expense_cat = next(
+            (n for n in expense_names if _aliment.search(n) is None and (n and n.strip())),
+            first_expense_cat,
+        )
+    if not transfer_expense_cat or _aliment.search(transfer_expense_cat or ""):
+        transfer_expense_cat = first_expense_cat
 
     prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações, sem omitir nenhuma.
 
@@ -1226,7 +1244,8 @@ Texto do ficheiro:
                 cat_name = first_income_cat if income_names else (cat_name or "Outros")
             elif trf_enviada.search(desc):
                 tipo = "expense"
-                if not cat_name or cat_name.lower() == "alimentação" or "aliment" in (cat_name or "").lower():
+                # Transferência enviada: nunca Alimentação; usar categoria adequada para transferências
+                if not cat_name or _aliment.search(cat_name or ""):
                     cat_name = transfer_expense_cat
 
             if not cat_name and default_cat_name:

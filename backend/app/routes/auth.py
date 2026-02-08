@@ -310,7 +310,8 @@ async def register_confirm(request: Request, data: schemas.RegisterConfirmReques
     db.add(new_workspace)
     db.commit()
     db.refresh(new_workspace)
-    categories_map = create_default_categories(db, new_workspace.id)
+    user_lang = getattr(user, 'language', 'pt') or 'pt'
+    categories_map = create_default_categories(db, new_workspace.id, user_lang)
     create_seed_transactions(db, new_workspace.id, categories_map)
 
     rv.is_used = True
@@ -396,82 +397,120 @@ async def check_verification_status(email: str, db: Session = Depends(get_db)):
         'verification_expires_at': ev.expires_at if ev else None
     }
 
-def create_default_categories(db: Session, workspace_id: uuid.UUID):
-    default_cats = [
-        {"name": "Cofre Investimentos", "type": "expense", "vault_type": "investment", "color_hex": "#3B82F6", "icon": "TrendingUp", "is_default": True},
-        {"name": "Cofre Emergência", "type": "expense", "vault_type": "emergency", "color_hex": "#F97316", "icon": "ShieldCheck", "is_default": True},
-        {"name": "Alimentação", "type": "expense", "vault_type": "none", "color_hex": "#F59E0B", "icon": "Utensils", "is_default": False},
-        {"name": "Entretenimento", "type": "expense", "vault_type": "none", "color_hex": "#EC4899", "icon": "Gamepad", "is_default": False},
-        {"name": "Transportes", "type": "expense", "vault_type": "none", "color_hex": "#3B82F6", "icon": "Car", "is_default": False},
-        {"name": "Habitação", "type": "expense", "vault_type": "none", "color_hex": "#8B5CF6", "icon": "Home", "is_default": False},
-        {"name": "Saúde", "type": "expense", "vault_type": "none", "color_hex": "#10B981", "icon": "Heart", "is_default": False},
-        {"name": "Salário", "type": "income", "vault_type": "none", "color_hex": "#10B981", "icon": "Landmark", "is_default": False},
-    ]
-    
+# Nomes das categorias padrão por língua (PT/EN/FR). Usado ao criar workspace.
+DEFAULT_CATEGORY_NAMES = {
+    'pt': {
+        'vault_investment': 'Cofre Investimentos',
+        'vault_emergency': 'Cofre Emergência',
+        'food': 'Alimentação',
+        'entertainment': 'Entretenimento',
+        'transport': 'Transportes',
+        'housing': 'Habitação',
+        'health': 'Saúde',
+        'salary': 'Salário',
+        'general_expense': 'Despesas gerais',
+    },
+    'en': {
+        'vault_investment': 'Investment Vault',
+        'vault_emergency': 'Emergency Fund',
+        'food': 'Food',
+        'entertainment': 'Entertainment',
+        'transport': 'Transport',
+        'housing': 'Housing',
+        'health': 'Health',
+        'salary': 'Salary',
+        'general_expense': 'General expenses',
+    },
+    'fr': {
+        'vault_investment': 'Cofre Investissements',
+        'vault_emergency': 'Fonds d\'urgence',
+        'food': 'Alimentation',
+        'entertainment': 'Divertissement',
+        'transport': 'Transports',
+        'housing': 'Logement',
+        'health': 'Santé',
+        'salary': 'Salaire',
+        'general_expense': 'Dépenses générales',
+    },
+}
+
+
+def _default_cats_spec(language: str):
+    """Lista de especificações de categorias padrão (com key). name é preenchido por língua."""
+    names = DEFAULT_CATEGORY_NAMES.get(language) or DEFAULT_CATEGORY_NAMES['pt']
+    return [
+        {"key": "vault_investment", "type": "expense", "vault_type": "investment", "color_hex": "#3B82F6", "icon": "TrendingUp", "is_default": True},
+        {"key": "vault_emergency", "type": "expense", "vault_type": "emergency", "color_hex": "#F97316", "icon": "ShieldCheck", "is_default": True},
+        {"key": "food", "type": "expense", "vault_type": "none", "color_hex": "#F59E0B", "icon": "Utensils", "is_default": False},
+        {"key": "entertainment", "type": "expense", "vault_type": "none", "color_hex": "#EC4899", "icon": "Gamepad", "is_default": False},
+        {"key": "transport", "type": "expense", "vault_type": "none", "color_hex": "#3B82F6", "icon": "Car", "is_default": False},
+        {"key": "housing", "type": "expense", "vault_type": "none", "color_hex": "#8B5CF6", "icon": "Home", "is_default": False},
+        {"key": "health", "type": "expense", "vault_type": "none", "color_hex": "#10B981", "icon": "Heart", "is_default": False},
+        {"key": "general_expense", "type": "expense", "vault_type": "none", "color_hex": "#64748B", "icon": "Wallet", "is_default": False},
+        {"key": "salary", "type": "income", "vault_type": "none", "color_hex": "#10B981", "icon": "Landmark", "is_default": False},
+    ], names
+
+
+def create_default_categories(db: Session, workspace_id: uuid.UUID, language: str = 'pt'):
+    """Cria categorias padrão no workspace. Nomes conforme a língua do utilizador (pt/en/fr)."""
+    lang = (language or 'pt').lower()[:2]
+    if lang not in DEFAULT_CATEGORY_NAMES:
+        lang = 'pt'
+    spec_list, names = _default_cats_spec(lang)
     categories_map = {}
-    for cat_data in default_cats:
-        new_cat = models.Category(
-            workspace_id=workspace_id,
-            **cat_data
-        )
+    for spec in spec_list:
+        name = names.get(spec["key"], spec["key"])
+        cat_data = {
+            "workspace_id": workspace_id,
+            "name": name,
+            "type": spec["type"],
+            "vault_type": spec["vault_type"],
+            "color_hex": spec["color_hex"],
+            "icon": spec["icon"],
+            "is_default": spec["is_default"],
+        }
+        new_cat = models.Category(**cat_data)
         db.add(new_cat)
-        categories_map[cat_data["name"]] = new_cat
+        categories_map[spec["key"]] = new_cat
     db.commit()
-    
-    # Retornar o mapa de categorias para usar no seed de transações
     return categories_map
 
 def create_seed_transactions(db: Session, workspace_id: uuid.UUID, categories_map: dict):
-    """Cria transações de exemplo (1 cêntimo) para ajudar o Telegram a categorizar melhor"""
-    
-    # Transações de exemplo com descrições comuns que ajudam o Telegram a categorizar
+    """Cria transações de exemplo (1 cêntimo) para ajudar o Telegram a categorizar melhor.
+    categories_map usa keys: food, transport, housing, health, entertainment, vault_investment, vault_emergency, salary, general_expense."""
     seed_transactions = [
-        # Alimentação
-        {"category": "Alimentação", "description": "Supermercado Continente", "amount_cents": -1, "days_ago": 5},
-        {"category": "Alimentação", "description": "Pingo Doce compras", "amount_cents": -1, "days_ago": 3},
-        {"category": "Alimentação", "description": "Restaurante McDonald's", "amount_cents": -1, "days_ago": 2},
-        {"category": "Alimentação", "description": "Uber Eats entrega", "amount_cents": -1, "days_ago": 1},
-        {"category": "Alimentação", "description": "Café Starbucks", "amount_cents": -1, "days_ago": 0},
-        
-        # Transportes
-        {"category": "Transportes", "description": "Uber viagem", "amount_cents": -1, "days_ago": 4},
-        {"category": "Transportes", "description": "Bolt transporte", "amount_cents": -1, "days_ago": 2},
-        {"category": "Transportes", "description": "Combustível Galp", "amount_cents": -1, "days_ago": 6},
-        {"category": "Transportes", "description": "Bilhete metro Lisboa", "amount_cents": -1, "days_ago": 1},
-        {"category": "Transportes", "description": "Estacionamento parque", "amount_cents": -1, "days_ago": 3},
-        
-        # Habitação
-        {"category": "Habitação", "description": "Renda apartamento", "amount_cents": -1, "days_ago": 7},
-        {"category": "Habitação", "description": "Conta luz EDP", "amount_cents": -1, "days_ago": 10},
-        {"category": "Habitação", "description": "Água EPAL", "amount_cents": -1, "days_ago": 8},
-        {"category": "Habitação", "description": "Internet MEO", "amount_cents": -1, "days_ago": 5},
-        {"category": "Habitação", "description": "Condomínio prédio", "amount_cents": -1, "days_ago": 4},
-        
-        # Saúde
-        {"category": "Saúde", "description": "Farmácia medicamentos", "amount_cents": -1, "days_ago": 3},
-        {"category": "Saúde", "description": "Consulta médico", "amount_cents": -1, "days_ago": 5},
-        {"category": "Saúde", "description": "Ginásio fitness", "amount_cents": -1, "days_ago": 1},
-        {"category": "Saúde", "description": "Seguro saúde", "amount_cents": -1, "days_ago": 15},
-        
-        # Entretenimento
-        {"category": "Entretenimento", "description": "Netflix subscrição", "amount_cents": -1, "days_ago": 2},
-        {"category": "Entretenimento", "description": "Spotify Premium", "amount_cents": -1, "days_ago": 1},
-        {"category": "Entretenimento", "description": "Cinema NOS", "amount_cents": -1, "days_ago": 4},
-        {"category": "Entretenimento", "description": "Jantar restaurante", "amount_cents": -1, "days_ago": 3},
-        {"category": "Entretenimento", "description": "PlayStation Store", "amount_cents": -1, "days_ago": 6},
-        
-        # Cofre Investimentos
-        {"category": "Cofre Investimentos", "description": "Ações bolsa", "amount_cents": -1, "days_ago": 7},
-        {"category": "Cofre Investimentos", "description": "ETF investimento", "amount_cents": -1, "days_ago": 10},
-        {"category": "Cofre Investimentos", "description": "Criptomoedas Bitcoin", "amount_cents": -1, "days_ago": 5},
-        
-        # Cofre Emergência
-        {"category": "Cofre Emergência", "description": "Poupança emergência", "amount_cents": -1, "days_ago": 14},
-        {"category": "Cofre Emergência", "description": "Reserva fundo", "amount_cents": -1, "days_ago": 20},
-        
-        # Salário (receita)
-        {"category": "Salário", "description": "Salário mensal", "amount_cents": 1, "days_ago": 0},
-        {"category": "Salário", "description": "Ordenado empresa", "amount_cents": 1, "days_ago": 30},
+        {"category": "food", "description": "Supermercado Continente", "amount_cents": -1, "days_ago": 5},
+        {"category": "food", "description": "Pingo Doce compras", "amount_cents": -1, "days_ago": 3},
+        {"category": "food", "description": "Restaurante McDonald's", "amount_cents": -1, "days_ago": 2},
+        {"category": "food", "description": "Uber Eats entrega", "amount_cents": -1, "days_ago": 1},
+        {"category": "food", "description": "Café Starbucks", "amount_cents": -1, "days_ago": 0},
+        {"category": "transport", "description": "Uber viagem", "amount_cents": -1, "days_ago": 4},
+        {"category": "transport", "description": "Bolt transporte", "amount_cents": -1, "days_ago": 2},
+        {"category": "transport", "description": "Combustível Galp", "amount_cents": -1, "days_ago": 6},
+        {"category": "transport", "description": "Bilhete metro Lisboa", "amount_cents": -1, "days_ago": 1},
+        {"category": "transport", "description": "Estacionamento parque", "amount_cents": -1, "days_ago": 3},
+        {"category": "housing", "description": "Renda apartamento", "amount_cents": -1, "days_ago": 7},
+        {"category": "housing", "description": "Conta luz EDP", "amount_cents": -1, "days_ago": 10},
+        {"category": "housing", "description": "Água EPAL", "amount_cents": -1, "days_ago": 8},
+        {"category": "housing", "description": "Internet MEO", "amount_cents": -1, "days_ago": 5},
+        {"category": "housing", "description": "Condomínio prédio", "amount_cents": -1, "days_ago": 4},
+        {"category": "health", "description": "Farmácia medicamentos", "amount_cents": -1, "days_ago": 3},
+        {"category": "health", "description": "Consulta médico", "amount_cents": -1, "days_ago": 5},
+        {"category": "health", "description": "Ginásio fitness", "amount_cents": -1, "days_ago": 1},
+        {"category": "health", "description": "Seguro saúde", "amount_cents": -1, "days_ago": 15},
+        {"category": "entertainment", "description": "Netflix subscrição", "amount_cents": -1, "days_ago": 2},
+        {"category": "entertainment", "description": "Spotify Premium", "amount_cents": -1, "days_ago": 1},
+        {"category": "entertainment", "description": "Cinema NOS", "amount_cents": -1, "days_ago": 4},
+        {"category": "entertainment", "description": "Jantar restaurante", "amount_cents": -1, "days_ago": 3},
+        {"category": "entertainment", "description": "PlayStation Store", "amount_cents": -1, "days_ago": 6},
+        {"category": "vault_investment", "description": "Ações bolsa", "amount_cents": -1, "days_ago": 7},
+        {"category": "vault_investment", "description": "ETF investimento", "amount_cents": -1, "days_ago": 10},
+        {"category": "vault_investment", "description": "Criptomoedas Bitcoin", "amount_cents": -1, "days_ago": 5},
+        {"category": "vault_emergency", "description": "Poupança emergência", "amount_cents": -1, "days_ago": 14},
+        {"category": "vault_emergency", "description": "Reserva fundo", "amount_cents": -1, "days_ago": 20},
+        {"category": "general_expense", "description": "Trf. Mb Way Para", "amount_cents": -1, "days_ago": 2},
+        {"category": "salary", "description": "Salário mensal", "amount_cents": 1, "days_ago": 0},
+        {"category": "salary", "description": "Ordenado empresa", "amount_cents": 1, "days_ago": 30},
     ]
     
     today = date.today()
@@ -592,13 +631,9 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
         db.add(new_workspace)
         db.commit()
         db.refresh(new_workspace)
-        
-        # Criar categorias padrão (Investimento e Fundo de Emergência)
-        categories_map = create_default_categories(db, new_workspace.id)
-        
-        # Criar transações de exemplo para ajudar o Telegram a categorizar
+        user_lang = getattr(user, 'language', 'pt') or 'pt'
+        categories_map = create_default_categories(db, new_workspace.id, user_lang)
         create_seed_transactions(db, new_workspace.id, categories_map)
-        
         logger.info(f'Utilizador criado e verificado: {user.email}')
         await log_action(db, action='register_success', user_id=user.id, details=f'Novo utilizador registado: {user.email}', request=request)
     else:
@@ -1049,8 +1084,8 @@ async def purge_user_data(request: Request, current_user: models.User = Depends(
         db.add(new_workspace)
         db.commit()
         db.refresh(new_workspace)
-
-        categories_map = create_default_categories(db, new_workspace.id)
+        user_lang = getattr(current_user, 'language', 'pt') or 'pt'
+        categories_map = create_default_categories(db, new_workspace.id, user_lang)
         create_seed_transactions(db, new_workspace.id, categories_map)
 
         await log_action(db, action='data_purge', user_id=user_id, details=f'Dados apagados pelo utilizador: {user_email}', request=request)
@@ -1310,11 +1345,8 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
             db.add(new_workspace)
             db.commit()
             db.refresh(new_workspace)
-            
-            # Criar categorias padrão (Investimento e Fundo de Emergência)
-            categories_map = create_default_categories(db, new_workspace.id)
-            
-            # Criar transações de exemplo para ajudar o Telegram a categorizar
+            user_lang = getattr(user, 'language', 'pt') or 'pt'
+            categories_map = create_default_categories(db, new_workspace.id, user_lang)
             create_seed_transactions(db, new_workspace.id, categories_map)
         else:
             if data.provider == 'google' and not user.google_id:
