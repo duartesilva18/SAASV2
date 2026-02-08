@@ -1205,7 +1205,8 @@ export const fr = {
           masterTipText: "Les catégories sont les tiroirs de votre esprit financier. Plus elles sont organisées, plus vous aurez de clarté pour prendre des décisions zen.",
           activeVault: "Coffre actif",
           activeVaultText: "Vous avez des catégories configurées pour alimenter votre coffre de réserve. Tous les mouvements dans ces catégories seront comptés comme épargne/investissement.",
-          harmonizing: "Harmonisation des catégories..."
+          harmonizing: "Harmonisation des catégories...",
+          protectedCategoryTooltip: "Catégorie protégée (Salaire et Dépenses générales ne peuvent pas être modifiées ni supprimées)."
       },
           admin: {
               dashboard: {

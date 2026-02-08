@@ -1185,7 +1185,8 @@ export const pt = {
           masterTipText: "Categorias são as gavetas da tua mente financeira. Quanto mais organizadas estiverem, mais clareza terás para tomar decisões zen.",
           activeVault: "Cofre Ativo",
           activeVaultText: "Tens categorias configuradas para alimentar o teu Cofre de Reservas. Todos os movimentos nestas categorias serão contabilizados como poupança/investimento.",
-          harmonizing: "A harmonizar categorias..."
+          harmonizing: "A harmonizar categorias...",
+          protectedCategoryTooltip: "Categoria protegida (Salário e Despesas gerais não podem ser editadas nem eliminadas)."
       },
           admin: {
               dashboard: {

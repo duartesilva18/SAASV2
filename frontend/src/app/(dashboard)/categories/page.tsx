@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { 
-  Tag, Plus, Trash2, Edit2, Check, X,
+  Tag, Plus, Trash2, Edit2, Check, X, Lock,
   ShoppingBag, Coffee, Car, Home, 
   Smartphone, Utensils, Heart, Briefcase,
   Gamepad, Plane, Zap, Layers, PieChart,
@@ -50,6 +50,15 @@ const AVAILABLE_ICONS = [
 ];
 
 const COLORS = ['#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#F59E0B'];
+
+// Salário e Despesas gerais (e equivalentes PT/EN/FR) — não podem ser editadas nem apagadas
+const PROTECTED_SYSTEM_CATEGORY_NAMES = new Set([
+  'Salário', 'Salary', 'Salaire',
+  'Despesas gerais', 'General expenses', 'Dépenses générales',
+]);
+function isProtectedSystemCategory(name: string): boolean {
+  return PROTECTED_SYSTEM_CATEGORY_NAMES.has((name || '').trim());
+}
 
 export default function CategoriesPage() {
   const { t, currency, formatCurrency } = useTranslation();
@@ -503,9 +512,10 @@ export default function CategoriesPage() {
               const isWarning = progress >= 80 && progress < 100;
               const overAmount = isExceeded ? Math.abs(stat?.total_spent_cents || 0) - cat.monthly_limit_cents : 0;
               
-              const isProtected = cat.is_default || 
+              const isProtected = cat.is_default || isProtectedSystemCategory(cat.name) ||
                 (cat.vault_type === 'investment' && ['INVESTIMENTO', 'INVESTIMENTOS'].includes(cat.name.toUpperCase())) ||
                 (cat.vault_type === 'emergency' && ['FUNDO DE EMERGÊNCIA', 'FUNDO DE EMERGENCIA'].includes(cat.name.toUpperCase()));
+              const isSystemLocked = isProtectedSystemCategory(cat.name);
               
               const isSelected = selectedIds.includes(cat.id);
 
@@ -562,20 +572,36 @@ export default function CategoriesPage() {
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {!isSelectionMode && (
                         <>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); openEdit(cat); }}
-                            className="p-2 hover:bg-blue-500/10 text-blue-400 rounded-xl transition-colors cursor-pointer"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          {!isProtected && (
+                          {isSystemLocked ? (
+                            <span
+                              className="p-2 text-slate-500 rounded-xl cursor-not-allowed"
+                              title={t.dashboard.categories.protectedCategoryTooltip}
+                            >
+                              <Lock size={16} />
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openEdit(cat); }}
+                              className="p-2 hover:bg-blue-500/10 text-blue-400 rounded-xl transition-colors cursor-pointer"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                          {!isProtected ? (
                             <button 
                               onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat); }}
                               className="p-2 hover:bg-red-500/10 text-red-400 rounded-xl transition-colors cursor-pointer"
                             >
                               <Trash2 size={16} />
                             </button>
-                          )}
+                          ) : isSystemLocked ? (
+                            <span
+                              className="p-2 text-slate-500 rounded-xl cursor-not-allowed"
+                              title={t.dashboard.categories.protectedCategoryTooltip}
+                            >
+                              <Lock size={16} />
+                            </span>
+                          ) : null}
                         </>
                       )}
                     </div>

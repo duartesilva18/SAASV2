@@ -1205,7 +1205,8 @@ export const en = {
           masterTipText: "Categories are the drawers of your financial mind. The more organized they are, the more clarity you'll have to make zen decisions.",
           activeVault: "Active Vault",
           activeVaultText: "You have categories configured to feed your Reserve Vault. All movements in these categories will be counted as savings/investment.",
-          harmonizing: "Harmonizing categories..."
+          harmonizing: "Harmonizing categories...",
+          protectedCategoryTooltip: "Protected category (Salary and General expenses cannot be edited or deleted)."
       },
           admin: {
               dashboard: {
