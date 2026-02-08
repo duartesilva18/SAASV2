@@ -57,15 +57,15 @@ export default function AddToHomePage() {
         transition={{ duration: 0.35 }}
         className="max-w-md mx-auto py-12 px-4"
       >
-        <div className="rounded-3xl bg-slate-800/40 border border-slate-700/60 p-8 text-center shadow-xl">
+        <div className="rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-8 text-center shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-6">
             <Smartphone className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">{addToHome?.alreadyInApp ?? 'Já estás na app'}</h1>
+          <h1 className="text-xl font-black text-white tracking-tight mb-2">{addToHome?.alreadyInApp ?? 'Já estás na app'}</h1>
           <p className="text-slate-400 text-sm mb-6">{addToHome?.alreadyInAppDesc ?? 'Abriste o Finly a partir do ícone no telemóvel.'}</p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-700 text-slate-200 font-medium text-sm hover:bg-slate-600 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors shadow-lg shadow-blue-600/20"
           >
             {addToHome?.goToDashboard ?? 'Ir para o dashboard'}
           </Link>
@@ -83,10 +83,10 @@ export default function AddToHomePage() {
     >
       {/* Hero */}
       <div className="text-center mb-8 sm:mb-10">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 mb-6">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-6">
           <Smartphone className="w-10 h-10 text-blue-400" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
           {addToHome?.title ?? 'Finly no telemóvel'}
         </h1>
         <p className="text-slate-400 text-base sm:text-lg max-w-md mx-auto leading-relaxed">
@@ -100,12 +100,12 @@ export default function AddToHomePage() {
       </p>
 
       {/* Main card */}
-      <div className="rounded-3xl bg-slate-800/40 border border-slate-700/60 p-6 sm:p-8 shadow-xl space-y-6">
+      <div className="rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-6 sm:p-8 shadow-2xl space-y-6">
         {(deferredPrompt && !installed) && (
           <button
             type="button"
             onClick={handleInstall}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 sm:py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-base transition-colors shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors shadow-lg shadow-blue-600/20 cursor-pointer"
           >
             <Smartphone className="w-5 h-5 shrink-0" />
             {addToHome?.button ?? 'Adicionar ao ecrã inicial'}
@@ -113,8 +113,8 @@ export default function AddToHomePage() {
         )}
 
         {ios && !deferredPrompt && (
-          <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-5 sm:p-6 space-y-4">
-            <p className="text-slate-300 font-semibold flex items-center gap-2 text-sm">
+          <div className="rounded-2xl bg-slate-950/60 border border-slate-700/60 p-5 sm:p-6 space-y-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Share className="w-4 h-4 text-blue-400 shrink-0" />
               {addToHome?.stepsSafari ?? 'Passos no Safari'}
             </p>
@@ -127,11 +127,11 @@ export default function AddToHomePage() {
         )}
 
         {!deferredPrompt && !ios && !installed && (
-          <div className="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-5 sm:p-6 text-center">
+          <div className="rounded-2xl bg-slate-950/60 border border-slate-700/60 p-5 sm:p-6 text-center">
             <p className="text-slate-400 text-sm leading-relaxed">
               {addToHome?.openOnMobile ?? 'Abre esta página no telemóvel (Chrome no Android ou Safari no iPhone) para adicionar o Finly ao ecrã inicial.'}
             </p>
-            <p className="text-slate-500 text-xs mt-3">
+            <p className="text-slate-500 text-xs mt-3 uppercase tracking-wider font-medium">
               {addToHome?.androidManual ?? 'Android: Menu (⋮) → "Adicionar ao ecrã inicial" ou "Instalar app".'}
             </p>
           </div>

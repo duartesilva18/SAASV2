@@ -25,6 +25,9 @@ from ..core.telegram_translations import get_telegram_t
 
 logger = logging.getLogger("telegram_webhook")
 
+# Limite da API Telegram: 4096 caracteres por mensagem
+TELEGRAM_MAX_MESSAGE_LENGTH = 4090
+
 
 class AIUnavailableError(Exception):
     """Levantada quando a IA (OpenAI) não está disponível (quota/plano esgotado)."""
@@ -1617,69 +1620,104 @@ def transcribe_audio_from_telegram(message: dict) -> Optional[str]:
         return None
 
 
+def _chunk_text_for_telegram(text: str, max_len: int = TELEGRAM_MAX_MESSAGE_LENGTH) -> List[str]:
+    """Divide texto em blocos <= max_len, cortando preferencialmente em newline."""
+    if len(text) <= max_len:
+        return [text] if text else []
+    chunks = []
+    rest = text
+    while rest:
+        if len(rest) <= max_len:
+            chunks.append(rest)
+            break
+        block = rest[:max_len]
+        last_nl = block.rfind("\n")
+        if last_nl > max_len // 2:
+            cut = last_nl + 1
+        else:
+            cut = max_len
+        chunks.append(rest[:cut])
+        rest = rest[cut:].lstrip("\n")
+    return chunks
+
+
 def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = None, pin_message: bool = False):
-    """Envia mensagem para o Telegram"""
+    """Envia mensagem para o Telegram. Mensagens longas são divididas em várias (limite 4096 carateres)."""
     if not settings.TELEGRAM_BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN não configurado")
         return None
-    
+
+    if not (text or text.strip()):
+        return None
+
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
-    
-    # Escapar caracteres especiais do Markdown que podem causar erro 400
-    # Telegram MarkdownV2 requer escape de: _ * [ ] ( ) ~ ` > # + - = | { } . !
-    # Vamos usar HTML que é mais simples e robusto
-    payload = {
-        'chat_id': chat_id,
-        'text': text,
-        'parse_mode': 'HTML'  # HTML é mais robusto que Markdown
-    }
-    if reply_markup:
-        payload['reply_markup'] = reply_markup
-    
-    try:
-        response = requests.post(url, json=payload, timeout=5)
-        response.raise_for_status()
-        result = response.json()
-        
-        # Fixar mensagem se solicitado
-        if pin_message and result.get('ok') and result.get('result', {}).get('message_id'):
-            message_id = result['result']['message_id']
-            try:
+    chunks = _chunk_text_for_telegram(text.strip())
+    last_result = None
+
+    for i, chunk in enumerate(chunks):
+        use_html = i == 0 and len(chunks) == 1
+        payload = {
+            "chat_id": chat_id,
+            "text": chunk,
+        }
+        if use_html:
+            payload["parse_mode"] = "HTML"
+        if reply_markup and i == len(chunks) - 1:
+            payload["reply_markup"] = reply_markup
+
+        try:
+            response = requests.post(url, json=payload, timeout=5)
+            response.raise_for_status()
+            last_result = response.json()
+        except requests.exceptions.HTTPError as e:
+            if getattr(e, "response", None) and getattr(e.response, "status_code", None) == 400:
+                try:
+                    err_body = e.response.json() if e.response.text else {}
+                    err_desc = (err_body.get("description") or "").lower()
+                except Exception:
+                    err_desc = ""
+                if "too long" in err_desc or "message is too long" in err_desc:
+                    logger.warning("Mensagem ainda longa após chunking, a truncar: %s", err_desc)
+                    payload["text"] = chunk[:TELEGRAM_MAX_MESSAGE_LENGTH - 50] + "\n\n(… truncado)"
+                if "parse_mode" in payload:
+                    payload.pop("parse_mode", None)
+                try:
+                    response = requests.post(url, json=payload, timeout=5)
+                    response.raise_for_status()
+                    last_result = response.json()
+                except Exception as e2:
+                    logger.error("Erro ao enviar mensagem Telegram (sem parse_mode): %s", e2)
+                    return last_result
+            else:
+                logger.error("Erro HTTP ao enviar mensagem Telegram: %s - %s", getattr(e.response, "status_code", ""), getattr(e.response, "text", ""))
+                return last_result
+        except Exception as e:
+            logger.error("Erro ao enviar mensagem Telegram: %s", e)
+            return last_result
+
+    if last_result and pin_message and len(chunks) == 1:
+        try:
+            message_id = last_result.get("result", {}).get("message_id")
+            if message_id:
                 pin_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/pinChatMessage"
-                pin_payload = {
-                    'chat_id': chat_id,
-                    'message_id': message_id,
-                    'disable_notification': True
-                }
-                requests.post(pin_url, json=pin_payload, timeout=5)
-                logger.info(f"Mensagem fixada: message_id={message_id}")
-            except Exception as e:
-                logger.warning(f"Erro ao fixar mensagem: {str(e)}")
-        
-        return result
-    except requests.exceptions.HTTPError as e:
-        # Tentar sem parse_mode se falhar
-        if response.status_code == 400:
-            logger.warning(f"Erro 400 ao enviar com HTML, tentando sem parse_mode: {response.text}")
-            payload.pop('parse_mode', None)
-            try:
-                response = requests.post(url, json=payload, timeout=5)
-                response.raise_for_status()
-                return response.json()
-            except Exception as e2:
-                logger.error(f"Erro ao enviar mensagem Telegram (sem parse_mode): {str(e2)}")
-        else:
-            logger.error(f"Erro HTTP ao enviar mensagem Telegram: {response.status_code} - {response.text}")
-    except Exception as e:
-        logger.error(f"Erro ao enviar mensagem Telegram: {str(e)}")
-    
-    return None
+                requests.post(
+                    pin_url,
+                    json={"chat_id": chat_id, "message_id": message_id, "disable_notification": True},
+                    timeout=5,
+                )
+                logger.info("Mensagem fixada: message_id=%s", message_id)
+        except Exception as e:
+            logger.warning("Erro ao fixar mensagem: %s", e)
+
+    return last_result
 
 
 def edit_telegram_message(chat_id: int, message_id: int, text: str, reply_markup: Optional[Dict] = None) -> bool:
-    """Edita texto e/ou teclado de uma mensagem existente."""
+    """Edita texto e/ou teclado de uma mensagem existente. Trunca se exceder o limite do Telegram."""
     if not settings.TELEGRAM_BOT_TOKEN:
         return False
+    if len(text) > TELEGRAM_MAX_MESSAGE_LENGTH:
+        text = text[: TELEGRAM_MAX_MESSAGE_LENGTH - 30] + "\n\n(… truncado)"
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
     payload = {"chat_id": chat_id, "message_id": message_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:

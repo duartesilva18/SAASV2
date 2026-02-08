@@ -220,7 +220,7 @@ export default function GoalsPage() {
       <section className="relative">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
           <div className="space-y-3 sm:space-y-4 min-w-0">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-xs font-bold uppercase tracking-wider">
               <Trophy size={14} /> {t.dashboard.goals.badge}
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white uppercase leading-tight break-words">
@@ -244,9 +244,10 @@ export default function GoalsPage() {
               });
               setShowNotifications(true);
             }}
-            className="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl sm:rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-95 cursor-pointer w-full sm:w-auto"
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 w-full sm:w-auto"
           >
-            {t.dashboard.goals.newGoal} <Plus size={18} />
+            <Plus size={18} className="shrink-0" />
+            <span>{t.dashboard.goals.newGoal}</span>
           </button>
         </div>
       </section>
@@ -266,10 +267,8 @@ export default function GoalsPage() {
               key={goal.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group relative flex flex-col min-h-[320px] w-full bg-gradient-to-b from-slate-900/70 to-slate-950/80 border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-all hover:shadow-lg hover:shadow-blue-500/5"
+              className="group relative flex flex-col min-h-[320px] w-full bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl hover:border-blue-500/30 transition-all"
             >
-              {/* Blur decorativo */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-[40px] rounded-full -mr-12 -mt-12 pointer-events-none" aria-hidden />
 
               <div className="relative z-10 flex flex-col flex-1 min-h-0 p-4 md:p-5">
                 {/* Linha 1: ícone + badge + ações */}
@@ -323,7 +322,7 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                  <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
@@ -343,7 +342,7 @@ export default function GoalsPage() {
                 </div>
 
                 {/* Botões sempre no fundo, 2 colunas iguais */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/5 flex-shrink-0">
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-700/60 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
@@ -366,7 +365,7 @@ export default function GoalsPage() {
         })}
 
         {goals.length === 0 && (
-          <div className="col-span-full py-32 text-center space-y-6 bg-slate-900/20 rounded-[64px] border border-dashed border-white/5">
+          <div className="col-span-full py-32 text-center space-y-6 bg-slate-900/70 backdrop-blur-md rounded-2xl border border-dashed border-slate-700/60">
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-700">
               <Target size={40} />
             </div>
@@ -380,10 +379,10 @@ export default function GoalsPage() {
 
       {/* Insights de Metas */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mt-8 sm:mt-10 md:mt-12 sm:mt-0 min-w-0">
-        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.goals.chartTypesLabel}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.chartTypesLabel}</p>
               <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTypesTitle}</h3>
             </div>
           </div>
@@ -401,7 +400,7 @@ export default function GoalsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3 mt-4">
             {goalsByType.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div key={entry.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
                 <span>{entry.name}</span>
               </div>
@@ -409,10 +408,10 @@ export default function GoalsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/70 border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.goals.chartTopLabel}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.chartTopLabel}</p>
               <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTopTitle}</h3>
             </div>
           </div>
@@ -465,32 +464,30 @@ export default function GoalsPage() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowNotifications(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-md"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-white/10 rounded-t-2xl sm:rounded-2xl sm:rounded-[28px] p-4 sm:p-8 md:p-10 shadow-[0_25px_80px_-40px_rgba(59,130,246,0.35)] overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
             >
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
-              
-              <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
+              <div className="flex items-center justify-between gap-3 mb-5 sm:mb-6">
                 <div className="min-w-0">
-                  <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tight leading-tight">
+                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight leading-tight">
                     {editingGoal ? t.dashboard.goals.edit : t.dashboard.goals.new} <span className="text-blue-500 italic">{t.dashboard.goals.goal}</span>
                   </h2>
-                  <p className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mt-1 sm:mt-2">{t.dashboard.goals.drawYourFuture}</p>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">{t.dashboard.goals.drawYourFuture}</p>
                 </div>
-                <button onClick={() => setShowNotifications(false)} className="p-2 sm:p-3 hover:bg-white/10 rounded-full text-slate-400 transition-colors cursor-pointer shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
-                  <X size={22} />
+                <button type="button" onClick={() => setShowNotifications(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2 shrink-0">
+                  <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-                <div className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalName}</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalName}</label>
                     <input 
                       type="text"
                       value={formData.name}
@@ -498,15 +495,16 @@ export default function GoalsPage() {
                         setFormData({ ...formData, name: e.target.value });
                         if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
                       }}
-                      className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base text-white font-black uppercase tracking-widest focus:border-blue-500 focus:bg-white/10 outline-none transition-all placeholder:text-slate-700 min-h-[48px] ${errors.name ? 'field-error' : ''}`}
+                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${errors.name ? 'border-red-500' : 'border-slate-700'}`}
                       placeholder={t.dashboard.goals.goalNamePlaceholder}
                     />
-                    {errors.name && <p className="field-error-message">{errors.name}</p>}
+                    {errors.name && <p className="text-[10px] text-red-400 mt-1">{errors.name}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.targetAmount}</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.targetAmount}</label>
                     <div className="relative">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">€</span>
                       <input 
                         type="number" 
                         step="0.01"
@@ -521,16 +519,15 @@ export default function GoalsPage() {
                             e.currentTarget.select();
                           }
                         }}
-                        className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 pr-10 sm:pr-12 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all min-h-[48px] ${errors.amount ? 'field-error' : ''}`}
+                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${errors.amount ? 'border-red-500' : 'border-slate-700'}`}
                         placeholder="0.00"
                       />
-                      <span className="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 text-white font-black text-sm sm:text-base">€</span>
                     </div>
-                    {errors.amount && <p className="field-error-message">{errors.amount}</p>}
+                    {errors.amount && <p className="text-[10px] text-red-400 mt-1">{errors.amount}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.goalType}</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalType}</label>
                     <div className="relative">
                       <select
                         value={formData.goal_type}
@@ -538,20 +535,18 @@ export default function GoalsPage() {
                           setFormData({ ...formData, goal_type: e.target.value });
                           if (errors.type) setErrors(prev => ({ ...prev, type: undefined }));
                         }}
-                        className={`goal-type-select w-full appearance-none border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 pr-10 sm:pr-12 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all cursor-pointer min-h-[48px] ${errors.type ? 'field-error' : ''} ${
-                          formData.goal_type === 'expense' ? 'bg-blue-950/60' : 'bg-white/5'
-                        }`}
+                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer ${errors.type ? 'border-red-500' : 'border-slate-700'} ${formData.goal_type === 'expense' ? '' : ''}`}
                       >
                         <option value="expense">{t.dashboard.goals.typeExpense}</option>
                         <option value="income">{t.dashboard.goals.typeIncome}</option>
                       </select>
-                      <ChevronDown size={18} className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     </div>
-                    {errors.type && <p className="field-error-message">{errors.type}</p>}
+                    {errors.type && <p className="text-[10px] text-red-400 mt-1">{errors.type}</p>}
                   </div>
 
                   <div>
-                    <label className="required-label text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block ml-2">{t.dashboard.goals.deadline}</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.deadline}</label>
                     <input 
                       type="date"
                       value={formData.target_date}
@@ -559,13 +554,13 @@ export default function GoalsPage() {
                         setFormData({ ...formData, target_date: e.target.value });
                         if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
                       }}
-                      className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-5 sm:px-6 py-4 sm:py-5 text-sm sm:text-base text-white font-black focus:border-blue-500 focus:bg-white/10 outline-none transition-all min-h-[48px] ${errors.date ? 'field-error' : ''}`}
+                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.date ? 'border-red-500' : 'border-slate-700'}`}
                     />
-                    {errors.date && <p className="field-error-message">{errors.date}</p>}
+                    {errors.date && <p className="text-[10px] text-red-400 mt-1">{errors.date}</p>}
                   </div>
 
                   <div>
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 mb-2 sm:mb-3 block ml-2">{t.dashboard.goals.color ?? 'Cor'}</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.color ?? 'Cor'}</label>
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       {COLORS.map((color) => (
                         <button
@@ -582,7 +577,7 @@ export default function GoalsPage() {
 
                 <button 
                   type="submit"
-                  className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[22px] font-black uppercase tracking-[0.3em] text-xs transition-all shadow-[0_15px_40px_-20px_rgba(37,99,235,0.6)] active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {editingGoal ? t.dashboard.goals.saveChanges : t.dashboard.goals.activateGoal} <Check size={18} />
                 </button>
@@ -607,34 +602,35 @@ export default function GoalsPage() {
       />
 
       {showCloseConfirm && goalToClose && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setShowCloseConfirm(false); setGoalToClose(null); }} aria-hidden />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl"
           >
             <h3 className="text-lg font-black text-white mb-1">{t.dashboard.goals?.finishGoal ?? 'Terminar meta'}</h3>
             <p className="text-slate-400 text-sm mb-4">{goalToClose.name} · {formatCurrency((goalToClose.current_amount_cents || 0) / 100)}</p>
-            <p className="text-slate-400 text-xs mb-3">{t.dashboard.goals?.closeCreateTransactionQuestion ?? 'Queres criar uma transação automaticamente?'}</p>
+            <p className="text-slate-500 text-xs mb-3">{t.dashboard.goals?.closeCreateTransactionQuestion ?? 'Queres criar uma transação automaticamente?'}</p>
             <div className="space-y-2 mb-6">
-              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-700 cursor-pointer hover:border-slate-600">
                 <input type="radio" name="closeTx" checked={closeTransactionChoice === 'income'} onChange={() => setCloseTransactionChoice('income')} className="text-blue-500" />
                 <span className="text-sm font-bold text-white">{t.dashboard.goals?.asIncome ?? 'Como receita'}</span>
               </label>
-              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-700 cursor-pointer hover:border-slate-600">
                 <input type="radio" name="closeTx" checked={closeTransactionChoice === 'expense'} onChange={() => setCloseTransactionChoice('expense')} className="text-blue-500" />
                 <span className="text-sm font-bold text-white">{t.dashboard.goals?.asExpense ?? 'Como despesa'}</span>
               </label>
-              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700 cursor-pointer hover:border-blue-500/50">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/60 border border-slate-700 cursor-pointer hover:border-slate-600">
                 <input type="radio" name="closeTx" checked={closeTransactionChoice === 'none'} onChange={() => setCloseTransactionChoice('none')} className="text-blue-500" />
                 <span className="text-sm font-bold text-white">{t.dashboard.goals?.noTransaction ?? 'Não criar transação'}</span>
               </label>
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowCloseConfirm(false); setGoalToClose(null); }} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-400 font-bold text-sm cursor-pointer">
+              <button type="button" onClick={() => { setShowCloseConfirm(false); setGoalToClose(null); }} className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 cursor-pointer">
                 {t.dashboard.goals.cancel}
               </button>
-              <button type="button" onClick={handleCloseGoal} disabled={!!closingGoal} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm cursor-pointer">
+              <button type="button" onClick={handleCloseGoal} disabled={!!closingGoal} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm uppercase tracking-wider cursor-pointer">
                 {closingGoal ? '...' : (t.dashboard.goals?.confirmClose ?? 'Terminar')}
               </button>
             </div>
@@ -643,14 +639,16 @@ export default function GoalsPage() {
       )}
 
       {goalForDeposit && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setGoalForDeposit(null); setDepositAmount(''); }} aria-hidden />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl"
           >
             <h3 className="text-lg font-black text-white mb-1">{t.dashboard.goals?.addMoney ?? 'Adicionar à meta'}</h3>
             <p className="text-slate-400 text-sm mb-4">{goalForDeposit.name}</p>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Valor</label>
             <input
               type="number"
               min="0"
@@ -658,13 +656,13 @@ export default function GoalsPage() {
               placeholder="0,00"
               value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value.replace(',', '.'))}
-              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold text-lg mb-4"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl bg-slate-950/60 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 mb-4"
             />
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => { setGoalForDeposit(null); setDepositAmount(''); }}
-                className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-400 font-bold text-sm cursor-pointer"
+                className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 cursor-pointer"
               >
                 {t.dashboard.goals.cancel}
               </button>
@@ -672,7 +670,7 @@ export default function GoalsPage() {
                 type="button"
                 onClick={handleDeposit}
                 disabled={depositLoading || !depositAmount || parseFloat(depositAmount) <= 0}
-                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2"
               >
                 {depositLoading ? '...' : (t.dashboard.goals?.addMoney ?? 'Adicionar')}
               </button>

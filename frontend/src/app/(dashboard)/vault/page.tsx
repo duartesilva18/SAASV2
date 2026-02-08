@@ -369,13 +369,12 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
+          className="bg-slate-900/70 backdrop-blur-md border border-blue-500/20 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full" />
-          <div className="relative z-10">
+          <div>
             <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1 sm:mb-2">{t.dashboard.vault.emergencyFund}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-1 sm:mb-2">{t.dashboard.vault.emergencyFund}</p>
                 <p className="text-xl sm:text-2xl md:text-3xl font-black text-white truncate" title={formatCurrency(vaultData.emergencyTotal)}>{formatCurrency(vaultData.emergencyTotal)}</p>
               </div>
               <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-blue-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
@@ -383,7 +382,7 @@ export default function VaultPage() {
               </div>
             </div>
             
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4 sm:mb-6">
+            <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden mb-4 sm:mb-6">
               <div 
                 className="h-full bg-blue-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, (vaultData.emergencyTotal / 10000) * 100)}%` }}
@@ -417,13 +416,12 @@ export default function VaultPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-slate-900/40 backdrop-blur-xl border border-emerald-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
+          className="bg-slate-900/70 backdrop-blur-md border border-emerald-500/20 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full" />
-          <div className="relative z-10">
+          <div>
             <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1 sm:mb-2">{t.dashboard.vault.zenInvestments}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1 sm:mb-2">{t.dashboard.vault.zenInvestments}</p>
                 <p className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-400 truncate" title={formatCurrency(vaultData.investmentTotal)}>{formatCurrency(vaultData.investmentTotal)}</p>
               </div>
               <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-emerald-500/20 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
@@ -431,7 +429,7 @@ export default function VaultPage() {
               </div>
             </div>
             
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4 sm:mb-6">
+            <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden mb-4 sm:mb-6">
               <div 
                 className="h-full bg-emerald-500 transition-all duration-500"
                 style={{ width: `${Math.min(100, (vaultData.investmentTotal / 10000) * 100)}%` }}
@@ -461,12 +459,11 @@ export default function VaultPage() {
       </div>
 
       {/* Period Selector */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-3 sm:p-4 rounded-xl sm:rounded-[24px] mb-4 sm:mb-6">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-3 sm:p-4 rounded-2xl mb-4 sm:mb-6 shadow-2xl">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
           <Calendar size={14} className="text-blue-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Período</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-400">Período</span>
         </div>
-        
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {[
             { key: '7D', label: '7 Dias' },
@@ -477,10 +474,10 @@ export default function VaultPage() {
             <button
               key={period.key}
               onClick={() => setSelectedPeriod(period.key as any)}
-              className={`px-2.5 sm:px-4 py-1.5 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border shrink-0 ${
+              className={`px-2.5 sm:px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border shrink-0 ${
                 selectedPeriod === period.key
                   ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20'
-                  : 'bg-transparent text-slate-500 border-slate-800 hover:border-slate-700 hover:text-slate-300'
+                  : 'bg-transparent text-slate-500 border-slate-700 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
               {period.label}
@@ -496,11 +493,11 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <ShieldCheck className="text-blue-400 shrink-0" size={18} />
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionEmergency}</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionEmergency}</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={vaultData.emergencyEvolution.length > 0 ? vaultData.emergencyEvolution : [{ date: new Date().toISOString().split('T')[0], value: 0 }]}>
@@ -580,11 +577,11 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <Target className="text-emerald-400" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.evolutionInvestments}</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionInvestments}</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={vaultData.investmentEvolution.length > 0 ? vaultData.investmentEvolution : [{ date: new Date().toISOString().split('T')[0], value: 0 }]}>
@@ -667,14 +664,14 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               <ShieldCheck className="text-blue-400" size={18} />
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.monthlyActivity}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.monthlyActivity}</h3>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.vault.emergencyFund}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-400">{t.dashboard.vault.emergencyFund}</span>
           </div>
           
           {vaultData.emergencyMonthly.length > 0 ? (
@@ -713,7 +710,7 @@ export default function VaultPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="relative w-full h-8 bg-slate-800 rounded-xl overflow-hidden">
+                    <div className="relative w-full h-8 bg-slate-800/60 rounded-xl overflow-hidden">
                       {depositPercent > 0 && (
                         <motion.div
                           initial={{ width: 0 }}
@@ -752,14 +749,14 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               <Target className="text-emerald-400" size={18} />
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.monthlyActivity}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.monthlyActivity}</h3>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">{t.dashboard.vault.investments}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">{t.dashboard.vault.investments}</span>
           </div>
           
           {vaultData.investmentMonthly.length > 0 ? (
@@ -798,7 +795,7 @@ export default function VaultPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="relative w-full h-8 bg-slate-800 rounded-xl overflow-hidden">
+                    <div className="relative w-full h-8 bg-slate-800/60 rounded-xl overflow-hidden">
                       {depositPercent > 0 && (
                         <motion.div
                           initial={{ width: 0 }}
@@ -840,11 +837,11 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <ShieldCheck className="text-blue-400" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.transactionsEmergency}</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.transactionsEmergency}</h3>
           </div>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {vaultData.emergencyTransactions.length > 0 ? (
@@ -854,7 +851,7 @@ export default function VaultPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-transparent hover:border-white/[0.05] transition-all"
+                  className="flex items-center justify-between p-4 bg-slate-950/60 rounded-2xl border border-slate-700/40 hover:border-slate-600/60 transition-all"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -887,11 +884,11 @@ export default function VaultPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6"
+          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
         >
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <Target className="text-emerald-400" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">{t.dashboard.vault.transactionsInvestments}</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.transactionsInvestments}</h3>
           </div>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {vaultData.investmentTransactions.length > 0 ? (
@@ -901,7 +898,7 @@ export default function VaultPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-transparent hover:border-white/[0.05] transition-all"
+                  className="flex items-center justify-between p-4 bg-slate-950/60 rounded-2xl border border-slate-700/40 hover:border-slate-600/60 transition-all"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -930,7 +927,7 @@ export default function VaultPage() {
         </motion.div>
       </div>
 
-      {/* Vault Transaction Modal */}
+      {/* Vault Transaction Modal — estilo login */}
       <AnimatePresence>
         {vaultModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -939,18 +936,18 @@ export default function VaultPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !vaultLoading && setVaultModal(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 w-full max-w-sm shadow-2xl"
+              className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     vaultModal.action === 'add' 
                       ? vaultModal.category.vault_type === 'emergency' 
                         ? 'bg-blue-500/20 text-blue-400' 
@@ -959,32 +956,25 @@ export default function VaultPage() {
                   }`}>
                     {vaultModal.action === 'add' ? <Plus size={20} /> : <Minus size={20} />}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-widest">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider truncate">
                       {vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
                     </h3>
-                    <p className="text-xs text-slate-400">{vaultModal.category.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{vaultModal.category.name}</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    if (!vaultLoading) {
-                      setVaultModal(null);
-                      setVaultAmount('');
-                    }
-                  }}
-                  className="p-2 hover:bg-white/5 rounded-xl transition-colors cursor-pointer"
+                  onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer shrink-0 -m-2"
                   disabled={vaultLoading}
                 >
-                  <X size={18} className="text-slate-400" />
+                  <X size={18} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">
-                    {t.dashboard.vault.value}
-                  </label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.vault.value}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -992,7 +982,7 @@ export default function VaultPage() {
                     value={vaultAmount}
                     onChange={(e) => setVaultAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white font-black text-lg focus:outline-none focus:border-blue-500/50 transition-colors"
+                    className="w-full px-4 py-2.5 sm:py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                     disabled={vaultLoading}
                     autoFocus
                     onKeyDown={(e) => {
@@ -1005,26 +995,23 @@ export default function VaultPage() {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => {
-                      if (!vaultLoading) {
-                        setVaultModal(null);
-                        setVaultAmount('');
-                      }
-                    }}
+                    type="button"
+                    onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }}
                     disabled={vaultLoading}
-                    className="flex-1 px-4 py-3 border border-slate-700 text-slate-400 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {t.dashboard.vault.cancel}
                   </button>
                   <button
+                    type="button"
                     onClick={handleVaultTransaction}
                     disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
-                    className={`flex-1 px-4 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer disabled:opacity-50 ${
+                    className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
                       vaultModal.action === 'add'
                         ? vaultModal.category.vault_type === 'emergency'
-                          ? 'bg-blue-500 hover:bg-blue-400 text-white'
-                          : 'bg-emerald-500 hover:bg-emerald-400 text-white'
-                        : 'bg-red-500 hover:bg-red-400 text-white'
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-red-600 hover:bg-red-500 text-white'
                     }`}
                   >
                     {vaultLoading ? t.dashboard.vault.processing : vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
