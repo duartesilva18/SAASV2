@@ -80,57 +80,65 @@ export default function LandingPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <div className="min-h-[100dvh] bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden">
+      <div className="min-h-[100dvh] bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden relative">
+        {/* Background: igual ao login (mesh + grid, sem orbs) */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden>
+          <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_15%_20%,rgba(59,130,246,0.12),transparent_55%),radial-gradient(1000px_circle_at_85%_10%,rgba(99,102,241,0.10),transparent_55%),radial-gradient(900px_circle_at_50%_95%,rgba(16,185,129,0.06),transparent_60%)]" />
+          <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: 'linear-gradient(to right, rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.08) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+        </div>
 
-        {/* Banner — compacto em mobile; safe-area horizontal */}
+        {/* Banner — pill compacta */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative bg-gradient-to-r from-blue-600/90 via-indigo-600/90 to-blue-600/90 py-2 sm:py-2.5 px-3 sm:px-4 text-center overflow-hidden"
-          style={{ paddingLeft: 'max(0.75rem, env(safe-area-inset-left))', paddingRight: 'max(0.75rem, env(safe-area-inset-right))' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="relative flex justify-center px-4 pt-3 sm:pt-4"
+          style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}
         >
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
-          <p className="text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-widest text-white/95 relative z-10 truncate">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/50 bg-slate-800/40 px-3 py-1.5 text-[10px] sm:text-xs font-medium uppercase tracking-widest text-slate-400">
+            <Sparkles className="h-3 w-3 text-amber-400/80" aria-hidden />
             {t.banner}
           </p>
         </motion.div>
 
-        {/* Nav — sticky, glass */}
+        {/* Nav — sticky, limpo e proporcional */}
         <motion.nav
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="sticky top-0 z-50 border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl"
-          style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.3 }}
+          className="sticky top-0 z-50 mx-4 sm:mx-6 lg:mx-8 mt-2 sm:mt-3 rounded-2xl border border-slate-700/50 bg-slate-900/80 backdrop-blur-xl shadow-lg shadow-black/20"
+          style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))', marginLeft: 'max(1rem, env(safe-area-inset-left))', marginRight: 'max(1rem, env(safe-area-inset-right))' }}
         >
-          <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 flex items-center justify-between gap-3 min-h-[64px] sm:min-h-[72px]">
-            <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0 -m-2 p-2 rounded-xl active:scale-[0.98]">
-              <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-9 w-9 sm:h-14 sm:w-14 md:h-16 md:w-16 object-contain shrink-0" draggable={false} />
-              <span className="text-white font-bold tracking-tight text-lg sm:text-2xl md:text-3xl 3xl:text-4xl 4xl:text-5xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
+          <div className="max-w-[90rem] mx-auto px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-4">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 shrink-0 min-w-0 rounded-xl py-1.5 pr-2 -ml-1.5 active:scale-[0.98] transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            >
+              <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-10 w-10 sm:h-11 sm:w-11 object-contain shrink-0" draggable={false} />
+              <span className="text-white font-bold tracking-tight text-2xl sm:text-3xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
                 Finly
               </span>
             </Link>
 
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                  className="flex items-center gap-1.5 h-10 sm:h-12 min-w-[40px] sm:min-w-[44px] px-2.5 sm:px-4 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 h-9 sm:h-10 min-w-[36px] px-2.5 sm:px-3 rounded-lg border border-slate-600/60 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                   aria-label="Language"
                 >
-                  <img src={FLAG_IMAGE_URLS[language]} alt="" className="w-4 h-3 sm:w-5 sm:h-3.5 3xl:w-6 3xl:h-4 object-cover rounded-sm shrink-0" width={24} height={16} />
-                  <span className="text-[9px] sm:text-[10px] 3xl:text-xs font-semibold hidden xs:inline sm:inline">{availableLanguages[language]?.code.toUpperCase()}</span>
+                  <img src={FLAG_IMAGE_URLS[language]} alt="" className="w-4 h-3 sm:w-[18px] sm:h-3.5 object-cover rounded-sm shrink-0" width={24} height={16} />
+                  <span className="text-[10px] sm:text-xs font-medium hidden xs:inline sm:inline">{availableLanguages[language]?.code.toUpperCase()}</span>
                 </button>
                 <AnimatePresence>
                   {showLanguageMenu && (
                     <>
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setShowLanguageMenu(false)} />
                       <motion.div
-                        initial={{ opacity: 0, y: -8 }}
+                        initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        className="absolute right-0 top-full mt-2 bg-slate-900/95 border border-slate-700 rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden z-50 min-w-[140px] sm:min-w-[160px] backdrop-blur-xl"
+                        exit={{ opacity: 0, y: -6 }}
+                        className="absolute right-0 top-full mt-2 bg-slate-900/95 backdrop-blur-xl border border-slate-700/60 rounded-xl shadow-xl overflow-hidden z-50 min-w-[140px] sm:min-w-[160px]"
                       >
                         {Object.values(availableLanguages)
                           .filter((lang): lang is LanguageConfig => lang != null && lang.code != null)
@@ -139,10 +147,10 @@ export default function LandingPage() {
                               key={lang.code}
                               type="button"
                               onClick={() => { setLanguage(lang.code as LanguageCode); setShowLanguageMenu(false); }}
-                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-left flex items-center gap-2 sm:gap-3 hover:bg-white/5 transition-colors cursor-pointer min-h-[44px] ${language === lang.code ? 'bg-blue-500/15 text-blue-400' : 'text-slate-300'}`}
+                              className={`w-full px-3 sm:px-4 py-2.5 text-left flex items-center gap-2.5 hover:bg-white/5 transition-colors cursor-pointer ${language === lang.code ? 'bg-blue-500/15 text-blue-400' : 'text-slate-300'}`}
                             >
-                              <img src={FLAG_IMAGE_URLS[lang.code]} alt="" className="w-5 h-3.5 sm:w-6 sm:h-4 object-cover rounded-sm shrink-0" width={24} height={16} />
-                              <span className="text-xs sm:text-sm font-medium">{lang.nativeName}</span>
+                              <img src={FLAG_IMAGE_URLS[lang.code]} alt="" className="w-5 h-3.5 object-cover rounded-sm shrink-0" width={24} height={16} />
+                              <span className="text-sm font-medium">{lang.nativeName}</span>
                               {language === lang.code && <CheckCircle2 size={14} className="ml-auto text-blue-400 shrink-0" />}
                             </button>
                           ))}
@@ -151,11 +159,17 @@ export default function LandingPage() {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <Link href="/auth/login" className="h-9 sm:h-11 3xl:h-12 min-h-[36px] sm:min-h-[44px] flex items-center justify-center bg-white/10 hover:bg-white/15 text-white px-2.5 sm:px-4 rounded-lg sm:rounded-xl font-bold text-[9px] sm:text-[10px] 3xl:text-xs uppercase tracking-wider border border-white/10 active:scale-[0.98]">
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/auth/login"
+                  className="h-9 sm:h-10 min-h-[40px] flex items-center justify-center px-4 rounded-lg font-semibold text-sm text-slate-300 hover:text-white border border-slate-600/60 hover:border-slate-500/60 hover:bg-slate-700/40 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                >
                   {(t.nav as { loginButton?: string })?.loginButton ?? 'Entrar'}
                 </Link>
-                <Link href="/auth/register" className="h-9 sm:h-11 3xl:h-12 min-h-[36px] sm:min-h-[44px] flex items-center justify-center bg-white text-black px-2.5 sm:px-4 3xl:px-6 py-2 sm:py-2.5 3xl:py-3 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] 3xl:text-sm font-black uppercase tracking-wider hover:bg-slate-100 active:scale-[0.98] transition-all shadow-lg">
+                <Link
+                  href="/auth/register"
+                  className="h-9 sm:h-10 min-h-[40px] flex items-center justify-center px-4 rounded-lg font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/30 transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                >
                   {t.nav.register}
                 </Link>
               </div>
@@ -178,7 +192,7 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none" />
 
           <div className="max-w-6xl mx-auto px-2 sm:px-5 lg:px-8 relative z-10 text-center">
-            <motion.div {...fadeUp} {...stagger(0)} className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 3xl:px-5 py-1.5 sm:py-2.5 3xl:py-3 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] sm:text-[10px] md:text-xs 3xl:text-sm font-bold uppercase tracking-widest mb-3 sm:mb-6 3xl:mb-8">
+            <motion.div {...fadeUp} {...stagger(0)} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/70 border border-slate-700/60 text-blue-400 text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
               <Sparkles size={12} className="sm:w-4 sm:h-4 3xl:w-[18px] 3xl:h-[18px] shrink-0" />
               <span className="truncate max-w-[160px] sm:max-w-none">{t.hero.badge}</span>
             </motion.div>
@@ -192,12 +206,12 @@ export default function LandingPage() {
                 <React.Fragment key={i}>{part}{i < arr.length - 1 && <AnimatedTelegram />}</React.Fragment>
               ))}
             </motion.p>
-            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 max-w-sm sm:max-w-none mx-auto">
-              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 sm:px-6 3xl:px-8 4xl:px-10 py-3 sm:py-3.5 3xl:py-4 4xl:py-5 min-h-[44px] 3xl:min-h-[48px] 4xl:min-h-[52px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-black uppercase tracking-wider shadow-lg shadow-blue-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <motion.div {...fadeUp} {...stagger(3)} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 max-w-sm sm:max-w-none mx-auto">
+              <Link href="/auth/register" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3.5 min-h-[44px] rounded-xl text-sm font-black uppercase tracking-wider active:scale-[0.98] transition-all">
                 {t.hero.cta}
-                <ArrowRight size={16} className="sm:w-4 sm:h-4 3xl:w-5 3xl:h-5 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
               </Link>
-              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-6 3xl:px-8 4xl:px-10 py-3 sm:py-3.5 3xl:py-4 4xl:py-5 min-h-[44px] 3xl:min-h-[48px] 4xl:min-h-[52px] rounded-xl sm:rounded-2xl text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-bold uppercase tracking-wider border-2 border-slate-600 text-slate-300 hover:border-blue-500/50 hover:text-white hover:bg-blue-500/5 transition-all active:scale-[0.98]">
+              <Link href="#telegram-simulator" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[44px] rounded-xl text-sm font-bold uppercase tracking-wider border border-slate-700/60 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all active:scale-[0.98]">
                 {t.hero.seeHow}
               </Link>
             </motion.div>
@@ -211,13 +225,12 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
-              className="relative group"
+              className="relative"
             >
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-[16px] sm:rounded-[22px] md:rounded-[32px] 3xl:rounded-[48px] blur opacity-20 group-hover:opacity-30 transition duration-700" />
-              <div className="relative bg-slate-950 rounded-[16px] sm:rounded-[20px] md:rounded-[28px] 3xl:rounded-[32px] p-4 sm:p-5 md:p-8 lg:p-10 3xl:p-16 border border-white/5 flex flex-col lg:flex-row items-center gap-5 sm:gap-6 lg:gap-10 3xl:gap-16 overflow-hidden">
+              <div className="relative bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col lg:flex-row items-center gap-6 lg:gap-10 overflow-hidden">
                 {/* Coluna esquerda: texto + formas de escrever */}
                 <div className="flex-1 space-y-3 sm:space-y-5 md:space-y-6 3xl:space-y-8 relative z-10 w-full min-w-0">
-                  <div className="inline-flex items-center gap-1.5 sm:gap-3 bg-blue-500/10 border border-blue-500/20 px-2.5 sm:px-3 3xl:px-4 py-1 sm:py-1.5 3xl:py-2 rounded-full text-blue-400 text-[9px] sm:text-[10px] 3xl:text-xs font-black uppercase tracking-widest">
+                  <div className="inline-flex items-center gap-2 bg-slate-900/50 border border-slate-700/60 px-3 py-1.5 rounded-full text-blue-400 text-xs font-bold uppercase tracking-widest">
                     <Send size={11} className="sm:w-3.5 sm:h-3.5 3xl:w-4 3xl:h-4 shrink-0" />
                     <span className="truncate">{(t.dashboard?.guide as any)?.telegramBot ?? 'Bot Telegram'}</span>
                   </div>
@@ -229,8 +242,8 @@ export default function LandingPage() {
                   <p className="text-slate-400 text-[11px] sm:text-xs md:text-sm 3xl:text-lg leading-relaxed max-w-xl">
                     {(t.dashboard?.guide as any)?.multipleWays ?? 'Múltiplas formas de escrever. Especifica a categoria com um hífen ou deixa a IA categorizar.'}
                   </p>
-                  <div className="bg-slate-900/50 rounded-lg sm:rounded-xl 3xl:rounded-2xl p-2.5 sm:p-3 md:p-4 3xl:p-5 border border-slate-800">
-                    <h3 className="text-white font-black text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm 4xl:text-base uppercase tracking-wider mb-1.5 sm:mb-2 md:mb-3 3xl:mb-4 4xl:mb-5">{(t.dashboard?.guide as any)?.waysToWrite ?? 'Formas de escrever:'}</h3>
+                  <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{(t.dashboard?.guide as any)?.waysToWrite ?? 'Formas de escrever:'}</h3>
                     <ul className="space-y-1 sm:space-y-1.5 md:space-y-2 3xl:space-y-3 4xl:space-y-4 text-slate-400 text-[10px] sm:text-[11px] md:text-xs 3xl:text-sm 4xl:text-base leading-snug">
                       <li className="flex items-start gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
@@ -247,18 +260,18 @@ export default function LandingPage() {
                     </ul>
                   </div>
                   <div className="flex flex-col sm:flex-row flex-wrap gap-1.5 sm:gap-3">
-                    <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 sm:gap-2 min-h-[40px] 3xl:min-h-[44px] px-3 sm:px-4 md:px-5 3xl:px-6 py-2 sm:py-2.5 3xl:py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg sm:rounded-xl 3xl:rounded-2xl text-[10px] sm:text-[11px] 3xl:text-xs font-black uppercase tracking-wider shadow-xl shadow-blue-600/20 active:scale-95 transition-all w-full sm:w-auto">
-                      <Send size={12} className="3xl:w-3.5 3xl:h-3.5" /> <span className="truncate">{(t.dashboard?.guide as any)?.openTelegramBot ?? 'Abrir bot no Telegram'}</span>
+                    <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all w-full sm:w-auto">
+                      <Send size={14} /> <span className="truncate">{(t.dashboard?.guide as any)?.openTelegramBot ?? 'Abrir bot no Telegram'}</span>
                     </a>
-                    <Link href="/auth/register" className="inline-flex items-center justify-center gap-1.5 sm:gap-2 min-h-[40px] 3xl:min-h-[44px] px-3 sm:px-4 md:px-5 3xl:px-6 py-2 sm:py-2.5 3xl:py-3.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg sm:rounded-xl 3xl:rounded-2xl text-[10px] sm:text-[11px] 3xl:text-xs font-black uppercase tracking-wider active:scale-95 transition-all w-full sm:w-auto">
+                    <Link href="/auth/register" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 bg-slate-900/70 border border-slate-700/60 hover:bg-slate-700/50 text-white rounded-xl text-xs font-bold uppercase tracking-wider active:scale-95 transition-all w-full sm:w-auto">
                       {t.hero.cta}
                     </Link>
                   </div>
                 </div>
 
                 {/* Simulador de chat — interativo; em mobile altura limitada e centrado */}
-                <div className="w-full max-w-[min(100%,20rem)] sm:max-w-[22rem] lg:max-w-[380px] 3xl:max-w-[420px] shrink-0 mx-auto">
-                  <div className="bg-slate-900 rounded-[16px] sm:rounded-[20px] md:rounded-[28px] 3xl:rounded-[32px] border border-white/10 shadow-2xl overflow-hidden aspect-[9/16] max-h-[60vh] sm:max-h-[65vh] md:aspect-auto md:max-h-none md:h-[440px] lg:h-[480px] 3xl:h-[560px] flex flex-col">
+                <div className="w-full max-w-[min(100%,20rem)] sm:max-w-[22rem] lg:max-w-[380px] shrink-0 mx-auto">
+                  <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden aspect-[9/16] max-h-[60vh] sm:max-h-[65vh] md:aspect-auto md:max-h-none md:h-[440px] lg:h-[480px] flex flex-col">
                     <div className="bg-slate-800 border-b border-white/5 p-2.5 sm:p-3 3xl:p-4 flex items-center gap-1.5 sm:gap-3">
                       <div className="w-8 h-8 sm:w-9 sm:h-9 3xl:w-10 3xl:h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shrink-0">
                         <Send size={16} className="sm:w-4 sm:h-4 3xl:w-5 3xl:h-5" />
@@ -381,16 +394,16 @@ export default function LandingPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: '0px 0px -40px 0px' }}
                     transition={{ delay: index * 0.08, duration: 0.35 }}
-                    className={`relative rounded-2xl 3xl:rounded-3xl p-5 sm:p-6 3xl:p-8 flex flex-col transition-all duration-300 ${plan.popular ? 'overflow-visible' : 'overflow-hidden'} ${
+                    className={`relative rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col transition-all duration-300 ${plan.popular ? 'overflow-visible' : 'overflow-hidden'} ${
                       plan.popular
-                        ? 'bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-blue-400/80 shadow-[0_0_60px_rgba(59,130,246,0.25),0_20px_50px_-15px_rgba(0,0,0,0.5)] md:-mt-2 md:mb-2 md:scale-[1.05] ring-2 ring-blue-400/30'
-                        : 'bg-gradient-to-b from-slate-800/90 to-slate-900/90 border-2 border-slate-600/80 hover:border-blue-500/50 hover:shadow-[0_0_40px_rgba(59,130,246,0.12)]'
+                        ? 'bg-slate-900/70 backdrop-blur-md border-2 border-blue-500/50 md:-mt-2 md:mb-2 md:scale-[1.02]'
+                        : 'bg-slate-900/70 backdrop-blur-md border border-slate-700/60 hover:border-blue-500/40'
                     }`}
-                    whileHover={plan.popular ? { scale: 1.03, boxShadow: '0 0 80px rgba(59,130,246,0.3), 0 25px 60px -15px rgba(0,0,0,0.5)' } : { y: -6, boxShadow: '0 20px 40px -15px rgba(0,0,0,0.4)' }}
+                    whileHover={plan.popular ? undefined : { y: -4 }}
                   >
                     {plan.popular && planData.popularLabel && (
-                      <div className="absolute -top-2.5 3xl:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 text-white px-3 sm:px-4 3xl:px-5 py-1.5 3xl:py-2 rounded-full text-[9px] sm:text-[10px] 3xl:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1 3xl:gap-1.5 text-center shadow-lg shadow-blue-500/40 z-10 min-w-[120px] sm:min-w-0 3xl:min-w-0 whitespace-nowrap">
-                        <Trophy size={10} className="sm:w-3.5 sm:h-3.5 3xl:w-4 3xl:h-4 shrink-0" />
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 z-10">
+                        <Trophy size={12} className="shrink-0" />
                         {planData.popularLabel}
                       </div>
                     )}
@@ -435,10 +448,10 @@ export default function LandingPage() {
                           router.push(`/auth/login?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
                         }
                       }}
-                      className={`w-full py-3 sm:py-3.5 3xl:py-4 min-h-[42px] 3xl:min-h-[48px] rounded-xl 3xl:rounded-2xl text-[11px] sm:text-xs 3xl:text-sm font-black uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] ${
+                      className={`w-full py-3.5 min-h-[44px] rounded-xl text-sm font-black uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] ${
                         plan.popular
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white shadow-lg shadow-blue-500/40 hover:shadow-xl hover:shadow-blue-500/50'
-                          : 'bg-slate-700 hover:bg-slate-600 text-white border-2 border-slate-500 hover:border-blue-500/50'
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                          : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/60 hover:border-blue-500/40'
                       }`}
                     >
                       {planData.buttonText}
@@ -448,64 +461,64 @@ export default function LandingPage() {
               })}
             </div>
 
-            {/* Bloco Afiliados — compacto abaixo de 3xl */}
-            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-8 sm:mt-14 md:mt-20 3xl:mt-24 max-w-4xl mx-auto">
-              <div className="relative rounded-2xl 3xl:rounded-3xl border-2 border-amber-500/30 bg-gradient-to-b from-amber-500/10 to-amber-500/5 p-4 sm:p-6 3xl:p-10 text-center overflow-hidden shadow-[0_0_60px_rgba(245,158,11,0.08)]">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                <span className="relative inline-flex items-center justify-center gap-1.5 sm:gap-2 text-amber-400 text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-black uppercase tracking-widest mb-3 sm:mb-4 3xl:mb-5 4xl:mb-6">
-                  <Trophy size={10} className="sm:w-3.5 sm:h-3.5 3xl:w-4 3xl:h-4 shrink-0" />
+            {/* Bloco Afiliados — card premium com destaque */}
+            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-10 sm:mt-16 max-w-4xl mx-auto">
+              <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 bg-gradient-to-b from-slate-900/90 to-slate-900/70 backdrop-blur-md p-6 sm:p-8 lg:p-10 text-center overflow-hidden shadow-xl shadow-amber-900/10">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+                <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-amber-400 text-xs sm:text-sm font-bold uppercase tracking-widest mb-4 sm:mb-5">
+                  <Trophy size={14} className="shrink-0" />
                   {t.pricingSection.affiliate.badge}
                 </span>
-                <h3 className="relative text-lg sm:text-2xl md:text-3xl 3xl:text-4xl font-black text-white mb-2 sm:mb-3 3xl:mb-4 tracking-tight leading-tight">
+                <h3 className="relative text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white mb-3 sm:mb-4 tracking-tight leading-tight">
                   {t.pricingSection.affiliate.title}
                 </h3>
-                <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl mb-4 sm:mb-5 3xl:mb-6 4xl:mb-8 max-w-2xl mx-auto leading-relaxed">
+                <p className="relative text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
                   {t.pricingSection.affiliate.description}
                 </p>
-                <ul className="relative space-y-1.5 sm:space-y-2 3xl:space-y-3 4xl:space-y-4 mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10 text-slate-200 text-xs sm:text-sm 3xl:text-base 4xl:text-lg flex flex-wrap justify-center gap-x-3 sm:gap-x-4 3xl:gap-x-6 4xl:gap-x-8 gap-y-1.5 3xl:gap-y-2 4xl:gap-y-3">
+                <ul className="relative flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-3 mb-6 sm:mb-8 text-slate-200 text-sm sm:text-base">
                   {t.pricingSection.affiliate.benefits.map((b: string, i: number) => (
-                    <li key={i} className="flex items-center gap-1.5 3xl:gap-2">
-                      <Check size={14} className="text-emerald-400 shrink-0 sm:w-4 sm:h-4 3xl:w-[18px] 3xl:h-[18px]" />
-                      {b}
+                    <li key={i} className="flex items-center gap-2">
+                      <Check size={16} className="text-emerald-400 shrink-0" />
+                      <span>{b}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="relative rounded-xl 3xl:rounded-2xl bg-slate-800/80 border border-slate-600/80 p-3 sm:p-4 3xl:p-6 text-left shadow-inner">
-                  <p className="text-amber-400/90 text-xs sm:text-sm 3xl:text-base 4xl:text-lg font-bold uppercase tracking-widest mb-1.5 sm:mb-2 3xl:mb-3 4xl:mb-4">
+                <div className="relative rounded-xl sm:rounded-2xl bg-slate-950/80 border border-slate-700/60 p-4 sm:p-6 text-left">
+                  <p className="text-amber-400 font-bold text-xs sm:text-sm uppercase tracking-widest mb-2 sm:mb-3">
                     {t.pricingSection.affiliate.example.title}
                   </p>
-                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl font-semibold mb-1 3xl:mb-2 4xl:mb-3 leading-snug">
+                  <p className="text-slate-100 text-sm sm:text-base font-semibold mb-1 leading-snug">
                     {t.pricingSection.affiliate.example.line1}
                   </p>
-                  <p className="text-slate-100 text-xs sm:text-sm 3xl:text-lg 4xl:text-xl font-semibold mb-1.5 sm:mb-2 3xl:mb-3 4xl:mb-4 leading-snug">
+                  <p className="text-slate-100 text-sm sm:text-base font-semibold mb-2 sm:mb-3 leading-snug">
                     {t.pricingSection.affiliate.example.line2}
                   </p>
-                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base">{t.pricingSection.affiliate.example.footer}</p>
+                  <p className="text-slate-500 text-xs sm:text-sm">{t.pricingSection.affiliate.example.footer}</p>
                 </div>
               </div>
             </motion.div>
 
-            {/* Garantias — compacto abaixo de 3xl */}
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-8 sm:mt-14 3xl:mt-20 pt-8 sm:pt-10 3xl:pt-14 border-t border-white/10">
-              <p className="text-center text-slate-400 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-widest mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10">
+            {/* Garantias — pills com ícone */}
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-10 sm:mt-14 pt-8 sm:pt-12 border-t border-slate-700/60">
+              <p className="text-center text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-widest mb-6 sm:mb-8">
                 {t.pricingSection.guarantee.title}
               </p>
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-8 3xl:gap-12 gap-y-2 3xl:gap-y-3">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                 {t.pricingSection.guarantee.items.map((item: string, i: number) => (
-                  <div key={i} className="flex items-center gap-1.5 3xl:gap-2 text-slate-300 text-[11px] sm:text-xs 3xl:text-base leading-snug">
-                    <Check size={14} className="text-emerald-400 shrink-0 sm:w-4 sm:h-4 3xl:w-5 3xl:h-5" />
+                  <span key={i} className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-800/50 px-4 py-2 text-slate-300 text-xs sm:text-sm leading-snug">
+                    <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
                     {item}
-                  </div>
+                  </span>
                 ))}
               </div>
             </motion.div>
           </div>
         </section>
 
-        {/* Stats — números sem cards, layout limpo; compacto abaixo de 3xl */}
-        <section id="stats" className="py-10 sm:py-16 3xl:py-20 border-y border-white/5" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+        {/* Stats — números em destaque com fundo suave */}
+        <section id="stats" className="py-12 sm:py-20 border-y border-slate-700/60" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 3xl:gap-8 text-center sm:divide-x sm:divide-white/10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center">
               {[
                 { value: '180€', label: t.stats.saved },
                 { value: '3s', label: t.stats.time },
@@ -513,155 +526,147 @@ export default function LandingPage() {
               ].map((stat, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.08, duration: 0.4 }}
-                  className="sm:px-6 3xl:px-8"
+                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  className="rounded-2xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm py-6 sm:py-8 px-4 sm:px-6"
                 >
-                  <p className="text-2xl sm:text-4xl md:text-5xl 3xl:text-6xl 4xl:text-7xl font-black tracking-tighter mb-1.5 3xl:mb-2 4xl:mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400">
+                  <p className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400">
                     {stat.value}
                   </p>
-                  <p className="text-[9px] sm:text-[10px] 3xl:text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{stat.label}</p>
+                  <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-500">{stat.label}</p>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Steps — 3 passos com cards destacados; compacto abaixo de 3xl */}
-        <section id="steps" className="py-12 sm:py-20 md:py-28 3xl:py-32 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+        {/* Steps — 3 passos com cards e linha conectora */}
+        <section id="steps" className="py-14 sm:py-20 md:py-24 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8">
-            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black tracking-tighter text-center mb-8 sm:mb-14 3xl:mb-20 4xl:mb-24">
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-center mb-10 sm:mb-14">
               {t.steps.title}
               <span className="text-blue-400 italic"> {t.steps.titleAccent}</span>
             </motion.h2>
 
-            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 3xl:gap-10">
-              {/* Linha conectora (desktop) — mais visível */}
-              <div className="hidden md:block absolute top-[88px] left-[12%] right-[12%] h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              <div className="hidden md:block absolute top-[100px] left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
               {t.steps.items.map((step: { t: string; d: string }, i: number) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 28 }}
+                  initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.12, duration: 0.4 }}
-                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  className="relative rounded-2xl 3xl:rounded-3xl bg-gradient-to-b from-slate-800/70 to-slate-900/70 border border-slate-600/60 p-4 sm:p-6 3xl:p-8 hover:border-blue-500/50 hover:shadow-[0_0_50px_rgba(59,130,246,0.12),0_20px_40px_-15px_rgba(0,0,0,0.4)] transition-all duration-300 group overflow-hidden"
+                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                  className="relative rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 hover:border-blue-500/40 transition-all duration-300 group overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
-                  <div className="relative flex items-start gap-3 3xl:gap-4 mb-4 3xl:mb-6">
-                    <span className="flex h-11 w-11 3xl:h-14 3xl:w-14 shrink-0 items-center justify-center rounded-xl 3xl:rounded-2xl bg-gradient-to-br from-blue-500/25 to-indigo-500/25 border border-blue-500/40 text-blue-300 font-black text-base 3xl:text-xl group-hover:from-blue-500/35 group-hover:to-indigo-500/35 group-hover:border-blue-400/50 transition-colors shadow-lg shadow-blue-500/10">
+                  <div className="relative flex items-center gap-4 mb-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 border border-blue-500/40 text-blue-300 font-black text-lg group-hover:border-blue-400/50 transition-colors">
                       {i + 1}
                     </span>
-                    <div className="w-11 h-11 3xl:w-14 3xl:h-14 rounded-xl 3xl:rounded-2xl bg-slate-700/80 flex items-center justify-center text-blue-400 border border-slate-600/80 group-hover:border-blue-500/40 group-hover:bg-slate-700 transition-colors shrink-0">
-                      {i === 0 ? <Phone size={22} className="3xl:w-[26px] 3xl:h-[26px]" /> : i === 1 ? <MessageSquare size={22} className="3xl:w-[26px] 3xl:h-[26px]" /> : <Zap size={22} className="3xl:w-[26px] 3xl:h-[26px]" />}
+                    <div className="w-12 h-12 rounded-xl bg-slate-700/80 flex items-center justify-center text-blue-400 border border-slate-600/80 group-hover:border-blue-500/40 shrink-0">
+                      {i === 0 ? <Phone size={24} /> : i === 1 ? <MessageSquare size={24} /> : <Zap size={24} />}
                     </div>
                   </div>
-                  <h3 className="relative text-base sm:text-lg 3xl:text-xl 4xl:text-2xl font-black text-white mb-2 3xl:mb-3 4xl:mb-4 uppercase tracking-tight">{step.t}</h3>
-                  <p className="relative text-slate-300 text-xs sm:text-sm 3xl:text-base 4xl:text-lg leading-relaxed">{step.d}</p>
+                  <h3 className="relative text-lg sm:text-xl font-black text-white mb-2 uppercase tracking-tight">{step.t}</h3>
+                  <p className="relative text-slate-300 text-sm sm:text-base leading-relaxed">{step.d}</p>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Resources — tecnologia que trabalha para si; compacto abaixo de 3xl */}
-        <section id="resources" className="py-14 sm:py-24 md:py-28 3xl:py-36 relative overflow-hidden bg-[#03081c]" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent pointer-events-none" />
+        {/* Resources — tecnologia que trabalha para si */}
+        <section id="resources" className="py-14 sm:py-20 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 relative">
-            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14 3xl:mb-20">
-              <span className="inline-flex items-center gap-1.5 sm:gap-2 text-amber-400 text-[11px] sm:text-xs 3xl:text-sm font-black uppercase tracking-widest mb-3 3xl:mb-5">
-                <Zap size={14} className="3xl:w-4 3xl:h-4 shrink-0" />
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-12">
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-400 text-xs font-bold uppercase tracking-widest mb-4">
+                <Zap size={14} className="shrink-0" />
                 {t.resources.badge}
               </span>
-              <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl 3xl:text-6xl font-black tracking-tighter mb-3 3xl:mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter mb-3">
                 {t.resources.title}
                 <span className="text-blue-400 italic"> {t.resources.titleAccent}</span>
               </h2>
-              <p className="text-slate-400 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl max-w-2xl mx-auto leading-relaxed">
+              <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
                 {(t.resources as { subtitle?: string }).subtitle ?? 'Tudo o que precisas para dominar as tuas finanças, num só sítio.'}
               </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 3xl:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {t.resources.items.map((item: { t: string; d: string }, i: number) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 28 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.08, duration: 0.4 }}
-                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  className="group relative rounded-2xl 3xl:rounded-3xl p-4 sm:p-6 3xl:p-8 bg-gradient-to-b from-slate-800/60 to-slate-900/60 border border-slate-600/50 hover:border-blue-500/40 hover:shadow-[0_0_50px_rgba(59,130,246,0.12),0_20px_40px_-15px_rgba(0,0,0,0.3)] transition-all duration-300 overflow-hidden"
+                  transition={{ delay: i * 0.06, duration: 0.35 }}
+                  whileHover={{ y: -4 }}
+                  className="group relative rounded-2xl p-5 sm:p-6 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 hover:border-blue-500/40 transition-all duration-300 overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/15 transition-colors pointer-events-none" />
-                    <div className="relative flex items-start gap-3 sm:gap-4 3xl:gap-5">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 3xl:w-16 3xl:h-16 rounded-xl 3xl:rounded-2xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 group-hover:from-blue-500/40 group-hover:to-indigo-500/40 group-hover:border-blue-400/50 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300">
-                        {i === 0 ? <Phone size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 1 ? <BarChart3 size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 2 ? <Globe size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 3 ? <ShieldCheck size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : i === 4 ? <Trophy size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" /> : <Star size={20} className="sm:w-6 sm:h-6 3xl:w-7 3xl:h-7" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs sm:text-base 3xl:text-lg 4xl:text-xl font-black uppercase tracking-wider text-white mb-1 3xl:mb-2 4xl:mb-3 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
-                        <p className="text-slate-300 text-[11px] sm:text-sm 3xl:text-base 4xl:text-lg leading-relaxed">{item.d}</p>
-                      </div>
+                  <div className="relative flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 group-hover:border-blue-400/50 group-hover:shadow-lg group-hover:shadow-blue-500/15 transition-all">
+                      {i === 0 ? <Phone size={22} /> : i === 1 ? <BarChart3 size={22} /> : i === 2 ? <Globe size={22} /> : i === 3 ? <ShieldCheck size={22} /> : i === 4 ? <Trophy size={22} /> : <Star size={22} />}
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-base sm:text-lg font-black uppercase tracking-tight text-white mb-1.5 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
+                      <p className="text-slate-300 text-sm leading-relaxed">{item.d}</p>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Testimonials — feedback redesenhado; compacto abaixo de 3xl */}
-        <section id="testimonials" className="py-12 sm:py-24 md:py-28 3xl:py-36 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-[#020617] to-slate-950/80 pointer-events-none" />
+        {/* Testimonials — feedback com destaque no do meio */}
+        <section id="testimonials" className="py-14 sm:py-20 relative overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 relative">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-14 3xl:mb-20">
-              <span className="inline-block text-amber-400 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-black uppercase tracking-widest mb-3 3xl:mb-4 4xl:mb-5">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-12">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-400 text-xs font-bold uppercase tracking-widest mb-4">
                 {(t.testimonials as { badge?: string }).badge ?? 'Opiniões'}
               </span>
-              <h2 className="text-xl sm:text-3xl md:text-4xl 3xl:text-5xl 4xl:text-6xl font-black tracking-tighter">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter">
                 {(t.testimonials as { title?: string }).title ?? 'O que dizem '}
                 <span className="text-blue-400 italic"> {(t.testimonials as { titleAccent?: string }).titleAccent ?? 'os nossos clientes.'}</span>
               </h2>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 3xl:gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
               {t.testimonials.items.map((item: { id: number; name: string; role: string; text: string; initial: string }, i: number) => (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, y: 28 }}
+                  initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.12, duration: 0.4 }}
-                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  className={`group relative flex flex-col rounded-2xl 3xl:rounded-3xl p-4 sm:p-6 3xl:p-8 border transition-all duration-300 overflow-hidden ${
+                  transition={{ delay: i * 0.1, duration: 0.35 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className={`group relative flex flex-col rounded-2xl p-5 sm:p-6 border transition-all duration-300 overflow-hidden ${
                     i === 1
-                      ? 'bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-blue-500/40 shadow-[0_0_50px_rgba(59,130,246,0.1)] md:-mt-2 md:mb-2 md:scale-[1.02] ring-1 ring-blue-500/20'
-                      : 'bg-slate-800/40 border-slate-600/60 hover:border-blue-500/30 hover:shadow-[0_0_40px_rgba(59,130,246,0.08)]'
+                      ? 'bg-slate-900/80 backdrop-blur-md border-blue-500/50 md:-mt-1 md:mb-1 md:scale-[1.02] shadow-lg shadow-blue-900/20'
+                      : 'bg-slate-900/70 backdrop-blur-md border-slate-700/60 hover:border-blue-500/30'
                   }`}
                 >
-                  {i === 1 && (
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                  )}
-                  <div className="relative flex items-center gap-3 3xl:gap-4 mb-4 3xl:mb-5">
-                    <div className="w-10 h-10 3xl:w-12 3xl:h-12 rounded-xl 3xl:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs 3xl:text-sm shadow-lg shadow-blue-600/30 ring-2 ring-white/10 shrink-0">
+                  <div className="relative flex items-center gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-600/25 ring-2 ring-white/10 shrink-0">
                       {item.initial}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-bold text-xs sm:text-sm 3xl:text-base 4xl:text-lg truncate">{item.name}</p>
-                      <p className="text-slate-400 text-[10px] sm:text-xs 3xl:text-sm 4xl:text-base truncate">{(item.role as string).toUpperCase()}</p>
+                      <p className="text-white font-bold text-sm truncate">{item.name}</p>
+                      <p className="text-slate-400 text-xs truncate uppercase tracking-wider">{(item.role as string)}</p>
                     </div>
                   </div>
-                  <div className="flex gap-0.5 mb-3 3xl:mb-4">
+                  <div className="flex gap-0.5 mb-3">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={14} className="fill-amber-400 text-amber-400 shrink-0 3xl:w-4 3xl:h-4" />
+                      <Star key={s} size={14} className="fill-amber-400 text-amber-400 shrink-0" />
                     ))}
                   </div>
-                  <p className="relative text-slate-200 text-xs sm:text-sm md:text-base 3xl:text-lg 4xl:text-xl leading-relaxed flex-1">
-                    <span className="absolute -top-1 -left-1 text-3xl sm:text-4xl font-serif text-blue-500/25 leading-none select-none">&quot;</span>
-                    <span className="pl-3 sm:pl-4">{item.text}</span>
+                  <p className="relative text-slate-200 text-sm sm:text-base leading-relaxed flex-1">
+                    <span className="absolute -top-0.5 -left-0.5 text-2xl sm:text-3xl font-serif text-blue-500/20 leading-none select-none">&quot;</span>
+                    <span className="pl-4">{item.text}</span>
                   </p>
                 </motion.div>
               ))}
@@ -669,58 +674,57 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* FAQ — estático; compacto abaixo de 3xl */}
-        <section id="faq" className="py-10 sm:py-20 md:py-24 3xl:py-32 border-t border-white/5" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <div className="max-w-4xl mx-auto px-4 sm:px-5 lg:px-8">
-            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-lg sm:text-3xl 3xl:text-4xl 4xl:text-5xl font-black tracking-tighter text-center mb-6 sm:mb-10 3xl:mb-12 4xl:mb-14">
+        {/* FAQ — cards claros com ícone */}
+        <section id="faq" className="py-12 sm:py-20 border-t border-slate-700/60" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+          <div className="max-w-3xl mx-auto px-4 sm:px-5 lg:px-8">
+            <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-center mb-8 sm:mb-10">
               {t.faq.title}
               <span className="text-blue-400 italic"> {t.faq.titleAccent}</span>
             </motion.h2>
 
-            <div className="space-y-3 3xl:space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {t.faq.items.map((item: { q: string; a: string }, i: number) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: -16 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.06 }}
-                  className="rounded-xl 3xl:rounded-2xl bg-slate-800/30 border border-slate-700/80 p-3 sm:p-4 3xl:p-6 hover:border-slate-600 hover:bg-slate-800/50 transition-all duration-300"
+                  transition={{ delay: i * 0.05 }}
+                  className="rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-5 hover:border-slate-600/80 transition-all duration-300"
                 >
-                  <h4 className="text-[11px] sm:text-xs 3xl:text-sm font-black uppercase tracking-wider text-white mb-1.5 3xl:mb-2 flex items-center gap-1.5 3xl:gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  <h4 className="text-sm sm:text-base font-bold text-white mb-2 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                     <span className="min-w-0">{item.q}</span>
                   </h4>
-                  <p className="text-slate-500 text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base leading-relaxed pl-3 3xl:pl-3.5 4xl:pl-4">{item.a}</p>
+                  <p className="text-slate-400 text-sm leading-relaxed pl-4">{item.a}</p>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Footer — compacto abaixo de 3xl */}
-        <footer className="relative border-t border-white/5 bg-[#010413] py-8 sm:py-12 3xl:py-16 overflow-hidden" style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+        {/* Footer — estrutura clara com logo, links e badge */}
+        <footer className="relative border-t border-slate-700/60 bg-slate-950/90 py-10 sm:py-14 overflow-hidden" style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 text-center relative">
-            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-4 3xl:mb-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
               <motion.div whileHover={{ scale: 1.05 }} className="shrink-0">
-                <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-8 w-8 sm:h-10 sm:w-10 3xl:h-12 3xl:w-12 4xl:h-14 4xl:w-14 object-contain" draggable={false} loading="lazy" />
+                <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-9 w-9 sm:h-10 sm:w-10 object-contain" draggable={false} loading="lazy" />
               </motion.div>
-              <span className="text-base sm:text-lg 3xl:text-xl font-black tracking-tight text-white">Finly</span>
+              <span className="text-lg sm:text-xl font-black tracking-tight text-white">Finly</span>
             </div>
-            <p className="text-slate-600 text-[9px] sm:text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-[0.3em] mb-4 sm:mb-6 3xl:mb-8 4xl:mb-10">{t.footer.slogan}</p>
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-6 3xl:gap-10 mb-4 sm:mb-6 3xl:mb-8">
+            <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-6">{t.footer.slogan}</p>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6">
               {t.footer.links.map((link: string, i: number) => {
                 const hrefMap: Record<string, string> = { 'Termos': '/terms', 'Terms': '/terms', 'Privacidade': '/privacy', 'Privacy': '/privacy', 'Cookies': '#' };
                 return (
-                  <Link key={i} href={hrefMap[link] || '#'} className="inline-flex items-center min-h-[40px] 3xl:min-h-[44px] 4xl:min-h-[48px] text-slate-500 hover:text-white text-[11px] sm:text-xs 3xl:text-sm 4xl:text-base font-bold uppercase tracking-wider transition-colors">
+                  <Link key={i} href={hrefMap[link] || '#'} className="text-slate-400 hover:text-white text-sm font-medium transition-colors">
                     {link}
                   </Link>
                 );
               })}
             </div>
-            <p className="flex items-center justify-center gap-1.5 3xl:gap-2 4xl:gap-3 text-slate-700 text-[9px] sm:text-[10px] 3xl:text-xs 4xl:text-sm font-bold uppercase tracking-widest">
-              <CheckCircle2 size={10} className="3xl:w-3 3xl:h-3" />
+            <p className="inline-flex items-center gap-2 rounded-full border border-slate-700/50 bg-slate-800/40 px-4 py-2 text-slate-500 text-xs font-semibold uppercase tracking-widest">
+              <CheckCircle2 size={12} className="text-emerald-500/80 shrink-0" />
               {t.footer.badge}
             </p>
           </div>

@@ -38,7 +38,7 @@ export const translations = {
       register: "Commencer gratuitement"
     },
     hero: {
-      badge: "✨ +2 800 français en contrôle total",
+      badge: "+2 800 français en contrôle total",
       title1: "Votre ",
       titleAccent: "paix financière",
       title2: " commence par un SMS.",
@@ -98,7 +98,7 @@ A estrutura completa de traduções inclui:
 
 **Dica:** Use a estrutura de `pt` ou `en` como template e traduza campo por campo.
 
-## 🚀 Exemplo Completo: Francês
+## Exemplo Completo: Francês
 
 ### 1. `languages.ts`:
 ```typescript

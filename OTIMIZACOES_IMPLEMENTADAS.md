@@ -172,7 +172,7 @@ psql -U usuario -d base_dados -f SaaS/backend/add_indexes.sql
 
 ---
 
-## 🚀 Próximos Passos (Opcional)
+## Próximos Passos (Opcional)
 
 ### 1. Atualizar Frontend para Usar `/dashboard/snapshot`
 

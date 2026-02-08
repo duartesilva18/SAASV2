@@ -1,4 +1,4 @@
-# 🚀 Otimização de Busca de Dados - Finly
+# Otimização de Busca de Dados - Finly
 
 **Data:** 2025-01-27
 

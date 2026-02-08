@@ -761,7 +761,7 @@ async def get_zen_insights(
         ),
         schemas.InsightItem(
             type='info',
-            title=tr('🚀 EVOLUÇÃO', '🚀 EVOLUTION'),
+            title=tr('EVOLUÇÃO', 'EVOLUTION'),
             message=tr(
                 'O teu futuro financeiro é construído com as decisões que tomas hoje.',
                 'Your financial future is built by the decisions you make today.'
@@ -886,8 +886,8 @@ async def get_zen_insights(
         )
     elif health_score > 90:
         summary = tr(
-            '✨ EXCELENTE: Estás em plena harmonia e domínio do teu capital.',
-            '✨ EXCELLENT: You are in full harmony and mastery of your capital.'
+            'EXCELENTE: Estás em plena harmonia e domínio do teu capital.',
+            'EXCELLENT: You are in full harmony and mastery of your capital.'
         )
     elif health_score > 75:
         summary = tr(

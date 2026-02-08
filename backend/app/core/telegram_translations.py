@@ -4,13 +4,13 @@ Telegram bot translations for backend messages
 TELEGRAM_TRANSLATIONS = {
     'pt': {
         'welcome_new': (
-            "✨ <b>Bem-vindo ao Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Bem-vindo ao Finan</b><i>Zen</i>\n\n"
             "🧘‍♂️ O teu <b>ecossistema financeiro</b> está à distância de uma mensagem.\n\n"
             "📧 Para começarmos, envia o <b>email</b> que utilizas na plataforma Finly.\n\n"
             "💎 <i>Domina o teu dinheiro com simplicidade.</i>"
         ),
         'welcome_return': (
-            "✨ <b>Olá de novo, Mestre!</b> ✨\n\n"
+            "<b>Olá de novo, Mestre!</b>\n\n"
             "💎 O teu <b>ecossistema Zen</b> está pronto.\n\n"
             "📝 <b>Envia transações como:</b>\n"
             "• 🍽️ Almoço 15€\n"
@@ -20,7 +20,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Paz financeira em cada mensagem.</i>"
         ),
         'help_guide': (
-            "✨ <b>Guia do Mestre Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Guia do Mestre Finan</b><i>Zen</i>\n\n"
             "📝 <b>Formato de mensagem:</b>\n"
             "<code>Descrição Valor€</code>\n\n"
             "💡 <b>Exemplos:</b>\n"
@@ -44,7 +44,7 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ Sessão expirada. Envia /start para começar."
         ),
         'unauthorized': (
-            "✨ <b>Bem-vindo ao Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Bem-vindo ao Finan</b><i>Zen</i>\n\n"
             "📧 Para começares, envia o teu <b>email</b> que utilizas na plataforma.\n\n"
             "💡 Ou envia <code>/start</code> para começar.\n\n"
             "🧘‍♂️ <i>Domina o teu dinheiro com simplicidade.</i>"
@@ -60,14 +60,14 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Exemplo: o-teu-email@exemplo.com</i>"
         ),
         'email_not_found': (
-            "✨ <b>Email recebido</b> ✨\n\n"
+            "<b>Email recebido</b>\n\n"
             "💎 Se estiveres associado a uma conta <b>Pro</b>, já podes começar a usar o bot.\n\n"
             "🧘‍♂️ <i>O teu ecossistema financeiro está quase pronto.</i>"
         ),
         'pro_required': (
             "💎 <b>Conta Pro Necessária</b>\n\n"
-            "✨ Esta funcionalidade requer uma conta <b>Pro</b>.\n\n"
-            "🚀 Faz upgrade na plataforma para desbloqueares o bot Telegram.\n\n"
+            "Esta funcionalidade requer uma conta <b>Pro</b>.\n\n"
+            "Faz upgrade na plataforma para desbloqueares o bot Telegram.\n\n"
             "🧘‍♂️ <i>Transforma a gestão financeira numa experiência Zen.</i>"
         ),
         'already_associated': (
@@ -77,7 +77,7 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Um Telegram só pode estar associado a uma conta.</i>"
         ),
         'account_linked_success': (
-            "✨ <b>Conta associada com sucesso!</b> ✨\n\n"
+            "<b>Conta associada com sucesso!</b>\n\n"
             "💎 <b>Conta:</b> <code>{email}</code>\n\n"
             "🎯 <b>Agora podes enviar transações:</b>\n"
             "• 🍽️ Almoço 15€\n"
@@ -118,7 +118,7 @@ TELEGRAM_TRANSLATIONS = {
             "Tenta novamente daqui a uns minutos."
         ),
         'transaction_pending': (
-            "✨ <b>Nova Transação</b> ✨\n"
+            "<b>Nova Transação</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
@@ -130,7 +130,7 @@ TELEGRAM_TRANSLATIONS = {
             "✅ Confirma esta transação?"
         ),
         'transaction_confirmed': (
-            "✨ <b>Transação Confirmada!</b> ✨\n"
+            "<b>Transação Confirmada!</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
@@ -142,7 +142,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
         ),
         'transaction_registered': (
-            "✨ <b>Transação Registada!</b> ✨\n"
+            "<b>Transação Registada!</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Descrição:</b>\n"
             "<code>{description}</code>\n\n"
@@ -177,7 +177,7 @@ TELEGRAM_TRANSLATIONS = {
         'button_confirm_all': "✅ Confirmar tudo",
         'button_cancel_all': "🚫 Cancelar tudo",
         'list_confirmed': (
-            "✨ <b>Transações registadas!</b> ✨\n\n"
+            "<b>Transações registadas!</b>\n\n"
             "💎 Todas as transações da lista foram guardadas.\n\n"
             "🧘‍♂️ <i>O teu ecossistema Zen está atualizado.</i>"
         ),
@@ -191,18 +191,18 @@ TELEGRAM_TRANSLATIONS = {
         'categoria_default_cleared': "✅ Categoria por defeito removida. As mensagens voltam a ser categorizadas normalmente.",
         'categoria_not_found': "⚠️ Categoria «{name}» não encontrada no teu workspace. Usa o nome exato (ex.: Alimentação).",
         'multiple_transactions_created': (
-            "✨ <b>{count} Transação(ões) Criada(s)!</b> ✨\n\n"
+            "<b>{count} Transação(ões) Criada(s)!</b>\n\n"
             "💎 Todas as transações foram registadas automaticamente.\n\n"
             "🧘‍♂️ <i>O teu ecossistema Zen está atualizado.</i>"
         ),
         'clear_success': (
-            "✨ <b>Limpeza Concluída!</b> ✨\n\n"
+            "<b>Limpeza Concluída!</b>\n\n"
             "🧹 <b>{count} transação(ões) pendente(s)</b> foram eliminadas.\n\n"
             "💎 O teu ecossistema Zen está limpo.\n\n"
             "🧘‍♂️ <i>Podes começar a registar novas transações.</i>"
         ),
         'clear_empty': (
-            "✨ <b>Já está limpo!</b> ✨\n\n"
+            "<b>Já está limpo!</b>\n\n"
             "💎 Não há transações pendentes para limpar.\n\n"
             "🧘‍♂️ <i>O teu ecossistema Zen está organizado.</i>"
         ),
@@ -212,7 +212,7 @@ TELEGRAM_TRANSLATIONS = {
         ),
         'type_expense': 'Despesa',
         'type_income': 'Receita',
-        'button_confirm': '✨ Confirmar',
+        'button_confirm': 'Confirmar',
         'button_cancel': '🚫 Cancelar',
         'button_change_category': '🏷️ Mudar categoria',
         'change_category_prompt': '🏷️ <b>Escolhe a categoria:</b>',
@@ -275,7 +275,7 @@ TELEGRAM_TRANSLATIONS = {
         ),
         'summary_empty': "📊 Ainda sem transações neste período.",
         'pendentes_list': "📋 <b>Transações pendentes</b> ({count})<br><br>{lines}💡 Confirma ou cancela cada uma na mensagem original, ou usa /clear para limpar todas.",
-        'pendentes_empty': "✨ Não tens transações pendentes.",
+        'pendentes_empty': "Não tens transações pendentes.",
         'revoke_ok': "✅ Telegram desvinculado. Para voltar a usar, envia /start e o teu email.",
         'language_set': "✅ Idioma definido para Português.",
         'language_set_en': "✅ Language set to English.",
@@ -293,13 +293,13 @@ TELEGRAM_TRANSLATIONS = {
     },
     'en': {
         'welcome_new': (
-            "✨ <b>Welcome to Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Welcome to Finan</b><i>Zen</i>\n\n"
             "🧘‍♂️ Your <b>financial ecosystem</b> is just a message away.\n\n"
             "📧 To get started, send the <b>email</b> you use on the Finly platform.\n\n"
             "💎 <i>Master your money with simplicity.</i>"
         ),
         'welcome_return': (
-            "✨ <b>Hello again, Master!</b> ✨\n\n"
+            "<b>Hello again, Master!</b>\n\n"
             "💎 Your <b>Zen ecosystem</b> is ready.\n\n"
             "📝 <b>Send transactions like:</b>\n"
             "• 🍽️ Lunch 15€\n"
@@ -309,7 +309,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Financial peace in every message.</i>"
         ),
         'help_guide': (
-            "✨ <b>Master's Guide to Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Master's Guide to Finan</b><i>Zen</i>\n\n"
             "📝 <b>Message format:</b>\n"
             "<code>Description Value€</code>\n\n"
             "💡 <b>Examples:</b>\n"
@@ -333,7 +333,7 @@ TELEGRAM_TRANSLATIONS = {
             "⚠️ Session expired. Send /start to begin."
         ),
         'unauthorized': (
-            "✨ <b>Welcome to Finan</b><i>Zen</i> ✨\n\n"
+            "<b>Welcome to Finan</b><i>Zen</i>\n\n"
             "📧 To get started, send the <b>email</b> you use on the platform.\n\n"
             "💡 Or send <code>/start</code> to begin.\n\n"
             "🧘‍♂️ <i>Master your money with simplicity.</i>"
@@ -349,14 +349,14 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>Example: your-email@example.com</i>"
         ),
         'email_not_found': (
-            "✨ <b>Email received</b> ✨\n\n"
+            "<b>Email received</b>\n\n"
             "💎 If you're associated with a <b>Pro</b> account, you can start using the bot.\n\n"
             "🧘‍♂️ <i>Your financial ecosystem is almost ready.</i>"
         ),
         'pro_required': (
             "💎 <b>Pro Account Required</b>\n\n"
-            "✨ This feature requires a <b>Pro</b> account.\n\n"
-            "🚀 Upgrade on the platform to unlock the Telegram bot.\n\n"
+            "This feature requires a <b>Pro</b> account.\n\n"
+            "Upgrade on the platform to unlock the Telegram bot.\n\n"
             "🧘‍♂️ <i>Transform financial management into a Zen experience.</i>"
         ),
         'already_associated': (
@@ -366,7 +366,7 @@ TELEGRAM_TRANSLATIONS = {
             "💡 <i>One Telegram can only be associated with one account.</i>"
         ),
         'account_linked_success': (
-            "✨ <b>Account linked successfully!</b> ✨\n\n"
+            "<b>Account linked successfully!</b>\n\n"
             "💎 <b>Account:</b> <code>{email}</code>\n\n"
             "🎯 <b>You can now send transactions:</b>\n"
             "• 🍽️ Lunch 15€\n"
@@ -407,7 +407,7 @@ TELEGRAM_TRANSLATIONS = {
             "Please try again in a few minutes."
         ),
         'transaction_pending': (
-            "✨ <b>New Transaction</b> ✨\n"
+            "<b>New Transaction</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
@@ -419,7 +419,7 @@ TELEGRAM_TRANSLATIONS = {
             "✅ Confirm this transaction?"
         ),
         'transaction_confirmed': (
-            "✨ <b>Transaction Confirmed!</b> ✨\n"
+            "<b>Transaction Confirmed!</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
@@ -431,7 +431,7 @@ TELEGRAM_TRANSLATIONS = {
             "🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
         ),
         'transaction_registered': (
-            "✨ <b>Transaction Registered!</b> ✨\n"
+            "<b>Transaction Registered!</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "📝 <b>Description:</b>\n"
             "<code>{description}</code>\n\n"
@@ -466,7 +466,7 @@ TELEGRAM_TRANSLATIONS = {
         'button_confirm_all': "✅ Confirm all",
         'button_cancel_all': "🚫 Cancel all",
         'list_confirmed': (
-            "✨ <b>Transactions registered!</b> ✨\n\n"
+            "<b>Transactions registered!</b>\n\n"
             "💎 All transactions in the list were saved.\n\n"
             "🧘‍♂️ <i>Your Zen ecosystem is updated.</i>"
         ),
@@ -480,18 +480,18 @@ TELEGRAM_TRANSLATIONS = {
         'categoria_default_cleared': "✅ Default category cleared. Messages will be categorized normally again.",
         'categoria_not_found': "⚠️ Category «{name}» not found in your workspace. Use the exact name (e.g. Food).",
         'multiple_transactions_created': (
-            "✨ <b>{count} Transaction(s) Created!</b> ✨\n\n"
+            "<b>{count} Transaction(s) Created!</b>\n\n"
             "💎 All transactions were registered automatically.\n\n"
             "🧘‍♂️ <i>Your Zen ecosystem is updated.</i>"
         ),
         'clear_success': (
-            "✨ <b>Cleanup Complete!</b> ✨\n\n"
+            "<b>Cleanup Complete!</b>\n\n"
             "🧹 <b>{count} pending transaction(s)</b> were deleted.\n\n"
             "💎 Your Zen ecosystem is clean.\n\n"
             "🧘‍♂️ <i>You can start registering new transactions.</i>"
         ),
         'clear_empty': (
-            "✨ <b>Already clean!</b> ✨\n\n"
+            "<b>Already clean!</b>\n\n"
             "💎 There are no pending transactions to clear.\n\n"
             "🧘‍♂️ <i>Your Zen ecosystem is organized.</i>"
         ),
@@ -501,7 +501,7 @@ TELEGRAM_TRANSLATIONS = {
         ),
         'type_expense': 'Expense',
         'type_income': 'Income',
-        'button_confirm': '✨ Confirm',
+        'button_confirm': 'Confirm',
         'button_cancel': '🚫 Cancel',
         'button_change_category': '🏷️ Change category',
         'change_category_prompt': '🏷️ <b>Choose category:</b>',
@@ -574,7 +574,7 @@ TELEGRAM_TRANSLATIONS = {
         ),
         'summary_empty': "📊 No transactions in this period yet.",
         'pendentes_list': "📋 <b>Pending transactions</b> ({count})<br><br>{lines}💡 Confirm or cancel each in the original message, or use /clear to clear all.",
-        'pendentes_empty': "✨ You have no pending transactions.",
+        'pendentes_empty': "You have no pending transactions.",
         'revoke_ok': "✅ Telegram unlinked. To use again, send /start and your email.",
         'language_set': "✅ Language set to Portuguese.",
         'language_set_en': "✅ Language set to English.",

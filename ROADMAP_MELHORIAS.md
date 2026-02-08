@@ -1,4 +1,4 @@
-# 🚀 Roadmap de Melhorias - Finly
+# Roadmap de Melhorias - Finly
 
 **Data:** 2025-01-27  
 **Versão atual:** 2.0 (após correções de bugs críticos)
@@ -230,7 +230,7 @@ const snapshot = await api.get('/financial/snapshot');
 
 ---
 
-## 🚀 PRIORIDADE 2: Produto e Realismo Financeiro
+## PRIORIDADE 2: Produto e Realismo Financeiro
 
 ### 3️⃣ Introduzir conceito de Accounts (Contas)
 
@@ -841,7 +841,7 @@ python scripts/audit_financial_data.py --all-workspaces
 1. ✅ Financial Engine centralizado
 2. ✅ Remover Math.abs() desnecessário
 
-### 🚀 Prioridade 2 (Produto)
+### Prioridade 2 (Produto)
 3. ✅ Sistema de Contas
 4. ✅ Daily Allowance correto
 

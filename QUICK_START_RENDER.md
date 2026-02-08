@@ -2,7 +2,7 @@
 
 **⚠️ IMPORTANTE**: O repositório Git começa na pasta `SaaS`, então o `render.yaml` deve estar na raiz do repositório (dentro da pasta `SaaS`).
 
-## 🚀 Passos Rápidos
+## Passos Rápidos
 
 ### 1. Preparar o Repositório
 ```bash

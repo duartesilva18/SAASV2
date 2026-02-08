@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script de inicialização para o Render
 
-echo "🚀 Iniciando FinanZen Backend..."
+echo "Iniciando FinanZen Backend..."
 
 # Executar migrações do Alembic se existirem
 if [ -d "alembic" ] && [ -f "alembic.ini" ]; then

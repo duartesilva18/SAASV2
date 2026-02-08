@@ -1,4 +1,4 @@
-# 🚀 Guia de Deploy no Render - FinanZen
+# Guia de Deploy no Render - FinanZen
 
 Este guia explica como fazer deploy do projeto FinanZen no Render.
 
@@ -154,7 +154,7 @@ FRONTEND_URL=https://finanzen-frontend.onrender.com
 
 A variável `DATABASE_URL` será preenchida automaticamente.
 
-## 🚀 Passo 6: Fazer Deploy
+## Passo 6: Fazer Deploy
 
 1. **Backend**: Render irá fazer deploy automaticamente após configurar as variáveis
 2. **Frontend**: Render irá fazer deploy automaticamente após configurar as variáveis
@@ -247,7 +247,7 @@ O bot Telegram será configurado automaticamente ao iniciar o backend, mas pode 
 
 ---
 
-**Boa sorte com o deploy! 🚀**
+**Boa sorte com o deploy!**
 
 
 

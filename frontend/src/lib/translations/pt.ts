@@ -4,9 +4,9 @@ export const pt = {
       loginButton: "Entrar",
       register: "Começar Grátis"
   },
-  banner: "🚀 Oferta Especial: Ganhe 3 meses grátis no plano anual",
+  banner: "Oferta Especial: Ganhe 3 meses grátis no plano anual",
   hero: {
-      badge: "✨ +2.000 pessoas em controlo total",
+      badge: "+2.000 pessoas em controlo total",
       title1: "A sua ",
       titleAccent: "paz financeira",
       title2: " começa com um SMS.",
@@ -1612,7 +1612,7 @@ export const pt = {
                       },
                       {
                           user: "salário 1500",
-                          bot: "✨ Incrível! Receita de 1.500,00€ adicionada ao teu saldo."
+                          bot: "Incrível! Receita de 1.500,00€ adicionada ao teu saldo."
                       }
                   ]
               },

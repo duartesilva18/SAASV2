@@ -37,7 +37,7 @@ async def download_media(url: str):
 
 @router.post('/whatsapp')
 async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
-    print("🚀 [WHATSAPP] MENSAGEM RECEBIDA!")
+    print("[WHATSAPP] MENSAGEM RECEBIDA!")
     try:
         # Tenta ler o corpo da mensagem como JSON
         body = await request.body()

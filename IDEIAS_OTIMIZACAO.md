@@ -1,4 +1,4 @@
-# 🚀 Ideias de Otimização - Performance Máxima
+# Ideias de Otimização - Performance Máxima
 
 **Data:** 2025-01-27  
 **Objetivo:** Reduzir tempo de carregamento das páginas ao máximo

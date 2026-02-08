@@ -1931,7 +1931,7 @@ def setup_bot_commands():
     
     # Lista completa para aparecer no menu de comandos (max 100; descrição max 256 chars)
     commands = [
-        {"command": "start", "description": "🚀 Iniciar e associar conta"},
+        {"command": "start", "description": "Iniciar e associar conta"},
         {"command": "info", "description": "📖 Guia e exemplos de formato"},
         {"command": "help", "description": "❓ Ajuda e comandos"},
         {"command": "ajuda", "description": "❓ Ajuda (atalho)"},
@@ -1976,7 +1976,7 @@ def setup_bot_info():
     # Configurar descrição completa (about)
     try:
         full_desc = (
-            "✨ Finly Bot ✨\n\n"
+            "Finly Bot\n\n"
             "💎 Regista transações financeiras rapidamente através do Telegram.\n\n"
             "🎯 Funcionalidades:\n"
             "• Categorização automática com IA\n"

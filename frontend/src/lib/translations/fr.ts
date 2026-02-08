@@ -4,9 +4,9 @@ export const fr = {
       loginButton: "Connexion",
       register: "Commencer gratuitement"
   },
-  banner: "🚀 Offre spéciale : 3 mois offerts sur le plan annuel",
+  banner: "Offre spéciale : 3 mois offerts sur le plan annuel",
   hero: {
-      badge: "✨ +2 000 personnes en contrôle total",
+      badge: "+2 000 personnes en contrôle total",
       title1: "Votre ",
       titleAccent: "sérénité financière",
       title2: " commence par un SMS.",

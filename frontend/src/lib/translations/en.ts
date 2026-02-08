@@ -4,9 +4,9 @@ export const en = {
       loginButton: "Log in",
       register: "Start Free"
   },
-  banner: "🚀 Special Offer: Get 3 months free on the annual plan",
+  banner: "Special Offer: Get 3 months free on the annual plan",
   hero: {
-      badge: "✨ +2,000 people in total control",
+      badge: "+2,000 people in total control",
       title1: "Your ",
       titleAccent: "financial peace",
       title2: " starts with a text.",

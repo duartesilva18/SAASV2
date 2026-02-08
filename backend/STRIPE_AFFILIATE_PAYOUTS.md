@@ -342,7 +342,7 @@ STRIPE_CONNECT_CLIENT_ID=ca_... (opcional, para OAuth)
 12. **KYC/Compliance**: Gerenciado automaticamente pelo Stripe
 13. **Idempotência**: Usar idempotency keys em todas as operações críticas
 
-## 🚀 Próximos Passos
+## Próximos Passos
 
 ### Fase 1: Estrutura Base
 1. ✅ Criar migration SQL para novos campos (stripe_connect_account_id, transfer_status)
