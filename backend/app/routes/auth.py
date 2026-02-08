@@ -451,6 +451,37 @@ def _default_cats_spec(language: str):
     ], names
 
 
+def ensure_salary_and_general_expense_for_workspace(db: Session, workspace_id: uuid.UUID, language: str, commit: bool = True) -> None:
+    """Cria Salário e Despesas gerais num workspace se ainda não existirem. Usado na migração para contas antigas.
+    Se commit=False, não faz commit (útil quando o caller gere a transação)."""
+    lang = (language or 'pt').lower()[:2]
+    if lang not in DEFAULT_CATEGORY_NAMES:
+        lang = 'pt'
+    names = DEFAULT_CATEGORY_NAMES[lang]
+    specs = [
+        {"key": "general_expense", "type": "expense", "vault_type": "none", "color_hex": "#64748B", "icon": "Wallet", "is_default": False},
+        {"key": "salary", "type": "income", "vault_type": "none", "color_hex": "#10B981", "icon": "Landmark", "is_default": False},
+    ]
+    existing_names = {c.name for c in db.query(models.Category).filter(models.Category.workspace_id == workspace_id).all()}
+    for spec in specs:
+        name = names.get(spec["key"], spec["key"])
+        if name in existing_names:
+            continue
+        new_cat = models.Category(
+            workspace_id=workspace_id,
+            name=name,
+            type=spec["type"],
+            vault_type=spec["vault_type"],
+            color_hex=spec["color_hex"],
+            icon=spec["icon"],
+            is_default=spec["is_default"],
+        )
+        db.add(new_cat)
+        existing_names.add(name)
+    if commit:
+        db.commit()
+
+
 def create_default_categories(db: Session, workspace_id: uuid.UUID, language: str = 'pt'):
     """Cria categorias padrão no workspace. Nomes conforme a língua do utilizador (pt/en/fr)."""
     lang = (language or 'pt').lower()[:2]
