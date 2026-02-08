@@ -7,7 +7,7 @@ import {
   User, Phone, Coins, UserCircle, 
   CreditCard, Download, Upload,
   Trash2, CheckCircle2, AlertCircle, Loader2,
-  ChevronRight, BellRing, Sparkles, Globe, Check, Send, ExternalLink,
+  ChevronRight, BellRing, Globe, Check, Send, ExternalLink,
   Lock, Mail, X
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -347,7 +347,7 @@ export default function SettingsPage() {
       transition={{ duration: 0.5 }}
       className="text-white"
     >
-      <h1 className="text-2xl sm:text-3xl font-black mb-4 sm:mb-6 md:mb-8 tracking-tighter uppercase tracking-widest text-xs opacity-50">
+      <h1 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 sm:mb-6 md:mb-8">
         {t.dashboard.settings.title}
       </h1>
 
@@ -355,63 +355,61 @@ export default function SettingsPage() {
         {/* Main Settings Form */}
         <div className="lg:col-span-2 space-y-8">
           <form onSubmit={handleSave} className="space-y-8">
-            {/* Personal Data Section */}
-            <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden group hover:border-slate-700 transition-all shadow-xl">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full -z-10" />
-              
-              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 md:mb-10">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/10 text-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+            {/* Personal Data Section — estilo login */}
+            <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 shadow-2xl">
+              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/10 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
                   <User size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <h2 className="text-xl font-black tracking-tighter text-white uppercase tracking-widest text-[11px] opacity-60">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   {t.dashboard.settings.personalData.title}
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
-                {/* Email (associado à conta) — somente leitura */}
-                <div className="space-y-3 md:col-span-2">
-                  <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Email (read-only) */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {(t.dashboard.settings as any).accountSecurity?.emailLabel ?? t.dashboard.settings.personalData?.email ?? 'Email'}
                   </label>
-                  <div className="relative group/field">
-                    <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                  <div className="relative">
+                    <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <input 
                       type="email"
                       value={userEmail}
                       readOnly
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm text-slate-400 cursor-not-allowed"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-slate-400 cursor-not-allowed"
                     />
                   </div>
                 </div>
 
                 {/* Full Name */}
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.fullName}
                   </label>
-                  <div className="relative group/field">
-                    <User size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors" />
+                  <div className="relative">
+                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <input 
                       type="text"
                       value={formData.full_name}
                       onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
                   </div>
                 </div>
 
                 {/* Gender */}
-                <div className="space-y-3">
-                  <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.gender}
                   </label>
-                  <div className="relative group/field">
-                    <UserCircle size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/field:text-blue-500 transition-colors pointer-events-none z-10" />
+                  <div className="relative">
+                    <UserCircle size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
                     <select 
                       value={formData.gender}
                       onChange={e => setFormData({ ...formData, gender: e.target.value })}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-10 text-sm focus:outline-none focus:border-blue-500 transition-all text-white font-medium appearance-none cursor-pointer"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-8 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
                     >
                       <option value="male" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.male}</option>
                       <option value="female" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.female}</option>
@@ -422,16 +420,16 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Phone */}
-                <div className="space-y-3 md:col-span-2">
-                  <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-2">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.phone}
                   </label>
-                  <div className="flex items-center bg-slate-950/50 border border-slate-800 rounded-2xl focus-within:border-emerald-500/50 transition-all group/phone overflow-hidden">
-                    <div className="relative flex items-center bg-white/[0.03] border-r border-slate-800/50 min-w-[100px]">
+                  <div className="flex items-center bg-slate-950/60 border border-slate-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50">
+                    <div className="relative flex items-center border-r border-slate-700 min-w-[100px]">
                       <select 
                         value={formData.country_code}
                         onChange={e => setFormData({ ...formData, country_code: e.target.value })}
-                        className="w-full bg-transparent pl-4 pr-8 py-4 text-sm text-white font-bold appearance-none cursor-pointer focus:outline-none z-10"
+                        className="w-full bg-transparent pl-4 pr-8 py-2.5 sm:py-3 text-sm text-white font-bold appearance-none cursor-pointer focus:outline-none z-10"
                       >
                         {countries.map(c => (
                           <option key={c.code} value={c.code} className="bg-[#0f172a] text-white">
@@ -439,45 +437,42 @@ export default function SettingsPage() {
                           </option>
                         ))}
                       </select>
-                      <div className="absolute right-3 pointer-events-none text-slate-500 group-focus-within/phone:text-emerald-500 transition-colors">
-                        <ChevronRight size={16} className="rotate-90" />
-                      </div>
+                      <ChevronRight size={16} className="absolute right-3 rotate-90 text-slate-500 pointer-events-none" />
                     </div>
                     <input 
                       type="tel"
                       value={formData.phone_number}
                       onChange={e => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
-                      className="flex-1 bg-transparent border-none py-4 px-5 text-base focus:outline-none text-white font-medium placeholder:text-slate-800"
+                      className="flex-1 bg-transparent border-none py-2.5 sm:py-3 px-4 text-sm focus:outline-none text-white placeholder:text-slate-500"
                     />
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Preferências (mais espaço) + Alterar password (menos) */}
+            {/* Preferências + Alterar password */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Preferences Section — 2/3 da largura */}
-              <section className="md:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+              <section className="md:col-span-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md p-5 shadow-2xl">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
                     <Coins size={20} />
                   </div>
-                  <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     {t.dashboard.settings.preferences.title}
                   </h2>
                 </div>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                         {t.dashboard.settings.preferences.currency}
                       </label>
-                      <div className="relative group/field">
+                      <div className="relative">
                         <Coins size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
                         <select 
                           value={formData.currency}
                           onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 text-white font-medium appearance-none cursor-pointer"
+                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
                         >
                           <option value="EUR" className="bg-slate-900">Euro (€)</option>
                           <option value="BRL" className="bg-slate-900">Real (R$)</option>
@@ -485,16 +480,16 @@ export default function SettingsPage() {
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                         {t.dashboard.settings.preferences.language}
                       </label>
-                      <div className="relative group/field">
+                      <div className="relative">
                         <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
                         <select 
                           value={language}
                           onChange={e => setLanguage(e.target.value as any)}
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 text-white font-medium appearance-none cursor-pointer"
+                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
                         >
                           {Object.values(availableLanguages).map((lang) => (
                             <option key={lang.code} value={lang.code} className="bg-slate-900">
@@ -507,7 +502,7 @@ export default function SettingsPage() {
                   </div>
                   <div 
                     onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
-                    className="flex items-center gap-3 py-3 px-4 bg-white/[0.02] border border-slate-800 rounded-xl cursor-pointer hover:bg-white/[0.04] transition-colors"
+                    className="flex items-center gap-3 py-3 px-4 bg-slate-950/60 border border-slate-700 rounded-xl cursor-pointer hover:bg-slate-950/80 transition-colors"
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
                       formData.marketing_opt_in ? 'bg-blue-600 border-blue-600' : 'border-slate-600 bg-slate-950'
@@ -522,13 +517,12 @@ export default function SettingsPage() {
                 </div>
               </section>
 
-              {/* Alterar password — 1/3 da largura */}
-              <div className="md:col-span-1 p-5 rounded-2xl border border-slate-800 bg-slate-900/50">
+              <div className="md:col-span-1 p-5 rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md shadow-2xl">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
                     <Lock size={20} />
                   </div>
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
                   </h3>
                 </div>
@@ -539,35 +533,36 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleRequestPasswordCode}
                   disabled={sendingCode || !userEmail}
-                  className="h-10 px-5 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border-2 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 hover:border-amber-500/70 text-amber-400 hover:text-amber-300 transition-all w-fit"
+                  className="h-10 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all w-fit"
                 >
                   {sendingCode ? <Loader2 size={16} className="animate-spin" /> : <><Lock size={14} /> {t.dashboard.settings.personalData.changePassword}</>}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full py-4 md:py-6 text-sm md:text-base bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl md:rounded-[24px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] active:scale-95 flex items-center justify-center gap-2 md:gap-3 cursor-pointer"
-            >
-              {saving ? <Loader2 size={18} className="animate-spin" /> : (
-                <>
-                  {t.dashboard.settings.personalData.save} <Sparkles size={18} />
-                </>
-              )}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : (
+                  <>
+                    {t.dashboard.settings.personalData.save}
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
 
-        {/* Exportar e Importar no mesmo card */}
         <div className="space-y-8">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:border-slate-700 transition-colors">
+          <section className="rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md p-5 shadow-2xl">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shrink-0 text-slate-300">
+              <div className="w-10 h-10 rounded-xl bg-slate-700/60 flex items-center justify-center shrink-0 text-slate-300">
                 <Download size={20} />
               </div>
-              <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 truncate">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
                 {(t.dashboard.settings as any).exportImportTitle ?? 'Exportar e importar dados'}
               </h2>
             </div>
@@ -579,7 +574,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleExportData}
                 disabled={exporting}
-                className="flex-1 h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 h-11 px-4 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
               >
                 {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
               </button>
@@ -595,22 +590,19 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => importFileInputRef.current?.click()}
                 disabled={importing}
-                className="flex-1 h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 h-11 px-4 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
               >
                 {importing ? <Loader2 size={14} className="animate-spin" /> : <><Upload size={14} /> <span>{(t.dashboard.settings as any).importButton ?? 'Importar'}</span></>}
               </button>
             </div>
           </section>
 
-          {/* Danger Zone — responsiva para mobile */}
-          <section className="bg-red-500/[0.03] backdrop-blur-xl border border-red-500/10 rounded-2xl sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-6 lg:p-8 relative overflow-hidden hover:border-red-500/20 transition-all group shadow-xl">
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/5 blur-[40px] rounded-full -z-10" />
-            
-            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                <Trash2 size={18} className="sm:w-5 sm:h-5" />
+          <section className="bg-red-500/[0.03] backdrop-blur-md border border-red-500/20 rounded-2xl p-4 sm:p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shrink-0">
+                <Trash2 size={18} />
               </div>
-              <h2 className="text-[10px] sm:text-[11px] font-black tracking-tighter text-red-500/60 uppercase tracking-widest min-w-0 truncate">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-red-500/80 min-w-0 truncate">
                 {t.dashboard.settings.dangerZone.title}
               </h2>
             </div>
@@ -631,11 +623,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Support Notice */}
-          <div className="p-4 sm:p-6 md:p-8 bg-blue-600/5 border border-blue-500/10 rounded-2xl sm:rounded-[32px] text-center shadow-xl group hover:bg-blue-600/10 transition-colors">
-            <BellRing className="text-blue-500/60 mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform" size={28} />
-            <h4 className="text-white font-black tracking-tight mb-1 sm:mb-2 uppercase tracking-widest text-[10px] opacity-60">{t.dashboard.settings.needHelp}</h4>
-            <p className="text-slate-500 text-[11px] sm:text-xs font-medium italic">{t.dashboard.settings.supportAvailable}</p>
+          <div className="p-4 sm:p-6 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl text-center shadow-2xl">
+            <BellRing className="text-blue-500/60 mx-auto mb-3" size={28} />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.dashboard.settings.needHelp}</h4>
+            <p className="text-slate-500 text-xs font-medium italic">{t.dashboard.settings.supportAvailable}</p>
           </div>
         </div>
       </div>
@@ -664,38 +655,38 @@ export default function SettingsPage() {
         isLoading={purging}
       />
 
-      {/* Modal Alterar Password (código + nova password) */}
+      {/* Modal Alterar Password — estilo login */}
       <AnimatePresence>
         {showChangePasswordModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowChangePasswordModal(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-[24px] sm:rounded-[32px] p-5 sm:p-8 shadow-2xl pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="relative w-full max-w-md bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-5 sm:p-6 md:p-8"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center gap-3 mb-4 sm:mb-8">
-                <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight min-w-0 truncate">
+              <div className="flex justify-between items-center gap-3 mb-4">
+                <h3 className="text-lg font-black text-white tracking-tight min-w-0 truncate">
                   {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? 'Alterar password'}
                 </h3>
-                <button onClick={() => setShowChangePasswordModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
+                <button onClick={() => setShowChangePasswordModal(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2">
                   <X size={20} />
                 </button>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-6">
+              <p className="text-xs text-slate-500 mb-5">
                 {(t.auth as any).resetPassword?.subtitle?.replace('{email}', userEmail) ?? `Introduz o código enviado para ${userEmail}`}
               </p>
-              <form onSubmit={handleConfirmPasswordChange} className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleConfirmPasswordChange} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {(t.auth as any).resetPassword?.codeLabel ?? 'Código de 6 dígitos'}
                   </label>
                   <input
@@ -704,43 +695,43 @@ export default function SettingsPage() {
                     value={passwordCode}
                     onChange={e => setPasswordCode(e.target.value.replace(/\D/g, ''))}
                     placeholder={(t.auth as any).resetPassword?.codePlaceholder ?? '000000'}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 px-6 text-center text-xl tracking-[0.4em] focus:outline-none focus:border-blue-500 text-white font-bold placeholder:text-slate-700"
+                    className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 px-4 text-center text-lg tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {(t.auth as any).resetPassword?.passwordLabel ?? 'Nova password'}
                   </label>
                   <div className="relative">
-                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <input
                       type="password"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       placeholder={(t.auth as any).resetPassword?.passwordPlaceholder ?? '••••••••••••'}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 text-white font-medium placeholder:text-slate-700"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.confirmPassword}
                   </label>
                   <div className="relative">
-                    <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <input
                       type="password"
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
                       placeholder={t.dashboard.settings.personalData.confirmPassword}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-4 pl-12 pr-5 text-sm focus:outline-none focus:border-blue-500 text-white font-medium placeholder:text-slate-700"
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
                   disabled={savingPassword || passwordCode.length !== 6 || !newPassword || !confirmPassword}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {savingPassword ? <Loader2 size={18} className="animate-spin" /> : ((t.auth as any).resetPassword?.submit ?? 'Confirmar nova password')}
                 </button>

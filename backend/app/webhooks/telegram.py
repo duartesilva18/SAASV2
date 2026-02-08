@@ -1193,6 +1193,173 @@ def _compress_image_for_vision(content: bytes, file_path: str, content_len: int)
         return content, mime
 
 
+def _download_telegram_file(file_id: str, max_size_mb: int = 20) -> Optional[bytes]:
+    """Descarrega um ficheiro do Telegram por file_id. Devolve o conteúdo em bytes ou None."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return None
+    try:
+        get_file_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
+        r = requests.get(get_file_url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("ok") or "result" not in data:
+            return None
+        file_path = data["result"].get("file_path")
+        if not file_path:
+            return None
+        download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
+        resp = requests.get(download_url, timeout=30)
+        resp.raise_for_status()
+        content = resp.content
+        if not content or len(content) > max_size_mb * 1024 * 1024:
+            return None
+        return content
+    except Exception as e:
+        logger.warning("[Telegram] Download de ficheiro falhou: %s", e)
+        return None
+
+
+def _extract_text_from_pdf(content: bytes) -> Optional[str]:
+    """Extrai texto de um PDF. Devolve string com newlines ou None se falhar."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(content))
+        parts = []
+        for page in reader.pages:
+            try:
+                t = page.extract_text()
+                if t and t.strip():
+                    parts.append(t.strip())
+            except Exception:
+                continue
+        if not parts:
+            return None
+        return "\n".join(parts)
+    except Exception as e:
+        logger.warning("[Telegram] Extração de texto do PDF falhou: %s", e)
+        return None
+
+
+def _extract_text_from_csv(content: bytes) -> Optional[str]:
+    """Extrai linhas tipo 'descrição valor€' de CSV (; ou ,). Devolve texto para parse_transaction."""
+    import csv
+    raw = None
+    for enc in ('utf-8', 'utf-8-sig', 'latin-1', 'cp1252'):
+        try:
+            raw = content.decode(enc)
+            break
+        except Exception:
+            continue
+    if not raw or not raw.strip():
+        return None
+    lines = raw.strip().splitlines()
+    if not lines:
+        return None
+    # Detetar delimitador (; ou , ou tab)
+    first = lines[0]
+    delim = ';' if ';' in first and first.count(';') >= 1 else (',' if ',' in first else '\t')
+    reader = csv.reader(io.StringIO(raw), delimiter=delim)
+    rows = list(reader)
+    if not rows:
+        return None
+    # Primeira linha pode ser cabeçalho: se segunda linha tiver número, primeira é header
+    start = 0
+    if len(rows) > 1:
+        second = rows[1]
+        has_num = any(re.search(r'-?\d+[.,]\d*', str(c)) for c in second)
+        if has_num and not any(re.search(r'-?\d+[.,]\d*', str(c)) for c in rows[0]):
+            start = 1
+    amount_pattern = re.compile(r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
+    parts = []
+    for row in rows[start:]:
+        if not row:
+            continue
+        row = [str(c).strip() for c in row if c is not None]
+        amount_val = None
+        desc_parts = []
+        for i, cell in enumerate(row):
+            if not cell:
+                continue
+            m = amount_pattern.search(cell.replace(' ', ''))
+            if m:
+                try:
+                    v = float(m.group(1).replace(' ', '').replace('.', '').replace(',', '.'))
+                    if abs(v) < 1e9:
+                        amount_val = v
+                        desc_parts = [c for j, c in enumerate(row) if j != i and c and not amount_pattern.search(str(c).replace(' ', ''))]
+                        if not desc_parts:
+                            desc_parts = [c for j, c in enumerate(row) if j != i and c]
+                        break
+                except ValueError:
+                    pass
+            desc_parts.append(cell)
+        if amount_val is not None and (desc_parts or row):
+            desc = ' '.join(desc_parts) if desc_parts else (row[0] if row else 'Movimento')
+            desc = re.sub(r'\s+', ' ', desc).strip()[:200]
+            if desc:
+                parts.append(f"{desc} {amount_val}€")
+    if not parts:
+        return None
+    return ' '.join(parts)
+
+
+def _extract_text_from_xlsx(content: bytes) -> Optional[str]:
+    """Extrai linhas tipo 'descrição valor€' de Excel (.xlsx)."""
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        ws = wb.active
+        if not ws:
+            return None
+        rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+    except Exception as e:
+        logger.warning("[Telegram] Extração Excel falhou: %s", e)
+        return None
+    if not rows:
+        return None
+    start = 0
+    if len(rows) > 1:
+        second = rows[1]
+        has_num = any(v is not None and re.search(r'-?\d+[.,]\d*', str(v)) for v in (second or []))
+        first_vals = rows[0] or []
+        if has_num and not any(v is not None and re.search(r'-?\d+[.,]\d*', str(v)) for v in first_vals):
+            start = 1
+    amount_pattern = re.compile(r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
+    parts = []
+    for row in rows[start:]:
+        if not row:
+            continue
+        row = [str(v).strip() if v is not None else '' for v in row]
+        amount_val = None
+        desc_parts = []
+        for i, cell in enumerate(row):
+            if not cell:
+                continue
+            cell_clean = cell.replace(' ', '')
+            m = amount_pattern.search(cell_clean)
+            if m:
+                try:
+                    v = float(m.group(1).replace(' ', '').replace('.', '').replace(',', '.'))
+                    if abs(v) < 1e9:
+                        amount_val = v
+                        desc_parts = [c for j, c in enumerate(row) if j != i and c and not amount_pattern.search(str(c).replace(' ', ''))]
+                        if not desc_parts:
+                            desc_parts = [c for j, c in enumerate(row) if j != i and c]
+                        break
+                except ValueError:
+                    pass
+            desc_parts.append(cell)
+        if amount_val is not None and (desc_parts or any(row)):
+            desc = ' '.join(desc_parts) if desc_parts else (row[0] or 'Movimento')
+            desc = re.sub(r'\s+', ' ', desc).strip()[:200]
+            if desc:
+                parts.append(f"{desc} {amount_val}€")
+    if not parts:
+        return None
+    return ' '.join(parts)
+
+
 def process_photo_with_openai(file_id: str, categories: List[models.Category]) -> Optional[Dict]:
     """
     Descarrega a foto do Telegram, comprime se necessário, e envia para OpenAI vision
@@ -2488,8 +2655,85 @@ async def telegram_webhook(
             return {'status': 'error'}
         
         parsed = None
+        # Processar documento: imagem (Vision), PDF, CSV ou Excel
+        if 'document' in message:
+            doc = message['document']
+            file_id = doc.get('file_id')
+            file_name = (doc.get('file_name') or '').lower()
+            mime = (doc.get('mime_type') or '').lower()
+            is_image = mime.startswith('image/') or file_name.endswith(('.jpg', '.jpeg', '.png', '.webp'))
+            is_pdf = mime == 'application/pdf' or file_name.endswith('.pdf')
+            is_csv = mime == 'text/csv' or file_name.endswith('.csv') or 'csv' in mime
+            is_xlsx = (
+                mime in ('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel')
+                or file_name.endswith('.xlsx') or file_name.endswith('.xls')
+            )
+
+            if is_image:
+                send_telegram_msg(chat_id, t('document_processing'))
+                all_categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
+                try:
+                    photo_result = process_photo_with_openai(file_id, all_categories)
+                except OpenAIRateLimitError as e:
+                    logger.warning("[Telegram] OpenAI rate limit (document image): %s", e)
+                    send_telegram_msg(chat_id, t('photo_rate_limit'))
+                    return {'status': 'error'}
+                if not photo_result:
+                    send_telegram_msg(chat_id, t('photo_not_supported'))
+                    return {'status': 'error'}
+                try:
+                    parsed = _build_parsed_from_photo_result(photo_result, workspace, db)
+                except AIUnavailableError as ae:
+                    logger.warning("[Telegram] Vision AIUnavailableError: %s", ae)
+                    send_telegram_msg(chat_id, t('ai_unavailable'))
+                    return {'status': 'error'}
+                if not parsed:
+                    send_telegram_msg(chat_id, t('document_no_data'))
+                    return {'status': 'error'}
+                if parsed.get("multiple"):
+                    logger.info("[Telegram] Documento imagem processado: %s transações", len(parsed.get("transactions", [])))
+                else:
+                    logger.info("[Telegram] Documento imagem processado: 1 transação - %s", parsed.get("description"))
+
+            elif is_pdf or is_csv or is_xlsx:
+                send_telegram_msg(chat_id, t('document_processing'))
+                content = _download_telegram_file(file_id)
+                if not content:
+                    send_telegram_msg(chat_id, t('document_not_supported'))
+                    return {'status': 'error'}
+                if is_pdf:
+                    extracted = _extract_text_from_pdf(content)
+                elif is_csv:
+                    extracted = _extract_text_from_csv(content)
+                else:
+                    extracted = _extract_text_from_xlsx(content)
+                if not extracted or len(extracted.strip()) < 5:
+                    send_telegram_msg(chat_id, t('document_no_data'))
+                    return {'status': 'error'}
+                default_cat_id = getattr(user, 'telegram_default_category_id', None)
+                try:
+                    parsed = parse_transaction(extracted.strip(), workspace, db, default_category_id=default_cat_id)
+                except AIUnavailableError as ae:
+                    err_str = str(ae).lower()
+                    if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                        send_telegram_msg(chat_id, t('ai_busy'))
+                    else:
+                        send_telegram_msg(chat_id, t('ai_unavailable'))
+                    return {'status': 'error'}
+                if not parsed:
+                    send_telegram_msg(chat_id, t('document_no_data'))
+                    return {'status': 'error'}
+                if parsed.get("multiple"):
+                    logger.info("[Telegram] Documento %s processado: %s transações", "PDF" if is_pdf else "CSV/Excel", len(parsed.get("transactions", [])))
+                else:
+                    logger.info("[Telegram] Documento processado: 1 transação - %s", parsed.get("description"))
+
+            else:
+                send_telegram_msg(chat_id, t('document_not_supported'))
+                return {'status': 'error'}
+
         # Processar fotos (OpenAI Vision)
-        if 'photo' in message:
+        elif 'photo' in message:
             file_id = message['photo'][-1]['file_id']
             # Resposta rápida "A processar..." para o user não achar que o bot não respondeu
             send_telegram_msg(chat_id, t('processing_photo'))

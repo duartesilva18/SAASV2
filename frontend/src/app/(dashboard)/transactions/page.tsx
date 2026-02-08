@@ -426,36 +426,35 @@ function TransactionsPageContent() {
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-emerald-500/5 blur-[40px] rounded-full" />
-              <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
-                <ArrowUpRight size={14} className="text-emerald-500 shrink-0 sm:w-4 sm:h-4" />
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.transactions.totalIncome}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 rounded-2xl min-w-0 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-slate-500">
+                  <ArrowUpRight size={16} className="text-emerald-500 shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">{t.dashboard.transactions.totalIncome}</span>
+                </div>
+                <p className="text-xl sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
               </div>
-              <p className="text-lg sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
+
+              <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 rounded-2xl min-w-0 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-slate-500">
+                  <ArrowDownRight size={16} className="text-red-500 shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">{t.dashboard.transactions.totalExpenses}</span>
+                </div>
+                <p className="text-xl sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
+              </div>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[32px] min-w-0 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-red-500/5 blur-[40px] rounded-full" />
-              <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2 text-slate-500">
-                <ArrowDownRight size={14} className="text-red-500 shrink-0 sm:w-4 sm:h-4" />
-                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.transactions.totalExpenses}</span>
-              </div>
-              <p className="text-lg sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
-            </div>
-            
             <button
               onClick={() => {
                 setEditingTransaction(null);
-                // Não pré-selecionar categoria - deixar o utilizador escolher
                 setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
                 setShowAddModal(true);
               }}
-              className="flex items-center justify-center gap-3 px-6 sm:px-8 py-4 sm:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
             >
-              <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-              {t.dashboard.transactions.addNew}
+              <Plus size={18} className="shrink-0" />
+              <span>{t.dashboard.transactions.addNew}</span>
             </button>
           </div>
         </div>
@@ -763,7 +762,7 @@ function TransactionsPageContent() {
         />
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal — estilo alinhado ao login/dashboard */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -772,50 +771,48 @@ function TransactionsPageContent() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAddModal(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl"
             >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
-              
-              <div className="p-5 sm:p-8 lg:p-12">
-                <div className="flex justify-between items-center mb-6 sm:mb-8 md:mb-10">
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter">
+              <div className="p-5 sm:p-6">
+                <div className="flex justify-between items-center mb-5 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">
                     {editingTransaction ? t.dashboard.transactions.editRecord : t.dashboard.transactions.newRecord}
                   </h2>
                   <button onClick={() => {
                     setShowAddModal(false);
                     setEditingTransaction(null);
-                  }} className="p-2 text-slate-500 hover:text-white transition-colors cursor-pointer">
-                    <X size={24} />
+                  }} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2">
+                    <X size={20} />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} noValidate className="space-y-6 sm:space-y-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.table.description}</label>
-                    <div className="relative group">
-                      <Activity size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.table.description}</label>
+                    <div className="relative">
+                      <Activity size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                       <input
                         required
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         placeholder={t.dashboard.transactions.descriptionPlaceholder}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.value}</label>
-                      <div className="relative group">
-                        <Wallet size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.value}</label>
+                      <div className="relative">
+                        <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                         <input
                           required
                           type="number"
@@ -823,35 +820,35 @@ function TransactionsPageContent() {
                           value={formData.amount}
                           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                           placeholder="0.00"
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
+                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.date}</label>
-                      <div className="relative group">
-                        <Calendar size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.date}</label>
+                      <div className="relative">
+                        <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                         <input
                           required
                           type="date"
                           max={new Date().toISOString().split('T')[0]}
                           value={formData.transaction_date}
                           onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-4 sm:pr-5 text-sm sm:text-base text-white focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
+                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">{t.dashboard.transactions.category}</label>
-                    <div className="relative group">
-                      <Tag size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.category}</label>
+                    <div className="relative">
+                      <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                       <select
                         required
                         value={formData.category_id}
                         onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px]"
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
                       >
                         <option value="">{t.dashboard.transactions.selectCategory}</option>
                         {/* Separar receitas e despesas para facilitar seleção */}
@@ -877,7 +874,7 @@ function TransactionsPageContent() {
                           ))}
                         </optgroup>
                       </select>
-                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     </div>
                     {/* Mostrar tipo da categoria selecionada para confirmação */}
                     {formData.category_id && (
@@ -927,7 +924,7 @@ function TransactionsPageContent() {
 
                   <button
                     type="submit"
-                    className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] cursor-pointer"
+                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     {editingTransaction ? t.dashboard.transactions.saveChanges : t.dashboard.transactions.registerTransaction}
                   </button>

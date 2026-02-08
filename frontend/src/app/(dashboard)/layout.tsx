@@ -171,10 +171,21 @@ export default function DashboardLayout({
 
   return (
     <NotificationsProvider>
-    <div className="flex bg-[#020617] min-h-screen relative overflow-hidden selection:bg-blue-500/30">
-      {/* Background Glows */}
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
+    <div className="flex bg-[#020617] text-slate-50 min-h-screen min-h-[100dvh] relative overflow-hidden selection:bg-blue-500/30">
+      {/* Background: igual ao login/registo (mesh + grid + orbs) */}
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_15%_20%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(1000px_circle_at_85%_10%,rgba(99,102,241,0.16),transparent_55%),radial-gradient(900px_circle_at_50%_95%,rgba(16,185,129,0.10),transparent_60%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage: 'linear-gradient(to right, rgba(148,163,184,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.10) 1px, transparent 1px)',
+            backgroundSize: '48px 48px'
+          }}
+        />
+        <div className="absolute top-0 right-[5%] w-64 h-64 sm:w-80 sm:h-80 bg-blue-500/12 blur-[80px] rounded-full" />
+        <div className="absolute bottom-[15%] left-[2%] w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/12 blur-[90px] rounded-full" />
+        <div className="absolute top-[40%] right-0 w-48 h-48 bg-emerald-500/8 blur-[70px] rounded-full" />
+      </div>
 
       {showOnboarding && (
         <OnboardingModal onComplete={async () => {
@@ -209,7 +220,7 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24 2xl:ml-20' : 'lg:ml-64 2xl:ml-52'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24 2xl:ml-20' : 'lg:ml-72 2xl:ml-60'}`}>
         {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
         <MobileHeaderWithNotifications
           t={t}

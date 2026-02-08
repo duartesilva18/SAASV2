@@ -222,7 +222,7 @@ export default function SupportButton() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-[10001] flex flex-col rounded-2xl md:rounded-3xl border border-slate-700/50 bg-slate-900/95 backdrop-blur-md shadow-2xl
+              className="fixed z-[10001] flex flex-col rounded-2xl border border-slate-700/60 bg-slate-900/95 backdrop-blur-md shadow-2xl
                 left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)]
                 w-[auto] max-h-[min(88vh,900px)] min-h-[260px]
                 md:left-auto md:right-[max(1rem,env(safe-area-inset-right))] md:bottom-[calc(max(1.5rem,env(safe-area-inset-bottom))+4rem)] md:w-[min(560px,calc(100vw-2rem))] md:min-h-0
@@ -230,27 +230,32 @@ export default function SupportButton() {
             >
               <div className="p-4 sm:p-5 md:p-6 overflow-y-auto flex-1 min-h-0">
                 <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
-                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-white opacity-90 truncate pr-2">
+                  <h3 className="text-sm font-black text-white tracking-tight truncate pr-2">
                     {(t.dashboard?.support as SupportT | undefined)?.contactTitle ?? 'Enviar mensagem ao suporte'}
                   </h3>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
                     aria-label="Fechar"
-                    className="p-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer shrink-0 touch-manipulation"
+                    className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer shrink-0"
                   >
-                    <X size={22} className="shrink-0" />
+                    <X size={20} className="shrink-0" />
                   </button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder={(t.dashboard?.support as SupportT | undefined)?.contactPlaceholder ?? 'Escreve a tua mensagem...'}
-                    rows={5}
-                    className="w-full bg-slate-950/50 border border-slate-700 rounded-xl md:rounded-2xl py-3 px-4 sm:py-4 text-base text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 resize-none min-h-[140px] sm:min-h-[180px] md:min-h-[200px] touch-manipulation"
-                    disabled={sending}
-                  />
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                      {(t.dashboard?.support as SupportT | undefined)?.message ?? 'Mensagem'}
+                    </label>
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder={(t.dashboard?.support as SupportT | undefined)?.contactPlaceholder ?? 'Escreve a tua mensagem...'}
+                      rows={5}
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none min-h-[140px] sm:min-h-[160px]"
+                      disabled={sending}
+                    />
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -264,9 +269,9 @@ export default function SupportButton() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={sending || files.length >= MAX_FILES}
-                      className="inline-flex items-center gap-2 px-4 py-3 min-h-[44px] rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 text-sm font-medium border border-slate-600 cursor-pointer touch-manipulation"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 text-xs font-bold uppercase tracking-wider cursor-pointer"
                     >
-                      <Paperclip size={18} className="shrink-0" />
+                      <Paperclip size={16} className="shrink-0" />
                       {(t.dashboard?.support as SupportT | undefined)?.contactAttach ?? 'Anexar ficheiro'}
                     </button>
                     {files.length > 0 && (
@@ -278,13 +283,13 @@ export default function SupportButton() {
                   {files.length > 0 && (
                     <ul className="space-y-1.5 max-h-28 sm:max-h-32 overflow-y-auto overscroll-contain">
                       {files.map((f, i) => (
-                        <li key={i} className="flex items-center justify-between gap-2 py-2.5 px-3 bg-slate-800/50 rounded-xl text-sm text-slate-300 min-h-[44px]">
+                        <li key={i} className="flex items-center justify-between gap-2 py-2 px-3 bg-slate-950/60 border border-slate-700/60 rounded-xl text-sm text-slate-300 min-h-[40px]">
                           <span className="truncate min-w-0">{f.name}</span>
                           <button
                             type="button"
                             onClick={() => removeFile(i)}
                             disabled={sending}
-                            className="shrink-0 text-slate-500 hover:text-red-400 cursor-pointer disabled:opacity-50 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation -mr-1"
+                            className="shrink-0 text-slate-500 hover:text-red-400 cursor-pointer disabled:opacity-50 p-2 rounded-lg -mr-1"
                             aria-label={(t.dashboard?.support as SupportT | undefined)?.contactRemoveFile ?? 'Remover'}
                           >
                             <X size={16} />
@@ -301,9 +306,9 @@ export default function SupportButton() {
                   <button
                     type="submit"
                     disabled={sending || !message.trim()}
-                    className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl md:rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[52px] cursor-pointer touch-manipulation"
+                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    {sending ? <Loader2 size={20} className="animate-spin" /> : ((t.dashboard?.support as SupportT | undefined)?.contactSend ?? 'Enviar')}
+                    {sending ? <Loader2 size={18} className="animate-spin" /> : ((t.dashboard?.support as SupportT | undefined)?.contactSend ?? 'Enviar')}
                   </button>
                 </form>
               </div>

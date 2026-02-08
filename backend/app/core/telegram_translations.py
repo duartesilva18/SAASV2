@@ -223,6 +223,36 @@ TELEGRAM_TRANSLATIONS = {
         'source_explicit': 'Por ti',
         'origin_suffix': "(<i>{origin}</i>)",
         'processing_photo': "⏳ A processar a imagem…",
+        'document_processing': "⏳ A processar o documento…",
+        'document_not_supported': (
+            "📎 <b>Tipo de ficheiro não suportado</b>\n\n"
+            "Aceito: <b>PDF</b>, <b>imagens</b> (JPEG/PNG/WebP), <b>CSV</b> e <b>Excel</b> (.xlsx) com lista de movimentos.\n\n"
+            "💡 Ou escreve em texto:\n"
+            "• <code>Almoço 15€</code>\n"
+            "• <code>Gasolina 50€</code>\n\n"
+            "📖 <code>/info</code> para ver formatos.\n\n"
+            "🧘‍♂️ <i>Simplicidade é a chave.</i>"
+        ),
+        'document_pdf_empty': (
+            "📎 <b>PDF sem movimentos reconhecidos</b>\n\n"
+            "Não consegui extrair texto ou valores neste PDF.\n\n"
+            "💡 <b>Sugestões:</b>\n"
+            "• Envia uma <b>foto</b> do recibo ou extrato\n"
+            "• Escreve as transações em texto: <code>Descrição 10€</code>\n"
+            "• Garante que o PDF contém valores em € (ex.: 15,00 €)\n\n"
+            "📖 <code>/info</code> para ver formatos.\n\n"
+            "🧘‍♂️ <i>Simplicidade é a chave.</i>"
+        ),
+        'document_no_data': (
+            "📎 <b>Sem movimentos reconhecidos</b>\n\n"
+            "Não consegui extrair transações deste ficheiro.\n\n"
+            "💡 <b>Sugestões:</b>\n"
+            "• PDF/CSV/Excel: garante que há coluna com valores em € (ex.: 15,00 €)\n"
+            "• Imagem: envia foto nítida do recibo ou extrato\n"
+            "• Ou escreve em texto: <code>Descrição 10€</code>\n\n"
+            "📖 <code>/info</code> para formatos.\n\n"
+            "🧘‍♂️ <i>Simplicidade é a chave.</i>"
+        ),
         'processing_audio': "⏳ A processar o áudio…",
         'audio_error': (
             "🎤 <b>Áudio não processado</b>\n\n"
@@ -482,6 +512,46 @@ TELEGRAM_TRANSLATIONS = {
         'source_explicit': 'By you',
         'origin_suffix': "(<i>{origin}</i>)",
         'processing_photo': "⏳ Processing image…",
+        'document_processing': "⏳ Processing document…",
+        'document_not_supported': (
+            "📎 <b>File type not supported</b>\n\n"
+            "I accept: <b>PDF</b>, <b>images</b> (JPEG/PNG/WebP), <b>CSV</b> and <b>Excel</b> (.xlsx) with a list of movements.\n\n"
+            "💡 Or type in text:\n"
+            "• <code>Lunch 15€</code>\n"
+            "• <code>Gas 50€</code>\n\n"
+            "📖 <code>/info</code> for formats.\n\n"
+            "🧘‍♂️ <i>Simplicity is key.</i>"
+        ),
+        'document_no_data': (
+            "📎 <b>No movements recognised</b>\n\n"
+            "I couldn't extract transactions from this file.\n\n"
+            "💡 <b>Suggestions:</b>\n"
+            "• PDF/CSV/Excel: ensure there's a column with amounts in € (e.g. 15.00 €)\n"
+            "• Image: send a clear photo of the receipt or statement\n"
+            "• Or type in text: <code>Description 10€</code>\n\n"
+            "📖 <code>/info</code> for formats.\n\n"
+            "🧘‍♂️ <i>Simplicity is key.</i>"
+        ),
+        'document_pdf_empty': (
+            "📎 <b>PDF with no recognised movements</b>\n\n"
+            "I couldn't extract text or amounts from this PDF.\n\n"
+            "💡 <b>Suggestions:</b>\n"
+            "• Send a <b>photo</b> of the receipt or statement\n"
+            "• Type the transactions: <code>Description 10€</code>\n"
+            "• Make sure the PDF contains values in € (e.g. 15.00 €)\n\n"
+            "📖 <code>/info</code> for formats.\n\n"
+            "🧘‍♂️ <i>Simplicity is key.</i>"
+        ),
+        'document_no_data': (
+            "📎 <b>No movements recognised</b>\n\n"
+            "I couldn't extract transactions from this file.\n\n"
+            "💡 <b>Suggestions:</b>\n"
+            "• PDF/CSV/Excel: ensure there's a column with amounts in € (e.g. 15.00 €)\n"
+            "• Image: send a clear photo of the receipt or statement\n"
+            "• Or type in text: <code>Description 10€</code>\n\n"
+            "📖 <code>/info</code> for formats.\n\n"
+            "🧘‍♂️ <i>Simplicity is key.</i>"
+        ),
         'processing_audio': "⏳ Processing audio…",
         'audio_error': (
             "🎤 <b>Audio not processed</b>\n\n"

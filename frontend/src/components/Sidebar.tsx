@@ -209,11 +209,11 @@ export default function Sidebar({
 
           if (isBlocked) {
             return (
-              <div
-                key={item.href}
-                onClick={() => router.push('/plans')}
-                className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-2xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
-              >
+            <div
+              key={item.href}
+              onClick={() => router.push('/plans')}
+              className={`flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-xl transition-all relative group cursor-pointer opacity-50 hover:opacity-70 ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+            >
                 <div className="relative shrink-0">
                   <Icon size={20} className="xl:w-5 xl:h-5 text-slate-600" />
                   <Lock size={12} className="xl:w-3 xl:h-3 absolute -top-0.5 -right-0.5 text-amber-400" />
@@ -235,7 +235,7 @@ export default function Sidebar({
               key={item.href}
               href={item.href}
               onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
-              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-2xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')} ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400 border border-blue-500/20') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:border-slate-700/40')} border border-transparent ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
             >
               <div className="relative shrink-0">
                 <Icon size={20} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
@@ -256,9 +256,9 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="flex-shrink-0 p-3 pt-4 pb-3 border-t border-white/5 space-y-2.5 bg-white/[0.01] relative overflow-visible">
+      <div className="flex-shrink-0 p-3 pt-4 pb-3 border-t border-slate-700/60 space-y-2.5 bg-slate-900/30 relative overflow-visible">
         {user && (
-          <div className={`group flex items-center gap-2 xl:gap-3 transition-all duration-300 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center lg:px-1' : 'px-2.5 xl:px-3 py-2 xl:py-2.5 hover:bg-white/[0.03] rounded-xl cursor-default border border-transparent hover:border-white/5 min-w-0'}`}>
+          <div className={`group flex items-center gap-2 xl:gap-3 transition-all duration-300 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center lg:px-1' : 'px-2.5 xl:px-3 py-2 xl:py-2.5 hover:bg-slate-800/50 rounded-xl cursor-default border border-transparent hover:border-slate-700/60 min-w-0'}`}>
             <div className="relative overflow-visible shrink-0">
               <div className={`relative shrink-0 flex items-center justify-center font-black text-white rounded-xl border shadow-2xl transition-all duration-500 group-hover:scale-110 ${
                 user.is_admin 
@@ -282,7 +282,7 @@ export default function Sidebar({
                       e.stopPropagation();
                       setShowNotifications(!showNotifications);
                     }}
-                    className={`p-1.5 bg-[#020617] border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400 border-red-500/50' : ''}`}
+                    className={`p-1.5 bg-slate-900/90 border border-slate-700/60 rounded-xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400 border-red-500/50' : ''}`}
                   >
                     <Bell size={16} />
                     <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full border border-[#020617] ${hasCritical ? 'bg-red-500' : 'bg-blue-500'}`} />
@@ -304,7 +304,7 @@ export default function Sidebar({
                         e.stopPropagation();
                         setShowNotifications(!showNotifications);
                       }}
-                      className={`p-1.5 xl:p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
+                      className={`p-1.5 xl:p-2 hover:bg-slate-800/50 rounded-xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
                     >
                       <Bell size={18} className="xl:w-6 xl:h-6" />
                       <div className={`absolute top-1.5 right-1.5 xl:top-2 xl:right-2 w-2 h-2 xl:w-2.5 xl:h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
@@ -349,7 +349,7 @@ export default function Sidebar({
                   initial={{ opacity: 0, scale: 0.9, y: -8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: -8 }}
-                  className="hidden lg:block absolute top-auto left-full bottom-0 mt-0 ml-4 w-[320px] max-w-[90vw] bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-[0_10px_100px_-10px_rgba(0,0,0,0.9)] z-[200] p-5 notification-card"
+                  className="hidden lg:block absolute top-auto left-full bottom-0 mt-0 ml-4 w-[320px] max-w-[90vw] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl z-[200] p-5 notification-card"
                   style={{ pointerEvents: 'auto' }}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -378,7 +378,7 @@ export default function Sidebar({
                   <div className="space-y-3 max-h-[360px] overflow-y-auto no-scrollbar pr-1">
                     {notifications.length === 0 ? (
                       <div className="py-10 text-center space-y-3">
-                        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mx-auto text-slate-700">
+                        <div className="w-12 h-12 bg-slate-800/60 border border-slate-700/60 rounded-xl flex items-center justify-center mx-auto text-slate-500">
                           <Bell size={22} />
                         </div>
                         <p className="text-[11px] text-slate-600 font-black uppercase tracking-[0.2em] italic">{t.dashboard.sidebar.nothingToReport}</p>
@@ -429,12 +429,12 @@ export default function Sidebar({
                           </>
                         );
                         const wrapperClass = `flex gap-3 items-start p-4 rounded-xl border transition-colors group/notif min-h-[4.5rem] ${
-                          notif.section ? 'cursor-pointer hover:bg-white/5' : ''
+                          notif.section ? 'cursor-pointer hover:bg-slate-800/50' : ''
                         } ${
                           notif.type === 'danger' ? 'bg-red-500/10 border-red-500/20' : 
                           notif.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' : 
                           notif.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' : 
-                          'bg-white/5 border-white/5'
+                          'bg-slate-800/50 border-slate-700/60'
                         }`;
                         return notif.section ? (
                           <Link
@@ -467,7 +467,7 @@ export default function Sidebar({
 
         <button
           onClick={logout}
-          className={`w-full flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/10 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
+          className={`w-full flex items-center gap-2 xl:gap-2.5 p-2 xl:p-2.5 min-h-[44px] lg:min-h-0 rounded-xl text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all group cursor-pointer border border-transparent hover:border-red-500/20 overflow-visible ${(isCollapsed && !isMobileOpen) ? 'lg:justify-center' : ''}`}
         >
           <div className="w-3.5 h-3.5 flex items-center justify-center group-hover:-translate-x-1 transition-transform shrink-0">
             <LogOut size={11} className="xl:w-3 xl:h-3" />
@@ -494,7 +494,7 @@ export default function Sidebar({
         aria-hidden={!isMobileOpen}
       />
       <aside
-        className={`fixed left-0 top-0 h-full w-64 max-w-[85vw] bg-[#020617] border-r border-slate-800 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-150 ease-out ${
+        className={`fixed left-0 top-0 h-full w-72 max-w-[85vw] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-150 ease-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ 
@@ -507,12 +507,12 @@ export default function Sidebar({
       </aside>
 
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-[#020617] border-r border-slate-800 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24 2xl:w-20' : 'w-64 2xl:w-52'}`}
+        className={`fixed left-0 top-0 h-screen bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24 2xl:w-20' : 'w-72 2xl:w-60'}`}
       >
         {sidebarContent}
         <button 
           onClick={onToggle}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-colors z-50 shadow-xl"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-900/90 border border-slate-700/60 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-colors z-50 shadow-xl"
         >
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>

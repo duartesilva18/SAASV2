@@ -300,11 +300,11 @@ export default function RecurringPage() {
               {t.dashboard.recurring.mySubscriptions} <span className="text-blue-500 italic">{t.dashboard.recurring.subscriptionsAccent}</span>
             </h1>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-4xl">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full max-w-4xl">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 min-w-0">
               <motion.div 
                 whileHover={{ y: -5 }}
-                className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group h-full flex flex-col"
+                className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
@@ -314,14 +314,14 @@ export default function RecurringPage() {
                   <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedIncome}</span>
                 </div>
                 <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalIncomes / 100)}</p>
-                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-700/60 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-emerald-500/50" />
                 </div>
               </motion.div>
 
               <motion.div 
                 whileHover={{ y: -5 }}
-                className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden group h-full flex flex-col"
+                className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
@@ -331,16 +331,15 @@ export default function RecurringPage() {
                   <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedExpenses}</span>
                 </div>
                 <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalExpenses / 100)}</p>
-                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-700/60 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-red-500/50" />
                 </div>
               </motion.div>
 
               <motion.div 
                 whileHover={{ scale: 1.02 }}
-                className="bg-blue-600/10 border border-blue-500/20 p-4 md:p-6 rounded-2xl md:rounded-[32px] shadow-[0_20px_50px_rgba(59,130,246,0.15)] relative overflow-hidden group h-full flex flex-col"
+                className="bg-blue-600/10 border border-blue-500/20 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full -mr-16 -mt-16 pointer-events-none" />
                 <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-blue-400">
                   <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-500/20 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
                     <Sparkles size={18} className="animate-pulse" />
@@ -357,24 +356,24 @@ export default function RecurringPage() {
                 </div>
               </motion.div>
             </div>
-            
+
             <button
               onClick={() => {
                 setEditingId(null);
                 setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: true, type: activeTab });
                 setShowAddModal(true);
               }}
-              className="self-center sm:self-end shrink-0 flex items-center gap-3 px-6 py-4 md:px-8 md:py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[24px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl shadow-blue-600/30 group active:scale-95 cursor-pointer h-fit"
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
             >
-              <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-              {activeTab === 'expense' ? t.dashboard.recurring.addNew : t.dashboard.recurring.newIncome}
+              <Plus size={18} className="shrink-0" />
+              <span>{activeTab === 'expense' ? t.dashboard.recurring.addNew : t.dashboard.recurring.newIncome}</span>
             </button>
           </div>
         </div>
 
         {/* Main Selection Tabs */}
         <div className="flex justify-center mt-8 sm:mt-12 overflow-x-auto">
-          <div className="bg-slate-900/50 p-2 rounded-xl sm:rounded-[24px] border border-slate-800 flex gap-2 min-w-0 shrink-0">
+          <div className="bg-slate-900/70 backdrop-blur-md p-2 rounded-xl border border-slate-700/60 flex gap-2 min-w-0 shrink-0">
             <button
               onClick={() => setActiveTab('income')}
               className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-[22px] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs transition-all cursor-pointer shrink-0 ${
@@ -401,7 +400,7 @@ export default function RecurringPage() {
         </div>
       </section>
 
-      <section className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
         <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
@@ -415,7 +414,7 @@ export default function RecurringPage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           {weeklyPressure.map((week, index) => (
-            <div key={index} className="bg-slate-950/50 border border-slate-800 rounded-[24px] p-6">
+            <div key={index} className="bg-slate-950/60 border border-slate-700/60 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{week.name}</span>
                 <span className={`text-lg font-black ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -480,7 +479,7 @@ export default function RecurringPage() {
       {/* Gráficos de Análise */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfico 1: Proporção Receitas vs Despesas */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
               <PieChartIcon size={16} />
@@ -531,7 +530,7 @@ export default function RecurringPage() {
         </div>
 
         {/* Gráfico 2: Distribuição por Categoria */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-12">
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
           <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
               <TrendingUp size={16} />
@@ -575,7 +574,7 @@ export default function RecurringPage() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <AnimatePresence>
           {filteredRecurring.map((item) => (
-            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/50 border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 cursor-pointer hover:border-blue-500/50 transition-all">
+            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 cursor-pointer hover:border-blue-500/50 transition-all">
               <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
                   <Zap size={20} className="sm:w-6 sm:h-6" />
@@ -595,20 +594,19 @@ export default function RecurringPage() {
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 md:p-12 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between gap-3 mb-6 sm:mb-8 md:mb-10">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-white uppercase tracking-tighter min-w-0">{editingId ? t.dashboard.recurring.editSubscription : t.dashboard.recurring.newSubscription} {t.dashboard.recurring.subscriptionLabel}</h2>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-500 cursor-pointer"><X size={24} /></button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-5 sm:p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center gap-3 mb-5 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight min-w-0 truncate">{editingId ? t.dashboard.recurring.editSubscription : t.dashboard.recurring.newSubscription} {t.dashboard.recurring.subscriptionLabel}</h2>
+                <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2"><X size={20} /></button>
               </div>
-              <form onSubmit={handleSubmit} noValidate className="space-y-6">
-                {/* Modal Type Selector */}
-                <div className="grid grid-cols-2 gap-4 mb-2">
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, type: 'expense'})}
-                    className={`py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer ${
-                      formData.type === 'expense' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-slate-950 border border-slate-800 text-slate-600 grayscale'
+                    className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                      formData.type === 'expense' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-slate-950/60 border border-slate-700 text-slate-500'
                     }`}
                   >
                     <ArrowDownCircle size={14} /> Despesa
@@ -616,76 +614,58 @@ export default function RecurringPage() {
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, type: 'income'})}
-                    className={`py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all cursor-pointer ${
-                      formData.type === 'income' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-950 border border-slate-800 text-slate-600 grayscale'
+                    className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                      formData.type === 'income' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-950/60 border border-slate-700 text-slate-500'
                     }`}
                   >
                     <ArrowUpCircle size={14} /> Receita
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">NOME DE SUBSCRIÇÃO <span className="text-red-500">*</span></label>
-                  <motion.div
-                    animate={errors.description ? { x: [-2, 2, -2, 2, 0] } : {}}
-                    transition={{ duration: 0.4 }}
-                  >
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">NOME DE SUBSCRIÇÃO <span className="text-red-500">*</span></label>
+                  <motion.div animate={errors.description ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                     <input 
                       required 
                       type="text" 
                       value={formData.description} 
-                      onChange={e => {
-                        setFormData({...formData, description: e.target.value});
-                        if (errors.description) setErrors({...errors, description: ''});
-                      }} 
+                      onChange={e => { setFormData({...formData, description: e.target.value}); if (errors.description) setErrors({...errors, description: ''}); }} 
                       placeholder={t.dashboard.recurring.descriptionPlaceholder} 
-                      className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
-                        errors.description ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
+                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${
+                        errors.description ? 'border-red-500' : 'border-slate-700'
                       }`} 
                     />
                   </motion.div>
                   {errors.description && (
-                    <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] text-red-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1">
+                    <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
                       <AlertCircle size={10} /> {errors.description}
                     </motion.p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">VALOR <span className="text-red-500">*</span></label>
-                    <motion.div
-                      animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">VALOR <span className="text-red-500">*</span></label>
+                    <motion.div animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                       <input 
                         required 
                         type="number" 
                         step="0.01" 
                         value={formData.amount} 
-                        onChange={e => {
-                          setFormData({...formData, amount: e.target.value});
-                          if (errors.amount) setErrors({...errors, amount: ''});
-                        }} 
+                        onChange={e => { setFormData({...formData, amount: e.target.value}); if (errors.amount) setErrors({...errors, amount: ''}); }} 
                         placeholder="0.00" 
-                        className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
-                          errors.amount ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
+                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${
+                          errors.amount ? 'border-red-500' : 'border-slate-700'
                         }`} 
                       />
                     </motion.div>
                     {errors.amount && (
-                      <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1">
-                        <AlertCircle size={10} /> {errors.amount}
-                      </p>
+                      <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1"><AlertCircle size={10} /> {errors.amount}</p>
                     )}
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">DIA <span className="text-red-500">*</span></label>
-                    <motion.div
-                      animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">DIA <span className="text-red-500">*</span></label>
+                    <motion.div animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                       <input 
                         required 
                         type="number" 
@@ -697,31 +677,26 @@ export default function RecurringPage() {
                           setFormData({...formData, day_of_month: val});
                           if (errors.day_of_month) setErrors({...errors, day_of_month: ''});
                         }} 
-                        className={`w-full bg-slate-950 border rounded-xl sm:rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-white outline-none transition-all cursor-pointer min-h-[48px] ${
-                          errors.day_of_month ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800 focus:border-blue-500'
+                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                          errors.day_of_month ? 'border-red-500' : 'border-slate-700'
                         }`} 
                       />
                     </motion.div>
                     {errors.day_of_month && (
-                      <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1">
-                        <AlertCircle size={10} /> {errors.day_of_month}
-                      </p>
+                      <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1"><AlertCircle size={10} /> {errors.day_of_month}</p>
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500 ml-2">CATEGORIA <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <Tag size={18} className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">CATEGORIA <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Tag size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <select
                       required
                       value={formData.category_id}
-                      onChange={(e) => {
-                        setFormData({ ...formData, category_id: e.target.value });
-                        if (errors.category_id) setErrors(prev => ({ ...prev, category_id: '' }));
-                      }}
-                      className={`w-full bg-slate-950/50 border rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-12 sm:pl-14 pr-8 sm:pr-10 text-sm sm:text-base text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer min-h-[48px] ${
-                        errors.category_id ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-slate-800'
+                      onChange={(e) => { setFormData({ ...formData, category_id: e.target.value }); if (errors.category_id) setErrors(prev => ({ ...prev, category_id: '' })); }}
+                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 pl-10 pr-8 text-sm text-white appearance-none outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer ${
+                        errors.category_id ? 'border-red-500' : 'border-slate-700'
                       }`}
                     >
                       <option value="">{t.dashboard.recurring.selectCategory}</option>
@@ -750,16 +725,14 @@ export default function RecurringPage() {
                         );
                       })()}
                     </select>
-                    <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>
                   {errors.category_id && (
-                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest ml-2 flex items-center gap-1">
-                      <AlertCircle size={10} /> {errors.category_id}
-                    </p>
+                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-1 flex items-center gap-1"><AlertCircle size={10} /> {errors.category_id}</p>
                   )}
                 </div>
 
-                <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-500 transition-all cursor-pointer">Guardar</button>
+                <button type="submit" className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer">Guardar</button>
               </form>
             </motion.div>
           </div>

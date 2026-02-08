@@ -273,15 +273,14 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-[28px] bg-slate-900 border border-slate-800 p-4 sm:p-6 md:p-8">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[100px] -z-10" />
+      <div className="relative overflow-hidden rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
                 <Layers size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 truncate">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 truncate">
                 Gestão de Identidade
               </span>
             </div>
@@ -292,20 +291,18 @@ export default function CategoriesPage() {
               {t.dashboard.categories.subtitle}
             </p>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 shrink-0">
-            <button
-              onClick={() => {
-                setEditingCategory(null);
-                setFormData({ name: '', nature: 'expense', monthly_limit: '', color_hex: COLORS[0], icon: 'Tag' });
-                setShowAddModal(true);
-              }}
-              className="flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 hover:bg-blue-500 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20 cursor-pointer w-full sm:w-auto"
-            >
-              <Plus size={18} />
-              {t.dashboard.categories.addNew}
-            </button>
-          </div>
+
+          <button
+            onClick={() => {
+              setEditingCategory(null);
+              setFormData({ name: '', nature: 'expense', monthly_limit: '', color_hex: COLORS[0], icon: 'Tag' });
+              setShowAddModal(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full md:w-auto"
+          >
+            <Plus size={18} className="shrink-0" />
+            <span>{t.dashboard.categories.addNew}</span>
+          </button>
         </div>
       </div>
 
@@ -315,7 +312,7 @@ export default function CategoriesPage() {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-600/10 border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
+            className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
           >
             <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Landmark size={24} />
@@ -331,7 +328,7 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Left: Charts & Stats */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
@@ -420,7 +417,7 @@ export default function CategoriesPage() {
 
         {/* Right: Zen Tips & Legend */}
         <div className="space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10" />
             <Sparkles className="mb-6 opacity-80" size={32} />
             <h3 className="text-2xl font-black tracking-tighter mb-4 leading-none uppercase">{t.dashboard.categories.masterTip}</h3>
@@ -429,7 +426,7 @@ export default function CategoriesPage() {
             </p>
           </div>
 
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8">
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6 flex items-center gap-2">
               <Target size={14} />
               Alvos este Mês
@@ -517,13 +514,13 @@ export default function CategoriesPage() {
                   key={cat.id}
                   layout
                   onClick={() => toggleSelect(cat.id, isProtected)}
-                  className={`group relative bg-slate-900/50 backdrop-blur-xl border rounded-[32px] p-6 transition-all duration-500 ${
+                  className={`group relative bg-slate-900/70 backdrop-blur-md border rounded-2xl p-6 transition-all duration-500 ${
                     isSelectionMode && !isProtected ? 'cursor-pointer hover:border-blue-500/50' : ''
                   } ${
                     isSelected ? 'border-blue-500 bg-blue-500/[0.05] ring-2 ring-blue-500/20' : 
                     isDanger 
                       ? 'border-red-500/50 bg-red-500/[0.03] shadow-[0_0_40px_-10px_rgba(239,68,68,0.2)]' 
-                      : 'border-slate-800 hover:border-blue-500/30 shadow-xl'
+                      : 'border-slate-700/60 hover:border-blue-500/30 shadow-2xl'
                   } ${isSelectionMode && isProtected ? 'opacity-40 grayscale-[0.5]' : ''}`}
                 >
                   {isSelected && (
@@ -634,7 +631,7 @@ export default function CategoriesPage() {
           </div>
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal — estilo alinhado ao login/dashboard */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -643,50 +640,38 @@ export default function CategoriesPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAddModal(false)}
-              className="absolute inset-0 bg-[#020617]/90 backdrop-blur-2xl will-change-transform"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
-            
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ type: 'spring' as const, damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-xl bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="relative w-full max-w-xl bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
-              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full" />
-
-              <div className="p-5 sm:p-8 md:p-10 lg:p-14 relative z-10">
-                <div className="flex items-center justify-between mb-6 sm:mb-8 md:mb-12">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Configuração de Gaveta</span>
-                    </div>
-                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
-                      {editingCategory ? t.dashboard.categories.edit : t.dashboard.categories.addNew}
-                    </h2>
-                  </div>
-                  <button onClick={() => setShowAddModal(false)} className="p-3 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all cursor-pointer border border-transparent hover:border-white/5">
-                    <X size={24} />
+              <div className="p-5 sm:p-6 md:p-8 relative z-10">
+                <div className="flex justify-between items-center mb-5 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">
+                    {editingCategory ? t.dashboard.categories.edit : t.dashboard.categories.addNew}
+                  </h2>
+                  <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2">
+                    <X size={20} />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-10">
+                <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                   {/* Icon Selection - 5 ícones */}
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-1 block">Escolhe o ícone</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Escolhe o ícone</label>
                     <div className="flex gap-4">
                       {AVAILABLE_ICONS.map((item) => (
                         <button
                           key={item.name}
                           type="button"
                           onClick={() => setFormData({ ...formData, icon: item.name })}
-                          className={`group p-4 rounded-2xl transition-all cursor-pointer relative overflow-hidden ${
+                          className={`group p-4 rounded-xl transition-all cursor-pointer relative overflow-hidden ${
                             formData.icon === item.name 
-                              ? 'bg-blue-600 text-white shadow-[0_0_25px_rgba(37,99,235,0.4)] scale-110' 
-                              : 'bg-slate-950/50 text-slate-500 border border-white/5 hover:border-white/10 hover:text-slate-300'
+                              ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                              : 'bg-slate-950/60 text-slate-500 border border-slate-700 hover:border-slate-600 hover:text-slate-300'
                           }`}
                         >
                           <item.icon size={22} className="relative z-10 group-hover:scale-110 transition-transform" />
@@ -699,25 +684,21 @@ export default function CategoriesPage() {
                   </div>
 
                   <div className="space-y-6 sm:space-y-8">
-                    <div className="relative group">
-                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
-                        {t.dashboard.categories.name}
-                      </label>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.name}</label>
                       <input
                         required
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-6 sm:px-8 py-4 sm:py-5 text-sm sm:text-base text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all placeholder:text-slate-700 font-medium min-h-[48px]"
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                         placeholder={t.dashboard.categories.namePlaceholder || "Category name"}
                       />
                     </div>
 
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 block">
-                        {t.dashboard.categories.nature}
-                      </label>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.nature}</label>
+                      <div className="grid grid-cols-2 gap-3">
                         {[
                           { id: 'expense', label: t.dashboard.categories.expense, icon: TrendingUp, color: 'text-red-400' },
                           { id: 'income', label: t.dashboard.categories.income, icon: Landmark, color: 'text-emerald-400' },
@@ -727,10 +708,10 @@ export default function CategoriesPage() {
                             type="button"
                             disabled={editingCategory ? (editingCategory.vault_type !== 'none') : false}
                             onClick={() => setFormData({ ...formData, nature: nature.id as any })}
-                            className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all cursor-pointer ${
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all cursor-pointer ${
                               formData.nature === nature.id 
-                                ? 'bg-slate-950 border-blue-500/50 shadow-lg shadow-blue-500/10' 
-                                : 'bg-slate-950/30 border-white/5 hover:border-white/10 opacity-60 hover:opacity-100'
+                                ? 'bg-slate-800/60 border-blue-500/50' 
+                                : 'bg-slate-950/60 border-slate-700 hover:border-slate-600 opacity-60 hover:opacity-100'
                             } ${editingCategory ? (editingCategory.vault_type !== 'none' ? 'opacity-50 cursor-not-allowed' : '') : ''}`}
                           >
                             <nature.icon size={16} className={nature.color} />
@@ -750,30 +731,26 @@ export default function CategoriesPage() {
                       )}
                     </div>
 
-                    <div className="relative group">
-                      <label className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-slate-500 ml-4 mb-2 block group-focus-within:text-blue-500 transition-colors">
-                        {t.dashboard.categories.limit} (Opcional)
-                      </label>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.limit} (Opcional)</label>
                       <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">
+                          {currency === 'EUR' ? '€' : currency === 'BRL' ? 'R$' : '$'}
+                        </span>
                         <input
                           type="number"
                           step="0.01"
                           value={formData.monthly_limit}
                           onChange={(e) => setFormData({ ...formData, monthly_limit: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl sm:rounded-2xl px-6 sm:px-8 py-4 sm:py-5 text-white focus:outline-none focus:border-blue-500/50 focus:bg-slate-950 transition-all pl-14 sm:pl-16 font-black text-lg sm:text-xl tracking-tighter min-h-[48px]"
+                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-8 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
                           placeholder="0.00"
                         />
-                        <span className="absolute left-6 sm:left-8 top-1/2 -translate-y-1/2 text-blue-500 font-black text-base sm:text-lg">
-                          {currency === 'EUR' ? '€' : currency === 'BRL' ? 'R$' : '$'}
-                        </span>
                       </div>
                     </div>
 
                     {/* Color Selection - 5 cores (+ cor atual ao editar) */}
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4 block">
-                        {t.dashboard.categories.color}
-                      </label>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.color}</label>
                       <div className="flex flex-wrap gap-4">
                         {(() => {
                           const colorsToShow = [...COLORS];
@@ -804,13 +781,10 @@ export default function CategoriesPage() {
 
                   <button
                     type="submit"
-                    className="group relative w-full py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-[32px] font-black uppercase tracking-[0.3em] text-sm transition-all active:scale-[0.98] shadow-2xl shadow-blue-600/30 overflow-hidden cursor-pointer"
+                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-                    <span className="relative z-10 flex items-center justify-center gap-3">
-                      {editingCategory ? t.dashboard.categories.saveChanges : t.dashboard.categories.createNew}
-                      <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                    </span>
+                    {editingCategory ? t.dashboard.categories.saveChanges : t.dashboard.categories.createNew}
+                    <ArrowRight size={18} />
                   </button>
                 </form>
               </div>

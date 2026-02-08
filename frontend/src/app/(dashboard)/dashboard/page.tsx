@@ -633,7 +633,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.filters}</span>
-          <div className="flex items-center gap-1 bg-slate-900/60 border border-white/10 rounded-xl px-2 sm:px-3 py-2">
+          <div className="flex items-center gap-1 bg-slate-900/70 border border-slate-700/60 rounded-xl px-2 sm:px-3 py-2">
             <Calendar size={14} className="text-slate-400 shrink-0 sm:w-4 sm:h-4" />
             <button
               type="button"
@@ -677,10 +677,10 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setShowAddTransactionModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20"
           >
-            <Plus size={18} />
-            {t.dashboard.page.newTransaction}
+            <Plus size={18} className="shrink-0" />
+            <span>{t.dashboard.page.newTransaction}</span>
           </button>
         </div>
       </div>
@@ -690,7 +690,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -709,7 +709,7 @@ export default function DashboardPage() {
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group"
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className="w-10 h-10 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -728,7 +728,7 @@ export default function DashboardPage() {
 
           <motion.div
             whileHover={{ y: -4 }}
-            className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 md:p-6 rounded-2xl border border-white/10 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.2),0_0_32px_-8px_rgba(148,163,184,0.08)] relative overflow-hidden group sm:col-span-2 md:col-span-1"
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group sm:col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -764,7 +764,7 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2"
+            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl lg:col-span-2"
           >
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
             <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.page.last6Months}</p>
@@ -810,7 +810,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl shadow-slate-900/20 flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
+            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
             <div className="flex items-center gap-2 sm:gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
@@ -863,7 +863,7 @@ export default function DashboardPage() {
             </div>
             {chartProcessed.distribution.length > 0 && (
               <>
-                <div className="mt-4 p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex flex-row items-center justify-between gap-4 shrink-0">
+                <div className="mt-4 p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60 flex flex-row items-center justify-between gap-4 shrink-0">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total</p>
                     <p className="text-lg font-black text-white">
@@ -877,7 +877,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-4 p-4 rounded-2xl bg-slate-800/40 border border-white/5 space-y-2 shrink-0 overflow-auto max-h-[180px]">
+                <div className="mt-4 p-4 rounded-2xl bg-slate-900/70 border border-slate-700/60 space-y-2 shrink-0 overflow-auto max-h-[180px]">
                   {chartProcessed.distribution.map((entry, i) => {
                     const total = chartProcessed.distribution.reduce((s, x) => s + x.value, 0);
                     const pct = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
@@ -904,11 +904,11 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 }}
-              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl flex flex-col lg:col-span-1"
+              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1"
             >
               <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
               <div className="space-y-3 flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/70 border border-slate-700/60 min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
                       <ShieldCheck size={16} />
@@ -927,7 +927,7 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-800/50 border border-white/5 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/70 border border-slate-700/60 min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
                       <Target size={16} />
@@ -946,7 +946,7 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                <div className="py-2 px-3 rounded-xl bg-slate-800/30 border border-white/5 flex items-center justify-between">
+                <div className="py-2 px-3 rounded-xl bg-slate-900/70 border border-slate-700/60 flex items-center justify-between">
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.totalFunds}</span>
                   <span className="text-sm font-black text-white">{formatCurrency(stats.vaultEmergency + stats.vaultInvestment)}</span>
                 </div>
@@ -963,7 +963,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl flex flex-col lg:col-span-2"
+              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-2"
             >
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
             <div className="flex-1 min-h-[180px] flex items-center justify-center">
@@ -1018,7 +1018,7 @@ export default function DashboardPage() {
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-sm p-4 sm:p-5 rounded-xl sm:rounded-[24px] border border-white/10 shadow-[0_0_30px_-15px_rgba(59,130,246,0.25)] text-xs sm:text-sm text-slate-200 font-medium italic flex items-center gap-2 sm:gap-3"
+              className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-700/60 shadow-2xl text-xs sm:text-sm text-slate-200 font-medium italic flex items-center gap-2 sm:gap-3"
             >
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles size={14} />
@@ -1049,7 +1049,7 @@ export default function DashboardPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className={`relative overflow-hidden p-6 rounded-[32px] border flex items-center gap-6 transition-all group ${
+                  className={`relative overflow-hidden p-6 rounded-2xl sm:rounded-3xl border flex items-center gap-6 transition-all group ${
                     alert.type === 'danger' 
                       ? 'bg-red-500/[0.03] border-red-500/20 hover:border-red-500/40 shadow-[0_0_30px_-10px_rgba(239,68,68,0.1)]' 
                       : 'bg-amber-500/[0.03] border-amber-500/20 hover:border-amber-500/40 shadow-[0_0_30px_-10px_rgba(245,158,11,0.1)]'
