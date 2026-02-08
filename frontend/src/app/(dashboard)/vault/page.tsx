@@ -10,7 +10,7 @@ import {
   Landmark, Plus, Minus, TrendingUp, TrendingDown, Wallet,
   ShieldCheck, Target, ArrowUpRight, ArrowDownRight, X, Calendar
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { ChartSkeleton } from '@/components/LoadingSkeleton';
 import AlertModal from '@/components/AlertModal';
@@ -37,9 +37,19 @@ export default function VaultPage() {
     isVisible: false
   });
   const [selectedPeriod, setSelectedPeriod] = useState<'7D' | '30D' | '12M' | 'Tudo'>('Tudo');
+  const [isMobile, setIsMobile] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   const fetchData = async () => {
@@ -927,7 +937,98 @@ export default function VaultPage() {
         </motion.div>
       </div>
 
-      {/* Vault Transaction Modal — estilo login */}
+      {/* Vault Transaction Modal — sem animação no mobile para evitar lag */}
+      {(reduceMotion || isMobile) ? (
+        vaultModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              role="presentation"
+              onClick={() => !vaultLoading && setVaultModal(null)}
+              className="absolute inset-0 bg-black/70"
+            />
+            <div
+              role="dialog"
+              aria-modal
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-slate-900/95 border border-slate-700/60 rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    vaultModal.action === 'add' 
+                      ? vaultModal.category.vault_type === 'emergency' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {vaultModal.action === 'add' ? <Plus size={20} /> : <Minus size={20} />}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider truncate">
+                      {vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
+                    </h3>
+                    <p className="text-xs text-slate-400 truncate">{vaultModal.category.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }}
+                  className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer shrink-0 -m-2"
+                  disabled={vaultLoading}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.vault.value}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={vaultAmount}
+                    onChange={(e) => setVaultAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 sm:py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
+                    disabled={vaultLoading}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !vaultLoading && vaultAmount && parseFloat(vaultAmount) > 0) {
+                        handleVaultTransaction();
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }}
+                    disabled={vaultLoading}
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {t.dashboard.vault.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleVaultTransaction}
+                    disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
+                    className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
+                      vaultModal.action === 'add'
+                        ? vaultModal.category.vault_type === 'emergency'
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-red-600 hover:bg-red-500 text-white'
+                    }`}
+                  >
+                    {vaultLoading ? t.dashboard.vault.processing : vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      ) : (
       <AnimatePresence>
         {vaultModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -935,6 +1036,7 @@ export default function VaultPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => !vaultLoading && setVaultModal(null)}
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
@@ -942,6 +1044,7 @@ export default function VaultPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
               className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
             >
@@ -1022,6 +1125,7 @@ export default function VaultPage() {
           </div>
         )}
       </AnimatePresence>
+      )}
 
       <AlertModal
         isOpen={alertModal.isOpen}

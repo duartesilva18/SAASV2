@@ -1065,6 +1065,113 @@ Responde APENAS com o nome exato da categoria:"""
         return (None, None)
 
 
+def parse_document_with_openai(
+    extracted_text: str,
+    workspace: models.Workspace,
+    db: Session,
+    default_category_id: Optional[uuid.UUID],
+) -> Optional[Dict]:
+    """
+    Usa OpenAI para extrair transações de texto longo (PDF/CSV/Excel).
+    Devolve {"transactions": [{"amount", "description", "type", "date", "category"}]} compatível com _build_parsed_from_photo_result,
+    ou None se falhar ou OPENAI_API_KEY não estiver definido.
+    """
+    if not getattr(settings, "OPENAI_API_KEY", None) or not (settings.OPENAI_API_KEY or "").strip():
+        return None
+    text = (extracted_text or "").strip()
+    if len(text) < 100:
+        return None
+    categories = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
+    if not categories:
+        return None
+    expense_names = [c.name for c in categories if getattr(c, "type", "expense") == "expense"]
+    income_names = [c.name for c in categories if getattr(c, "type", "income") == "income"]
+    cats_expense = ", ".join(expense_names[:40]) if expense_names else "(nenhuma)"
+    cats_income = ", ".join(income_names[:40]) if income_names else "(nenhuma)"
+    default_cat_name = None
+    if default_category_id:
+        default_cat = next((c for c in categories if c.id == default_category_id), None)
+        if default_cat:
+            default_cat_name = default_cat.name
+    max_chars = 11000
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n[... texto truncado ...]"
+    today_str = date.today().strftime("%Y-%m-%d")
+    prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações.
+
+Regras:
+- Cada linha/movimento com valor em euros (ex: 15,00€; 202€; -10.5€) = uma transação.
+- amount: número positivo (valor absoluto em euros).
+- type: "expense" para débitos/saídas, "income" para créditos/entradas.
+- date: data no formato YYYY-MM-DD se aparecer no texto; senão usa "{today_str}".
+- description: descrição curta e útil (ex: "Supermercado", "Transferência", "MB Way"). Se for texto genérico de banco (Titular, Conta, Saldo disponível, Movimentos) usa "Movimento conta".
+- category: escolhe UMA categoria da lista que melhor se adequa. Usa o nome EXATO da lista. Se não souberes, usa "{default_cat_name or (expense_names[0] if expense_names else (income_names[0] if income_names else 'Outros'))}" para despesas.
+
+Categorias disponíveis (nome EXATO):
+Despesas: {cats_expense}
+Receitas: {cats_income}
+
+Responde APENAS com um JSON válido, sem markdown nem texto extra:
+{{"transactions":[{{"amount":n,"description":"...","type":"expense","date":"YYYY-MM-DD","category":"NomeExato"}}]}}
+
+Texto do ficheiro:
+---
+{text}
+---"""
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=4000,
+            temperature=0.1,
+        )
+        raw = (response.choices[0].message.content or "").strip() if response.choices else ""
+        if not raw:
+            return None
+        clean = re.search(r"\{[\s\S]*\}", raw)
+        if clean:
+            raw = clean.group(0)
+        data = json.loads(raw)
+        items = data.get("transactions")
+        if not isinstance(items, list) or len(items) == 0:
+            return None
+        out = []
+        for item in items:
+            try:
+                amount = float(item.get("amount", 0))
+            except (TypeError, ValueError):
+                continue
+            if amount <= 0:
+                continue
+            desc = (item.get("description") or "").strip()[:255] or "Movimento conta"
+            tipo = (item.get("type") or "expense").lower()
+            if tipo not in ("expense", "income"):
+                tipo = "expense"
+            date_str = (item.get("date") or today_str).strip()[:10]
+            cat_name = (item.get("category") or "").strip()
+            if not cat_name and default_cat_name:
+                cat_name = default_cat_name
+            out.append({
+                "amount": amount,
+                "description": desc,
+                "type": tipo,
+                "date": date_str,
+                "category": cat_name or None,
+            })
+        if not out:
+            return None
+        logger.info("[parse_document_with_openai] Extraídas %s transações do ficheiro", len(out))
+        return {"transactions": out}
+    except OpenAIRateLimitError:
+        raise
+    except Exception as e:
+        logger.warning("[parse_document_with_openai] Erro: %s", e)
+        return None
+
+
 def _build_parsed_from_photo_result(
     photo_result: Dict, workspace: models.Workspace, db: Session
 ) -> Optional[Dict]:
@@ -2786,15 +2893,31 @@ async def telegram_webhook(
                     send_telegram_msg(chat_id, t('document_no_data'))
                     return {'status': 'error'}
                 default_cat_id = getattr(user, 'telegram_default_category_id', None)
-                try:
-                    parsed = parse_transaction(extracted.strip(), workspace, db, default_category_id=default_cat_id)
-                except AIUnavailableError as ae:
-                    err_str = str(ae).lower()
-                    if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                extracted_stripped = extracted.strip()
+                use_ai_for_document = len(extracted_stripped) >= 400 and getattr(settings, "OPENAI_API_KEY", None)
+                parsed = None
+                if use_ai_for_document:
+                    try:
+                        ai_doc_result = parse_document_with_openai(extracted_stripped, workspace, db, default_cat_id)
+                        if ai_doc_result:
+                            parsed = _build_parsed_from_photo_result(ai_doc_result, workspace, db)
+                            if parsed:
+                                logger.info("[Telegram] Documento processado com IA: %s transações", len(parsed.get("transactions", [parsed])))
+                    except OpenAIRateLimitError:
                         send_telegram_msg(chat_id, t('ai_busy'))
-                    else:
-                        send_telegram_msg(chat_id, t('ai_unavailable'))
-                    return {'status': 'error'}
+                        return {'status': 'error'}
+                    except Exception as ai_err:
+                        logger.warning("[Telegram] IA para documento falhou, fallback regex: %s", ai_err)
+                if not parsed:
+                    try:
+                        parsed = parse_transaction(extracted_stripped, workspace, db, default_category_id=default_cat_id)
+                    except AIUnavailableError as ae:
+                        err_str = str(ae).lower()
+                        if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                            send_telegram_msg(chat_id, t('ai_busy'))
+                        else:
+                            send_telegram_msg(chat_id, t('ai_unavailable'))
+                        return {'status': 'error'}
                 if not parsed:
                     send_telegram_msg(chat_id, t('document_no_data'))
                     return {'status': 'error'}
@@ -2892,6 +3015,8 @@ async def telegram_webhook(
             created_count = 0
             batch_id = uuid.uuid4()
             batch_id_hex = batch_id.hex[:16]
+            # Evitar duplicados (ex.: PDF com mesma lista duas vezes ou parser a repetir linhas)
+            seen_key = set()
 
             for trans_data in transactions:
                 amount_cents = int(trans_data['amount'] * 100)
@@ -2906,6 +3031,11 @@ async def telegram_webhook(
                     amount_cents = abs(amount_cents)
 
                 trans_date = trans_data.get('transaction_date') or date.today()
+                dedup_key = (amount_cents, trans_date)
+                if dedup_key in seen_key:
+                    continue
+                seen_key.add(dedup_key)
+
                 if user.telegram_auto_confirm:
                     transaction = models.Transaction(
                         workspace_id=workspace.id,
