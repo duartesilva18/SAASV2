@@ -1125,8 +1125,8 @@ def parse_document_with_openai(
     prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações, sem omitir nenhuma.
 
 Regras OBRIGATÓRIAS:
-- TRANSFERÊNCIAS RECEBIDAS (dinheiro que entrou) → SEMPRE type "income" e category Receitas ("{first_income_cat}" ou Salário). NUNCA Alimentação. Exemplos por banco/país: PT "Trf. Mb Way De", "Trf.imed. De", "Transferência de", "Recebido de"; ES "Transferencia de", "Bizum de", "Recibido de"; EN "Transfer from", "Received from", "Incoming transfer"; FR "Virement de", "Transfert de", "Reçu de"; BR "Pix recebido".
-- TRANSFERÊNCIAS ENVIADAS (dinheiro que saiu) → type "expense" e category "{transfer_expense_cat}". NUNCA Alimentação. Exemplos: PT "Trf. Mb Way Para", "Transferência para"; ES "Transferencia a", "Bizum para"; EN "Transfer to", "Sent to"; FR "Virement vers"; BR "Pix enviado".
+- TRANSFERÊNCIAS RECEBIDAS (dinheiro que entrou) → type "income". Se a descrição não indicar destinatário (ex. só "Trf. Mb Way De"), usa category "{first_income_cat}" ou Salário. Se indicar origem (ex. "De Empresa X"), podes usar a categoria mais adequada das Receitas.
+- TRANSFERÊNCIAS ENVIADAS (dinheiro que saiu) → type "expense". Se a descrição for genérica (ex. só "Trf. Mb Way Para" sem nome) usa category "{transfer_expense_cat}". Se a descrição indicar destinatário/comerciante (ex. "Trf. Mb Way Para McDonald's", "Para Continente", "Transfer to Restaurant"), usa a categoria adequada às Despesas: Alimentação para restaurantes/supermercados, Transportes para combustível/uber, etc. NUNCA uses Alimentação para transferências genéricas sem destinatário.
 - Compras, Via Verde, Google One, etc. = expense com categoria adequada (Transportes, Alimentação, etc.).
 - Se uma linha tiver dois valores em €, o primeiro é o valor do movimento.
 - amount: número positivo (valor absoluto em euros).
@@ -1201,6 +1201,24 @@ Texto do ficheiro:
             r"\btransfert\s+vers\b",                                    # FR: Transfert vers
         ]
         trf_enviada = re.compile("|".join(f"(?:{p})" for p in trf_enviada_patterns), re.IGNORECASE)
+        # Descrição genérica = sem destinatário/comerciante (ex.: "Trf. Mb Way Para" só). Se tiver "Para McDonald's", não é genérica.
+        def _transfer_description_is_generic(description: str, is_enviada: bool) -> bool:
+            if not description or len(description) < 10:
+                return True
+            # Remove o prefixo até (e incluindo) "para"/"to"/"vers" ou "de"/"from"; o que sobra é o destinatário/origem
+            if is_enviada:
+                m = re.search(r"(?:para|to|vers|enviado|saída)\s*", description, re.IGNORECASE)
+            else:
+                m = re.search(r"(?:de|from|reçu)\s*", description, re.IGNORECASE)
+            if not m:
+                return True
+            rest = description[m.end() :].strip()
+            if len(rest) <= 3:
+                return True
+            if re.search(r"[a-zA-ZÀ-ÿ]{4,}", rest):
+                return False
+            return True
+
         # Meses PT para parse de data "06 fev 2026"
         _meses_pt = {"jan": 1, "fev": 2, "mar": 3, "abr": 4, "mai": 5, "jun": 6, "jul": 7, "ago": 8, "set": 9, "out": 10, "nov": 11, "dez": 12}
 
@@ -1238,15 +1256,24 @@ Texto do ficheiro:
             date_str = parse_date_from_doc((item.get("date") or today_str).strip())
             cat_name = (item.get("category") or "").strip()
 
-            # Forçar tipo e categoria para transferências (independentemente do que a IA devolveu)
+            # Forçar tipo e categoria para transferências só quando a descrição é genérica (sem destinatário/comerciante)
             if trf_recebida.search(desc):
                 tipo = "income"
-                cat_name = first_income_cat if income_names else (cat_name or "Outros")
+                if _transfer_description_is_generic(desc, False):
+                    cat_name = first_income_cat if income_names else (cat_name or "Outros")
+                elif not cat_name or cat_name not in (income_names or []):
+                    cat_name = first_income_cat if income_names else (cat_name or "Outros")
             elif trf_enviada.search(desc):
                 tipo = "expense"
-                # Transferência enviada: nunca Alimentação; usar categoria adequada para transferências
-                if not cat_name or _aliment.search(cat_name or ""):
-                    cat_name = transfer_expense_cat
+                desc_generic = _transfer_description_is_generic(desc, True)
+                # Só forçar Despesas gerais se: descrição genérica OU IA não devolveu categoria específica válida
+                if desc_generic:
+                    if not cat_name or _aliment.search(cat_name or ""):
+                        cat_name = transfer_expense_cat
+                else:
+                    # Descrição com destinatário (ex.: "Para McDonald's") — manter categoria da IA se for válida (ex.: Alimentação)
+                    if not cat_name or cat_name not in (expense_names or []):
+                        cat_name = transfer_expense_cat
 
             if not cat_name and default_cat_name:
                 cat_name = default_cat_name
