@@ -110,6 +110,13 @@ body {
   }
 }
 
+/* Mobile: contain layout no main para reduzir reflow (menos lag) */
+@media (max-width: 768px) {
+  main {
+    contain: layout;
+  }
+}
+
 /* Android / mobile: safe-area e touch targets */
 .touch-manipulation {
   touch-action: manipulation;

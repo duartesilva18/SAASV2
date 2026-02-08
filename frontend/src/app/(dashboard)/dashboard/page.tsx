@@ -594,11 +594,13 @@ export default function DashboardPage() {
     return <LoadingScreen />;
   }
 
+  const motionOpts = isMobile
+    ? { initial: { opacity: 1 } as const, animate: { opacity: 1 } as const, transition: { duration: 0 } }
+    : { initial: { opacity: 0, y: 20 } as const, animate: { opacity: 1, y: 0 } as const, transition: { duration: 0.5 } };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      {...motionOpts}
       className="text-white pb-20 -mt-4"
     >
       {/* Cabeçalho: saudação + resumo | Modo Demo + Upgrade Pro */}
@@ -611,8 +613,9 @@ export default function DashboardPage() {
         </div>
         {!isPro && (
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={isMobile ? false : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
+            transition={isMobile ? { duration: 0 } : undefined}
             className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-amber-500/10 border border-amber-500/20 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl w-full sm:w-auto shrink-0"
           >
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -689,7 +692,7 @@ export default function DashboardPage() {
       <section className="mb-6 sm:mb-8 md:mb-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
-            whileHover={{ y: -4 }}
+            whileHover={isMobile ? undefined : { y: -4 }}
             className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
@@ -708,7 +711,7 @@ export default function DashboardPage() {
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -4 }}
+            whileHover={isMobile ? undefined : { y: -4 }}
             className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
           >
             <div className="flex items-center justify-between mb-1.5">
@@ -727,7 +730,7 @@ export default function DashboardPage() {
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -4 }}
+            whileHover={isMobile ? undefined : { y: -4 }}
             className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group sm:col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between mb-1.5">

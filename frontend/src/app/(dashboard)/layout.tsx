@@ -15,7 +15,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
 
 export default function DashboardLayout({
@@ -30,8 +30,10 @@ export default function DashboardLayout({
   const [showSessionExpired, setShowSessionExpired] = useState(false);
   // Inicializar sempre false para evitar hydration mismatch (server não tem localStorage)
   const [supportHidden, setSupportHidden] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
 
   const supportRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supportDidRestoreRef = useRef(false);
@@ -42,6 +44,15 @@ export default function DashboardLayout({
     const onHidden = () => setSupportHidden(true);
     window.addEventListener('support-hidden', onHidden);
     return () => window.removeEventListener('support-hidden', onHidden);
+  }, []);
+
+  // Mobile viewport: desativar animações de transição de página (reduz lag)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobileViewport(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   const openSupport = useCallback(() => {
@@ -316,18 +327,27 @@ export default function DashboardLayout({
         )}
 
         <main ref={mainRef} className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
+          {(reduceMotion || isMobileViewport) ? (
+            <div
               key={pathname}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
             >
               {children}
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </main>
       </div>
 
