@@ -1950,7 +1950,6 @@ def _build_batch_message_and_keyboard(
         return None, None
     lines = []
     total_cents = 0
-    keyboard = []
     for p in pendents_batch:
         total_cents += p.amount_cents
         cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
@@ -1962,10 +1961,6 @@ def _build_batch_message_and_keyboard(
             amount=amount_display,
             category=cat_name,
         ))
-        keyboard.append([
-            {"text": "✅", "callback_data": f"confirm_{p.id.hex[:16]}"},
-            {"text": "❌", "callback_data": f"cancel_{p.id.hex[:16]}"},
-        ])
     total_euros = abs(total_cents) / 100
     total_display = "{:.2f}".format(total_euros).replace(".", ",")
     message_text = (
@@ -1974,10 +1969,11 @@ def _build_batch_message_and_keyboard(
         + t('list_pending_total').format(total=total_display)
         + t('list_confirm_question')
     )
-    keyboard.append([
+    # Apenas Confirmar tudo e Cancelar tudo (sem botões por linha)
+    keyboard = [[
         {"text": t('button_confirm_all'), "callback_data": f"confirm_batch_{batch_id_hex}"},
         {"text": t('button_cancel_all'), "callback_data": f"cancel_batch_{batch_id_hex}"},
-    ])
+    ]]
     reply_markup = {"inline_keyboard": keyboard}
     return message_text, reply_markup
 
