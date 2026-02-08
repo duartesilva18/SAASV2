@@ -11,6 +11,8 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, date, timezone
 from typing import Optional, Dict, List
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 import io
 import tempfile
 import time
@@ -18,7 +20,7 @@ import unicodedata
 from difflib import SequenceMatcher
 
 from ..core.config import settings
-from ..core.dependencies import get_db
+from ..core.dependencies import get_db, SessionLocal
 from ..models import database as models
 from ..core.limiter import limiter
 from ..core.telegram_translations import get_telegram_t
@@ -1178,17 +1180,60 @@ def _build_parsed_from_photo_result(
     """
     Converte o resultado de process_photo_with_openai (uma transação ou lista de transações)
     no mesmo formato que parse_transaction: um dict único ou {"multiple": True, "transactions": [...]}.
+    Otimização: carrega categorias uma vez por batch e reutiliza em todas as transações.
     """
     if not photo_result:
         return None
     if photo_result.get("transactions") and isinstance(photo_result["transactions"], list):
+        raw_count = len(photo_result["transactions"])
+        # Carregar categorias uma vez para todo o workspace (evita N queries iguais)
+        all_cats = db.query(models.Category).filter(
+            models.Category.workspace_id == workspace.id
+        ).all()
+        categories_by_type = {
+            "expense": [c for c in all_cats if c.type == "expense"],
+            "income": [c for c in all_cats if c.type == "income"],
+        }
         transactions = []
-        for item in photo_result["transactions"]:
-            parsed_one = _parsed_from_photo(item, workspace, db)
-            if parsed_one:
-                transactions.append(parsed_one)
+        # A partir de 4 transações, processar em paralelo (categorização IA é o gargalo)
+        if raw_count >= 4:
+            def _cat_ref(c):
+                return SimpleNamespace(
+                    id=c.id, name=c.name, type=c.type,
+                    vault_type=getattr(c, "vault_type", "none"),
+                )
+            refs = {
+                t: [_cat_ref(c) for c in cats]
+                for t, cats in categories_by_type.items()
+            }
+
+            def _process_one(item):
+                session = SessionLocal()
+                try:
+                    return _parsed_from_photo(
+                        item, workspace.id, session, categories_by_type=refs
+                    )
+                finally:
+                    session.close()
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                results = list(executor.map(_process_one, photo_result["transactions"]))
+            transactions = [r for r in results if r]
+        else:
+            for item in photo_result["transactions"]:
+                parsed_one = _parsed_from_photo(
+                    item, workspace, db, categories_by_type=categories_by_type
+                )
+                if parsed_one:
+                    transactions.append(parsed_one)
         if not transactions:
+            logger.warning("[_build_parsed_from_photo_result] Nenhuma transação válida em %s itens", raw_count)
             return None
+        ok_count = len(transactions)
+        if ok_count < raw_count:
+            logger.info("[_build_parsed_from_photo_result] %s transações OK, %s ignoradas (dados inválidos)", ok_count, raw_count - ok_count)
+        else:
+            logger.info("[_build_parsed_from_photo_result] %s transações validadas com sucesso", ok_count)
         if len(transactions) == 1:
             return transactions[0]
         return {"multiple": True, "transactions": transactions}
@@ -1196,13 +1241,19 @@ def _build_parsed_from_photo_result(
 
 
 def _parsed_from_photo(
-    photo_data: Dict, workspace: models.Workspace, db: Session
+    photo_data: Dict,
+    workspace: models.Workspace,
+    db: Session,
+    *,
+    categories_by_type: Optional[Dict[str, List[models.Category]]] = None,
 ) -> Optional[Dict]:
     """
     Constrói um dict 'parsed' (mesmo formato que parse_transaction para transação única)
     a partir de um item (amount, description, type, date, category) devolvido pela Vision.
+    Se categories_by_type for passado, evita query de categorias e reutiliza a lista para category_obj.
+    workspace pode ser objeto Workspace ou UUID (path paralelo).
     """
-    logger.info("[_parsed_from_photo] Entrada: description=%r amount=%s type=%s", photo_data.get("description"), photo_data.get("amount"), photo_data.get("type"))
+    workspace_id = getattr(workspace, "id", None) or workspace
     description = (photo_data.get("description") or "").strip()[:255]
     try:
         amount = float(photo_data.get("amount", 0))
@@ -1222,12 +1273,15 @@ def _parsed_from_photo(
             transaction_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             pass
-    categories = db.query(models.Category).filter(
-        models.Category.workspace_id == workspace.id,
-        models.Category.type == tipo,
-    ).all()
+    if categories_by_type is not None:
+        categories = categories_by_type.get(tipo) or []
+    else:
+        categories = db.query(models.Category).filter(
+            models.Category.workspace_id == workspace_id,
+            models.Category.type == tipo,
+        ).all()
     if not categories:
-        logger.warning("[_parsed_from_photo] Sem categorias para workspace_id=%s tipo=%s", workspace.id, tipo)
+        logger.warning("[_parsed_from_photo] Sem categorias para workspace_id=%s tipo=%s", workspace_id, tipo)
         return None
 
     # Se a Vision devolveu uma categoria, tentar usar (match exato ou por similaridade)
@@ -1258,7 +1312,7 @@ def _parsed_from_photo(
             from ..core.config import settings as _settings
             cat_id, source, needs_review, _conf, reason, _explain = infer_category(
                 description,
-                workspace.id,
+                workspace_id,
                 tipo,
                 categories,
                 db,
@@ -1275,7 +1329,8 @@ def _parsed_from_photo(
             category_id = categories[0].id if categories else None
     if not category_id and categories and not suggested_category_name:
         category_id = categories[0].id
-    category_obj = db.query(models.Category).filter(models.Category.id == category_id).first() if category_id else None
+    # Obter category_obj da lista já carregada (evita query extra)
+    category_obj = next((c for c in categories if c.id == category_id), None) if category_id else None
     is_vault_category = category_obj and getattr(category_obj, "vault_type", "none") != "none"
     result = {
         "amount": amount,
@@ -1290,7 +1345,6 @@ def _parsed_from_photo(
         "transaction_date": transaction_date,
         "suggested_category_name": suggested_category_name[:100] if suggested_category_name else None,
     }
-    logger.info("[_parsed_from_photo] OK: category_id=%s inference_source=%s suggested=%s", category_id, inference_source, suggested_category_name)
     return result
 
 
@@ -1795,6 +1849,9 @@ def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = No
 
     for i, chunk in enumerate(chunks):
         use_html = i == 0 and len(chunks) == 1
+        # Telegram HTML parse_mode não suporta <br>; usar \n para quebras de linha
+        if use_html:
+            chunk = chunk.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
         payload = {
             "chat_id": chat_id,
             "text": chunk,
@@ -1857,6 +1914,8 @@ def edit_telegram_message(chat_id: int, message_id: int, text: str, reply_markup
         return False
     if len(text) > TELEGRAM_MAX_MESSAGE_LENGTH:
         text = text[: TELEGRAM_MAX_MESSAGE_LENGTH - 30] + "\n\n(… truncado)"
+    # Telegram HTML não suporta <br>; usar \n
+    text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
     payload = {"chat_id": chat_id, "message_id": message_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:
@@ -2524,7 +2583,14 @@ async def telegram_webhook(
                 return {'status': 'error'}
             text = text.strip()
             logger.info(f"Áudio transcrito: '{text[:100]}'")
-        logger.info(f"Mensagem recebida: chat_id={chat_id}, text='{text[:100]}'")
+        # Log claro: documento, foto ou texto
+        if message.get('document'):
+            doc = message['document']
+            logger.info(f"Mensagem recebida: chat_id={chat_id}, document={doc.get('file_name', '')} (mime={doc.get('mime_type', '')})")
+        elif message.get('photo'):
+            logger.info(f"Mensagem recebida: chat_id={chat_id}, photo ({} bytes)", message['photo'][-1].get('file_size') or '?')
+        else:
+            logger.info(f"Mensagem recebida: chat_id={chat_id}, text='{text[:100] if text else ''}'")
         
         # Buscar utilizador para obter linguagem (se existir); senão usar idioma do Telegram
         user_temp = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
