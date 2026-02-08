@@ -952,8 +952,6 @@ function TransactionsPageContent() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 shadow-2xl overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full -z-10" />
-              
               <div className="flex flex-col items-center text-center gap-6">
                 {(() => {
                   const cat = categories.find(c => c.id === selectedTransaction.category_id);

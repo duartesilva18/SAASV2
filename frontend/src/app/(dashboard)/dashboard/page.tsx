@@ -602,7 +602,7 @@ export default function DashboardPage() {
       className="text-white pb-20 -mt-4"
     >
       {/* Cabeçalho: saudação + resumo | Modo Demo + Upgrade Pro */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 mt-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
             {greeting}, {userName}

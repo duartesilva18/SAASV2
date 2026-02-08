@@ -179,9 +179,6 @@ function RegisterPageContent() {
               backgroundSize: '48px 48px'
             }}
           />
-          <div className="absolute top-0 right-[5%] w-64 h-64 sm:w-80 sm:h-80 bg-blue-500/12 blur-[80px] rounded-full" />
-          <div className="absolute bottom-[15%] left-[2%] w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/12 blur-[90px] rounded-full" />
-          <div className="absolute top-[40%] right-0 w-48 h-48 bg-emerald-500/8 blur-[70px] rounded-full" />
         </div>
 
         {/* Back link */}

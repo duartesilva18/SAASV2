@@ -224,10 +224,6 @@ export default function AffiliatePage() {
           animate={{ opacity: 1, y: 0 }}
           className="relative bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-950/80 backdrop-blur-xl border border-white/5 rounded-2xl sm:rounded-[32px] p-6 sm:p-10 md:p-12 lg:p-16 shadow-2xl overflow-hidden"
         >
-          {/* Background Glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full -z-10" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full -z-10" />
-          
           <div className="relative z-10 text-center space-y-4 sm:space-y-6 md:space-y-8">
             {/* Icon */}
             <motion.div

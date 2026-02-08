@@ -175,7 +175,6 @@ export default function LandingPage() {
         {/* Hero — destaque, título e CTAs; mobile-first; compacto abaixo de 3xl */}
         <section id="hero" className="relative pt-8 sm:pt-16 md:pt-24 3xl:pt-32 pb-10 sm:pb-16 md:pb-20 3xl:pb-24 overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[280px] sm:w-[500px] md:w-[800px] h-[200px] sm:h-[350px] bg-blue-500/10 blur-[80px] sm:blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none" />
 
           <div className="max-w-6xl mx-auto px-2 sm:px-5 lg:px-8 relative z-10 text-center">

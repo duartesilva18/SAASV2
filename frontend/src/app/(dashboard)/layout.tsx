@@ -172,7 +172,7 @@ export default function DashboardLayout({
   return (
     <NotificationsProvider>
     <div className="flex bg-[#020617] text-slate-50 min-h-screen min-h-[100dvh] relative overflow-hidden selection:bg-blue-500/30">
-      {/* Background: igual ao login/registo (mesh + grid + orbs) */}
+      {/* Background: mesh + grid (sem orbs) */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_15%_20%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(1000px_circle_at_85%_10%,rgba(99,102,241,0.16),transparent_55%),radial-gradient(900px_circle_at_50%_95%,rgba(16,185,129,0.10),transparent_60%)]" />
         <div
@@ -182,9 +182,6 @@ export default function DashboardLayout({
             backgroundSize: '48px 48px'
           }}
         />
-        <div className="absolute top-0 right-[5%] w-64 h-64 sm:w-80 sm:h-80 bg-blue-500/12 blur-[80px] rounded-full" />
-        <div className="absolute bottom-[15%] left-[2%] w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/12 blur-[90px] rounded-full" />
-        <div className="absolute top-[40%] right-0 w-48 h-48 bg-emerald-500/8 blur-[70px] rounded-full" />
       </div>
 
       {showOnboarding && (
@@ -233,15 +230,15 @@ export default function DashboardLayout({
         />
 
         {/* Desktop Header – menu secundário (tabs) ao centro; Bot Telegram, Guia, idioma à direita */}
-        <header className="hidden lg:flex flex-col gap-3 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40">
+        <header className="hidden lg:flex flex-col gap-3 p-4 border-b border-slate-700/60 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center w-full">
             <div className="flex-1 min-w-0" />
-            <nav className="flex items-center justify-center gap-1 shrink-0 px-4" aria-label="Menu secundário">
+            <nav className="flex items-center justify-center gap-1 shrink-0 px-4 bg-slate-900/50 border border-slate-700/60 rounded-2xl py-1.5" aria-label="Menu secundário">
               {secondaryTabs?.map((tab) => (
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
                 >
                   {tab.label}
                 </Link>
@@ -278,7 +275,7 @@ export default function DashboardLayout({
                     }
                     openSupport();
                   }}
-                  className="p-2 text-blue-400 hover:text-blue-300 transition-colors rounded-lg hover:bg-white/5 shrink-0"
+                  className="p-2 text-blue-400 hover:text-blue-300 transition-colors rounded-xl hover:bg-slate-700/50 shrink-0"
                   title="Suporte (clique abre; segurar devolve o ícone ao canto)"
                   aria-label="Suporte"
                 >
@@ -290,10 +287,10 @@ export default function DashboardLayout({
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
                 </svg>
               </a>
-              <Link href="/add-to-home" className="p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-lg hover:bg-white/5 shrink-0" title="App no telemóvel" aria-label="App no telemóvel">
+              <Link href="/add-to-home" className="p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-xl hover:bg-slate-700/50 shrink-0" title="App no telemóvel" aria-label="App no telemóvel">
                 <Smartphone className="w-5 h-5" />
               </Link>
-              <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-lg hover:bg-white/5" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
+              <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-xl hover:bg-slate-700/50" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
                 <HelpCircle size={18} />
               </Link>
               <LanguageSelector />
@@ -378,7 +375,7 @@ function MobileHeaderWithNotifications({
 
   return (
     <>
-      <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <header className="lg:hidden flex flex-col gap-3 px-4 py-3 border-b border-slate-700/60 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <div className="flex items-center justify-between gap-3 min-h-[56px]">
           <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
             <img
@@ -394,7 +391,7 @@ function MobileHeaderWithNotifications({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setToolsOpen((o) => !o); }}
-                className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-xl hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-xl hover:bg-slate-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
                 title="Acesso rápido"
                 aria-label="Acesso rápido"
                 aria-expanded={toolsOpen}
@@ -408,7 +405,7 @@ function MobileHeaderWithNotifications({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-800/98 backdrop-blur-xl border border-slate-600/50 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
+                    className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
                   >
                     <div className="flex items-center gap-0.5">
                       {supportHidden && onOpenSupport && (
@@ -487,7 +484,7 @@ function MobileHeaderWithNotifications({
             </div>
             <button
               onClick={() => setShowNotifications(true)}
-              className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center relative notification-trigger"
+              className="p-2 text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-slate-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center relative notification-trigger"
               title={t.dashboard?.sidebar?.notifications || 'Notificações'}
               aria-label="Notificações"
             >
@@ -496,7 +493,7 @@ function MobileHeaderWithNotifications({
             <LanguageSelector />
             <button
               onClick={onOpenMenu}
-              className="p-2 text-slate-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-slate-700/50 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <Menu size={22} />
             </button>
@@ -508,7 +505,7 @@ function MobileHeaderWithNotifications({
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center touch-manipulation ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                className={`px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center touch-manipulation ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
               >
                 {tab.label}
               </Link>

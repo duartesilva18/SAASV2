@@ -28,7 +28,7 @@ export default function LoadingScreen() {
       aria-label="A carregar"
       suppressHydrationWarning
     >
-      {/* Background: igual ao dashboard (mesh + grid + orbs) */}
+      {/* Background: mesh + grid (sem orbs) */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_15%_20%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(1000px_circle_at_85%_10%,rgba(99,102,241,0.16),transparent_55%),radial-gradient(900px_circle_at_50%_95%,rgba(16,185,129,0.10),transparent_60%)]" />
         <div
@@ -38,9 +38,6 @@ export default function LoadingScreen() {
             backgroundSize: '48px 48px',
           }}
         />
-        <div className="absolute top-0 right-[5%] w-64 h-64 sm:w-80 sm:h-80 bg-blue-500/12 blur-[80px] rounded-full" />
-        <div className="absolute bottom-[15%] left-[2%] w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/12 blur-[90px] rounded-full" />
-        <div className="absolute top-[40%] right-0 w-48 h-48 bg-emerald-500/8 blur-[70px] rounded-full" />
       </div>
 
       <motion.div

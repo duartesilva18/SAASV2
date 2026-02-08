@@ -49,11 +49,6 @@ export default function PageLoading({
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6">
-      {/* Background Glow */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-64 h-64 bg-blue-500/5 blur-[80px] rounded-full animate-pulse" />
-      </div>
-
       {/* Spinner Container */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}

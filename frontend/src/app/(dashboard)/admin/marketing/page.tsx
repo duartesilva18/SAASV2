@@ -110,9 +110,6 @@ export default function MarketingAdminPage() {
     >
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-[32px] bg-slate-900 border border-white/5 p-10 md:p-16">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full -z-10 animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-600/5 blur-[100px] rounded-full -z-10" />
-        
         <div className="max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-blue-600/20 text-blue-400 rounded-2xl shadow-lg shadow-blue-600/10">

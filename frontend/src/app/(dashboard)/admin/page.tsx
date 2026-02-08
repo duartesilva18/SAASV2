@@ -198,8 +198,6 @@ export default function AdminDashboardPage() {
 
       {/* User Management Section */}
       <section className="bg-slate-900/30 backdrop-blur-sm border border-white/5 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 lg:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full -z-10" />
-        
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg md:text-xl font-black text-white uppercase tracking-widest text-[11px] opacity-60 mb-1">Gestão de Operadores</h2>
