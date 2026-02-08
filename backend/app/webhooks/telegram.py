@@ -1099,25 +1099,27 @@ def parse_document_with_openai(
     if len(text) > max_chars:
         text = text[:max_chars] + "\n[... texto truncado ...]"
     today_str = date.today().strftime("%Y-%m-%d")
+    # Categoria padrão para transferências recebidas (receita) e enviadas (despesa)
+    first_income_cat = income_names[0] if income_names else "Outros"
+    first_expense_cat = expense_names[0] if expense_names else "Outros"
+    transfer_expense_cat = next((n for n in expense_names if "transfer" in n.lower() or "transferência" in n.lower()), first_expense_cat)
+
     prompt = f"""Analisa o seguinte texto extraído de um ficheiro (extrato bancário, lista de movimentos, CSV ou PDF) e extrai TODAS as transações, sem omitir nenhuma.
 
-Regras:
-- Cada linha/movimento com valor em euros (ex: 15,00€; 202€; -10.5€) = uma transação. Inclui SEMPRE:
-  • "Trf. Mb Way Para [nome]" = envio (expense)
-  • "Trf. Mb Way De [nome]" = recebimento (income)
-  • Compras, Via Verde, subscrições (Google One, etc.), pagamentos, transferências.
-- Se uma linha tiver dois valores em € (ex: 37,00€ 96,28€), o primeiro é o valor do movimento; o segundo costuma ser saldo — usa o primeiro para amount.
+Regras OBRIGATÓRIAS:
+- TRANSFERÊNCIAS RECEBIDAS (dinheiro que entrou) → SEMPRE type "income" e category Receitas ("{first_income_cat}" ou Salário). NUNCA Alimentação. Exemplos por banco/país: PT "Trf. Mb Way De", "Trf.imed. De", "Transferência de", "Recebido de"; ES "Transferencia de", "Bizum de", "Recibido de"; EN "Transfer from", "Received from", "Incoming transfer"; FR "Virement de", "Transfert de", "Reçu de"; BR "Pix recebido".
+- TRANSFERÊNCIAS ENVIADAS (dinheiro que saiu) → type "expense" e category "{transfer_expense_cat}". NUNCA Alimentação. Exemplos: PT "Trf. Mb Way Para", "Transferência para"; ES "Transferencia a", "Bizum para"; EN "Transfer to", "Sent to"; FR "Virement vers"; BR "Pix enviado".
+- Compras, Via Verde, Google One, etc. = expense com categoria adequada (Transportes, Alimentação, etc.).
+- Se uma linha tiver dois valores em €, o primeiro é o valor do movimento.
 - amount: número positivo (valor absoluto em euros).
-- type: "expense" para débitos/saídas, "income" para créditos/entradas (incluindo "Mb Way De" = recebimento).
-- date: se aparecer no texto em formato "DD mmm YYYY" (ex: 06 fev 2026) converte para YYYY-MM-DD (2026-02-06). Senão usa "{today_str}".
-- description: descrição curta (ex: "Trf. Mb Way De Bruna Rosa Silva", "Via Verde"). Evita "Movimento conta" só para texto genérico (Titular, Saldo disponível).
-- category: escolhe UMA categoria da lista. Nome EXATO. Despesas: "{default_cat_name or (expense_names[0] if expense_names else 'Outros')}" como fallback.
+- date: OBRIGATÓRIO extrair a data do documento quando visível. Formato "DD mmm YYYY" (ex: 06 fev 2026) → converte para YYYY-MM-DD (2026-02-06). Se a data aparecer na linha ou na secção, usa-a. Só usa "{today_str}" se não houver data no texto.
+- description: descrição curta; mantém "Trf. Mb Way De Nome", "Via Verde", etc.
 
-Categorias disponíveis (nome EXATO):
+Categorias (nome EXATO):
 Despesas: {cats_expense}
 Receitas: {cats_income}
 
-Responde APENAS com um JSON válido, sem markdown:
+Responde APENAS com JSON válido, sem markdown:
 {{"transactions":[{{"amount":n,"description":"...","type":"expense|income","date":"YYYY-MM-DD","category":"NomeExato"}}]}}
 
 Texto do ficheiro:
@@ -1145,6 +1147,65 @@ Texto do ficheiro:
         if not isinstance(items, list) or len(items) == 0:
             return None
         out = []
+        # Padrões transferência RECEBIDA (receita) — varia por banco/país (PT, ES, EN, FR, etc.)
+        trf_recebida_patterns = [
+            r"\b(?:trf\.?|mb\s*way|trf\.?\s*imed\.?)\s+de\b",           # PT: Trf. Mb Way De, Trf.imed. De
+            r"\btransfer(?:ência|encia)?\s+de\b",                      # PT/ES: Transferência de, Transferencia de
+            r"\brecebido\s+de\b",                                       # PT: Recebido de
+            r"\b(?:recibido|recibo)\s+de\b",                            # ES: Recibido de
+            r"\bbizum\s+de\b",                                          # ES: Bizum de (recebimento)
+            r"\bpix\s+(?:recebido|entrada|de)\b",                       # BR: Pix recebido / de
+            r"\btransfer\s+from\b",                                     # EN: Transfer from
+            r"\breceived\s+from\b",                                     # EN: Received from
+            r"\bincoming\s+transfer\b",                                  # EN: Incoming transfer
+            r"\bcredit\s+from\b",                                       # EN: Credit from
+            r"\bvirement\s+(?:reçu|de)\b",                              # FR: Virement reçu/de
+            r"\btransfert\s+de\b",                                     # FR: Transfert de
+            r"\breçu\s+de\b",                                           # FR: Reçu de
+            r"\b(?:mb\s*way|mbway)\s+recebido\b",                       # PT: MB Way recebido
+            r"\bentrada\s+de\s+transferência\b",                        # PT: Entrada de transferência
+            r"\b(?:depósito|deposit)\s+de\b",                           # PT/EN: Depósito de
+            r"\bcredito\s+(?:de|from)\b",                               # PT/ES: Crédito de
+        ]
+        trf_recebida = re.compile("|".join(f"(?:{p})" for p in trf_recebida_patterns), re.IGNORECASE)
+        # Padrões transferência ENVIADA (despesa)
+        trf_enviada_patterns = [
+            r"\b(?:trf\.?|mb\s*way)\s+para\b",                         # PT: Trf. Mb Way Para
+            r"\btransfer(?:ência|encia)?\s+para\b",                     # PT: Transferência para
+            r"\btransfer(?:encia)?\s+a\b",                              # ES: Transferencia a
+            r"\bbizum\s+para\b",                                        # ES/PT: Bizum para
+            r"\bpix\s+(?:enviado|saída|para)\b",                       # BR: Pix enviado
+            r"\btransfer\s+to\b",                                      # EN: Transfer to
+            r"\bsent\s+to\b",                                           # EN: Sent to
+            r"\boutgoing\s+transfer\b",                                 # EN: Outgoing transfer
+            r"\bpayment\s+to\b",                                        # EN: Payment to
+            r"\bvirement\s+vers\b",                                     # FR: Virement vers
+            r"\btransfert\s+vers\b",                                    # FR: Transfert vers
+        ]
+        trf_enviada = re.compile("|".join(f"(?:{p})" for p in trf_enviada_patterns), re.IGNORECASE)
+        # Meses PT para parse de data "06 fev 2026"
+        _meses_pt = {"jan": 1, "fev": 2, "mar": 3, "abr": 4, "mai": 5, "jun": 6, "jul": 7, "ago": 8, "set": 9, "out": 10, "nov": 11, "dez": 12}
+
+        def parse_date_from_doc(s: str):
+            if not s or len(s) < 6:
+                return today_str
+            s = s.strip()[:50]
+            # YYYY-MM-DD
+            m = re.match(r"(\d{4})-(\d{2})-(\d{2})", s)
+            if m:
+                return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+            # DD mmm YYYY (06 fev 2026)
+            m = re.match(r"(\d{1,2})\s+(\w{3})\s+(\d{4})", s, re.IGNORECASE)
+            if m:
+                mes = _meses_pt.get(m.group(2).lower()[:3])
+                if mes:
+                    return f"{m.group(3)}-{mes:02d}-{int(m.group(1)):02d}"
+            # DD/MM/YYYY
+            m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", s)
+            if m:
+                return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
+            return today_str
+
         for item in items:
             try:
                 amount = float(item.get("amount", 0))
@@ -1156,8 +1217,18 @@ Texto do ficheiro:
             tipo = (item.get("type") or "expense").lower()
             if tipo not in ("expense", "income"):
                 tipo = "expense"
-            date_str = (item.get("date") or today_str).strip()[:10]
+            date_str = parse_date_from_doc((item.get("date") or today_str).strip())
             cat_name = (item.get("category") or "").strip()
+
+            # Forçar tipo e categoria para transferências (independentemente do que a IA devolveu)
+            if trf_recebida.search(desc):
+                tipo = "income"
+                cat_name = first_income_cat if income_names else (cat_name or "Outros")
+            elif trf_enviada.search(desc):
+                tipo = "expense"
+                if not cat_name or cat_name.lower() == "alimentação" or "aliment" in (cat_name or "").lower():
+                    cat_name = transfer_expense_cat
+
             if not cat_name and default_cat_name:
                 cat_name = default_cat_name
             out.append({
