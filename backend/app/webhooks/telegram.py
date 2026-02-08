@@ -2124,13 +2124,13 @@ async def telegram_webhook(
             
             # Processar callback
             if callback_data.startswith("confirm_batch_"):
-                batch_id_hex = callback_data.replace("confirm_batch_", "").strip()
+                batch_id_hex = callback_data.replace("confirm_batch_", "").strip()[:16]
                 logger.info("[Telegram] confirm_batch: batch_id_hex=%r chat_id=%s", batch_id_hex, chat_id)
                 all_pending = db.query(models.TelegramPendingTransaction).filter(
                     models.TelegramPendingTransaction.chat_id == str(chat_id),
                 ).all()
-                # Match por prefixo do batch_id (16 primeiros chars do hex)
-                batch_pendents = [p for p in all_pending if p.batch_id and (p.batch_id.hex[:16] == batch_id_hex or p.batch_id.hex.startswith(batch_id_hex))]
+                # Match exato pelos 16 primeiros chars do batch_id (como no botão)
+                batch_pendents = [p for p in all_pending if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
                 logger.info("[Telegram] confirm_batch: all_pending=%s batch_pendents=%s", len(all_pending), len(batch_pendents))
                 if not batch_id_hex or not batch_pendents:
                     send_telegram_msg(chat_id, t('transaction_not_found'))
@@ -3080,6 +3080,7 @@ async def telegram_webhook(
             batch_id = uuid.uuid4()
             batch_id_hex = batch_id.hex[:16]
             # Evitar duplicados (ex.: PDF com mesma lista duas vezes ou parser a repetir linhas)
+            # Incluir descrição na chave para não descartar transações diferentes com mesmo valor e data (ex.: duas compras 20€ no mesmo dia)
             seen_key = set()
 
             for trans_data in transactions:
@@ -3095,7 +3096,8 @@ async def telegram_webhook(
                     amount_cents = abs(amount_cents)
 
                 trans_date = trans_data.get('transaction_date') or date.today()
-                dedup_key = (amount_cents, trans_date)
+                desc = (trans_data.get('description') or '').strip()[:200]
+                dedup_key = (amount_cents, trans_date, desc)
                 if dedup_key in seen_key:
                     continue
                 seen_key.add(dedup_key)
