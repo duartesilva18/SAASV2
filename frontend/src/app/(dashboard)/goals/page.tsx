@@ -470,22 +470,23 @@ export default function GoalsPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
-              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
+              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl p-3 sm:p-6 md:p-8 shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
             >
-              <div className="flex items-center justify-between gap-3 mb-5 sm:mb-6">
+              {/* Header compacto no mobile para o formulário ficar visível */}
+              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-6 shrink-0">
                 <div className="min-w-0">
-                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight leading-tight">
+                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight leading-tight truncate">
                     {editingGoal ? t.dashboard.goals.edit : t.dashboard.goals.new} <span className="text-blue-500 italic">{t.dashboard.goals.goal}</span>
                   </h2>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">{t.dashboard.goals.drawYourFuture}</p>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-0.5 sm:mt-1 hidden sm:block">{t.dashboard.goals.drawYourFuture}</p>
                 </div>
-                <button type="button" onClick={() => setShowNotifications(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2 shrink-0">
+                <button type="button" onClick={() => setShowNotifications(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2 shrink-0 touch-manipulation" aria-label={t.dashboard.goals.cancel}>
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
-                <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalName}</label>
                     <input 
