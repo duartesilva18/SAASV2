@@ -102,18 +102,36 @@ body {
   }
 }
 
-/* Mobile: scroll suave (GPU-accelerated) */
+/* ========== MOBILE: otimização máxima de scroll (menos lag) ========== */
 @media (max-width: 768px) {
   .overflow-y-auto,
   .overflow-auto {
     -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+    contain: paint;
+  }
+
+  main {
+    contain: layout paint;
+    transform: translateZ(0);
+  }
+
+  /* Secções abaixo da dobra: content-visibility reduz trabalho fora do viewport */
+  .scroll-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+  }
+
+  * {
+    scroll-behavior: auto;
   }
 }
 
-/* Mobile: contain layout no main para reduzir reflow (menos lag) */
-@media (max-width: 768px) {
-  main {
-    contain: layout;
+/* Desktop: manter scroll suave */
+@media (min-width: 769px) {
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
   }
 }
 

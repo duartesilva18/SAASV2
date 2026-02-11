@@ -752,8 +752,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* 4 quadrados: [Evolução] [Analytics donut – coluna direita inteira]; [Fundos/Inv/Emerg] [continua donut] */}
-      <section className="mb-8 sm:mb-10 md:mb-12">
+      {/* 4 quadrados: [Evolução] [Analytics donut]; [Fundos] — scroll-section no mobile para content-visibility */}
+      <section className="scroll-section mb-8 sm:mb-10 md:mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Gráficos</h2>
           {isPro && (
@@ -765,8 +765,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-6">
           {/* Quadrado 1: Evolução Financeira – ocupa 2/3 */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={isMobile ? { duration: 0 } : {}}
             className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl lg:col-span-2"
           >
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
@@ -808,11 +809,11 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          {/* Quadrado 2+4: Analytics – coluna direita 1/3, duas linhas, donut até ao fim */}
+          {/* Quadrado 2+4: Analytics – coluna direita 1/3 */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
+            transition={isMobile ? { duration: 0 } : { delay: 0.05 }}
             className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
             <div className="flex items-center gap-2 sm:gap-3 mb-2">
@@ -904,9 +905,9 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:col-span-2">
             {/* Fundos · Investimentos e Emergência – 1/3 da metade */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08 }}
+              transition={isMobile ? { duration: 0 } : { delay: 0.08 }}
               className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1"
             >
               <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
@@ -926,7 +927,7 @@ export default function DashboardPage() {
                       className="h-full bg-amber-500 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (stats.vaultEmergency / Math.max(1, stats.vaultEmergency + stats.vaultInvestment)) * 100)}%` }}
-                      transition={{ duration: 0.5 }}
+                      transition={{ duration: isMobile ? 0 : 0.5 }}
                     />
                   </div>
                 </div>
@@ -945,7 +946,7 @@ export default function DashboardPage() {
                       className="h-full bg-blue-500 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (stats.vaultInvestment / Math.max(1, stats.vaultEmergency + stats.vaultInvestment)) * 100)}%` }}
-                      transition={{ duration: 0.5 }}
+                      transition={{ duration: isMobile ? 0 : 0.5 }}
                     />
                   </div>
                 </div>
@@ -963,9 +964,9 @@ export default function DashboardPage() {
 
             {/* Distribuição de fundos por mês – 2/3 da metade */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={isMobile ? { duration: 0 } : { delay: 0.1 }}
               className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-2"
             >
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
@@ -1005,7 +1006,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mb-8 sm:mb-10 md:mb-12">
+      <section className="scroll-section mb-8 sm:mb-10 md:mb-12">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.quickInsightsTitle}</h2>
           {isPro && (

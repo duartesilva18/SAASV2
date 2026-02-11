@@ -183,11 +183,11 @@ export default function DashboardLayout({
   return (
     <NotificationsProvider>
     <div className="flex bg-[#020617] text-slate-50 min-h-screen min-h-[100dvh] relative overflow-hidden selection:bg-blue-500/30">
-      {/* Background: mesh + grid (sem orbs) */}
-      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+      {/* Background: no mobile só gradiente (grid causa lag no scroll); desktop mantém mesh+grid */}
+      <div className="fixed inset-0 pointer-events-none select-none" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_15%_20%,rgba(59,130,246,0.18),transparent_55%),radial-gradient(1000px_circle_at_85%_10%,rgba(99,102,241,0.16),transparent_55%),radial-gradient(900px_circle_at_50%_95%,rgba(16,185,129,0.10),transparent_60%)]" />
         <div
-          className="absolute inset-0 opacity-[0.18]"
+          className="absolute inset-0 opacity-[0.18] hidden lg:block"
           style={{
             backgroundImage: 'linear-gradient(to right, rgba(148,163,184,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.10) 1px, transparent 1px)',
             backgroundSize: '48px 48px'
