@@ -102,18 +102,18 @@ body {
   }
 }
 
-/* ========== MOBILE: otimização máxima de scroll (menos lag) ========== */
+/* ========== MOBILE: otimização de scroll (menos lag) ========== */
+/* Nota: main NÃO pode ter transform/contain senão os modais (position:fixed) ficam relativos ao main e é preciso scroll até ao fundo para os ver */
 @media (max-width: 768px) {
-  .overflow-y-auto,
-  .overflow-auto {
+  .overflow-y-auto:not(main),
+  .overflow-auto:not(main) {
     -webkit-overflow-scrolling: touch;
     transform: translateZ(0);
     contain: paint;
   }
 
   main {
-    contain: layout paint;
-    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Secções abaixo da dobra: content-visibility reduz trabalho fora do viewport */
