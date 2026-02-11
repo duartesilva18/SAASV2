@@ -574,9 +574,9 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleExportData}
                 disabled={exporting}
-                className="flex-1 h-11 px-4 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                className="flex-1 min-h-[48px] sm:h-11 px-4 py-3 sm:py-0 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors touch-manipulation"
               >
-                {exporting ? <Loader2 size={14} className="animate-spin" /> : <><Download size={14} /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
+                {exporting ? <Loader2 size={16} className="animate-spin shrink-0" /> : <><Download size={16} className="shrink-0" /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
               </button>
               <input
                 ref={importFileInputRef}
@@ -590,9 +590,9 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => importFileInputRef.current?.click()}
                 disabled={importing}
-                className="flex-1 h-11 px-4 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                className="flex-1 min-h-[48px] sm:h-11 px-4 py-3 sm:py-0 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors touch-manipulation"
               >
-                {importing ? <Loader2 size={14} className="animate-spin" /> : <><Upload size={14} /> <span>{(t.dashboard.settings as any).importButton ?? 'Importar'}</span></>}
+                {importing ? <Loader2 size={16} className="animate-spin shrink-0" /> : <><Upload size={16} className="shrink-0" /> <span>{(t.dashboard.settings as any).importButton ?? 'Importar'}</span></>}
               </button>
             </div>
           </section>

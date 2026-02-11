@@ -660,7 +660,14 @@ export default function CategoriesPage() {
       {/* Add/Edit Modal — estilo alinhado ao login/dashboard */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 pt-[max(4.5rem,calc(env(safe-area-inset-top)+4rem))] sm:pt-4"
+            style={{
+              paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1rem, env(safe-area-inset-right))',
+              paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+            }}
+          >
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
