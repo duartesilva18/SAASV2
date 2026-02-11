@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, Plus, Trash2, Edit2, X, Check, 
@@ -86,6 +87,19 @@ export default function GoalsPage() {
     fetchGoals();
     fetchCategories();
   }, []);
+
+  // Bloquear scroll do body quando o modal Nova/Editar Meta está aberto (mobile: overlay cobre o ecrã)
+  useEffect(() => {
+    if (!showModal) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [showModal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -454,139 +468,168 @@ export default function GoalsPage() {
         </div>
       </section>
 
-      {/* Modal Nova/Editar Meta */}
-      <AnimatePresence>
-        {showModal && (
-          <div 
-            className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-4"
-            style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-          >
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowNotifications(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 16 }}
-              className="relative w-full max-w-xl max-h-[90dvh] sm:max-h-[90vh] bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl p-3 sm:p-6 md:p-8 shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col min-h-0"
+      {/* Modal Nova/Editar Meta – renderizado em document.body para overlay cobrir o ecrã no mobile */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showModal && (
+            <div
+              className="flex items-end sm:items-center justify-center p-0 sm:p-4"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 500,
+                paddingLeft: 'env(safe-area-inset-left)',
+                paddingRight: 'env(safe-area-inset-right)',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+              }}
+              aria-modal
+              role="dialog"
+              aria-labelledby="goal-modal-title"
             >
-              {/* Header compacto no mobile para o formulário ficar visível */}
-              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-6 shrink-0">
-                <div className="min-w-0">
-                  <h2 className="text-base sm:text-xl font-black text-white tracking-tight leading-tight truncate">
-                    {editingGoal ? t.dashboard.goals.edit : t.dashboard.goals.new} <span className="text-blue-500 italic">{t.dashboard.goals.goal}</span>
-                  </h2>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-0.5 sm:mt-1 hidden sm:block">{t.dashboard.goals.drawYourFuture}</p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowNotifications(false)}
+                className="bg-black/70 sm:backdrop-blur-sm"
+                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                aria-hidden
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 24 }}
+                transition={{ type: 'tween', duration: 0.25 }}
+                className="relative w-full max-w-xl bg-slate-900/95 sm:backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] sm:max-h-[90vh] min-h-0"
+                style={{
+                  paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+                  paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 mb-3 sm:mb-6 shrink-0 px-3 sm:px-6 md:px-8 pt-0">
+                  <div className="min-w-0">
+                    <h2 id="goal-modal-title" className="text-base sm:text-xl font-black text-white tracking-tight leading-tight truncate">
+                      {editingGoal ? t.dashboard.goals.edit : t.dashboard.goals.new} <span className="text-blue-500 italic">{t.dashboard.goals.goal}</span>
+                    </h2>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-0.5 sm:mt-1 hidden sm:block">{t.dashboard.goals.drawYourFuture}</p>
+                  </div>
+                  <button type="button" onClick={() => setShowNotifications(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2 shrink-0 touch-manipulation" aria-label={t.dashboard.goals.cancel}>
+                    <X size={20} />
+                  </button>
                 </div>
-                <button type="button" onClick={() => setShowNotifications(false)} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer -m-2 shrink-0 touch-manipulation" aria-label={t.dashboard.goals.cancel}>
-                  <X size={20} />
-                </button>
-              </div>
 
-              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalName}</label>
-                    <input 
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => {
-                        setFormData({ ...formData, name: e.target.value });
-                        if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
-                      }}
-                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${errors.name ? 'border-red-500' : 'border-slate-700'}`}
-                      placeholder={t.dashboard.goals.goalNamePlaceholder}
-                    />
-                    {errors.name && <p className="text-[10px] text-red-400 mt-1">{errors.name}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.targetAmount}</label>
-                    <div className="relative">
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">€</span>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        min="0"
-                        value={formData.target_amount_cents}
-                        onChange={(e) => {
-                          setFormData({ ...formData, target_amount_cents: Number(e.target.value) });
-                          if (errors.amount) setErrors(prev => ({ ...prev, amount: undefined }));
-                        }}
-                        onFocus={(e) => {
-                          if (e.currentTarget.value === '0' || e.currentTarget.value === '0.00') {
-                            e.currentTarget.select();
-                          }
-                        }}
-                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 ${errors.amount ? 'border-red-500' : 'border-slate-700'}`}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    {errors.amount && <p className="text-[10px] text-red-400 mt-1">{errors.amount}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalType}</label>
-                    <div className="relative">
-                      <select
-                        value={formData.goal_type}
-                        onChange={(e) => {
-                          setFormData({ ...formData, goal_type: e.target.value });
-                          if (errors.type) setErrors(prev => ({ ...prev, type: undefined }));
-                        }}
-                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer ${errors.type ? 'border-red-500' : 'border-slate-700'} ${formData.goal_type === 'expense' ? '' : ''}`}
-                      >
-                        <option value="expense">{t.dashboard.goals.typeExpense}</option>
-                        <option value="income">{t.dashboard.goals.typeIncome}</option>
-                      </select>
-                      <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                    </div>
-                    {errors.type && <p className="text-[10px] text-red-400 mt-1">{errors.type}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.deadline}</label>
-                    <input 
-                      type="date"
-                      value={formData.target_date}
-                      onChange={(e) => {
-                        setFormData({ ...formData, target_date: e.target.value });
-                        if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
-                      }}
-                      className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.date ? 'border-red-500' : 'border-slate-700'}`}
-                    />
-                    {errors.date && <p className="text-[10px] text-red-400 mt-1">{errors.date}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.color ?? 'Cor'}</label>
-                    <div className="flex flex-wrap gap-2 sm:gap-3">
-                      {COLORS.map((color) => (
-                        <button
-                          key={color} type="button"
-                          onClick={() => setFormData({ ...formData, color_hex: color })}
-                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all cursor-pointer shrink-0 ${formData.color_hex === color ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                          style={{ backgroundColor: color }}
-                          aria-label={t.dashboard.goals.color ?? 'Cor'}
+                <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain px-3 sm:px-6 md:px-8 pb-2">
+                  <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
+                    <div className="space-y-3 sm:space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalName}</label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value });
+                            if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+                          }}
+                          className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 min-h-[48px] ${errors.name ? 'border-red-500' : 'border-slate-700'}`}
+                          placeholder={t.dashboard.goals.goalNamePlaceholder}
                         />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                        {errors.name && <p className="text-[10px] text-red-400 mt-1">{errors.name}</p>}
+                      </div>
 
-                <button 
-                  type="submit"
-                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {editingGoal ? t.dashboard.goals.saveChanges : t.dashboard.goals.activateGoal} <Check size={18} />
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.targetAmount}</label>
+                        <div className="relative">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">€</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.target_amount_cents}
+                            onChange={(e) => {
+                              setFormData({ ...formData, target_amount_cents: Number(e.target.value) });
+                              if (errors.amount) setErrors(prev => ({ ...prev, amount: undefined }));
+                            }}
+                            onFocus={(e) => {
+                              if (e.currentTarget.value === '0' || e.currentTarget.value === '0.00') {
+                                e.currentTarget.select();
+                              }
+                            }}
+                            className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 min-h-[48px] ${errors.amount ? 'border-red-500' : 'border-slate-700'}`}
+                            placeholder="0.00"
+                            inputMode="decimal"
+                          />
+                        </div>
+                        {errors.amount && <p className="text-[10px] text-red-400 mt-1">{errors.amount}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.goalType}</label>
+                        <div className="relative">
+                          <select
+                            value={formData.goal_type}
+                            onChange={(e) => {
+                              setFormData({ ...formData, goal_type: e.target.value });
+                              if (errors.type) setErrors(prev => ({ ...prev, type: undefined }));
+                            }}
+                            className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 pr-10 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer min-h-[48px] ${errors.type ? 'border-red-500' : 'border-slate-700'}`}
+                          >
+                            <option value="expense">{t.dashboard.goals.typeExpense}</option>
+                            <option value="income">{t.dashboard.goals.typeIncome}</option>
+                          </select>
+                          <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                        </div>
+                        {errors.type && <p className="text-[10px] text-red-400 mt-1">{errors.type}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.deadline}</label>
+                        <input
+                          type="date"
+                          value={formData.target_date}
+                          onChange={(e) => {
+                            setFormData({ ...formData, target_date: e.target.value });
+                            if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
+                          }}
+                          className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 px-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[48px] ${errors.date ? 'border-red-500' : 'border-slate-700'}`}
+                        />
+                        {errors.date && <p className="text-[10px] text-red-400 mt-1">{errors.date}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.goals.color ?? 'Cor'}</label>
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
+                          {COLORS.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, color_hex: color })}
+                              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all cursor-pointer shrink-0 touch-manipulation ${formData.color_hex === color ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                              style={{ backgroundColor: color }}
+                              aria-label={t.dashboard.goals.color ?? 'Cor'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                    >
+                      {editingGoal ? t.dashboard.goals.saveChanges : t.dashboard.goals.activateGoal} <Check size={18} />
+                    </button>
+                  </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       <ConfirmModal
         isOpen={showDeleteConfirm}
