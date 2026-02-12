@@ -195,9 +195,11 @@ def _build_financial_context(user: models.User, workspace: models.Workspace, db:
     income_cats = [c.name for c in categories if c.type == 'income']
 
     # Totais do mes
+    # Nota: SQLAlchemy 2.x exige que os "whens" sejam passados como argumentos posicionais,
+    # não como lista. Usamos tuplos individuais em vez de lista de tuplos.
     q = db.query(
-        func.sum(case([(models.Transaction.amount_cents < 0, models.Transaction.amount_cents)], else_=0)),
-        func.sum(case([(models.Transaction.amount_cents > 0, models.Transaction.amount_cents)], else_=0)),
+        func.sum(case((models.Transaction.amount_cents < 0, models.Transaction.amount_cents), else_=0)),
+        func.sum(case((models.Transaction.amount_cents > 0, models.Transaction.amount_cents), else_=0)),
         func.count(models.Transaction.id),
     ).filter(
         models.Transaction.workspace_id == workspace.id,
