@@ -66,7 +66,7 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Finly",
-    "alternateName": ["finlybot", "Finly Bot"],
+    "alternateName": ["Finly Bot", "finlybot"],
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Telegram",
     "offers": { "@type": "Offer", "price": "9.99", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },

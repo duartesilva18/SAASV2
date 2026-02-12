@@ -23,16 +23,16 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com';
+
 export const metadata: Metadata = {
   title: {
     default: "Finly - Gestão Financeira Pessoal | Telegram Bot",
     template: "%s | Finly"
   },
-  description: "Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas e ajuda-te a alcançar a paz financeira. Gráficos inteligentes, categorização automática e insights de IA. App finanças Portugal.",
+  description: "Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e ajuda-te a alcançar a paz financeira. Gráficos inteligentes, categorização automática e insights de IA. App finanças Portugal.",
   keywords: [
     "Finly",
-    "finlybot",
-    "Finly Bot",
     "gestão financeira",
     "controlo de despesas",
     "telegram bot",
@@ -52,7 +52,8 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com'),
+  metadataBase: new URL(siteUrl),
+  applicationName: "Finly",
   // Favicon em URL absoluta para evitar cache/redirecionamentos; browsers guardam ícone muito tempo
   icons: {
     icon: [
@@ -77,7 +78,7 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'Finly',
     title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
-    description: 'Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas e ajuda-te a alcançar a paz financeira.',
+    description: 'Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e ajuda-te a alcançar a paz financeira.',
     images: [
       {
         url: '/og-image.png',
@@ -90,7 +91,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
-    description: 'Finly (finlybot): regista despesas no Telegram em 3 segundos. O Finly Bot elimina a confusão das contas.',
+    description: 'Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e paz financeira.',
     images: ['/og-image.png'],
     creator: '@finlypt',
   },
@@ -126,11 +127,28 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Finly',
+    url: siteUrl,
+    logo: `${siteUrl}/images/logo/logo-semfundo.png`,
+    description: 'Finly - Gestão financeira pessoal e bot Telegram para registar despesas em segundos.',
+    sameAs: [
+      'https://t.me/FinanZenApp_bot',
+      ...(process.env.NEXT_PUBLIC_TWITTER_URL ? [process.env.NEXT_PUBLIC_TWITTER_URL] : []),
+    ].filter(Boolean),
+  };
+
   return (
     <html lang="pt-PT" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased overflow-x-hidden`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <ErrorBoundary>
           <ThemeProvider>
             <InstallPromptProvider>
