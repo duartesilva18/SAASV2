@@ -302,11 +302,12 @@ def _query_financial_data(query_type: str, workspace: models.Workspace, db: Sess
                 end = today
         else:
             end = today
-    q = db.query(
-        func.sum(case((models.Transaction.amount_cents < 0, models.Transaction.amount_cents), else_=0)),
-        func.sum(case((models.Transaction.amount_cents > 0, models.Transaction.amount_cents), else_=0)),
-        func.count(models.Transaction.id),
-    ).filter(
+
+        q = db.query(
+            func.sum(case((models.Transaction.amount_cents < 0, models.Transaction.amount_cents), else_=0)),
+            func.sum(case((models.Transaction.amount_cents > 0, models.Transaction.amount_cents), else_=0)),
+            func.count(models.Transaction.id),
+        ).filter(
             models.Transaction.workspace_id == workspace.id,
             models.Transaction.transaction_date >= start,
             models.Transaction.transaction_date <= end,
