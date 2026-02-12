@@ -3257,12 +3257,24 @@ async def telegram_webhook(
             expenses = abs(expenses_cents) / 100
             income = income_cents / 100
             balance = income - abs(expenses_cents) / 100
+            # Garantir sempre 2 casas decimais na apresentação
+            expenses_str = f"{expenses:.2f}"
+            income_str = f"{income:.2f}"
+            balance_str = f"{balance:.2f}"
             lang = user.language if user.language else 'pt'
             t_sum = get_telegram_t(lang)
             if count == 0:
                 send_telegram_msg(chat_id, t_sum('summary_empty'))
             else:
-                send_telegram_msg(chat_id, t_sum('summary_today').format(expenses=expenses, income=income, count=count, balance=balance))
+                send_telegram_msg(
+                    chat_id,
+                    t_sum('summary_today').format(
+                        expenses=expenses_str,
+                        income=income_str,
+                        count=count,
+                        balance=balance_str,
+                    ),
+                )
             return {'status': 'ok'}
         
         # Comando /mes - Resumo do mês
@@ -3292,12 +3304,24 @@ async def telegram_webhook(
             expenses = abs(expenses_cents) / 100
             income = income_cents / 100
             balance = income - abs(expenses_cents) / 100
+            # Garantir sempre 2 casas decimais na apresentação
+            expenses_str = f"{expenses:.2f}"
+            income_str = f"{income:.2f}"
+            balance_str = f"{balance:.2f}"
             lang = user.language if user.language else 'pt'
             t_sum = get_telegram_t(lang)
             if count == 0:
                 send_telegram_msg(chat_id, t_sum('summary_empty'))
             else:
-                send_telegram_msg(chat_id, t_sum('summary_month').format(expenses=expenses, income=income, count=count, balance=balance))
+                send_telegram_msg(
+                    chat_id,
+                    t_sum('summary_month').format(
+                        expenses=expenses_str,
+                        income=income_str,
+                        count=count,
+                        balance=balance_str,
+                    ),
+                )
             return {'status': 'ok'}
         
         # Comando /pendentes - Listar transações pendentes
