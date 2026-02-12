@@ -1,7 +1,7 @@
 """Handlers para webhooks do Stripe Connect"""
 from sqlalchemy.orm import Session
 from uuid import UUID
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from ..models import database as models
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
 import logging
@@ -11,49 +11,19 @@ from ..core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _get_price_id_from_payment_intent(payment_intent: dict) -> str | None:
-    """Obtém o price_id da subscrição associada ao payment_intent (via invoice)."""
-    invoice_id = payment_intent.get('invoice')
-    if not invoice_id or not settings.STRIPE_API_KEY:
-        return None
-    try:
-        stripe.api_key = settings.STRIPE_API_KEY
-        invoice = stripe.Invoice.retrieve(invoice_id, expand=['lines.data.price'])
-        lines = (invoice.get('lines') or {}).get('data') or []
-        if lines:
-            price = lines[0].get('price')
-            if isinstance(price, str):
-                return price
-            if price:
-                return price.get('id')
-    except Exception as e:
-        logger.warning(f'Erro ao obter price_id do invoice {invoice_id}: {e}')
-    return None
-
-
-def _get_commission_percentage_for_payment(payment_intent: dict, db: Session) -> float:
-    """Percentagem de comissão: por price_id (Plus 20%, Pro 25%) ou metadata do checkout."""
-    metadata = payment_intent.get('metadata') or {}
-    price_id = _get_price_id_from_payment_intent(payment_intent)
-    if price_id:
-        return get_commission_percentage_for_price_id(price_id, db)
-    # Fallback: valor guardado no checkout (renovações podem não ter price no PI)
-    meta_pct = metadata.get('commission_percentage')
-    if meta_pct is not None:
-        try:
-            return float(meta_pct)
-        except (TypeError, ValueError):
-            pass
-    return 20.0  # fallback legado
-
-
 def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
-    """Processa payment_intent.succeeded - marca comissão como paga se houver transfer"""
+    """
+    Processa payment_intent.succeeded — APENAS marca comissão existente como paga
+    se houver transfer_data (divisão automática via Connect).
+    
+    NOTA: A criação/atualização de valores de comissão é responsabilidade exclusiva
+    de handle_invoice_paid (em stripe.py), que tem idempotência via AffiliateCommissionInvoice.
+    Este handler NÃO cria comissões nem soma valores — apenas marca is_paid/transfer_status.
+    """
     try:
         # Verificar se tem transfer_data (divisão automática)
         transfer_data = payment_intent.get('transfer_data')
         if not transfer_data:
-            # Tentar obter transfer_data a partir do charge
             charges = payment_intent.get('charges', {})
             charge = None
             if isinstance(charges, dict):
@@ -78,113 +48,37 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
             logger.warning(f'Conta Stripe Connect não encontrada ou não é afiliado: {destination_account}')
             return
         
-        # Buscar metadata para identificar o cliente que pagou
-        metadata = payment_intent.get('metadata', {}) or {}
-        user_id_str = metadata.get('user_id')
-        if not user_id_str:
-            # Tentar obter user_id a partir do charge (caso metadata não esteja no PaymentIntent)
-            charges = payment_intent.get('charges', {})
-            charge = None
-            if isinstance(charges, dict):
-                charge_data = charges.get('data') or []
-                if charge_data:
-                    charge = charge_data[0]
-            if charge:
-                charge_metadata = charge.get('metadata', {}) or {}
-                user_id_str = charge_metadata.get('user_id')
-        if not user_id_str:
-            # Tentar buscar pelo customer
-            customer_id = payment_intent.get('customer')
-            if customer_id:
-                user = db.query(models.User).filter(
-                    models.User.stripe_customer_id == customer_id
-                ).first()
-                if user:
-                    user_id_str = str(user.id)
-        if not user_id_str:
-            # Tentar buscar pelo invoice (útil em pagamentos de subscrição)
-            invoice_id = payment_intent.get('invoice')
-            if invoice_id and settings.STRIPE_API_KEY:
-                try:
-                    stripe.api_key = settings.STRIPE_API_KEY
-                    invoice = stripe.Invoice.retrieve(invoice_id)
-                    customer_id = invoice.get('customer')
-                    if customer_id:
-                        user = db.query(models.User).filter(
-                            models.User.stripe_customer_id == customer_id
-                        ).first()
-                        if user:
-                            user_id_str = str(user.id)
-                except Exception as e:
-                    logger.warning(f'Erro ao buscar invoice {invoice_id} para resolver user_id: {str(e)}')
-        
-        if not user_id_str:
-            logger.warning(f'Não foi possível identificar o user_id do payment_intent {payment_intent.get("id")}')
-            return
-        
-        # Buscar referral
-        try:
-            user_uuid = UUID(user_id_str)
-        except ValueError:
-            logger.error(f'user_id inválido: {user_id_str}')
-            return
-        
-        referral = db.query(models.AffiliateReferral).filter(
-            models.AffiliateReferral.referred_user_id == user_uuid,
-            models.AffiliateReferral.referrer_id == affiliate.id
-        ).first()
-        
-        if not referral:
-            logger.warning(f'Referral não encontrada para user {user_id_str} e afiliado {affiliate.id}')
-            return
-        
-        # Buscar comissão relacionada (ou criar se necessário)
-        # Para divisão automática, a comissão é criada no momento do pagamento
-        # Buscar comissão do mês atual
+        # Determinar mês correto a partir da invoice (se disponível)
         current_month = date.today().replace(day=1)
+        invoice_id = payment_intent.get('invoice')
+        if invoice_id and settings.STRIPE_API_KEY:
+            try:
+                stripe.api_key = settings.STRIPE_API_KEY
+                inv = stripe.Invoice.retrieve(invoice_id)
+                period_start = inv.get('period_start')
+                if period_start is not None:
+                    current_month = datetime.fromtimestamp(period_start, tz=timezone.utc).date().replace(day=1)
+            except Exception as e:
+                logger.warning(f'Erro ao obter period_start da invoice {invoice_id} em payment_intent.succeeded: {e}')
         
+        # Buscar comissão existente para este mês (criada por invoice.paid)
         commission = db.query(models.AffiliateCommission).filter(
             models.AffiliateCommission.affiliate_id == affiliate.id,
             models.AffiliateCommission.month == current_month
         ).first()
         
-        # Se não existe, criar (será calculada depois, mas marcamos como paga)
-        if not commission:
-            # Comissão por plano: Plus 20%, Pro 25% (a partir do price_id da invoice ou metadata)
-            commission_percentage = _get_commission_percentage_for_payment(payment_intent, db)
-            
-            # Calcular comissão do pagamento atual
-            amount = payment_intent.get('amount', 0)
-            commission_amount = int(amount * (commission_percentage / 100))
-            
-            commission = models.AffiliateCommission(
-                affiliate_id=affiliate.id,
-                month=current_month,
-                total_revenue_cents=amount,
-                commission_percentage=float(commission_percentage),
-                commission_amount_cents=commission_amount,
-                referrals_count=1,
-                conversions_count=1,
-                is_paid=True,
-                paid_at=datetime.now(),
-                transfer_status='created'
-            )
-            db.add(commission)
+        if commission and not commission.is_paid:
+            # Apenas marcar como paga — os valores já foram calculados por invoice.paid
+            commission.is_paid = True
+            commission.paid_at = datetime.now(timezone.utc)
+            commission.transfer_status = 'created'
+            db.commit()
+            logger.info(f'✅ Comissão marcada como paga via divisão automática: afiliado {affiliate.email}, payment_intent {payment_intent.get("id")}')
+        elif commission:
+            logger.info(f'Comissão já estava paga para afiliado {affiliate.email}, mês {current_month}')
         else:
-            # Atualizar comissão existente
-            if not commission.is_paid:
-                commission.is_paid = True
-                commission.paid_at = datetime.now()
-                commission.transfer_status = 'created'
-                # Atualizar valores se necessário
-                amount = payment_intent.get('amount', 0)
-                commission.total_revenue_cents += amount
-                commission_percentage = _get_commission_percentage_for_payment(payment_intent, db)
-                commission.commission_amount_cents += int(amount * (commission_percentage / 100))
-                commission.conversions_count += 1
-        
-        db.commit()
-        logger.info(f'✅ Comissão marcada como paga via divisão automática: afiliado {affiliate.email}, payment_intent {payment_intent.get("id")}')
+            # invoice.paid ainda não correu — não criar comissão aqui, será criada por invoice.paid
+            logger.info(f'Comissão para mês {current_month} ainda não existe; invoice.paid irá criá-la. PI: {payment_intent.get("id")}')
         
     except Exception as e:
         db.rollback()
@@ -192,11 +86,12 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
 
 
 def handle_transfer_created(transfer: dict, db: Session):
-    """Processa transfer.created - captura stripe_transfer_id"""
+    """Processa transfer.created - captura stripe_transfer_id na comissão correspondente."""
     try:
         transfer_id = transfer.get('id')
+        if not transfer_id:
+            return
         destination = transfer.get('destination')
-        
         if not destination:
             return
         
@@ -209,18 +104,35 @@ def handle_transfer_created(transfer: dict, db: Session):
             logger.warning(f'Afiliado não encontrado para conta Stripe Connect: {destination}')
             return
         
-        # Buscar comissão relacionada (priorizar mês atual, com fallback para última pendente)
-        current_month = date.today().replace(day=1)
+        # Determinar mês correto a partir do source_transaction (charge → invoice → period_start)
+        target_month = date.today().replace(day=1)
+        source_transaction = transfer.get('source_transaction')
+        if source_transaction and settings.STRIPE_API_KEY:
+            try:
+                stripe.api_key = settings.STRIPE_API_KEY
+                charge = stripe.Charge.retrieve(source_transaction)
+                inv_id = charge.get('invoice') if isinstance(charge, dict) else getattr(charge, 'invoice', None)
+                if inv_id:
+                    inv = stripe.Invoice.retrieve(inv_id)
+                    period_start = inv.get('period_start') if isinstance(inv, dict) else getattr(inv, 'period_start', None)
+                    if period_start is not None:
+                        target_month = datetime.fromtimestamp(period_start, tz=timezone.utc).date().replace(day=1)
+            except Exception as e:
+                logger.warning(f'Erro ao obter period_start do transfer {transfer_id}: {e}')
         
+        # Buscar comissão pelo mês correto E sem transfer_id (evitar stampar comissão errada)
         commission = db.query(models.AffiliateCommission).filter(
             models.AffiliateCommission.affiliate_id == affiliate.id,
-            models.AffiliateCommission.month == current_month,
-            models.AffiliateCommission.stripe_transfer_id.is_(None)  # Ainda não tem transfer_id
+            models.AffiliateCommission.month == target_month,
+            models.AffiliateCommission.stripe_transfer_id.is_(None)
         ).order_by(models.AffiliateCommission.created_at.desc()).first()
 
+        # Fallback: mês anterior (caso o transfer chegue no início do mês seguinte)
         if not commission:
+            prev_month = (target_month.replace(day=1) - timedelta(days=1)).replace(day=1)
             commission = db.query(models.AffiliateCommission).filter(
                 models.AffiliateCommission.affiliate_id == affiliate.id,
+                models.AffiliateCommission.month == prev_month,
                 models.AffiliateCommission.stripe_transfer_id.is_(None)
             ).order_by(models.AffiliateCommission.created_at.desc()).first()
         
@@ -228,11 +140,11 @@ def handle_transfer_created(transfer: dict, db: Session):
             commission.stripe_transfer_id = transfer_id
             commission.payment_reference = transfer_id
             commission.is_paid = True
-            commission.paid_at = datetime.now()
+            commission.paid_at = datetime.now(timezone.utc)
             db.commit()
             logger.info(f'✅ Transfer ID capturado: {transfer_id} para comissão {commission.id} (marcada como paga)')
         else:
-            logger.warning(f'Comissão não encontrada para atualizar transfer_id {transfer_id}')
+            logger.warning(f'Comissão não encontrada para atualizar transfer_id {transfer_id} (mês={target_month})')
         
     except Exception as e:
         db.rollback()
@@ -240,7 +152,7 @@ def handle_transfer_created(transfer: dict, db: Session):
 
 
 def handle_transfer_reversed(transfer: dict, db: Session):
-    """Processa transfer.reversed - reverte status da comissão"""
+    """Processa transfer.reversed - reverte status da comissão e limpa paid_at."""
     try:
         transfer_id = transfer.get('id')
         
@@ -255,6 +167,7 @@ def handle_transfer_reversed(transfer: dict, db: Session):
         
         commission.transfer_status = 'reversed'
         commission.is_paid = False
+        commission.paid_at = None  # Limpar: já não foi paga
         commission.payout_error_message = 'Transfer was reversed by Stripe'
         db.commit()
         

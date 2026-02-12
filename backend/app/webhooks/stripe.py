@@ -4,7 +4,7 @@ import stripe
 import uuid
 import logging
 from uuid import UUID
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
@@ -86,39 +86,46 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     event_type = event['type']
     logger.info(f'Evento Stripe recebido: {event_type}')
 
-    if event_type == 'checkout.session.completed':
-        session = event['data']['object']
-        handle_checkout_completed(session, db)
-    elif event_type == 'customer.subscription.created':
-        subscription = event['data']['object']
-        handle_subscription_created(subscription, db)
-    elif event_type == 'customer.subscription.updated':
-        subscription = event['data']['object']
-        handle_subscription_updated(subscription, db)
-    elif event_type == 'customer.subscription.deleted':
-        subscription = event['data']['object']
-        handle_subscription_deleted(subscription, db)
-    elif event_type == 'invoice.payment_failed':
-        invoice = event['data']['object']
-        handle_invoice_payment_failed(invoice, db)
-    elif event_type == 'invoice.paid':
-        invoice = event['data']['object']
-        handle_invoice_paid(invoice, db)
-    elif event_type == 'payment_intent.succeeded':
-        payment_intent = event['data']['object']
-        handle_payment_intent_succeeded(payment_intent, db)
-    elif event_type == 'transfer.created':
-        transfer = event['data']['object']
-        handle_transfer_created(transfer, db)
-    elif event_type == 'transfer.reversed':
-        transfer = event['data']['object']
-        handle_transfer_reversed(transfer, db)
-    elif event_type == 'account.updated':
-        account = event['data']['object']
-        handle_account_updated(account, db)
-    elif event_type == 'charge.refunded':
-        charge = event['data']['object']
-        handle_charge_refunded(charge, db)
+    # Mapear eventos para handlers; erros NÃO são engolidos para que o Stripe faça retry.
+    try:
+        if event_type == 'checkout.session.completed':
+            session = event['data']['object']
+            handle_checkout_completed(session, db)
+        elif event_type == 'customer.subscription.created':
+            subscription = event['data']['object']
+            handle_subscription_created(subscription, db)
+        elif event_type == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            handle_subscription_updated(subscription, db)
+        elif event_type == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            handle_subscription_deleted(subscription, db)
+        elif event_type == 'invoice.payment_failed':
+            invoice = event['data']['object']
+            handle_invoice_payment_failed(invoice, db)
+        elif event_type == 'invoice.paid':
+            invoice = event['data']['object']
+            handle_invoice_paid(invoice, db)
+        elif event_type == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            handle_payment_intent_succeeded(payment_intent, db)
+        elif event_type == 'transfer.created':
+            transfer = event['data']['object']
+            handle_transfer_created(transfer, db)
+        elif event_type == 'transfer.reversed':
+            transfer = event['data']['object']
+            handle_transfer_reversed(transfer, db)
+        elif event_type == 'account.updated':
+            account = event['data']['object']
+            handle_account_updated(account, db)
+        elif event_type == 'charge.refunded':
+            charge = event['data']['object']
+            handle_charge_refunded(charge, db)
+    except Exception as e:
+        logger.error(f'Erro ao processar evento Stripe {event_type}: {str(e)}', exc_info=True)
+        db.rollback()
+        # Devolver 500 para que o Stripe faça retry (em vez de engolir o erro)
+        raise HTTPException(status_code=500, detail=f'Webhook handler error: {event_type}')
 
     return {'status': 'success'}
 
@@ -340,7 +347,7 @@ def handle_charge_refunded(charge: dict, db: Session):
             inv = stripe.Invoice.retrieve(invoice_id)
             period_start = inv.get('period_start')
             if period_start is not None:
-                commission_month = datetime.fromtimestamp(period_start).date().replace(day=1)
+                commission_month = datetime.fromtimestamp(period_start, tz=timezone.utc).date().replace(day=1)
         except Exception:
             pass
 
@@ -453,7 +460,7 @@ def handle_invoice_payment_failed(invoice: dict, db: Session):
                         db.commit()
                         logger.warning(f'Status da subscrição atualizado para {subscription.status} devido a pagamento falhado: {user.email}')
                     else:
-                        logger.info(f'Pagamento falhou para fatura futura (próximo ciclo). Mantendo acesso até {datetime.fromtimestamp(current_period_end)}: {user.email}')
+                        logger.info(f'Pagamento falhou para fatura futura (próximo ciclo). Mantendo acesso até {datetime.fromtimestamp(current_period_end, tz=timezone.utc)}: {user.email}')
                 elif subscription.status == 'active':
                     # Se ainda está ativo, não fazer nada (pode ser tentativa de pagamento futuro)
                     logger.info(f'Subscrição ainda ativa após falha de pagamento. Pode ser fatura futura: {user.email}')
@@ -540,7 +547,8 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                                 amount_cents=commission_cents,
                                                 currency=currency,
                                             ))
-                                            db.commit()
+                                            # NÃO fazer db.commit() aqui — será commitado junto com a comissão no final
+                                            db.flush()
                                             logger.info(f'✅ Transfer manual (1ª invoice sem split): {commission_cents} {currency} → afiliado {referrer.email} (invoice {invoice_id})')
                                     elif has_transfer:
                                         logger.info(f'Invoice {invoice_id} já tem transfer; não criar Transfer manual')
@@ -553,11 +561,6 @@ def handle_invoice_paid(invoice: dict, db: Session):
                         referral.has_subscribed = True
                         referral.subscription_date = datetime.now()
                         logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
-                    elif referral and user.subscription_status in ['active', 'trialing']:
-                        if not referral.has_subscribed:
-                            referral.has_subscribed = True
-                            referral.subscription_date = datetime.now()
-                            logger.info(f'✅ Conversão de afiliado marcada (correção): {referral.referrer_id} -> {user.email} (invoice.paid)')
 
                     # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)
                     # Idempotência: não creditar duas vezes a mesma invoice se o webhook for reenviado
@@ -576,7 +579,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                 base_amount = _get_base_amount_for_commission(invoice)  # só base (afiliado não ganha sobre taxa Stripe)
                                 period_start = invoice.get('period_start')
                                 if period_start is not None:
-                                    period_dt = datetime.fromtimestamp(period_start)
+                                    period_dt = datetime.fromtimestamp(period_start, tz=timezone.utc)
                                     commission_month = period_dt.replace(day=1).date()
                                 else:
                                     commission_month = date.today().replace(day=1)

@@ -328,6 +328,8 @@ async def get_audit_logs(
     db: Session = Depends(get_db), 
     admin: models.User = Depends(check_admin)
 ):
+    limit = min(max(limit, 1), 100)  # Cap entre 1 e 100
+    page = max(page, 1)
     query = db.query(models.AuditLog)
     
     if action and action != 'all':
@@ -367,6 +369,8 @@ async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: m
 
 @router.post('/users/{user_id}/toggle-admin')
 async def toggle_admin_status(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail='Não podes alterar o teu próprio estado de admin.')
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Utilizador não encontrado')
@@ -435,6 +439,8 @@ async def update_user_admin(request: Request, user_id: UUID, user_update: schema
 
 @router.delete('/users/{user_id}')
 async def delete_user_admin(request: Request, user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail='Não podes eliminar o teu próprio utilizador.')
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Utilizador não encontrado')
@@ -451,14 +457,37 @@ async def get_system_settings(db: Session = Depends(get_db), admin: models.User 
     settings_list = db.query(models.SystemSetting).all()
     return {s.key: s.value for s in settings_list}
 
+# Chaves permitidas para system settings (whitelist)
+ALLOWED_SYSTEM_SETTING_KEYS = {
+    'affiliate_commission_percentage_plus',
+    'affiliate_commission_percentage_pro',
+    'maintenance_mode',
+    'site_name',
+    'site_url',
+    'support_email',
+    'max_free_transactions',
+    'max_free_categories',
+    'max_free_recurring',
+}
+
+
 @router.post('/settings')
 async def update_system_setting(data: dict, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    invalid_keys = [k for k in data.keys() if k not in ALLOWED_SYSTEM_SETTING_KEYS]
+    if invalid_keys:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Chaves não permitidas: {", ".join(invalid_keys)}. Chaves válidas: {", ".join(sorted(ALLOWED_SYSTEM_SETTING_KEYS))}'
+        )
     for key, value in data.items():
+        str_value = str(value).strip()
+        if len(str_value) > 500:
+            raise HTTPException(status_code=400, detail=f'Valor demasiado longo para chave "{key}" (máx 500 caracteres).')
         setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
         if setting:
-            setting.value = str(value)
+            setting.value = str_value
         else:
-            setting = models.SystemSetting(key=key, value=str(value))
+            setting = models.SystemSetting(key=key, value=str_value)
             db.add(setting)
     db.commit()
     return {"message": "Definições atualizadas"}
@@ -571,15 +600,20 @@ async def send_marketing_broadcast(
             t = get_email_translation(user_lang)
             marketing_footer = t.get('marketing_footer', 'Recebeu este email porque aceitou as comunicações de marketing do Finly.')
             
+            import html as html_module
+            safe_subject = html_module.escape(broadcast.subject)
+            # Converter newlines em <br> na mensagem, mas escapar o resto
+            safe_message = html_module.escape(broadcast.message).replace('\n', '<br>')
+            safe_footer = html_module.escape(marketing_footer)
             html = f"""
             <!DOCTYPE html>
             <html>
             <body style="font-family: sans-serif; background-color: #020617; color: #94a3b8; padding: 40px;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 24px; padding: 40px; border: 1px solid #1e293b;">
-                    <h2 style="color: #ffffff; margin-top: 0;">{broadcast.subject}</h2>
-                    <p style="line-height: 1.6; font-size: 16px;">{broadcast.message}</p>
+                    <h2 style="color: #ffffff; margin-top: 0;">{safe_subject}</h2>
+                    <p style="line-height: 1.6; font-size: 16px;">{safe_message}</p>
                     <hr style="border: 0; border-top: 1px solid #1e293b; margin: 30px 0;">
-                    <p style="font-size: 12px; color: #475569;">{marketing_footer}</p>
+                    <p style="font-size: 12px; color: #475569;">{safe_footer}</p>
                 </div>
             </body>
             </html>

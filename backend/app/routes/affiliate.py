@@ -125,10 +125,10 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
             invoice_months = set()
             for inv in basic_invoices:
                 if hasattr(inv, 'period_start') and inv.period_start:
-                    inv_date = datetime.fromtimestamp(inv.period_start)
+                    inv_date = datetime.fromtimestamp(inv.period_start, tz=timezone.utc)
                     invoice_months.add((inv_date.year, inv_date.month))
                 elif hasattr(inv, 'created') and inv.created:
-                    inv_date = datetime.fromtimestamp(inv.created)
+                    inv_date = datetime.fromtimestamp(inv.created, tz=timezone.utc)
                     invoice_months.add((inv_date.year, inv_date.month))
             
             if len(invoice_months) < 3:
@@ -504,7 +504,7 @@ async def get_affiliate_stats(
                             'commission_cents': commission_cents,
                             'commission_percentage': commission_percentage,
                             'currency': invoice.currency,
-                            'paid_at': datetime.fromtimestamp(invoice.created).isoformat() if invoice.created else None,
+                            'paid_at': datetime.fromtimestamp(invoice.created, tz=timezone.utc).isoformat() if invoice.created else None,
                             'subscription_status': subscription.status,
                             'plan_name': plan_info.nickname if plan_info and getattr(plan_info, 'nickname', None) else (getattr(plan_info, 'product', None) if plan_info else None),
                             'plan_interval': getattr(getattr(plan_info, 'recurring', None), 'interval', None) if plan_info else None
@@ -805,6 +805,7 @@ async def get_stripe_connect_status(
                 current_user.stripe_connect_account_status = 'active' if payouts_enabled else 'pending'
                 current_user.affiliate_payout_enabled = payouts_enabled
             else:
+                current_user.stripe_connect_onboarding_completed = False
                 current_user.stripe_connect_account_status = 'pending'
                 current_user.affiliate_payout_enabled = False
             
@@ -832,14 +833,14 @@ async def get_stripe_connect_status(
             
     except stripe.error.StripeError as e:
         logger.error(f'Erro ao buscar status da conta Stripe Connect: {str(e)}')
-        # Retornar status local em caso de erro
+        # Retornar status local em caso de erro (sem expor detalhes internos do Stripe)
         return {
             'connected': True,
             'account_id': current_user.stripe_connect_account_id,
             'status': current_user.stripe_connect_account_status,
             'onboarding_completed': current_user.stripe_connect_onboarding_completed,
             'payout_enabled': current_user.affiliate_payout_enabled,
-            'error': str(e)
+            'error': 'Erro temporário ao verificar conta Stripe. Tenta novamente.'
         }
     except Exception as e:
         logger.error(f'Erro inesperado ao buscar status: {str(e)}', exc_info=True)

@@ -165,6 +165,8 @@ async def create_category(request: Request, category_in: schemas.CategoryBase, d
 @router.patch('/{category_id}', response_model=schemas.CategoryResponse)
 async def update_category(request: Request, category_id: UUID, category_in: schemas.CategoryUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_category = db.query(models.Category).filter(
         models.Category.id == category_id,
         models.Category.workspace_id == workspace.id
@@ -209,6 +211,8 @@ async def update_category(request: Request, category_id: UUID, category_in: sche
 @router.delete('/{category_id}')
 async def delete_category(request: Request, category_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_category = db.query(models.Category).filter(
         models.Category.id == category_id,
         models.Category.workspace_id == workspace.id

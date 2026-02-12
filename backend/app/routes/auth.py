@@ -954,7 +954,7 @@ async def export_user_data(
         }
     except Exception as e:
         logger.exception('Erro ao exportar dados do utilizador %s', current_user.email)
-        raise HTTPException(status_code=500, detail=f'Erro ao exportar dados: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao exportar dados. Tenta novamente.')
 
 
 def _parse_date(s):
@@ -1405,5 +1405,5 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
         raise
     except Exception as e:
         logger.error(f'Erro inesperado no social-login: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=500, detail=f'Erro interno do servidor: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro interno do servidor.')
 

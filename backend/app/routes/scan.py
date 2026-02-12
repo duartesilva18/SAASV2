@@ -110,4 +110,4 @@ RESPONDE APENAS COM UM JSON PURO. NÃO ADICIONES COMENTÁRIOS OU MARKDOWN.
         raise
     except Exception as e:
         logger.error(f"Erro no Scan OpenAI: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail='Erro ao processar imagem. Tenta novamente.')

@@ -42,6 +42,8 @@ async def create_recurring_transaction(request: Request, recurring_in: schemas.R
 @router.patch('/{recurring_id}', response_model=schemas.RecurringTransactionResponse)
 async def update_recurring_transaction(request: Request, recurring_id: UUID, recurring_in: schemas.RecurringTransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
     db_recurring = db.query(models.RecurringTransaction).filter(
         models.RecurringTransaction.id == recurring_id,
         models.RecurringTransaction.workspace_id == workspace.id
@@ -63,6 +65,8 @@ async def update_recurring_transaction(request: Request, recurring_id: UUID, rec
 @router.post('/{recurring_id}/confirm', response_model=schemas.TransactionResponse)
 async def confirm_recurring_transaction(request: Request, recurring_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
     db_recurring = db.query(models.RecurringTransaction).filter(
         models.RecurringTransaction.id == recurring_id,
         models.RecurringTransaction.workspace_id == workspace.id
@@ -105,6 +109,8 @@ async def confirm_recurring_transaction(request: Request, recurring_id: UUID, db
 @router.delete('/{recurring_id}')
 async def delete_recurring_transaction(request: Request, recurring_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
     db_recurring = db.query(models.RecurringTransaction).filter(
         models.RecurringTransaction.id == recurring_id,
         models.RecurringTransaction.workspace_id == workspace.id

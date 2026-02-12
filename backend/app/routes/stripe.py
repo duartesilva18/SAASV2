@@ -245,7 +245,7 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         return {'url': checkout_session.url}
     except Exception as e:
         logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail='Erro ao criar sessão de pagamento. Tenta novamente.')
 
 def _get_connect_params_for_subscription(user: models.User, price_id: str, db: Session):
     """Retorna (transfer_data, application_fee_percent) para Subscription.modify quando o user tem afiliado com Connect ativo. Caso contrário (None, None)."""

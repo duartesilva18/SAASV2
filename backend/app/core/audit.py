@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 async def log_action(db: Session, action: str, user_id: uuid.UUID = None, details: str = None, request: Request = None):
-    ip = request.client.host if request else None
+    ip = request.client.host if request and request.client else None
     log = database.AuditLog(
         id=uuid.uuid4(),
         user_id=user_id,

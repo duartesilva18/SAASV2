@@ -11,8 +11,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
+import { useUser } from '@/lib/UserContext';
+import { useRouter } from 'next/navigation';
 
 export default function MarketingAdminPage() {
+  const { user } = useUser();
+  const router = useRouter();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -28,8 +32,12 @@ export default function MarketingAdminPage() {
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
 
   useEffect(() => {
+    if (user && !user.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchStats();
-  }, []);
+  }, [user]);
 
   const fetchStats = async () => {
     try {

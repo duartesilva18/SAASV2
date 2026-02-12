@@ -118,42 +118,24 @@ TELEGRAM_TRANSLATIONS = {
             "Tenta novamente daqui a uns minutos."
         ),
         'transaction_pending': (
-            "<b>Nova Transação</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Descrição:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
-            "📊 <b>Tipo:</b> {type}\n"
+            "{emoji} <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "✅ Confirma esta transação?"
+            "\n✅ Confirma esta transação?"
         ),
         'transaction_confirmed': (
-            "<b>Transação Confirmada!</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Descrição:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
-            "📊 <b>Tipo:</b> {type}\n"
+            "✅ <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
+            "\n🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
         ),
         'transaction_registered': (
-            "<b>Transação Registada!</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Descrição:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Valor:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Categoria:</b> {category} {origin_line}\n"
-            "📊 <b>Tipo:</b> {type}\n"
+            "✅ <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
+            "\n🧘‍♂️ <i>Registado no teu ecossistema Zen.</i>"
         ),
-        'date_line': "\n📅 <b>Data:</b> {date}\n",
+        'date_line': "📅 {date}\n",
         'date_line_empty': "",
         'transaction_not_found': (
             "❌ Transação não encontrada ou já processada."
@@ -290,6 +272,12 @@ TELEGRAM_TRANSLATIONS = {
         'generic_error': "⚠️ Algo correu mal. Tenta de novo ou envia <code>/info</code>.",
         'pending_duplicate': "💡 Já tens esta transação pendente. Confirma ou cancela na mensagem original.",
         'pending_stale': "⏳ Tens transações pendentes há mais de 24h. Confirma ou usa /clear.",
+        'ai_thinking': "🧠 <i>A analisar a tua mensagem...</i>",
+        'ai_error': "⚠️ Não consegui processar a tua mensagem. Tenta reformular ou envia no formato: <code>Descrição Valor€</code>",
+        'ai_rate_limited': "⏳ Muitos pedidos de IA por minuto. Aguarda um momento ou envia a transação no formato: <code>Descrição Valor€</code>",
+        'ai_no_data': "📭 Ainda não tens dados suficientes para responder a esta pergunta. Regista mais transações primeiro!",
+        'ai_question_header': "📊 <b>Consulta Financeira</b>\n\n",
+        'ai_advice_header': "🧘 <b>Análise Zen</b>\n\n",
     },
     'en': {
         'welcome_new': (
@@ -407,42 +395,24 @@ TELEGRAM_TRANSLATIONS = {
             "Please try again in a few minutes."
         ),
         'transaction_pending': (
-            "<b>New Transaction</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Description:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category} {origin_line}\n"
-            "📊 <b>Type:</b> {type}\n"
+            "{emoji} <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "✅ Confirm this transaction?"
+            "\n✅ Confirm this transaction?"
         ),
         'transaction_confirmed': (
-            "<b>Transaction Confirmed!</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Description:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category} {origin_line}\n"
-            "📊 <b>Type:</b> {type}\n"
+            "✅ <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
+            "\n🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
         ),
         'transaction_registered': (
-            "<b>Transaction Registered!</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            "📝 <b>Description:</b>\n"
-            "<code>{description}</code>\n\n"
-            "{emoji} <b>Value:</b> <code>{amount}€</code>\n"
-            "🏷️ <b>Category:</b> {category} {origin_line}\n"
-            "📊 <b>Type:</b> {type}\n"
+            "✅ <b>{description}</b> — <code>{amount}€</code>\n"
+            "📁 {category} {origin_line}\n"
             "{date_line}"
-            "\n━━━━━━━━━━━━━━━━━━\n"
-            "🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
+            "\n🧘‍♂️ <i>Registered in your Zen ecosystem.</i>"
         ),
-        'date_line': "\n📅 <b>Date:</b> {date}\n",
+        'date_line': "📅 {date}\n",
         'date_line_empty': "",
         'transaction_not_found': (
             "❌ Transaction not found or already processed."
@@ -589,6 +559,12 @@ TELEGRAM_TRANSLATIONS = {
         'generic_error': "⚠️ Something went wrong. Try again or send <code>/info</code>.",
         'pending_duplicate': "💡 You already have this transaction pending. Confirm or cancel in the original message.",
         'pending_stale': "⏳ You have pending transactions older than 24h. Confirm or use /clear.",
+        'ai_thinking': "🧠 <i>Analysing your message...</i>",
+        'ai_error': "⚠️ Couldn't process your message. Try rephrasing or use the format: <code>Description Amount€</code>",
+        'ai_rate_limited': "⏳ Too many AI requests per minute. Wait a moment or send your transaction as: <code>Description Amount€</code>",
+        'ai_no_data': "📭 Not enough data to answer this question yet. Record more transactions first!",
+        'ai_question_header': "📊 <b>Financial Query</b>\n\n",
+        'ai_advice_header': "🧘 <b>Zen Analysis</b>\n\n",
     }
 }
 

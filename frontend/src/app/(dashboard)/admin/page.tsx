@@ -15,10 +15,12 @@ import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
 import ConfirmModal from '@/components/ConfirmModal';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboardPage() {
   const { t, formatCurrency } = useTranslation();
   const { user: currentUser } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -69,8 +71,12 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    if (currentUser && !currentUser.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!loading) {

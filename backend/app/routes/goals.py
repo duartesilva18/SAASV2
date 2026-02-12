@@ -33,6 +33,8 @@ async def create_goal(goal: schemas.SavingsGoalCreate, db: Session = Depends(get
 @router.patch('/{goal_id}', response_model=schemas.SavingsGoalResponse)
 async def update_goal(goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(models.SavingsGoal.id == goal_id, models.SavingsGoal.workspace_id == workspace.id).first()
     
     if not db_goal:
@@ -49,6 +51,8 @@ async def update_goal(goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db:
 @router.delete('/{goal_id}')
 async def delete_goal(goal_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(models.SavingsGoal.id == goal_id, models.SavingsGoal.workspace_id == workspace.id).first()
     
     if not db_goal:

@@ -17,10 +17,12 @@ import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
+import { useRouter } from 'next/navigation';
 
 export default function AdminFinancePage() {
   const { t, formatCurrency } = useTranslation();
   const { user: currentUser } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [financeStats, setFinanceStats] = useState<any>(null);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
@@ -46,8 +48,12 @@ export default function AdminFinancePage() {
   };
 
   useEffect(() => {
+    if (currentUser && !currentUser.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [currentUser]);
 
   if (loading) {
     return <PageLoading message="Consultando Tesouraria Global..." />;

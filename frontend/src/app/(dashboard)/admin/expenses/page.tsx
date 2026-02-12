@@ -11,9 +11,11 @@ import {
   Tooltip, XAxis, YAxis, CartesianGrid, LineChart, Line
 } from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
+import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import api from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#6366F1'];
 
@@ -26,7 +28,9 @@ interface ProjectExpense {
 }
 
 export default function AdminExpensesPage() {
-  const { formatCurrency } = useTranslation();
+  const { t, formatCurrency } = useTranslation();
+  const { user } = useUser();
+  const router = useRouter();
   const [expenses, setExpenses] = useState<ProjectExpense[]>([]);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -42,22 +46,26 @@ export default function AdminExpensesPage() {
       const res = await api.get<ProjectExpense[]>('/admin/project-expenses');
       setExpenses(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      setToast({ isVisible: true, message: 'Erro ao carregar despesas.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.adminExpenses.loadError, type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (user && !user.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchExpenses();
-  }, []);
+  }, [user]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = description.trim();
     const value = parseFloat(amount.replace(',', '.'));
     if (!trimmed || isNaN(value) || value <= 0) {
-      setToast({ isVisible: true, message: 'Descrição e valor obrigatórios.', type: 'error' });
+      setToast({ isVisible: true, message: t.dashboard.adminExpenses.descriptionRequired, type: 'error' });
       return;
     }
     const amountCents = Math.round(value * 100);
@@ -71,10 +79,10 @@ export default function AdminExpensesPage() {
       setDescription('');
       setAmount('');
       setDate(new Date().toISOString().split('T')[0]);
-      setToast({ isVisible: true, message: 'Despesa adicionada.', type: 'success' });
+      setToast({ isVisible: true, message: t.dashboard.adminExpenses.expenseAdded, type: 'success' });
       fetchExpenses();
     } catch (err: any) {
-      setToast({ isVisible: true, message: err.response?.data?.detail || 'Erro ao adicionar.', type: 'error' });
+      setToast({ isVisible: true, message: err.response?.data?.detail || t.dashboard.adminExpenses.addError, type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -84,7 +92,7 @@ export default function AdminExpensesPage() {
     try {
       await api.delete(`/admin/project-expenses/${id}`);
       setDeleteId(null);
-      setToast({ isVisible: true, message: 'Despesa removida.', type: 'success' });
+      setToast({ isVisible: true, message: t.dashboard.adminExpenses.expenseRemoved, type: 'success' });
       fetchExpenses();
     } catch (err: any) {
       setToast({ isVisible: true, message: err.response?.data?.detail || 'Erro ao remover.', type: 'error' });
@@ -121,11 +129,13 @@ export default function AdminExpensesPage() {
       }));
   }, [expenses]);
 
+  const te = (t.dashboard as any)?.adminExpenses || {};
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">A carregar...</p>
+        <p className="text-slate-500 font-medium">{te.loading || 'A carregar...'}</p>
       </div>
     );
   }
@@ -139,15 +149,15 @@ export default function AdminExpensesPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-white mb-2 uppercase">
-            Despesas do <span className="text-blue-500 italic">Projeto</span>
+            {te.title || 'Despesas do'} <span className="text-blue-500 italic">{te.titleHighlight || 'Projeto'}</span>
           </h1>
           <p className="text-slate-500 font-medium italic text-sm">
-            Regista despesas de manutenção e projeto. Usa a calculadora para dividir pelo número de pessoas.
+            {te.subtitle || 'Regista despesas de manutenção e projeto. Usa a calculadora para dividir pelo número de pessoas.'}
           </p>
         </div>
         <div className="flex items-center gap-4 bg-slate-900/50 border border-slate-800 p-2 rounded-2xl">
           <Receipt className="text-blue-500" size={20} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Despesas Internas</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{te.internalExpenses || 'Despesas Internas'}</span>
         </div>
       </header>
 

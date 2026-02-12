@@ -26,7 +26,7 @@ export default function LandingPage() {
   const { user } = useUser();
   const router = useRouter();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollProgressRef = useRef<HTMLDivElement>(null);
 
   // Simulador Telegram: resultado da primeira mensagem (Confirmar/Cancelar) e mensagens dinâmicas
   const defaultSimMessages: { user: string; bot: string; outcome?: 'confirmed' | 'cancelled' }[] = [
@@ -49,15 +49,13 @@ export default function LandingPage() {
     }
   }, [simMessages.length]);
 
-  // Barra de progresso de scroll (0–100%)
+  // Barra de progresso de scroll -- manipulação direta do DOM (sem re-render)
   useEffect(() => {
     const onScroll = () => {
+      if (!scrollProgressRef.current) return;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      if (docHeight <= 0) {
-        setScrollProgress(100);
-        return;
-      }
-      setScrollProgress((window.scrollY / docHeight) * 100);
+      const pct = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 100;
+      scrollProgressRef.current.style.width = `${pct}%`;
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -177,12 +175,12 @@ export default function LandingPage() {
           </div>
         </motion.nav>
 
-        {/* Barra de progresso — no topo, safe area; fina em mobile */}
+        {/* Barra de progresso — no topo, safe area; fina em mobile; manipulada via ref (sem re-render) */}
         <div className="fixed left-0 right-0 z-[60] h-0.5 sm:h-1.5 bg-slate-800/80 overflow-hidden pointer-events-none" style={{ top: 'env(safe-area-inset-top)' }}>
-          <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
-            style={{ width: `${scrollProgress}%` }}
-            transition={{ duration: 0.15 }}
+          <div
+            ref={scrollProgressRef}
+            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-[width] duration-150 ease-out"
+            style={{ width: '0%' }}
           />
         </div>
 

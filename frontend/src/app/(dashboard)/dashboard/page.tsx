@@ -14,7 +14,7 @@ import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
-import confetti from 'canvas-confetti';
+// canvas-confetti carregado dinamicamente (só quando necessário -- raro)
 import { useUser } from '@/lib/UserContext';
 import LoadingScreen from '@/components/LoadingScreen';
 import { hasProAccess } from '@/lib/utils';
@@ -208,10 +208,10 @@ export default function DashboardPage() {
               const overAmount = currentSpent - limit;
               return {
                 type: 'danger',
-                title: overAmount > 0 ? 'Limite Excedido!' : 'Limite Atingido!',
+                title: overAmount > 0 ? t.dashboard.page.limitExceeded : t.dashboard.page.limitReached,
                 message: overAmount > 0 
-                  ? `Gastaste mais ${formatCurrency(overAmount)} em ${cat.name} do que o planeado.`
-                  : `Atingiste o teu limite planeado de ${formatCurrency(limit)} em ${cat.name}.`,
+                  ? t.dashboard.page.limitExceededMessage.replace('{amount}', formatCurrency(overAmount)).replace('{category}', cat.name)
+                  : t.dashboard.page.limitReachedMessage.replace('{amount}', formatCurrency(limit)).replace('{category}', cat.name),
                 category: cat.name,
                 icon: 'AlertCircle'
               };
@@ -287,12 +287,12 @@ export default function DashboardPage() {
             setShowPaywall(false);
             setIsProcessingUpgrade(false);
             window.history.replaceState({}, '', '/dashboard');
-            confetti({
+            import('canvas-confetti').then(mod => mod.default({
               particleCount: 200,
               spread: 100,
               origin: { y: 0.6 },
               colors: ['#3b82f6', '#fbbf24', '#ffffff']
-            });
+            })).catch(() => {});
           } else if (retryCount < 5) {
             // Ainda não está completo, tentar novamente
             setTimeout(() => verifyAndActivate(retryCount + 1), 1500);
@@ -332,7 +332,11 @@ export default function DashboardPage() {
   // Carregar dados quando snapshot estiver pronto; ao mudar viewMonth o hook pede novo mês e snapshot/collections atualizam
   useEffect(() => {
     if (!userData) return;
-    if (snapshotLoading || !snapshot || !collections) return;
+    if (snapshotLoading || !snapshot || !collections) {
+      // Se o snapshot terminou de carregar mas não tem dados (erro), desbloquear loading
+      if (!snapshotLoading && !snapshot) setLoading(false);
+      return;
+    }
     fetchData();
   }, [snapshot, collections, userData, snapshotLoading, fetchData]);
 
@@ -346,48 +350,13 @@ export default function DashboardPage() {
     mutateSnapshot();
   }, [viewMonth.year, viewMonth.month, mutateSnapshot]);
 
-  // Prefetch dos dados da Análise Pro quando o dashboard já está carregado
+  // Prefetch da Análise Pro -- usa SWR mutate para aquecer cache sem duplicar requests
   useEffect(() => {
     if (!loading && isPro) {
-      // Aguardar 2 segundos após o dashboard carregar antes de fazer prefetch
       const timer = setTimeout(() => {
-        const prefetchAnalytics = async () => {
-          try {
-            // Verificar se já existe cache recente (menos de 30 segundos)
-            const cached = localStorage.getItem('analytics_cache');
-            if (cached) {
-              const { timestamp } = JSON.parse(cached);
-              if (Date.now() - timestamp < 30000) {
-                return; // Cache ainda fresca, não precisa atualizar
-              }
-            }
-            
-            const [profileRes, analyticsRes] = await Promise.all([
-              api.get('/auth/me'),
-              api.get('/insights/composite')
-            ]);
-            
-            const user = profileRes.data;
-            if (!hasProAccess(user)) return; // Só prefetch se for Pro ou admin
-            
-            let compositeData = {
-              ...analyticsRes.data,
-              subscription_status: user.subscription_status
-            };
-            
-            // Guardar no cache para uso imediato na página de analytics
-            localStorage.setItem('analytics_cache', JSON.stringify({
-              data: compositeData,
-              timestamp: Date.now()
-            }));
-          } catch {
-            // Silenciar erros de prefetch - não é crítico
-          }
-        };
-        
-        prefetchAnalytics();
-      }, 2000);
-      
+        // Revalidar SWR cache em background (sem fetch duplicado)
+        mutate('/insights/composite');
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [loading, isPro]);
@@ -500,7 +469,7 @@ export default function DashboardPage() {
         vsIncome = { pct: null, label: '—' };
       } else if (prevIncome === 0) {
         vsIncome = stats.income > 0 
-          ? { pct: Infinity, label: 'Novo' }
+          ? { pct: Infinity, label: t.dashboard.page.newLabel }
           : { pct: 0, label: '0%' };
       } else {
         const incomeChange = ((stats.income - prevIncome) / prevIncome) * 100;
@@ -514,7 +483,7 @@ export default function DashboardPage() {
         vsExpenses = { pct: null, label: '—' };
       } else if (prevExpenses === 0) {
         vsExpenses = stats.expenses > 0 
-          ? { pct: Infinity, label: 'Novo' }
+          ? { pct: Infinity, label: t.dashboard.page.newLabel }
           : { pct: 0, label: '0%' };
       } else {
         const expensesChange = ((stats.expenses - prevExpenses) / prevExpenses) * 100;
@@ -532,7 +501,7 @@ export default function DashboardPage() {
         // Se o saldo atual é positivo, é um aumento infinito (de 0 para X)
         // Se o saldo atual é negativo, é uma diminuição infinita (de 0 para -X)
         vsBalance = stats.balance !== 0
-          ? { pct: stats.balance > 0 ? Infinity : -Infinity, label: 'Novo' }
+          ? { pct: stats.balance > 0 ? Infinity : -Infinity, label: t.dashboard.page.newLabel }
           : { pct: 0, label: '0%' };
       } else {
         // Calcular percentagem normalmente quando temos valores válidos
@@ -755,10 +724,10 @@ export default function DashboardPage() {
       {/* 4 quadrados: [Evolução] [Analytics donut]; [Fundos] — scroll-section no mobile para content-visibility */}
       <section className="scroll-section mb-8 sm:mb-10 md:mb-12">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">Gráficos</h2>
+          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.charts}</h2>
           {isPro && (
             <Link href="/analytics" className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">
-              Ver análise completa
+              {t.dashboard.page.viewFullAnalysis}
             </Link>
           )}
         </div>
@@ -804,8 +773,8 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             <div className="flex items-center justify-end gap-6 mt-2 text-[10px] font-bold uppercase tracking-wider">
-              <span className="text-emerald-400">● Receitas</span>
-              <span className="text-red-400">● Despesas</span>
+              <span className="text-emerald-400">● {t.dashboard.page.incomeLabel}</span>
+              <span className="text-red-400">● {t.dashboard.page.expenseLabel}</span>
             </div>
           </motion.div>
 
@@ -821,8 +790,8 @@ export default function DashboardPage() {
                 <Activity size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">Analytics</h3>
-                <p className="text-xs text-slate-400 font-medium">Despesas por categoria</p>
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">{t.dashboard.page.analyticsTitle}</h3>
+                <p className="text-xs text-slate-400 font-medium">{t.dashboard.page.expensesByCategory}</p>
               </div>
             </div>
             <div className="relative flex-1 min-h-[280px] w-full flex items-center justify-center">
@@ -862,7 +831,7 @@ export default function DashboardPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-slate-500 text-sm italic">Sem despesas por categoria no período</p>
+                <p className="text-slate-500 text-sm italic">{t.dashboard.page.noExpensesByCategory}</p>
               )}
             </div>
             {chartProcessed.distribution.length > 0 && (
@@ -875,7 +844,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Maior gasto</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.biggestExpense}</p>
                     <p className="text-lg font-black text-violet-400 capitalize">
                       {chartProcessed.distribution[0]?.name ?? '—'}
                     </p>
@@ -1037,9 +1006,10 @@ export default function DashboardPage() {
       <AnimatePresence>
         {alerts.length > 0 && (
           <motion.section 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
             className="mb-12 space-y-4"
           >
             <div className="flex items-center gap-3 px-2 mb-4">

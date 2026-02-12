@@ -9,6 +9,8 @@ import {
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
+import { useUser } from '@/lib/UserContext';
+import { useRouter } from 'next/navigation';
 
 interface Integration {
   name: string;
@@ -25,6 +27,8 @@ interface RecentError {
 }
 
 export default function AdminHealthPage() {
+  const { user } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [recentErrors, setRecentErrors] = useState<RecentError[]>([]);
@@ -43,8 +47,12 @@ export default function AdminHealthPage() {
   };
 
   useEffect(() => {
+    if (user && !user.is_admin) {
+      router.push('/dashboard');
+      return;
+    }
     fetchHealth();
-  }, []);
+  }, [user]);
 
   const handleClearErrors = async () => {
     try {

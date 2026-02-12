@@ -5,6 +5,8 @@ import requests
 import logging
 import json
 import io
+import hmac
+import hashlib
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..models import database as models
@@ -35,12 +37,32 @@ async def download_media(url: str):
     res = requests.get(url, headers=headers)
     return res.content
 
+def _verify_whatsapp_signature(payload: bytes, signature_header: str | None, app_secret: str) -> bool:
+    """Verifica X-Hub-Signature-256 do Meta/WhatsApp Cloud API."""
+    if not signature_header:
+        return False
+    try:
+        expected = 'sha256=' + hmac.new(app_secret.encode(), payload, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, signature_header)
+    except Exception:
+        return False
+
+
 @router.post('/whatsapp')
 async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
     print("[WHATSAPP] MENSAGEM RECEBIDA!")
     try:
         # Tenta ler o corpo da mensagem como JSON
         body = await request.body()
+
+        # Verificar assinatura X-Hub-Signature-256 (Meta Cloud API)
+        whatsapp_app_secret = getattr(settings, 'WHATSAPP_APP_SECRET', None) or ''
+        if whatsapp_app_secret:
+            sig_header = request.headers.get('X-Hub-Signature-256')
+            if not _verify_whatsapp_signature(body, sig_header, whatsapp_app_secret):
+                logger.warning('WhatsApp webhook: assinatura inválida ou ausente')
+                raise HTTPException(status_code=403, detail='Invalid signature')
+
         print(f"📦 Raw Body: {body.decode()}")
         
         try:
@@ -71,13 +93,13 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
 
         print(f"📱 Mensagem de: {from_phone} | Tipo: {msg_type}")
 
-        # 1. Encontrar Utilizador (Log para debug)
-        user = db.query(models.User).filter(models.User.phone_number.contains(from_phone)).first()
+        # 1. Encontrar Utilizador (exact match para evitar colisões parciais)
+        user = db.query(models.User).filter(models.User.phone_number == from_phone).first()
         if not user:
             print(f"⚠️ Utilizador não encontrado para o número: {from_phone}")
-            # Se não encontrar, vamos tentar procurar sem o prefixo 351
+            # Se não encontrar, tentar sem o prefixo 351
             short_phone = from_phone[3:] if from_phone.startswith('351') else from_phone
-            user = db.query(models.User).filter(models.User.phone_number.contains(short_phone)).first()
+            user = db.query(models.User).filter(models.User.phone_number == short_phone).first()
             
             if not user:
                 # Tenta enviar uma mensagem de erro se tivermos token

@@ -5,10 +5,9 @@ import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { 
   Tag, Plus, Trash2, Edit2, Check, X, Lock,
-  ShoppingBag, Coffee, Car, Home, 
-  Smartphone, Utensils, Heart, Briefcase,
-  Gamepad, Plane, Zap, Layers, PieChart,
-  BarChart3, Target, Sparkles, Filter, AlertCircle,
+  Home, Utensils, Heart,
+  Zap, Layers, PieChart,
+  Target, Sparkles, Filter, AlertCircle,
   Landmark, ShieldCheck, TrendingUp, ChevronDown, ArrowRight,
   Loader2
 } from 'lucide-react';
@@ -17,7 +16,7 @@ import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { 
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, 
-  Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid
+  Tooltip
 } from 'recharts';
 
 interface Category {

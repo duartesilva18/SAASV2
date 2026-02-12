@@ -145,6 +145,473 @@ def check_rate_limit(chat_id: str) -> bool:
     _rate_limit_store[chat_id].append(now)
     return True
 
+# ==================== AI ROUTER: GPT-4o-mini conversational assistant ====================
+
+# Rate limit separado para chamadas GPT (5/min por user)
+_gpt_rate_limit_store: Dict[str, list] = defaultdict(list)
+_gpt_rate_limit_window = timedelta(minutes=1)
+_gpt_rate_limit_max = 5
+
+
+def _check_gpt_rate_limit(chat_id: str) -> bool:
+    """True se o user pode fazer mais chamadas GPT neste minuto."""
+    now = datetime.now()
+    _gpt_rate_limit_store[chat_id] = [
+        ts for ts in _gpt_rate_limit_store[chat_id]
+        if now - ts < _gpt_rate_limit_window
+    ]
+    if len(_gpt_rate_limit_store[chat_id]) >= _gpt_rate_limit_max:
+        return False
+    _gpt_rate_limit_store[chat_id].append(now)
+    return True
+
+
+def _is_obvious_transaction(text: str) -> bool:
+    """
+    Fast-path: se a mensagem claramente contem um valor monetario, e uma transacao.
+    Nestes casos saltamos o GPT e vamos direto para parse_transaction (mais rapido).
+    """
+    # Padroes obvios: "15€", "15 euros", "15e", "15,50€", numeros seguidos de moeda
+    return bool(re.search(
+        r'\d+(?:[.,]\d+)?\s*(?:€|eur(?:os?)?|e)\b',
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def _build_financial_context(user: models.User, workspace: models.Workspace, db: Session) -> str:
+    """
+    Constroi um resumo financeiro compacto para o system prompt do GPT.
+    Inclui: categorias, totais do mes, top gastos. Nao inclui dados pessoais.
+    """
+    today = date.today()
+    first_day = today.replace(day=1)
+
+    # Categorias do workspace
+    categories = db.query(models.Category).filter(
+        models.Category.workspace_id == workspace.id
+    ).all()
+    expense_cats = [c.name for c in categories if c.type == 'expense']
+    income_cats = [c.name for c in categories if c.type == 'income']
+
+    # Totais do mes
+    q = db.query(
+        func.sum(case([(models.Transaction.amount_cents < 0, models.Transaction.amount_cents)], else_=0)),
+        func.sum(case([(models.Transaction.amount_cents > 0, models.Transaction.amount_cents)], else_=0)),
+        func.count(models.Transaction.id),
+    ).filter(
+        models.Transaction.workspace_id == workspace.id,
+        models.Transaction.transaction_date >= first_day,
+        models.Transaction.transaction_date <= today,
+    ).first()
+    expenses_cents = abs(int(q[0] or 0))
+    income_cents = int(q[1] or 0)
+    tx_count = int(q[2] or 0)
+    balance_cents = income_cents - expenses_cents
+
+    # Top 5 categorias de despesa do mes
+    top_cats = db.query(
+        models.Category.name,
+        func.sum(func.abs(models.Transaction.amount_cents)).label('total'),
+    ).join(
+        models.Transaction, models.Transaction.category_id == models.Category.id
+    ).filter(
+        models.Transaction.workspace_id == workspace.id,
+        models.Transaction.transaction_date >= first_day,
+        models.Transaction.amount_cents < 0,
+    ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).limit(5).all()
+
+    top_str = ", ".join(f"{name} {int(total)/100:.0f}€" for name, total in top_cats) if top_cats else "sem dados"
+
+    currency = getattr(user, 'currency', 'EUR') or 'EUR'
+
+    return (
+        f"Hoje: {today.strftime('%d/%m/%Y')}. Moeda: {currency}.\n"
+        f"CATEGORIAS DE DESPESA: {', '.join(expense_cats[:25]) if expense_cats else 'nenhuma'}\n"
+        f"CATEGORIAS DE RECEITA: {', '.join(income_cats[:15]) if income_cats else 'nenhuma'}\n"
+        f"RESUMO DO MES ({today.strftime('%B %Y')}):\n"
+        f"  Despesas: {expenses_cents/100:.2f}€ | Receitas: {income_cents/100:.2f}€ | Saldo: {balance_cents/100:.2f}€ | {tx_count} transacoes\n"
+        f"  Top gastos: {top_str}\n"
+    )
+
+
+def _query_financial_data(query_type: str, workspace: models.Workspace, db: Session, params: dict) -> str:
+    """
+    Executa queries na BD com base no intent do GPT.
+    Retorna texto formatado com os resultados para o GPT montar a resposta final.
+    """
+    today = date.today()
+    first_day = today.replace(day=1)
+
+    if query_type == "gastos_categoria":
+        cat_name = (params.get("category") or "").strip()
+        if not cat_name:
+            return "Nenhuma categoria especificada."
+        cat = db.query(models.Category).filter(
+            models.Category.workspace_id == workspace.id,
+            func.lower(models.Category.name).contains(cat_name.lower()),
+        ).first()
+        if not cat:
+            return f"Categoria '{cat_name}' nao encontrada."
+        period_start = params.get("period_start")
+        period_end = params.get("period_end")
+        if period_start:
+            try:
+                start = datetime.strptime(period_start, "%Y-%m-%d").date()
+            except Exception:
+                start = first_day
+        else:
+            start = first_day
+        if period_end:
+            try:
+                end = datetime.strptime(period_end, "%Y-%m-%d").date()
+            except Exception:
+                end = today
+        else:
+            end = today
+        txs = db.query(models.Transaction).filter(
+            models.Transaction.workspace_id == workspace.id,
+            models.Transaction.category_id == cat.id,
+            models.Transaction.transaction_date >= start,
+            models.Transaction.transaction_date <= end,
+        ).order_by(models.Transaction.amount_cents).limit(20).all()
+        total = sum(abs(t.amount_cents) for t in txs)
+        lines = [f"- {t.description}: {abs(t.amount_cents)/100:.2f}€ ({t.transaction_date.strftime('%d/%m')})" for t in txs[:10]]
+        return (
+            f"Categoria: {cat.name}\nPeriodo: {start.strftime('%d/%m/%Y')} a {end.strftime('%d/%m/%Y')}\n"
+            f"Total: {total/100:.2f}€ ({len(txs)} transacoes)\n"
+            f"Transacoes:\n" + "\n".join(lines)
+        )
+
+    elif query_type == "total_periodo":
+        period_start = params.get("period_start")
+        period_end = params.get("period_end")
+        if period_start:
+            try:
+                start = datetime.strptime(period_start, "%Y-%m-%d").date()
+            except Exception:
+                start = first_day
+        else:
+            start = first_day
+        if period_end:
+            try:
+                end = datetime.strptime(period_end, "%Y-%m-%d").date()
+            except Exception:
+                end = today
+        else:
+            end = today
+        q = db.query(
+            func.sum(case([(models.Transaction.amount_cents < 0, models.Transaction.amount_cents)], else_=0)),
+            func.sum(case([(models.Transaction.amount_cents > 0, models.Transaction.amount_cents)], else_=0)),
+            func.count(models.Transaction.id),
+        ).filter(
+            models.Transaction.workspace_id == workspace.id,
+            models.Transaction.transaction_date >= start,
+            models.Transaction.transaction_date <= end,
+        ).first()
+        expenses = abs(int(q[0] or 0))
+        income = int(q[1] or 0)
+        count = int(q[2] or 0)
+        return (
+            f"Periodo: {start.strftime('%d/%m/%Y')} a {end.strftime('%d/%m/%Y')}\n"
+            f"Despesas: {expenses/100:.2f}€ | Receitas: {income/100:.2f}€ | Saldo: {(income-expenses)/100:.2f}€ | {count} transacoes"
+        )
+
+    elif query_type == "top_despesas":
+        limit = min(int(params.get("limit", 10)), 20)
+        period_start = params.get("period_start")
+        if period_start:
+            try:
+                start = datetime.strptime(period_start, "%Y-%m-%d").date()
+            except Exception:
+                start = first_day
+        else:
+            start = first_day
+        txs = db.query(models.Transaction).join(
+            models.Category, models.Transaction.category_id == models.Category.id
+        ).filter(
+            models.Transaction.workspace_id == workspace.id,
+            models.Transaction.transaction_date >= start,
+            models.Transaction.amount_cents < 0,
+        ).order_by(models.Transaction.amount_cents).limit(limit).all()
+        lines = []
+        for i, t in enumerate(txs, 1):
+            cat = db.query(models.Category).filter(models.Category.id == t.category_id).first()
+            cat_name = cat.name if cat else "?"
+            lines.append(f"{i}. {t.description} — {abs(t.amount_cents)/100:.2f}€ ({cat_name}, {t.transaction_date.strftime('%d/%m')})")
+        return f"Top {len(txs)} maiores despesas desde {start.strftime('%d/%m/%Y')}:\n" + "\n".join(lines)
+
+    elif query_type == "por_categoria":
+        start = first_day
+        cats = db.query(
+            models.Category.name,
+            func.sum(func.abs(models.Transaction.amount_cents)).label('total'),
+            func.count(models.Transaction.id).label('cnt'),
+        ).join(
+            models.Transaction, models.Transaction.category_id == models.Category.id
+        ).filter(
+            models.Transaction.workspace_id == workspace.id,
+            models.Transaction.transaction_date >= start,
+            models.Transaction.amount_cents < 0,
+        ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).all()
+        lines = [f"- {name}: {int(total)/100:.2f}€ ({cnt} tx)" for name, total, cnt in cats]
+        return f"Despesas por categoria ({today.strftime('%B %Y')}):\n" + "\n".join(lines) if lines else "Sem despesas este mes."
+
+    return "Tipo de consulta desconhecido."
+
+
+def _build_system_prompt(context: str, language: str) -> str:
+    """Constroi o system prompt para o AI Router."""
+    lang_instruction = "Responde sempre em português." if language == "pt" else "Always reply in English."
+
+    return f"""Tu es o Finly, um assistente financeiro pessoal no Telegram. Personalidade: calmo, zen, direto, usa emojis com moderacao.
+{lang_instruction}
+
+{context}
+
+INSTRUCOES RIGOROSAS — responde SEMPRE em JSON valido, sem texto extra:
+
+1. TRANSACAO — se a mensagem regista um gasto/receita (contem valor, descricao de compra, pagamento, etc.):
+{{"intent":"transaction","transactions":[{{"amount":15.0,"description":"Almoco","type":"expense","category":"Alimentacao"}}]}}
+- amount: valor positivo (float)
+- type: "expense" ou "income"
+- category: nome EXATO de uma categoria existente (lista acima). Se nenhuma encaixa, usa a mais proxima.
+- Para multiplas transacoes na mesma mensagem, inclui todas no array.
+
+2. PERGUNTA FINANCEIRA — se pergunta sobre dados (quanto gastei, qual categoria, totais, etc.):
+{{"intent":"question","query_type":"gastos_categoria|total_periodo|top_despesas|por_categoria","params":{{"category":"nome","period_start":"YYYY-MM-DD","period_end":"YYYY-MM-DD","limit":10}}}}
+- Preenche apenas os params relevantes para a pergunta. Omite os que nao se aplicam.
+
+3. CONSELHO/ANALISE — se pede dicas, sugestoes, analise de habitos:
+{{"intent":"advice"}}
+
+4. CONVERSA CASUAL — saudacoes, agradecimentos, conversa geral:
+{{"intent":"chat","response":"texto da resposta em HTML simples (bold com <b>, italico com <i>)"}}
+
+REGRAS:
+- Responde APENAS com o objecto JSON. Sem explicacoes, sem markdown, sem ```json```.
+- Para transacoes: nao inventes categorias; usa as existentes.
+- Se a mensagem e ambigua entre transacao e pergunta, prioriza transacao se contem um valor claro.
+"""
+
+
+async def ai_route_message(
+    text: str,
+    chat_id: str,
+    user: models.User,
+    workspace: models.Workspace,
+    db: Session,
+    t,
+) -> dict:
+    """
+    AI Router: envia a mensagem ao GPT-4o-mini para classificar intent e extrair dados.
+    Retorna dict com 'intent' e dados relevantes.
+    Fallback: retorna intent='fallback' se GPT falhar (para usar parse_transaction).
+    """
+    if not settings.OPENAI_API_KEY:
+        return {"intent": "fallback"}
+
+    language = user.language if user.language else "pt"
+    context = _build_financial_context(user, workspace, db)
+    system_prompt = _build_system_prompt(context, language)
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text},
+            ],
+            max_tokens=600,
+            temperature=0.1,
+        )
+
+        raw = (response.choices[0].message.content or "").strip()
+        logger.info("[AI Router] GPT raw response: %s", raw[:300])
+
+        # Limpar resposta: por vezes GPT mete ```json ... ```
+        if raw.startswith("```"):
+            raw = re.sub(r'^```(?:json)?\s*', '', raw)
+            raw = re.sub(r'\s*```$', '', raw)
+
+        result = json.loads(raw)
+        intent = result.get("intent", "chat")
+        logger.info("[AI Router] intent=%s", intent)
+
+        if intent == "transaction":
+            transactions = result.get("transactions", [])
+            if not transactions:
+                return {"intent": "fallback"}
+            return {"intent": "transaction", "transactions": transactions}
+
+        elif intent == "question":
+            query_type = result.get("query_type", "total_periodo")
+            params = result.get("params", {})
+            # Executar query na BD
+            data_text = _query_financial_data(query_type, workspace, db, params)
+            if not data_text or "nao encontrad" in data_text.lower():
+                return {"intent": "chat", "response": t('ai_no_data')}
+            # Segundo pedido ao GPT: formatar resposta bonita com os dados reais
+            format_prompt = (
+                f"Com base nestes dados financeiros reais do utilizador:\n\n{data_text}\n\n"
+                f"Pergunta original: \"{text}\"\n\n"
+                f"Formata uma resposta clara e bonita em HTML simples (usa <b> para bold, <i> para italico). "
+                f"Inclui totais, medias se relevante, e comparacoes. Nao uses markdown, usa HTML. "
+                f"Maximo 500 caracteres. {'Responde em portugues.' if language == 'pt' else 'Reply in English.'}"
+            )
+            fmt_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": format_prompt}],
+                max_tokens=300,
+                temperature=0.3,
+            )
+            formatted = (fmt_response.choices[0].message.content or "").strip()
+            # Limpar markdown residual
+            formatted = re.sub(r'```(?:html)?\s*', '', formatted)
+            formatted = re.sub(r'\s*```', '', formatted)
+            return {"intent": "question", "response": t('ai_question_header') + formatted}
+
+        elif intent == "advice":
+            # Pedir conselho personalizado com contexto financeiro
+            advice_prompt = (
+                f"Es um consultor financeiro pessoal. Com base nestes dados:\n\n{context}\n\n"
+                f"O utilizador pediu: \"{text}\"\n\n"
+                f"Da conselhos praticos e personalizados. Identifica padroes nos gastos e sugere melhorias concretas. "
+                f"Usa HTML simples (<b>, <i>). Maximo 600 caracteres. "
+                f"Tom: calmo, zen, encorajador. {'Responde em portugues.' if language == 'pt' else 'Reply in English.'}"
+            )
+            adv_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": advice_prompt}],
+                max_tokens=350,
+                temperature=0.5,
+            )
+            advice_text = (adv_response.choices[0].message.content or "").strip()
+            advice_text = re.sub(r'```(?:html)?\s*', '', advice_text)
+            advice_text = re.sub(r'\s*```', '', advice_text)
+            return {"intent": "advice", "response": t('ai_advice_header') + advice_text}
+
+        elif intent == "chat":
+            chat_response = result.get("response", "")
+            if not chat_response:
+                chat_response = "🧘‍♂️"
+            return {"intent": "chat", "response": chat_response}
+
+        return {"intent": "fallback"}
+
+    except json.JSONDecodeError as e:
+        logger.warning("[AI Router] JSON decode error: %s | raw: %s", e, raw[:200] if 'raw' in dir() else '?')
+        return {"intent": "fallback"}
+    except ImportError:
+        logger.warning("[AI Router] openai not installed")
+        return {"intent": "fallback"}
+    except Exception as e:
+        err_str = str(e).lower()
+        if "429" in err_str or "quota" in err_str or "rate" in err_str:
+            logger.warning("[AI Router] OpenAI rate limit: %s", e)
+            return {"intent": "gpt_rate_limited"}
+        logger.error("[AI Router] Error: %s", e, exc_info=True)
+        return {"intent": "fallback"}
+
+
+def _handle_ai_transaction(
+    transactions_data: list,
+    chat_id: str,
+    user: models.User,
+    workspace: models.Workspace,
+    db: Session,
+    t,
+) -> dict:
+    """
+    Processa transacoes extraidas pelo AI Router.
+    Mapeia nomes de categoria para IDs reais e cria pendentes/transacoes.
+    Retorna dict com status.
+    """
+    categories = db.query(models.Category).filter(
+        models.Category.workspace_id == workspace.id
+    ).all()
+
+    parsed_list = []
+    for tx in transactions_data:
+        amount = float(tx.get("amount", 0))
+        if amount <= 0:
+            continue
+        description = (tx.get("description") or "Transacao").strip()[:255]
+        tipo = tx.get("type", "expense")
+        cat_name = (tx.get("category") or "").strip()
+
+        # Encontrar categoria por nome (exact -> fuzzy -> fallback)
+        filtered = [c for c in categories if c.type == tipo]
+        category_id = None
+        for c in filtered:
+            if c.name.lower() == cat_name.lower():
+                category_id = c.id
+                break
+        if not category_id:
+            match = find_best_category_match(cat_name, filtered, threshold=0.5)
+            if match:
+                category_id = match.id
+        if not category_id and filtered:
+            category_id = filtered[0].id
+
+        if not category_id:
+            continue
+
+        amount_cents = int(amount * 100)
+        if tipo == "expense":
+            amount_cents = -abs(amount_cents)
+        else:
+            amount_cents = abs(amount_cents)
+
+        parsed_list.append({
+            "amount": amount,
+            "amount_cents": amount_cents,
+            "description": description,
+            "type": tipo,
+            "category_id": category_id,
+            "inference_source": "gpt4o_mini",
+            "decision_reason": "ai_router",
+            "needs_review": False,
+            "transaction_date": date.today(),
+        })
+
+    if not parsed_list:
+        return {"status": "no_valid_transactions"}
+
+    # Se multiplas, usar batch flow
+    if len(parsed_list) > 1:
+        return {
+            "status": "multiple",
+            "parsed": {"multiple": True, "transactions": parsed_list},
+        }
+
+    # Transacao unica
+    tx = parsed_list[0]
+    cat = db.query(models.Category).filter(models.Category.id == tx["category_id"]).first()
+    cat_name = cat.name if cat else "Outros"
+
+    return {
+        "status": "single",
+        "parsed": {
+            "amount": tx["amount"],
+            "description": tx["description"],
+            "type": tx["type"],
+            "category_id": tx["category_id"],
+            "inference_source": tx["inference_source"],
+            "decision_reason": tx["decision_reason"],
+            "needs_review": tx["needs_review"],
+            "transaction_date": tx["transaction_date"],
+        },
+        "category_name": cat_name,
+    }
+
+
+# ==================== END AI ROUTER ====================
+
+
 def normalize_text(text: str) -> str:
     """Normaliza texto removendo acentos e símbolos"""
     # Remove acentos
@@ -2012,9 +2479,13 @@ def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = No
             logger.error("Erro ao enviar mensagem Telegram: %s", e)
             return last_result
 
+    sent_message_id = None
+    if last_result:
+        sent_message_id = (last_result.get("result") or {}).get("message_id")
+
     if last_result and pin_message and len(chunks) == 1:
         try:
-            message_id = last_result.get("result", {}).get("message_id")
+            message_id = sent_message_id
             if message_id:
                 pin_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/pinChatMessage"
                 requests.post(
@@ -2026,7 +2497,20 @@ def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = No
         except Exception as e:
             logger.warning("Erro ao fixar mensagem: %s", e)
 
-    return last_result
+    return sent_message_id
+
+
+def _delete_telegram_msg(chat_id: int, message_id: int) -> bool:
+    """Apaga uma mensagem no Telegram (ex: indicador 'a pensar...')."""
+    if not settings.TELEGRAM_BOT_TOKEN or not message_id:
+        return False
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/deleteMessage"
+    try:
+        r = requests.post(url, json={"chat_id": chat_id, "message_id": message_id}, timeout=5)
+        return r.ok
+    except Exception as e:
+        logger.warning("Erro ao apagar mensagem Telegram: %s", e)
+        return False
 
 
 def edit_telegram_message(chat_id: int, message_id: int, text: str, reply_markup: Optional[Dict] = None) -> bool:
@@ -3150,24 +3634,101 @@ async def telegram_webhook(
                 logger.info("[Telegram] Foto processada: %s transações (extrato/tabela)", len(parsed.get("transactions", [])))
             else:
                 logger.info("[Telegram] Foto processada: 1 transação - %s", parsed.get("description"))
-        # Processar texto (corrigir com histórico antes do parse: voz e texto)
+        # Processar texto: AI Router (GPT) ou fast-path regex
         elif text:
             text = correct_transcription_with_history(text, workspace.id, db)
-            logger.info(f"Processando texto como transação: '{text}'")
+            logger.info(f"Processando texto: '{text}'")
             default_cat_id = getattr(user, 'telegram_default_category_id', None)
-            try:
-                parsed = parse_transaction(text, workspace, db, default_category_id=default_cat_id)
-            except AIUnavailableError as ae:
-                err_str = str(ae).lower()
-                if "429" in err_str or "rate" in err_str or "limit" in err_str:
-                    send_telegram_msg(chat_id, t('ai_busy'))
+
+            # FAST-PATH: mensagens com valor monetario obvio -> parse_transaction direto (sem GPT)
+            if _is_obvious_transaction(text):
+                logger.info("[Fast-path] Mensagem com valor obvio, a usar parse_transaction direto")
+                try:
+                    parsed = parse_transaction(text, workspace, db, default_category_id=default_cat_id)
+                except AIUnavailableError as ae:
+                    err_str = str(ae).lower()
+                    if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                        send_telegram_msg(chat_id, t('ai_busy'))
+                    else:
+                        send_telegram_msg(chat_id, t('ai_unavailable'))
+                    return {'status': 'error'}
+
+                if parsed:
+                    logger.info(f"[Fast-path] Resultado do parsing: {parsed}")
                 else:
-                    send_telegram_msg(chat_id, t('ai_unavailable'))
-                return {'status': 'error'}
-            logger.info(f"Resultado do parsing: {parsed}")
-            
+                    logger.warning(f"[Fast-path] parse_transaction falhou, a tentar AI Router")
+                    # Fallthrough: se o regex falha mesmo com valor, tentar o AI Router
+
+            # AI ROUTER: GPT-4o-mini decide intent (transacao, pergunta, conselho, chat)
             if not parsed:
-                logger.warning(f"Não foi possível fazer parse da mensagem: '{text}'")
+                if not _check_gpt_rate_limit(str(chat_id)):
+                    logger.warning("[AI Router] Rate limit GPT para chat_id=%s", chat_id)
+                    send_telegram_msg(chat_id, t('ai_rate_limited'))
+                    return {'status': 'gpt_rate_limited'}
+
+                # Enviar indicador "a pensar..." enquanto GPT processa
+                thinking_msg_id = send_telegram_msg(chat_id, t('ai_thinking'))
+
+                result = await ai_route_message(text, str(chat_id), user, workspace, db, t)
+                intent = result.get("intent", "fallback")
+                logger.info("[AI Router] intent=%s para texto='%s'", intent, text[:60])
+
+                # Apagar mensagem "a pensar..."
+                if thinking_msg_id:
+                    try:
+                        _delete_telegram_msg(chat_id, thinking_msg_id)
+                    except Exception:
+                        pass
+
+                if intent == "gpt_rate_limited":
+                    send_telegram_msg(chat_id, t('ai_rate_limited'))
+                    return {'status': 'gpt_rate_limited'}
+
+                if intent == "transaction":
+                    # GPT extraiu transacoes -> processar
+                    ai_result = _handle_ai_transaction(
+                        result.get("transactions", []),
+                        str(chat_id), user, workspace, db, t,
+                    )
+                    if ai_result["status"] == "no_valid_transactions":
+                        # GPT pensou que era transacao mas nao conseguiu extrair -> fallback regex
+                        try:
+                            parsed = parse_transaction(text, workspace, db, default_category_id=default_cat_id)
+                        except AIUnavailableError:
+                            pass
+                        if not parsed:
+                            send_telegram_msg(chat_id, t('ai_error'))
+                            return {'status': 'error'}
+                    elif ai_result["status"] == "multiple":
+                        parsed = ai_result["parsed"]
+                    elif ai_result["status"] == "single":
+                        parsed = ai_result["parsed"]
+                    else:
+                        send_telegram_msg(chat_id, t('ai_error'))
+                        return {'status': 'error'}
+
+                elif intent in ("question", "advice", "chat"):
+                    # Enviar resposta do GPT diretamente
+                    response_text = result.get("response", "")
+                    if response_text:
+                        send_telegram_msg(chat_id, response_text)
+                    return {'status': 'success'}
+
+                elif intent == "fallback":
+                    # GPT falhou -> fallback para parse_transaction
+                    logger.info("[AI Router] Fallback para parse_transaction")
+                    try:
+                        parsed = parse_transaction(text, workspace, db, default_category_id=default_cat_id)
+                    except AIUnavailableError as ae:
+                        err_str = str(ae).lower()
+                        if "429" in err_str or "rate" in err_str or "limit" in err_str:
+                            send_telegram_msg(chat_id, t('ai_busy'))
+                        else:
+                            send_telegram_msg(chat_id, t('ai_unavailable'))
+                        return {'status': 'error'}
+
+            if not parsed:
+                logger.warning(f"Nao foi possivel fazer parse da mensagem: '{text}'")
                 send_telegram_msg(chat_id, t('parse_error'))
                 return {'status': 'error'}
         

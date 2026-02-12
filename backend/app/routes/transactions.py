@@ -69,6 +69,7 @@ def process_automatic_recurring(db: Session, workspace_id: UUID):
 
 @router.get('/', response_model=List[schemas.TransactionResponse])
 async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    limit = min(max(limit, 1), 500)  # Cap entre 1 e 500
     import logging
     logger = logging.getLogger("transactions")
     
@@ -214,6 +215,8 @@ async def create_transaction(request: Request, transaction_in: schemas.Transacti
 @router.patch('/{transaction_id}', response_model=schemas.TransactionResponse)
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_transaction = db.query(models.Transaction).filter(
         models.Transaction.id == transaction_id,
         models.Transaction.workspace_id == workspace.id
@@ -262,6 +265,8 @@ async def update_transaction(request: Request, transaction_id: UUID, transaction
 @router.delete('/{transaction_id}')
 async def delete_transaction(request: Request, transaction_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_transaction = db.query(models.Transaction).filter(
         models.Transaction.id == transaction_id,
         models.Transaction.workspace_id == workspace.id

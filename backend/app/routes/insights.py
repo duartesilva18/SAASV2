@@ -928,14 +928,14 @@ async def get_analytics_composite(
     zen_insights = await get_zen_insights(request, db, current_user)
     
     # Filtrar transações de seed (1 cêntimo) diretamente na query SQL - muito mais rápido
-    # Usar eager loading para evitar N+1 queries
+    # Usar eager loading para evitar N+1 queries; limitar a 2000 transações para performance
     from sqlalchemy.orm import joinedload
     transactions = db.query(models.Transaction).options(
         joinedload(models.Transaction.category)
     ).filter(
         models.Transaction.workspace_id == workspace.id,
         func.abs(models.Transaction.amount_cents) != 1
-    ).order_by(models.Transaction.transaction_date.desc()).all()
+    ).order_by(models.Transaction.transaction_date.desc()).limit(2000).all()
     
     categories = db.query(models.Category).filter(
         models.Category.workspace_id == workspace.id

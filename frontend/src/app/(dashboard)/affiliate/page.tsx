@@ -75,7 +75,7 @@ interface AffiliateStats {
 
 export default function AffiliatePage() {
   const { t, formatCurrency } = useTranslation();
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
   const router = useRouter();
   const [status, setStatus] = useState<AffiliateStatus | null>(null);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
@@ -147,10 +147,8 @@ export default function AffiliatePage() {
           console.warn('Erro ao carregar stats:', err);
         }
         
-        // Atualizar user context se disponível
-        if (user) {
-          user.is_affiliate = true;
-        }
+        // Atualizar user context via refresh (não mutar diretamente)
+        await refreshUser();
         
         setToast({
           isVisible: true,
@@ -191,10 +189,24 @@ export default function AffiliatePage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback para browsers sem Clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const formatPrice = (cents: number) => formatCurrency(cents / 100);
@@ -274,10 +286,10 @@ export default function AffiliatePage() {
               >
                 <div className="flex items-center justify-center gap-3 text-blue-400">
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="text-lg font-black uppercase tracking-wider">A pensar...</span>
+                  <span className="text-lg font-black uppercase tracking-wider">{(t.dashboard?.affiliate as any)?.thinking || 'A pensar...'}</span>
                 </div>
                 <p className="text-sm text-slate-500 font-medium">
-                  A verificar se a tua conta tem mais de 5 meses...
+                  {(t.dashboard?.affiliate as any)?.verifyingAccount || 'A verificar se a tua conta tem mais de 3 meses...'}
                 </p>
               </motion.div>
             ) : (
@@ -333,7 +345,7 @@ export default function AffiliatePage() {
                     )}
                   </p>
                   <p className="text-xs text-amber-400/80 font-medium leading-relaxed mt-2">
-                    💡 Dica: Considera fazer upgrade para o plano de 3 meses ou anual para teres acesso imediato aos afiliados!
+                    {(t.dashboard?.affiliate as any)?.upgradeTip || '💡 Dica: Considera fazer upgrade para o plano de 3 meses ou anual para teres acesso imediato aos afiliados!'}
                   </p>
                 </div>
               </motion.div>
