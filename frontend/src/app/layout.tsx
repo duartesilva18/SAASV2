@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { UserProvider } from "@/lib/UserContext";
 import { InstallPromptProvider } from "@/lib/InstallPromptContext";
+import { ThemeProvider } from "@/lib/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/CookieBanner";
 
@@ -131,14 +132,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} antialiased overflow-x-hidden`}
       >
         <ErrorBoundary>
-          <InstallPromptProvider>
-            <LanguageProvider>
-              <UserProvider>
-                {children}
-                <CookieBanner />
-              </UserProvider>
-            </LanguageProvider>
-          </InstallPromptProvider>
+          <ThemeProvider>
+            <InstallPromptProvider>
+              <LanguageProvider>
+                <UserProvider>
+                  {children}
+                  <CookieBanner />
+                </UserProvider>
+              </LanguageProvider>
+            </InstallPromptProvider>
+          </ThemeProvider>
         </ErrorBoundary>
         <script
           dangerouslySetInnerHTML={{

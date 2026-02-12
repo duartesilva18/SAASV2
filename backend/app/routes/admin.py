@@ -428,7 +428,20 @@ async def update_user_admin(request: Request, user_id: UUID, user_update: schema
         raise HTTPException(status_code=404, detail='Utilizador não encontrado')
     
     update_data = user_update.dict(exclude_unset=True)
+    # Prevent admin from changing their own admin status via this endpoint
+    if user_id == admin.id and 'is_admin' in update_data:
+        raise HTTPException(status_code=400, detail='Não podes alterar o teu próprio estado de admin.')
+    # Block sensitive fields that should not be set via generic update
+    blocked_fields = {'password_hash', 'id', 'created_at'}
     for field, value in update_data.items():
+        if field in blocked_fields:
+            continue
+        # If changing email, check uniqueness
+        if field == 'email' and value:
+            value = value.strip().lower()
+            existing = db.query(models.User).filter(models.User.email == value, models.User.id != user_id).first()
+            if existing:
+                raise HTTPException(status_code=409, detail='Email já está em uso.')
         setattr(user, field, value)
     
     db.commit()

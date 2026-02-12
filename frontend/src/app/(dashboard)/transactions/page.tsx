@@ -62,7 +62,7 @@ function TransactionsPageContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [evolutionPeriod, setEvolutionPeriod] = useState<'weekly' | 'daily'>('weekly');
-  const itemsPerPage = 10;
+  const itemsPerPage = 13;
   
   const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -393,7 +393,7 @@ function TransactionsPageContent() {
   const handleEdit = (t: Transaction) => {
     setEditingTransaction(t);
     setFormData({
-      amount: (t.amount_cents / 100).toString(),
+      amount: Math.abs(t.amount_cents / 100).toString(),
       description: t.description,
       category_id: t.category_id,
       transaction_date: t.transaction_date
@@ -414,63 +414,78 @@ function TransactionsPageContent() {
     >
       {/* Hero Header */}
       <section className="relative">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-8 lg:gap-10">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-6">
-              <Sparkles size={14} className="text-blue-400" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t.dashboard.transactions.yourAbundanceDiary}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-lg mb-3">
+              <Sparkles size={12} className="text-blue-400" />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.transactions.yourAbundanceDiary}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white leading-none">
-              {t.dashboard.transactions.activityRecord} <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 italic">{t.dashboard.transactions.activity}</span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white mb-1">
+              {t.dashboard.transactions.activityRecord}
             </h1>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium italic">{t.dashboard.transactions.activity}</p>
           </div>
+          <button
+            onClick={() => {
+              setEditingTransaction(null);
+              setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+              setShowAddModal(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
+          >
+            <Plus size={16} className="shrink-0" />
+            <span>{t.dashboard.transactions.addNew}</span>
+          </button>
+        </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 flex-1 min-w-0">
-              <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 rounded-2xl min-w-0 shadow-2xl relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2 text-slate-500">
-                  <ArrowUpRight size={16} className="text-emerald-500 shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">{t.dashboard.transactions.totalIncome}</span>
-                </div>
-                <p className="text-xl sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
+        {/* Stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <ArrowUpRight size={14} className="text-emerald-400" />
               </div>
-
-              <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 rounded-2xl min-w-0 shadow-2xl relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2 text-slate-500">
-                  <ArrowDownRight size={16} className="text-red-500 shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">{t.dashboard.transactions.totalExpenses}</span>
-                </div>
-                <p className="text-xl sm:text-3xl font-black text-white truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
-              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.totalIncome}</span>
             </div>
-
-            <button
-              onClick={() => {
-                setEditingTransaction(null);
-                setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
-                setShowAddModal(true);
-              }}
-              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
-            >
-              <Plus size={18} className="shrink-0" />
-              <span>{t.dashboard.transactions.addNew}</span>
-            </button>
+            <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate">{formatCurrency(stats.income)}</p>
+          </div>
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <ArrowDownRight size={14} className="text-red-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.totalExpenses}</span>
+            </div>
+            <p className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate">{formatCurrency(stats.expenses)}</p>
+          </div>
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl col-span-2 sm:col-span-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${(stats.income - stats.expenses) >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                <Wallet size={14} className={(stats.income - stats.expenses) >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Balanço</span>
+            </div>
+            <p className={`text-lg sm:text-xl font-black tabular-nums truncate ${(stats.income - stats.expenses) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {(stats.income - stats.expenses) >= 0 ? '+' : ''}{formatCurrency(stats.income - stats.expenses)}
+            </p>
           </div>
         </div>
       </section>
 
       {/* Filters & Search */}
-      <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] p-4 sm:p-6 md:p-8">
-        <div className="flex flex-col gap-6 mb-6">
-          <div className="flex items-center gap-2 sm:gap-4 bg-slate-950/50 border border-slate-800 rounded-2xl p-1.5 w-full">
+      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Tabs */}
+          <div className="flex items-center bg-slate-950/60 border border-slate-700/50 rounded-xl p-1 shrink-0">
             {(['all', 'income', 'expense'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   activeTab === tab 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                  ? tab === 'income' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
+                    : tab === 'expense' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                    : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
                   : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -479,132 +494,112 @@ function TransactionsPageContent() {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 w-full">
+          {/* Search & Category filter */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative flex-1 group">
-              <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
               <input 
                 type="text" 
                 placeholder={t.dashboard.transactions.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-3 sm:py-4 pl-14 pr-5 text-white placeholder:text-slate-800 focus:border-blue-500/50 transition-all outline-none font-medium text-sm"
+                className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl py-2.5 pl-10 pr-4 text-white placeholder:text-slate-600 focus:border-blue-500/40 transition-all outline-none font-medium text-sm"
               />
             </div>
-
-            <div className="relative group w-full sm:min-w-[200px] sm:w-auto">
-              <Tag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <div className="relative sm:min-w-[180px]">
+              <Tag size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl py-3 sm:py-4 pl-14 pr-10 text-white appearance-none focus:border-blue-500/50 transition-all outline-none font-medium cursor-pointer text-sm"
+                className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl py-2.5 pl-10 pr-8 text-sm text-white appearance-none focus:border-blue-500/40 transition-all outline-none font-medium cursor-pointer"
               >
                 <option value="all">{t.dashboard.transactions.allCategories}</option>
                 {categories.map(c => (
                   <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
                 ))}
               </select>
-              <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             </div>
           </div>
         </div>
 
-        <div className="flex items-start sm:items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/5 border border-blue-500/10 rounded-xl sm:rounded-2xl w-full sm:w-fit">
-          <Info size={14} className="text-blue-400 shrink-0 mt-0.5 sm:mt-0" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 min-w-0">
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/5 border border-blue-500/10 rounded-lg w-fit">
+          <Info size={12} className="text-blue-400 shrink-0" />
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
             {t.dashboard.transactions.zenTip} <span className="text-blue-400">{t.dashboard.transactions.zenTipText.split('Clica em qualquer linha')[0]}</span>{t.dashboard.transactions.zenTipText.split('Clica em qualquer linha')[1]}
           </p>
         </div>
       </section>
 
-      {/* Transactions List & Charts — tabela 2/3, gráficos 1/3; em ecrãs pequenos os gráficos vão para baixo */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-        {/* Left: Transactions Table (desktop) / Cards (mobile) — ocupa 2/3 no xl */}
-        <section className="xl:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[32px] overflow-hidden shadow-2xl">
+      {/* Transactions List & Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
+        {/* Left: Transactions Table (desktop) / Cards (mobile) */}
+        <section className="xl:col-span-2 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl h-fit">
         {/* Mobile: card list */}
-        <div className="md:hidden px-4 py-4 space-y-3">
+        <div className="md:hidden px-3 py-3 space-y-2">
           {filteredTransactions.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6 border border-slate-800">
-                <SearchX size={28} className="text-slate-700 animate-pulse" />
+            <div className="py-14 flex flex-col items-center justify-center text-center">
+              <div className="w-14 h-14 bg-slate-800/80 rounded-xl flex items-center justify-center mb-4 border border-slate-700/50">
+                <SearchX size={24} className="text-slate-600" />
               </div>
-              <h3 className="text-lg font-black text-white mb-2">{t.dashboard.transactions.noResultsTitle}</h3>
-              <p className="text-slate-500 text-xs font-medium italic max-w-xs mx-auto">
-                {t.dashboard.transactions.noResultsHint}
-              </p>
+              <h3 className="text-sm font-bold text-white mb-1">{t.dashboard.transactions.noResultsTitle}</h3>
+              <p className="text-slate-500 text-xs font-medium italic max-w-xs mx-auto">{t.dashboard.transactions.noResultsHint}</p>
             </div>
           ) : (
             <>
-              {paginatedTransactions.map((transaction) => {
+              {paginatedTransactions.map((transaction, i) => {
                 const cat = categories.find(c => c.id === transaction.category_id);
                 const isIncome = cat && cat.vault_type !== 'none'
                   ? transaction.amount_cents > 0
                   : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
                 return (
-                  <button
+                  <motion.button
                     key={transaction.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02 }}
                     type="button"
                     onClick={() => setSelectedTransaction(transaction)}
-                    className="w-full text-left bg-slate-800/50 hover:bg-slate-800/80 border border-slate-700/50 rounded-2xl p-4 active:scale-[0.99] transition-all touch-manipulation"
+                    className="w-full text-left bg-slate-950/50 hover:bg-slate-800/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-3 active:scale-[0.99] transition-all touch-manipulation"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-white truncate">{transaction.description}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[10px] font-black uppercase text-slate-500">
-                            {new Date(transaction.transaction_date).getDate()} {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
-                          </span>
-                          <span className="text-slate-600">·</span>
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {isIncome ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate">{transaction.description}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-bold text-slate-500">
+                              {new Date(transaction.transaction_date).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                            </span>
+                            <span className="text-slate-700">·</span>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                              <span className="text-[9px] font-bold text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <span className={`text-sm font-black shrink-0 ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
+                      <span className={`text-sm font-black shrink-0 tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
                         {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
                       </span>
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
               {filteredTransactions.length > itemsPerPage && (
-                <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800/50">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
-                    {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>
+                <div className="pt-3 flex items-center justify-between gap-3 border-t border-slate-700/30">
+                  <p className="text-[9px] font-bold text-slate-500 tabular-nums">
+                    {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredTransactions.length)} / {filteredTransactions.length}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer touch-manipulation"
-                    >
-                      <ChevronDown size={18} className="rotate-90" />
+                  <div className="flex items-center gap-1">
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg border border-slate-700/50 text-slate-500 hover:text-white disabled:opacity-30 transition-all cursor-pointer touch-manipulation">
+                      <ChevronDown size={14} className="rotate-90" />
                     </button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
-                        .map((page, index, array) => (
-                          <div key={page} className="flex items-center gap-1">
-                            {index > 0 && array[index - 1] !== page - 1 && (
-                              <span className="text-slate-700 px-1">...</span>
-                            )}
-                            <button
-                              onClick={() => setCurrentPage(page)}
-                              className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all cursor-pointer touch-manipulation ${
-                                currentPage === page ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer touch-manipulation"
-                    >
-                      <ChevronDown size={18} className="-rotate-90" />
+                    <span className="text-[10px] font-bold text-white px-2 tabular-nums">{currentPage}/{totalPages}</span>
+                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg border border-slate-700/50 text-slate-500 hover:text-white disabled:opacity-30 transition-all cursor-pointer touch-manipulation">
+                      <ChevronDown size={14} className="-rotate-90" />
                     </button>
                   </div>
                 </div>
@@ -614,65 +609,55 @@ function TransactionsPageContent() {
         </div>
 
         {/* Desktop: tabela com paginação */}
-        <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+        <div className="hidden md:block overflow-x-auto">
+          <div className="inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
-                <tr className="border-b border-slate-800/50">
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.date}</th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{t.dashboard.transactions.table.description}</th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 hidden sm:table-cell">{t.dashboard.transactions.table.category}</th>
-                  <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 text-right">{t.dashboard.transactions.table.amount}</th>
+                <tr className="border-b border-slate-700/40">
+                  <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.table.date}</th>
+                  <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.table.description}</th>
+                  <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500 hidden sm:table-cell">{t.dashboard.transactions.table.category}</th>
+                  <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500 text-right">{t.dashboard.transactions.table.amount}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/30">
+              <tbody className="divide-y divide-slate-800/20">
                 <AnimatePresence mode="popLayout">
                   {paginatedTransactions.map((transaction, index) => {
                     const cat = categories.find(c => c.id === transaction.category_id);
+                    const isIncome = cat && cat.vault_type !== 'none'
+                      ? transaction.amount_cents > 0
+                      : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
                     return (
                       <motion.tr 
                         key={transaction.id}
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ delay: index * 0.05 }}
+                        exit={{ opacity: 0, x: -16 }}
+                        transition={{ delay: index * 0.03 }}
                         onClick={() => setSelectedTransaction(transaction)}
-                        className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
+                        className="group hover:bg-white/[0.03] transition-colors cursor-pointer"
                       >
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+                        <td className="px-5 py-3.5">
                           <div className="flex flex-col">
-                            <span className="text-xs font-black text-white">{new Date(transaction.transaction_date).getDate()}</span>
-                            <span className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">
+                            <span className="text-xs font-bold text-white tabular-nums">{new Date(transaction.transaction_date).getDate()}</span>
+                            <span className="text-[9px] font-bold uppercase text-slate-500">
                               {new Date(transaction.transaction_date).toLocaleString('default', { month: 'short' })} {new Date(transaction.transaction_date).getFullYear()}
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-                          <div className="flex flex-col gap-1">
-                            <p className="text-sm font-black text-white group-hover:text-blue-400 transition-colors">{transaction.description}</p>
-                            <div className="flex items-center gap-2 sm:hidden">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{cat?.name || t.dashboard.transactions.noCategory}</span>
-                            </div>
-                          </div>
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate max-w-[250px]">{transaction.description}</p>
                         </td>
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 hidden sm:table-cell">
-                          <div className="flex items-center gap-3">
+                        <td className="px-5 py-3.5 hidden sm:table-cell">
+                          <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 text-right">
-                          {(() => {
-                            const isIncome = cat && cat.vault_type !== 'none'
-                              ? transaction.amount_cents > 0
-                              : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
-                            return (
-                              <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
-                                {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
-                              </span>
-                            );
-                          })()}
+                        <td className="px-5 py-3.5 text-right">
+                          <span className={`text-sm font-black tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+                          </span>
                         </td>
                       </motion.tr>
                     );
@@ -682,66 +667,37 @@ function TransactionsPageContent() {
             </table>
           
           {filteredTransactions.length === 0 && (
-            <div className="py-32 flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center mb-8 border border-slate-800 shadow-2xl">
-                <SearchX size={32} className="text-slate-700 animate-pulse" />
+            <div className="py-20 flex flex-col items-center justify-center text-center">
+              <div className="w-14 h-14 bg-slate-800/80 rounded-xl flex items-center justify-center mb-4 border border-slate-700/50">
+                <SearchX size={24} className="text-slate-600" />
               </div>
-              <h3 className="text-xl font-black text-white mb-2">{t.dashboard.transactions.noResultsTitle}</h3>
-              <p className="text-slate-500 text-sm font-medium italic max-w-xs mx-auto">
-                {t.dashboard.transactions.noResultsHint}
-              </p>
+              <h3 className="text-sm font-bold text-white mb-1">{t.dashboard.transactions.noResultsTitle}</h3>
+              <p className="text-slate-500 text-xs italic max-w-xs mx-auto">{t.dashboard.transactions.noResultsHint}</p>
             </div>
           )}
           </div>
         </div>
 
-        {/* Pagination Controls (desktop table) — quando há mais de uma página */}
+        {/* Pagination Controls (desktop) */}
         {filteredTransactions.length > itemsPerPage && (
-          <div className="hidden md:flex px-4 sm:px-6 md:px-8 py-4 sm:py-6 border-t border-slate-800/50 flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center sm:text-left">
-              {t.dashboard.transactions.paginationShowing} <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> {t.dashboard.transactions.paginationTo} <span className="text-white">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> {t.dashboard.transactions.paginationOf} <span className="text-white">{filteredTransactions.length}</span>
+          <div className="hidden md:flex px-5 py-3 border-t border-slate-700/30 items-center justify-between gap-4 bg-slate-950/20">
+            <p className="text-[9px] font-bold text-slate-500 tabular-nums">
+              {t.dashboard.transactions.paginationShowing} {(currentPage - 1) * itemsPerPage + 1} {t.dashboard.transactions.paginationTo} {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} {t.dashboard.transactions.paginationOf} {filteredTransactions.length}
             </p>
-            
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                <ChevronDown size={18} className="rotate-90" />
+            <div className="flex items-center gap-1">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg border border-slate-700/50 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 transition-all cursor-pointer">
+                <ChevronDown size={14} className="rotate-90" />
               </button>
-              
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => {
-                    // Mostrar primeira, última, e páginas ao redor da atual
-                    return page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1);
-                  })
-                  .map((page, index, array) => (
-                    <div key={page} className="flex items-center gap-1">
-                      {index > 0 && array[index - 1] !== page - 1 && (
-                        <span className="text-slate-700 px-1">...</span>
-                      )}
-                      <button
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
-                          currentPage === page 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                          : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    </div>
-                  ))}
-              </div>
-
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                className="p-2 rounded-xl border border-slate-800 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                <ChevronDown size={18} className="-rotate-90" />
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
+                .map((page, index, array) => (
+                  <div key={page} className="flex items-center gap-1">
+                    {index > 0 && array[index - 1] !== page - 1 && <span className="text-slate-700 px-0.5 text-xs">…</span>}
+                    <button onClick={() => setCurrentPage(page)} className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}>{page}</button>
+                  </div>
+                ))}
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="p-1.5 rounded-lg border border-slate-700/50 text-slate-500 hover:text-white hover:border-slate-600 disabled:opacity-30 transition-all cursor-pointer">
+                <ChevronDown size={14} className="-rotate-90" />
               </button>
             </div>
           </div>
@@ -944,92 +900,83 @@ function TransactionsPageContent() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedTransaction(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-[32px] p-5 sm:p-8 shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="relative w-full max-w-sm bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className="flex flex-col items-center text-center gap-6">
-                {(() => {
-                  const cat = categories.find(c => c.id === selectedTransaction.category_id);
-                  const isIncome = cat && cat.vault_type !== 'none'
-                    ? selectedTransaction.amount_cents > 0
-                    : (cat ? cat.type === 'income' : selectedTransaction.amount_cents > 0);
-                  return (
-                    <>
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                        isIncome 
-                        ? 'bg-emerald-500/10 text-emerald-500' 
-                        : 'bg-blue-500/10 text-blue-500'
-                      }`}>
-                        <CreditCard size={32} />
-                      </div>
-                      
-                      <div>
-                        <h2 className="text-2xl font-black text-white tracking-tighter mb-1">
-                          {selectedTransaction.description}
-                        </h2>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                          {t.dashboard.transactions.table.description}
-                        </p>
+              {(() => {
+                const cat = categories.find(c => c.id === selectedTransaction.category_id);
+                const isIncome = cat && cat.vault_type !== 'none'
+                  ? selectedTransaction.amount_cents > 0
+                  : (cat ? cat.type === 'income' : selectedTransaction.amount_cents > 0);
+                return (
+                  <>
+                    {/* Colored top strip */}
+                    <div className={`h-1 w-full ${isIncome ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                    
+                    <div className="p-5">
+                      {/* Close button */}
+                      <button onClick={() => setSelectedTransaction(null)} className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer">
+                        <X size={16} />
+                      </button>
+
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isIncome ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                          {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-base font-bold text-white truncate">{selectedTransaction.description}</h2>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.dashboard.transactions.table.description}</p>
+                        </div>
                       </div>
 
-                      <div className="w-full bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4">
+                      {/* Details */}
+                      <div className="space-y-3 bg-slate-950/50 border border-slate-700/30 rounded-xl p-4 mb-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.value}</span>
-                          <span className={`text-xl font-black ${
-                            isIncome 
-                            ? 'text-emerald-400' 
-                            : 'text-white'
-                          }`}>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.value}</span>
+                          <span className={`text-lg font-black tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
                             {isIncome ? '+' : '-'}{formatCurrency(Math.abs(selectedTransaction.amount_cents) / 100)}
                           </span>
                         </div>
+                        <div className="h-px bg-slate-700/30" />
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.date}</span>
-                          <span className="text-sm font-bold text-white">
-                            {new Date(selectedTransaction.transaction_date).toLocaleDateString('pt-PT')}
-                          </span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.date}</span>
+                          <span className="text-sm font-bold text-white">{new Date(selectedTransaction.transaction_date).toLocaleDateString('pt-PT')}</span>
                         </div>
+                        <div className="h-px bg-slate-700/30" />
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.transactions.category}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.category}</span>
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: categories.find(c => c.id === selectedTransaction.category_id)?.color_hex || '#3b82f6' }} />
-                            <span className="text-sm font-bold text-white">
-                              {categories.find(c => c.id === selectedTransaction.category_id)?.name || t.dashboard.transactions.noCategory}
-                            </span>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                            <span className="text-sm font-bold text-white">{cat?.name || t.dashboard.transactions.noCategory}</span>
                           </div>
                         </div>
                       </div>
-                    </>
-                  );
-                })()}
 
-                <div className="w-full grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => handleEdit(selectedTransaction)}
-                    className="px-6 py-4 bg-white/5 border border-slate-800 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Edit2 size={14} /> {t.dashboard.transactions.editButton}
-                  </button>
-                  <button
-                    onClick={() => setTransactionToDelete(selectedTransaction.id)}
-                    className="px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Trash2 size={14} /> {t.dashboard.transactions.deleteButton}
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => setSelectedTransaction(null)}
-                  className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-white transition-colors"
-                >
-                  {t.dashboard.transactions.closeDetails}
-                </button>
-              </div>
+                      {/* Actions */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleEdit(selectedTransaction)}
+                          className="px-4 py-3 bg-slate-800/60 border border-slate-700/50 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-slate-700/60 transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <Edit2 size={13} /> {t.dashboard.transactions.editButton}
+                        </button>
+                        <button
+                          onClick={() => setTransactionToDelete(selectedTransaction.id)}
+                          className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:bg-red-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={13} /> {t.dashboard.transactions.deleteButton}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </motion.div>
           </div>
         )}

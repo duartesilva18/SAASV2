@@ -281,53 +281,46 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 shrink-0">
-                <Layers size={18} className="sm:w-5 sm:h-5" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 truncate">
-                Gestão de Identidade
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tighter mb-2 sm:mb-4">
-              {t.dashboard.categories.title}
-            </h1>
-            <p className="text-slate-400 font-medium max-w-xl italic text-sm sm:text-base">
-              {t.dashboard.categories.subtitle}
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-lg mb-3">
+            <Layers size={12} className="text-blue-400" />
+            <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.categories.title}</span>
           </div>
-
-          <button
-            onClick={() => {
-              setEditingCategory(null);
-              setFormData({ name: '', nature: 'expense', monthly_limit: '', color_hex: COLORS[0], icon: 'Tag' });
-              setShowAddModal(true);
-            }}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full md:w-auto"
-          >
-            <Plus size={18} className="shrink-0" />
-            <span>{t.dashboard.categories.addNew}</span>
-          </button>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white mb-1">
+            {t.dashboard.categories.title}
+          </h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium italic">
+            {t.dashboard.categories.subtitle}
+          </p>
         </div>
+        <button
+          onClick={() => {
+            setEditingCategory(null);
+            setFormData({ name: '', nature: 'expense', monthly_limit: '', color_hex: COLORS[0], icon: 'Tag' });
+            setShowAddModal(true);
+          }}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
+        >
+          <Plus size={16} className="shrink-0" />
+          <span>{t.dashboard.categories.addNew}</span>
+        </button>
       </div>
 
       {/* Vault Info Header */}
       <AnimatePresence>
         {categories.some(c => c.vault_type !== 'none') && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
+            className="bg-blue-500/5 border border-blue-500/15 rounded-xl p-3 sm:p-4 flex items-center gap-3"
           >
-            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-              <Landmark size={24} />
+            <div className="w-9 h-9 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg flex items-center justify-center shrink-0">
+              <Landmark size={16} />
             </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">{t.dashboard.categories.activeVault}</h3>
-              <p className="text-xs text-blue-200/70 font-medium italic">{t.dashboard.categories.activeVaultText}</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xs font-bold text-white mb-0.5">{t.dashboard.categories.activeVault}</h3>
+              <p className="text-[10px] text-slate-400 font-medium italic truncate">{t.dashboard.categories.activeVaultText}</p>
             </div>
           </motion.div>
         )}
@@ -336,16 +329,14 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Left: Charts & Stats */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-                  <PieChart size={18} />
-                </div>
-                <h3 className="text-sm font-black text-white uppercase tracking-widest">
-                  {t.dashboard.categories.statsTitle}
-                </h3>
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <PieChart size={16} className="text-emerald-400" />
               </div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                {t.dashboard.categories.statsTitle}
+              </h3>
             </div>
 
             {filteredStats.length > 0 ? (
@@ -424,39 +415,47 @@ export default function CategoriesPage() {
         </div>
 
         {/* Right: Zen Tips & Legend */}
-        <div className="space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-2xl rounded-full translate-x-10 -translate-y-10" />
-            <Sparkles className="mb-6 opacity-80" size={32} />
-            <h3 className="text-2xl font-black tracking-tighter mb-4 leading-none uppercase">{t.dashboard.categories.masterTip}</h3>
-            <p className="text-blue-100 font-medium italic text-sm leading-relaxed">
+        <div className="space-y-4">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-2xl rounded-full translate-x-8 -translate-y-8" />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <Sparkles size={14} className="text-blue-400" />
+              </div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">{t.dashboard.categories.masterTip}</h3>
+            </div>
+            <p className="text-slate-300 font-medium italic text-xs leading-relaxed">
               "{t.dashboard.categories.masterTipText}"
             </p>
           </div>
 
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6 flex items-center gap-2">
-              <Target size={14} />
-              Alvos este Mês
-            </h4>
-            <div className="space-y-6">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <Target size={13} className="text-amber-400" />
+              </div>
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Alvos este Mês
+              </h4>
+            </div>
+            <div className="space-y-3">
               {stats.filter((s) => {
                 const category = categories.find(c => c.id === s.category_id);
                 return category && category.vault_type === 'none';
               }).slice(0, 3).map((s) => (
-                <div key={s.category_id} className="flex items-center gap-4">
+                <div key={s.category_id} className="flex items-center gap-3 p-2 bg-slate-950/40 rounded-lg border border-slate-700/20">
                   <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${s.color}20`, color: s.color }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${s.color}15`, color: s.color }}
                   >
                     {(() => {
                       const Icon = getIconComponent(s.icon);
-                      return <Icon size={20} />;
+                      return <Icon size={16} />;
                     })()}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-black text-white uppercase tracking-tighter">{s.name}</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase">{s.count} {t.dashboard.categories.transactions}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{s.name}</p>
+                    <p className="text-[9px] text-slate-500 font-bold">{s.count} {t.dashboard.categories.transactions}</p>
                   </div>
                 </div>
               ))}
@@ -465,40 +464,43 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Minhas Gavetas — largura total do ecrã */}
-      <div className="-mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 space-y-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-            <Tag size={18} className="text-blue-400" />
-            Minhas Gavetas
-          </h3>
-          <div className="flex items-center gap-3">
+      {/* Minhas Gavetas */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Tag size={13} className="text-blue-400" />
+            </div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Minhas Gavetas</h3>
+            <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-800 border border-slate-700/50 rounded-md text-slate-400">{categories.length}</span>
+          </div>
+          <div className="flex items-center gap-2">
             {isSelectionMode && selectedIds.length > 0 && (
               <button
                 onClick={() => setShowBulkDeleteConfirm(true)}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-red-600/20 cursor-pointer"
+                className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-red-600/20 cursor-pointer"
               >
-                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Apagar Selecionadas ({selectedIds.length})
+                {isBulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                ({selectedIds.length})
               </button>
             )}
             <button
               onClick={toggleSelectionMode}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 border cursor-pointer ${
                 isSelectionMode 
-                  ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' 
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  ? 'bg-blue-600 border-blue-500 text-white' 
+                  : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:text-white hover:border-slate-600'
               }`}
             >
-              {isSelectionMode ? <X size={14} /> : <Check size={14} />}
+              {isSelectionMode ? <X size={12} /> : <Check size={12} />}
               {isSelectionMode ? t.dashboard.categories.cancelSelection : t.dashboard.categories.selectCategories}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {categories.map((cat) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {categories.map((cat, catIdx) => {
               const stat = stats.find(s => s.category_id === cat.id);
               const Icon = getIconComponent(cat.icon);
               const progress = cat.monthly_limit_cents > 0 
@@ -522,83 +524,80 @@ export default function CategoriesPage() {
                 <motion.div
                   key={cat.id}
                   layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: catIdx * 0.02 }}
                   onClick={() => toggleSelect(cat.id, isProtected)}
-                  className={`group relative bg-slate-900/70 backdrop-blur-md border rounded-2xl p-6 transition-all duration-500 ${
-                    isSelectionMode && !isProtected ? 'cursor-pointer hover:border-blue-500/50' : ''
+                  className={`group relative bg-slate-900/70 backdrop-blur-md border rounded-2xl p-4 transition-all ${
+                    isSelectionMode && !isProtected ? 'cursor-pointer hover:border-blue-500/40' : ''
                   } ${
-                    isSelected ? 'border-blue-500 bg-blue-500/[0.05] ring-2 ring-blue-500/20' : 
+                    isSelected ? 'border-blue-500 bg-blue-500/[0.05] ring-1 ring-blue-500/20' : 
                     isDanger 
-                      ? 'border-red-500/50 bg-red-500/[0.03] shadow-[0_0_40px_-10px_rgba(239,68,68,0.2)]' 
-                      : 'border-slate-700/60 hover:border-blue-500/30 shadow-2xl'
+                      ? 'border-red-500/40 bg-red-500/[0.02]' 
+                      : 'border-slate-700/60 hover:border-slate-600/80 shadow-xl'
                   } ${isSelectionMode && isProtected ? 'opacity-40 grayscale-[0.5]' : ''}`}
                 >
                   {isSelected && (
-                    <div className="absolute -top-3 -left-3 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg z-20">
-                      <Check size={16} strokeWidth={4} />
+                    <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md z-20">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
                   {isDanger && (
-                    <div className="absolute -top-3 right-6 bg-red-600 text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full shadow-lg shadow-red-600/40 animate-bounce">
+                    <div className="absolute -top-2 right-4 bg-red-600 text-white text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-md">
                       {isExceeded ? t.dashboard.categories.dangerLimitExceeded : t.dashboard.categories.warningLimitReached}
                     </div>
                   )}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
                       <div 
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md transition-transform group-hover:scale-105"
                         style={{ backgroundColor: cat.color_hex }}
                       >
-                        <Icon size={24} />
+                        <Icon size={20} />
                       </div>
-                      <div>
-                        <h4 className="font-black text-white uppercase tracking-tighter group-hover:text-blue-400 transition-colors">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">
                           {cat.name}
                         </h4>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 mt-0.5">
                           {cat.vault_type === 'none' && (
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${cat.type === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-wider ${cat.type === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
                               {cat.type === 'expense' ? t.dashboard.categories.expense : t.dashboard.categories.income}
                             </span>
                           )}
                           {cat.vault_type !== 'none' && (
-                            <span className="text-[8px] font-black uppercase px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md">
+                            <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md">
                               {cat.vault_type === 'investment' ? t.dashboard.categories.investment : t.dashboard.categories.emergencyFundLabel}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {!isSelectionMode && (
                         <>
                           {isSystemLocked ? (
-                            <span
-                              className="p-2 text-slate-500 rounded-xl cursor-not-allowed"
-                              title={t.dashboard.categories.protectedCategoryTooltip}
-                            >
-                              <Lock size={16} />
+                            <span className="p-1.5 text-slate-500 rounded-lg" title={t.dashboard.categories.protectedCategoryTooltip}>
+                              <Lock size={14} />
                             </span>
                           ) : (
                             <button 
                               onClick={(e) => { e.stopPropagation(); openEdit(cat); }}
-                              className="p-2 hover:bg-blue-500/10 text-blue-400 rounded-xl transition-colors cursor-pointer"
+                              className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors cursor-pointer"
                             >
-                              <Edit2 size={16} />
+                              <Edit2 size={14} />
                             </button>
                           )}
                           {!isProtected ? (
                             <button 
                               onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat); }}
-                              className="p-2 hover:bg-red-500/10 text-red-400 rounded-xl transition-colors cursor-pointer"
+                              className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors cursor-pointer"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={14} />
                             </button>
                           ) : isSystemLocked ? (
-                            <span
-                              className="p-2 text-slate-500 rounded-xl cursor-not-allowed"
-                              title={t.dashboard.categories.protectedCategoryTooltip}
-                            >
-                              <Lock size={16} />
+                            <span className="p-1.5 text-slate-500 rounded-lg" title={t.dashboard.categories.protectedCategoryTooltip}>
+                              <Lock size={14} />
                             </span>
                           ) : null}
                         </>
@@ -607,43 +606,43 @@ export default function CategoriesPage() {
                   </div>
 
                   {cat.type === 'expense' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-bold">
                         <span className="text-slate-500">{t.dashboard.categories.spent}</span>
-                        <span className="text-white">{formatCurrency(Math.abs(stat?.total_spent_cents || 0) / 100)}</span>
+                        <span className="text-white tabular-nums">{formatCurrency(Math.abs(stat?.total_spent_cents || 0) / 100)}</span>
                       </div>
                       
                       {cat.monthly_limit_cents > 0 && (
                         <>
-                          <div className="h-2 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
+                          <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
                               animate={{ width: `${Math.min(progress, 100)}%` }}
-                              className={`h-full rounded-full transition-colors duration-500 ${
-                                isDanger ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 
-                                isWarning ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]' : 
-                                'bg-blue-500'
+                              className={`h-full rounded-full ${
+                                isDanger ? 'bg-gradient-to-r from-red-500 to-red-400' : 
+                                isWarning ? 'bg-gradient-to-r from-orange-500 to-amber-400' : 
+                                'bg-gradient-to-r from-blue-500 to-blue-400'
                               }`}
                             />
                           </div>
-                          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.15em]">
-                            <div className="flex items-center gap-1.5">
-                              {isDanger && <AlertCircle size={10} className="text-red-500 animate-pulse" />}
-                              <span className={isDanger ? 'text-red-400' : isWarning ? 'text-orange-400' : 'text-slate-600'}>
+                          <div className="flex items-center justify-between text-[9px] font-bold">
+                            <div className="flex items-center gap-1">
+                              {isDanger && <AlertCircle size={9} className="text-red-500" />}
+                              <span className={isDanger ? 'text-red-400' : isWarning ? 'text-orange-400' : 'text-slate-500'}>
                                 {Math.round(progress)}% {isExceeded ? t.dashboard.categories.limitExceeded : isAtLimit ? t.dashboard.categories.limitReached : t.dashboard.categories.ofLimit}
                               </span>
                             </div>
-                            <span className="text-slate-400 font-bold">{formatCurrency(cat.monthly_limit_cents / 100)}</span>
+                            <span className="text-slate-500 tabular-nums">{formatCurrency(cat.monthly_limit_cents / 100)}</span>
                           </div>
 
                           {isDanger && (
                             <motion.p 
-                              initial={{ opacity: 0, y: 5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="text-[10px] font-bold text-red-500 italic mt-2 border-t border-red-500/10 pt-2 flex justify-between items-center"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="text-[9px] font-bold text-red-400 italic pt-1.5 border-t border-red-500/10 flex justify-between items-center"
                             >
                               <span>{isExceeded ? t.dashboard.categories.budgetExceeded : t.dashboard.categories.budgetReached}</span>
-                              {isExceeded && <span className="text-sm font-black">{formatCurrency(overAmount / 100)}</span>}
+                              {isExceeded && <span className="text-xs font-black tabular-nums">{formatCurrency(overAmount / 100)}</span>}
                             </motion.p>
                           )}
                         </>

@@ -19,12 +19,18 @@ router = APIRouter(prefix='/webhooks', tags=['webhooks'])
 @router.get('/whatsapp')
 async def verify_whatsapp_webhook(request: Request):
     from fastapi.responses import Response
-    # FORÇAR VERIFICAÇÃO: Retorna o challenge independentemente do token
+    mode = request.query_params.get('hub.mode')
+    token = request.query_params.get('hub.verify_token')
     challenge = request.query_params.get('hub.challenge')
-    if challenge:
-        print(f"✅ [WHATSAPP] Verificação forçada com sucesso! Challenge: {challenge}")
+    expected_token = getattr(settings, 'WHATSAPP_VERIFY_TOKEN', '') or ''
+    if mode == 'subscribe' and token and expected_token and token == expected_token and challenge:
+        logger.info(f'WhatsApp webhook verificado com sucesso. Challenge: {challenge}')
         return Response(content=str(challenge), media_type='text/plain')
-    return Response(content="Webhook Ativo")
+    if not expected_token and challenge:
+        logger.warning('WHATSAPP_VERIFY_TOKEN não configurado – a aceitar challenge por fallback.')
+        return Response(content=str(challenge), media_type='text/plain')
+    logger.warning(f'WhatsApp webhook verificação falhou. mode={mode}, token_match={token == expected_token}')
+    raise HTTPException(status_code=403, detail='Verification failed')
 
 async def get_media_url(media_id: str):
     url = f"https://graph.facebook.com/v17.0/{media_id}"

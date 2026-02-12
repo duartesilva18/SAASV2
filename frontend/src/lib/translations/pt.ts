@@ -394,7 +394,7 @@ export const pt = {
           codeError: "O código deve ter 6 dígitos.",
           passwordLabel: "Nova Password",
           passwordPlaceholder: "••••••••••••",
-          passwordError: "A nova password deve ter pelo menos 6 caracteres.",
+          passwordError: "Mínimo 8 caracteres, com maiúscula, minúscula e número.",
           submit: "Confirmar Nova Password",
           loadingConfirming: "A guardar…",
           successMessage: "Password alterada com sucesso! A redirecionar...",
@@ -1573,7 +1573,18 @@ export const pt = {
           closeCreateTransactionQuestion: "Queres criar uma transação automaticamente?",
           asIncome: "Como receita",
           asExpense: "Como despesa",
-          noTransaction: "Não criar transação"
+          noTransaction: "Não criar transação",
+          totalGoals: "Total Metas",
+          totalSaved: "Total Poupado",
+          totalTarget: "Objetivo Total",
+          globalProgress: "Progresso Global",
+          createFirstGoal: "Criar Primeira Meta",
+          startByDefining: "Comeca por definir um objetivo e dar o primeiro passo.",
+          zenTip: "Dividir grandes objetivos em metas menores torna tudo mais alcancavel. Celebra cada conquista.",
+          quickAmounts: "Valor rapido",
+          goalCompleted: "Concluida",
+          icon: "Icone",
+          depositValue: "Valor"
       },
       fire: {
           title: "SIMULADOR",

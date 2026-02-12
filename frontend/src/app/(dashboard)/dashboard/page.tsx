@@ -169,11 +169,18 @@ export default function DashboardPage() {
         // Usar snapshot calculado pelo backend (sem cálculos no frontend!)
         const transactions = collections.recent_transactions || collections.transactions || [];
         const categories = collections.categories || [];
-        const isDemoMode = !hasActiveSub && transactions.length === 0;
+        
+        // Verificar se o utilizador está no mês atual para decidir se mostra demo
+        const now = new Date();
+        const isCurrentMonth = viewMonth.year === now.getFullYear() && viewMonth.month === now.getMonth();
+        
+        // Só mostrar dados demo se: não é Pro, está no mês atual, e não tem transações
+        // Para meses futuros/passados sem dados, mostrar zeros (não dados mock)
+        const isDemoMode = !hasActiveSub && isCurrentMonth && transactions.length === 0;
         // Admins/Pro nunca veem Modo Demo – têm acesso completo
         const lowData = !hasActiveSub && (transactions.length < 10 || isDemoMode);
 
-        // Se não for Pro e não tiver transações, usar demo
+        // Se não for Pro e não tiver transações no mês atual, usar demo
         let finalTransactions = transactions;
         let finalCategories = categories;
         if (isDemoMode) {
@@ -263,7 +270,7 @@ export default function DashboardPage() {
           });
         }
       }
-    }, [snapshot, collections, snapshotLoading, userData, invoicesData, hasActiveSub, formatCurrency, isPro]);
+    }, [snapshot, collections, snapshotLoading, userData, invoicesData, hasActiveSub, formatCurrency, isPro, viewMonth.year, viewMonth.month]);
   
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -575,10 +582,10 @@ export default function DashboardPage() {
       {/* Cabeçalho: saudação + resumo | Modo Demo + Upgrade Pro */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 mt-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
             {greeting}, {userName}
           </h1>
-          <p className="text-slate-400 font-medium mt-1">{t.dashboard.page.headerSubtitle}</p>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">{t.dashboard.page.headerSubtitle}</p>
         </div>
         {!isPro && (
           <motion.div
@@ -602,32 +609,32 @@ export default function DashboardPage() {
       </div>
 
       {/* Filtros (esquerda) | Nova transação (direita) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.filters}</span>
-          <div className="flex items-center gap-1 bg-slate-900/70 border border-slate-700/60 rounded-xl px-2 sm:px-3 py-2">
-            <Calendar size={14} className="text-slate-400 shrink-0 sm:w-4 sm:h-4" />
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.page.filters}</span>
+          <div className="flex items-center gap-0.5 bg-slate-900/70 border border-slate-700/60 rounded-lg px-2 py-1.5">
+            <Calendar size={13} className="text-slate-400 shrink-0" />
             <button
               type="button"
               disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 0 ? { year: p.year - 1, month: 11 } : { year: p.year, month: p.month - 1 }))}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={t.dashboard.page.previousMonth}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
-            <span className="text-xs sm:text-sm font-bold text-white min-w-[100px] sm:min-w-[140px] text-center capitalize flex items-center justify-center gap-2">
-              {snapshotLoading ? <Loader2 size={14} className="animate-spin text-slate-400 shrink-0" /> : null}
+            <span className="text-xs font-bold text-white min-w-[100px] sm:min-w-[130px] text-center capitalize flex items-center justify-center gap-1.5">
+              {snapshotLoading ? <Loader2 size={12} className="animate-spin text-slate-400 shrink-0" /> : null}
               {filterMonthLabel}
             </span>
             <button
               type="button"
               disabled={snapshotLoading}
               onClick={() => setViewMonth((p: { year: number; month: number }) => (p.month === 11 ? { year: p.year + 1, month: 0 } : { year: p.year, month: p.month + 1 }))}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={t.dashboard.page.nextMonth}
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={16} />
             </button>
             {(() => {
               const now = new Date();
@@ -637,7 +644,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
-                  className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 transition-colors cursor-pointer"
+                  className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 transition-colors cursor-pointer"
                 >
                   {t.dashboard.page.currentMonth}
                 </button>
@@ -645,76 +652,74 @@ export default function DashboardPage() {
             })()}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setShowAddTransactionModal(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20"
-          >
-            <Plus size={18} className="shrink-0" />
-            <span>{t.dashboard.page.newTransaction}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowAddTransactionModal(true)}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 w-full sm:w-auto"
+        >
+          <Plus size={16} className="shrink-0" />
+          <span>{t.dashboard.page.newTransaction}</span>
+        </button>
       </div>
 
       {/* 3 cards: Receitas | Despesas | Saldo */}
-      <section className="mb-6 sm:mb-8 md:mb-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+      <section className="mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <motion.div
-            whileHover={isMobile ? undefined : { y: -4 }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
+            whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                <ArrowUpCircle size={22} />
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center shrink-0">
+                <ArrowUpCircle size={14} />
               </div>
               {chartProcessed.vsIncome.label && chartProcessed.vsIncome.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsIncome.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {(chartProcessed.vsIncome.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${(chartProcessed.vsIncome.pct ?? 0) >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  {(chartProcessed.vsIncome.pct ?? 0) >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                   {chartProcessed.vsIncome.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
           </motion.div>
 
           <motion.div
-            whileHover={isMobile ? undefined : { y: -4 }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group"
+            whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="w-10 h-10 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-                <ArrowDownCircle size={22} />
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg flex items-center justify-center shrink-0">
+                <ArrowDownCircle size={14} />
               </div>
               {chartProcessed.vsExpenses.label && chartProcessed.vsExpenses.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  {(chartProcessed.vsExpenses.pct ?? 0) <= 0 ? <TrendingDown size={10} /> : <TrendingUp size={10} />}
                   {chartProcessed.vsExpenses.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tighter truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
+            <p className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
           </motion.div>
 
           <motion.div
-            whileHover={isMobile ? undefined : { y: -4 }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-slate-700/60 shadow-2xl relative overflow-hidden group sm:col-span-2 md:col-span-1"
+            whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group sm:col-span-2 md:col-span-1"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 ${stats.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                <Wallet size={22} />
+            <div className="flex items-center justify-between mb-2">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${stats.balance >= 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                <Wallet size={14} />
               </div>
               {chartProcessed.vsBalance.label && chartProcessed.vsBalance.label !== '—' && (
-                <span className={`text-[11px] font-black uppercase flex items-center gap-1 ${(chartProcessed.vsBalance.pct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {(chartProcessed.vsBalance.pct ?? 0) >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${(chartProcessed.vsBalance.pct ?? 0) >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  {(chartProcessed.vsBalance.pct ?? 0) >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                   {chartProcessed.vsBalance.label}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
-            <p className={`text-xl sm:text-2xl font-black tracking-tighter truncate ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
+            <p className={`text-lg sm:text-xl font-black tabular-nums truncate ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)}>
               {formatCurrency(stats.balance)}
             </p>
           </motion.div>
@@ -722,25 +727,30 @@ export default function DashboardPage() {
       </section>
 
       {/* 4 quadrados: [Evolução] [Analytics donut]; [Fundos] — scroll-section no mobile para content-visibility */}
-      <section className="scroll-section mb-8 sm:mb-10 md:mb-12">
+      <section className="scroll-section mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.charts}</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Activity size={13} className="text-blue-400" />
+            </div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.page.charts}</h2>
+          </div>
           {isPro && (
-            <Link href="/analytics" className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors">
+            <Link href="/analytics" className="text-[9px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors">
               {t.dashboard.page.viewFullAnalysis}
             </Link>
           )}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Quadrado 1: Evolução Financeira – ocupa 2/3 */}
           <motion.div
             initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={isMobile ? { duration: 0 } : {}}
-            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl lg:col-span-2"
+            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-2"
           >
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.page.financialEvolution}</h3>
-            <p className="text-xs text-slate-500 font-medium italic mb-4">{t.dashboard.page.last6Months}</p>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-0.5">{t.dashboard.page.financialEvolution}</h3>
+            <p className="text-[10px] text-slate-500 font-medium italic mb-3">{t.dashboard.page.last6Months}</p>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartProcessed.flow6} margin={{ top: 10, right: 10, left: 0, bottom: isMobile ? 5 : 0 }}>
@@ -783,15 +793,15 @@ export default function DashboardPage() {
             initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={isMobile ? { duration: 0 } : { delay: 0.05 }}
-            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
+            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
-            <div className="flex items-center gap-2 sm:gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                <Activity size={20} />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                <Activity size={14} />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">{t.dashboard.page.analyticsTitle}</h3>
-                <p className="text-xs text-slate-400 font-medium">{t.dashboard.page.expensesByCategory}</p>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white">{t.dashboard.page.analyticsTitle}</h3>
+                <p className="text-[10px] text-slate-500 font-medium">{t.dashboard.page.expensesByCategory}</p>
               </div>
             </div>
             <div className="relative flex-1 min-h-[280px] w-full flex items-center justify-center">
@@ -871,15 +881,15 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* Metade esquerda (2/3 da linha): dentro, Fundos 1/3 + Distribuição 2/3 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:col-span-2">
             {/* Fundos · Investimentos e Emergência – 1/3 da metade */}
             <motion.div
               initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={isMobile ? { duration: 0 } : { delay: 0.08 }}
-              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-1"
+              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1"
             >
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
               <div className="space-y-3 flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/70 border border-slate-700/60 min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -936,9 +946,9 @@ export default function DashboardPage() {
               initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={isMobile ? { duration: 0 } : { delay: 0.1 }}
-              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col lg:col-span-2"
+              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-2"
             >
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
             <div className="flex-1 min-h-[180px] flex items-center justify-center">
               {chartProcessed.vaultByMonth.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -975,28 +985,30 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="scroll-section mb-8 sm:mb-10 md:mb-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.quickInsightsTitle}</h2>
+      <section className="scroll-section mb-6 sm:mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Sparkles size={13} className="text-blue-400" />
+            </div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.page.quickInsightsTitle}</h2>
+          </div>
           {isPro && (
-            <Link
-              href="/analytics"
-              className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
-            >
+            <Link href="/analytics" className="text-[9px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors">
               {t.dashboard.page.viewDetails}
             </Link>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-700/60 shadow-2xl text-xs sm:text-sm text-slate-200 font-medium italic flex items-center gap-2 sm:gap-3"
+              className="bg-slate-900/70 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/60 shadow-xl text-xs text-slate-300 font-medium italic flex items-center gap-2.5"
             >
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-                <Sparkles size={14} />
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Sparkles size={12} />
               </div>
-              <span>{insight}</span>
+              <span className="line-clamp-2">{insight}</span>
             </div>
           ))}
         </div>
@@ -1010,61 +1022,58 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="mb-12 space-y-4"
+            className="mb-8 space-y-3"
           >
-            <div className="flex items-center gap-3 px-2 mb-4">
-              <AlertCircle size={18} className="text-red-500" />
-              <h2 className="text-[10px] font-black tracking-[0.4em] text-slate-500 uppercase">{t.dashboard.page.alerts}</h2>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                  <AlertCircle size={13} className="text-red-400" />
+                </div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.page.alerts}</h2>
+                <span className="text-[9px] font-bold px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded-md text-red-400">{alerts.length}</span>
+              </div>
+              {hasMoreAlerts && (
+                <Link href="/categories" className="text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors">
+                  {t.dashboard.page.viewMoreAlerts}
+                </Link>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {visibleAlerts.map((alert, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className={`relative overflow-hidden p-6 rounded-2xl sm:rounded-3xl border flex items-center gap-6 transition-all group ${
+                  transition={{ delay: idx * 0.04 }}
+                  className={`relative overflow-hidden p-3.5 rounded-2xl border flex items-center gap-3 transition-all group ${
                     alert.type === 'danger' 
-                      ? 'bg-red-500/[0.03] border-red-500/20 hover:border-red-500/40 shadow-[0_0_30px_-10px_rgba(239,68,68,0.1)]' 
-                      : 'bg-amber-500/[0.03] border-amber-500/20 hover:border-amber-500/40 shadow-[0_0_30px_-10px_rgba(245,158,11,0.1)]'
+                      ? 'bg-red-500/[0.03] border-red-500/20 hover:border-red-500/35' 
+                      : 'bg-amber-500/[0.03] border-amber-500/20 hover:border-amber-500/35'
                   }`}
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-                    alert.type === 'danger' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'
+                  <div className={`absolute top-0 left-0 w-0.5 h-full ${alert.type === 'danger' ? 'bg-red-500/50' : 'bg-amber-500/50'}`} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                    alert.type === 'danger' ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                   }`}>
-                    {alert.icon === 'AlertCircle' ? <AlertCircle size={28} /> : <Zap size={28} />}
+                    {alert.icon === 'AlertCircle' ? <AlertCircle size={16} /> : <Zap size={16} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className={`text-sm font-black uppercase tracking-tight mb-1 ${
-                      alert.type === 'danger' ? 'text-red-400' : 'text-amber-400'
-                    }`}>
+                    <h4 className={`text-xs font-bold mb-0.5 ${alert.type === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>
                       {alert.title}
                     </h4>
-                    <p className="text-sm text-slate-400 font-medium italic truncate">
-                      {alert.message}
-                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium italic truncate">{alert.message}</p>
                   </div>
                   <Link 
                     href="/categories" 
-                    className={`p-3 rounded-xl transition-all ${
-                      alert.type === 'danger' ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-amber-500/10 text-amber-500'
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      alert.type === 'danger' ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-amber-500/10 text-amber-400'
                     }`}
                   >
-                    <ChevronRight size={20} />
+                    <ChevronRight size={16} />
                   </Link>
                 </motion.div>
               ))}
             </div>
-            {hasMoreAlerts && (
-              <div className="flex justify-end">
-                <Link
-                  href="/categories"
-                  className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  {t.dashboard.page.viewMoreAlerts}
-                </Link>
-              </div>
-            )}
           </motion.section>
         )}
       </AnimatePresence>

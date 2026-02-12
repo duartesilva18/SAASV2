@@ -123,8 +123,11 @@ export default function SettingsPage() {
     try {
       const fullPhone = `${formData.country_code}${formData.phone_number.replace(/\s/g, '')}`;
       await api.patch('/auth/profile', {
-        ...formData,
-        phone_number: fullPhone
+        full_name: formData.full_name,
+        phone_number: fullPhone,
+        currency: formData.currency,
+        gender: formData.gender,
+        marketing_opt_in: formData.marketing_opt_in,
       });
       
       setCurrency(formData.currency as 'EUR' | 'USD' | 'BRL');

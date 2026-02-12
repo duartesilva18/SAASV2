@@ -245,7 +245,7 @@ async def get_zen_insights(
     # 4. Detetção de Anomalias (Spikes)
     if this_expenses > 0 and len(this_month_transactions) > 0:
         avg_trans = this_expenses / len(this_month_transactions)
-        big_spenders = [t for t in this_month_transactions if (t.amount_cents/100) > avg_trans * 4 and t.amount_cents > 10000]
+        big_spenders = [t for t in this_month_transactions if t.amount_cents < 0 and abs(t.amount_cents/100) > avg_trans * 4 and abs(t.amount_cents) > 10000]
         if big_spenders:
             health_score -= 20 # Penalização pesada para impulsividade
             insights.append(schemas.InsightItem(
@@ -259,7 +259,7 @@ async def get_zen_insights(
             ))
 
     # 5. Pequenos Gastos (Ghost Spending)
-    small_expenses = [t for t in this_month_transactions if 0 < t.amount_cents < 1000]
+    small_expenses = [t for t in this_month_transactions if t.amount_cents < 0 and abs(t.amount_cents) < 1000]
     if len(small_expenses) > 6: # Limite de tolerância menor (era 8)
         health_score -= 15
         insights.append(schemas.InsightItem(

@@ -37,7 +37,7 @@ function ResetPasswordContent() {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
       setError(t.auth.resetPassword.passwordError);
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
@@ -183,7 +183,7 @@ function ResetPasswordContent() {
                         type={showPassword ? 'text' : 'password'}
                         value={newPassword}
                         onChange={(e) => { setNewPassword(e.target.value); if (error) setError(''); }}
-                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-600 ${error && newPassword.length < 6 ? 'border-red-500/50' : 'border-slate-700'}`}
+                        className={`w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-600 ${error && newPassword.length < 8 ? 'border-red-500/50' : 'border-slate-700'}`}
                         placeholder={rp.passwordPlaceholder}
                         required
                       />

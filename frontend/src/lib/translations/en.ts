@@ -394,7 +394,7 @@ export const en = {
           codeError: "The code must have 6 digits.",
           passwordLabel: "New Password",
           passwordPlaceholder: "••••••••••••",
-          passwordError: "The new password must be at least 6 characters.",
+          passwordError: "Minimum 8 characters, with uppercase, lowercase and number.",
           submit: "Confirm New Password",
           loadingConfirming: "Saving…",
           successMessage: "Password changed successfully! Redirecting...",
@@ -1478,7 +1478,18 @@ export const en = {
           closeCreateTransactionQuestion: "Do you want to create a transaction automatically?",
           asIncome: "As income",
           asExpense: "As expense",
-          noTransaction: "Don't create transaction"
+          noTransaction: "Don't create transaction",
+          totalGoals: "Total Goals",
+          totalSaved: "Total Saved",
+          totalTarget: "Total Target",
+          globalProgress: "Global Progress",
+          createFirstGoal: "Create First Goal",
+          startByDefining: "Start by defining a goal and taking the first step.",
+          zenTip: "Breaking big goals into smaller milestones makes everything more achievable. Celebrate each win.",
+          quickAmounts: "Quick amount",
+          goalCompleted: "Completed",
+          icon: "Icon",
+          depositValue: "Amount"
       },
       fire: {
           title: "FIRE",

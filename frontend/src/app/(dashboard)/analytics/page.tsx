@@ -496,9 +496,9 @@ export default function AnalyticsPage() {
       .sort((a: any, b: any) => Math.abs(a.amount_cents) - Math.abs(b.amount_cents)) // Ordenar por valor absoluto (maiores primeiro)
       .reverse()
       .slice(0, 5)
-      .map((t: any) => ({
-        name: t.description || t.dashboard.analytics.noDescription,
-        value: Math.abs(t.amount_cents) / 100 // Mostrar valor absoluto (positivo)
+      .map((tx: any) => ({
+        name: tx.description || 'N/A',
+        value: Math.abs(tx.amount_cents) / 100
       }));
 
     // Process all transactions for Evolution (Historical)
@@ -811,26 +811,31 @@ export default function AnalyticsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-500/10 backdrop-blur-xl border border-amber-500/30 rounded-[24px] p-6"
+          className="bg-amber-500/5 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-4 sm:p-5 relative overflow-hidden"
         >
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Info size={20} className="text-amber-400" />
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-full" />
+          <div className="flex items-start gap-3 sm:gap-4 pl-3">
+            <div className="w-10 h-10 bg-amber-500/15 rounded-xl flex items-center justify-center flex-shrink-0 border border-amber-500/20">
+              <Info size={18} className="text-amber-400" />
             </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-sm font-black text-white">
-                  {t.dashboard.analytics.lowConfidenceTitle}
-                </h3>
-                <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest text-amber-400">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <h3 className="text-sm font-black text-white">{t.dashboard.analytics.lowConfidenceTitle}</h3>
+                <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/25 rounded-lg text-[9px] font-bold uppercase tracking-wider text-amber-400">
                   {t.dashboard.analytics.lowConfidenceBadge}
                 </span>
               </div>
-              <p className="text-sm text-slate-400 font-medium italic">
+              <p className="text-xs text-slate-400 font-medium leading-relaxed">
                 {t.dashboard.analytics.lowConfidenceDescription}
-                <br />
-                {t.dashboard.analytics.lowConfidenceTransactions.replace('{count}', String(realTransactions.length))}
+                {' '}{t.dashboard.analytics.lowConfidenceTransactions.replace('{count}', String(realTransactions.length))}
               </p>
+              {/* Mini progress toward 10 transactions */}
+              <div className="flex items-center gap-3 mt-3">
+                <div className="flex-1 h-1.5 bg-slate-800/60 rounded-full overflow-hidden max-w-[200px]">
+                  <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (realTransactions.length / 10) * 100)}%` }} />
+                </div>
+                <span className="text-[10px] font-bold text-amber-400 tabular-nums">{realTransactions.length}/10</span>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -863,54 +868,65 @@ export default function AnalyticsPage() {
       {/* 3 cards compactos: Saúde | Taxa Poupança | Resultado (estilo dashboard) */}
       <section className="mb-6 sm:mb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl">
-            <div className="flex items-center justify-between mb-1">
-              <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center shrink-0">
-                <Activity size={18} />
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center border border-blue-500/20">
+                <Activity size={16} />
               </div>
               {healthDelta !== null && (
-                <span className={`text-[10px] font-black uppercase flex items-center gap-0.5 ${healthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {healthDelta >= 0 ? '↑' : '↓'} {Math.abs(healthDelta).toFixed(0)}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${healthDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  {healthDelta >= 0 ? '▲' : '▼'} {Math.abs(healthDelta).toFixed(0)}
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
-            <p className="text-xl font-black text-white tracking-tighter">{processedData.healthScore}%</p>
-            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
+            <p className="text-xl font-black text-white tabular-nums">{processedData.healthScore}%</p>
+            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl">
-            <div className="flex items-center justify-between mb-1">
-              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
-                <Target size={18} />
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center border border-emerald-500/20">
+                <Target size={16} />
               </div>
               {savingRateDelta !== null && (
-                <span className={`text-[10px] font-black uppercase ${savingRateDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {savingRateDelta >= 0 ? '↑' : '↓'} {Math.abs(savingRateDelta).toFixed(1)}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${savingRateDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                  {savingRateDelta >= 0 ? '▲' : '▼'} {Math.abs(savingRateDelta).toFixed(1)}
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
-            <p className="text-xl font-black text-white tracking-tighter">{processedData.savingRate}%</p>
-            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase rounded-lg ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
+            <p className="text-xl font-black text-white tabular-nums">{processedData.savingRate}%</p>
+            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
           </motion.div>
 
-          <motion.div whileHover={{ y: -4 }} className="bg-slate-800/60 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl sm:col-span-2 md:col-span-1">
-            <div className="flex items-center justify-between mb-1">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                <Wallet size={18} />
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl sm:col-span-2 md:col-span-1 group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                <Wallet size={16} />
               </div>
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 mb-0.5">Resultado período</p>
-            <p className={`text-xl font-black tracking-tighter ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Resultado período</p>
+            <p className={`text-xl font-black tabular-nums ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(processedData.netResult || 0)}
             </p>
           </motion.div>
         </div>
 
         {/* Insight uma linha – compacto */}
-        <div className="mt-3 sm:mt-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/20 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
-          <Sparkles size={14} className="text-blue-400 shrink-0" />
+        <div className="mt-3 sm:mt-4 bg-slate-900/50 border border-blue-500/15 rounded-xl px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3">
+          <div className="w-6 h-6 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+            <Sparkles size={12} className="text-blue-400" />
+          </div>
           <p className="text-[10px] font-medium text-slate-300 italic truncate">
             {hasLowConfidence || !processedData?.summary || (String(processedData.summary || '').trim() === '') || maxWeekly.name === 'N/A'
               ? (t.dashboard?.analytics?.zenInsightGeneric || "Ainda a aprender com os teus dados. Mais transações = insights mais precisos.")
@@ -960,10 +976,18 @@ export default function AnalyticsPage() {
 
         {/* Linha 2: 1/3 Categorias em risco | 2/3 Comparação atual anterior */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-2 sm:mb-3">Categorias em risco</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-1">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <Activity size={14} className="text-red-400" />
+              </div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">Categorias em risco</h3>
+              {processedData.categoriesAtRisk?.length > 0 && (
+                <span className="ml-auto text-[9px] font-bold px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">{processedData.categoriesAtRisk.length}</span>
+              )}
+            </div>
             {processedData.categoriesAtRisk?.length > 0 ? (
-              <div className="space-y-3 mb-4">
+              <div className="space-y-2 mb-3">
                 {(processedData.categoriesAtRisk as { category_name?: string; name?: string; risk_level?: string; risk_percent?: number; projected?: number; limit?: number }[]).map((c: any, i: number) => {
                   const name = c.category_name ?? c.name ?? 'Categoria';
                   const pct = c.risk_percent ?? parseFloat(String(c.risk_level || '0').replace('%', ''));
@@ -971,45 +995,51 @@ export default function AnalyticsPage() {
                   const limitVal = typeof c.limit === 'number' ? c.limit : 0;
                   const isExceeded = pct >= 100;
                   return (
-                    <div
+                    <motion.div
                       key={i}
-                      className={`rounded-xl px-4 py-3 border ${
-                        isExceeded ? 'bg-red-500/5 border-red-500/20' : 'bg-amber-500/5 border-amber-500/20'
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className={`rounded-xl px-3 py-2.5 border ${
+                        isExceeded ? 'bg-red-500/5 border-red-500/15' : 'bg-amber-500/5 border-amber-500/15'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-bold text-white">{name}</span>
-                        <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${isExceeded ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-white">{name}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isExceeded ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
                           {c.risk_level ?? `${pct.toFixed(0)}%`}
                         </span>
                       </div>
                       {limitVal > 0 && (
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1.5">
+                        <div className="flex items-center justify-between text-[9px] text-slate-500 mb-1.5 tabular-nums">
                           <span>{formatCurrency(amount)}</span>
                           <span className="text-slate-600">{formatCurrency(limitVal)} limite</span>
                         </div>
                       )}
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-800/80 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(pct, 100)}%` }}
                           transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className={`h-full rounded-full ${isExceeded ? 'bg-red-500' : 'bg-amber-500'}`}
+                          className={`h-full rounded-full ${isExceeded ? 'bg-gradient-to-r from-red-500 to-red-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`}
                         />
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-500 italic mb-4">{t.dashboard.analytics.noCategoryAtRisk}</p>
+              <div className="flex flex-col items-center py-8 text-center">
+                <CheckCircle2 size={24} className="text-emerald-400 mb-2" />
+                <p className="text-xs text-slate-400">{t.dashboard.analytics.noCategoryAtRisk}</p>
+              </div>
             )}
             {processedData.categoriesAtRisk?.length > 0 && (
               <Link
                 href="/categories"
-                className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors mb-4"
+                className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors"
               >
-                <ArrowRight size={12} />
+                <ArrowRight size={10} />
                 {t.dashboard?.analytics?.adjustLimits ?? 'Ajustar limites'}
               </Link>
             )}
@@ -1231,43 +1261,51 @@ export default function AnalyticsPage() {
       <section className="space-y-4">
       <button
         onClick={() => setIsRecurringOpen(!isRecurringOpen)}
-        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-[0.4em] text-slate-500"
+        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-slate-300 transition-colors"
       >
         <span>{t.dashboard.analytics.futureCommitments}</span>
         {isRecurringOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
       {isRecurringOpen && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Upcoming Payments */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6`}>
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
-            <Clock className="text-orange-500" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.upcoming}</h3>
+        <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <Clock size={16} className="text-orange-400" />
+            </div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.analytics.upcoming}</h3>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {processedData.upcomingPayments.map((p: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/[0.05] rounded-2xl group hover:bg-white/[0.06] transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex flex-col items-center justify-center">
-                    <span className="text-[8px] font-black text-orange-500 uppercase">{new Date(p.transaction_date).toLocaleString('default', { month: 'short' })}</span>
-                    <span className="text-sm font-black text-white">{new Date(p.transaction_date).getDate()}</span>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center justify-between p-3 bg-slate-950/50 rounded-xl border border-slate-700/30 hover:border-orange-500/20 transition-all group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-[7px] font-bold text-orange-400 uppercase leading-none">{new Date(p.transaction_date).toLocaleString('default', { month: 'short' })}</span>
+                    <span className="text-sm font-black text-white leading-none">{new Date(p.transaction_date).getDate()}</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-white">{p.description || t.dashboard.analytics.noDescription}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{p.description || t.dashboard.analytics.noDescription}</p>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                       {p.type === 'recurring' ? t.dashboard.analytics.recurringType : t.dashboard.analytics.scheduledType}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-black text-white">-{formatCurrency(p.amount_cents / 100)}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-black text-red-400 tabular-nums">-{formatCurrency(p.amount_cents / 100)}</span>
                   {p.type === 'recurring' && (
-                    <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl" title={t.dashboard.analytics.processingAutomatic}>
-                      <Zap size={16} className="animate-pulse" />
+                    <div className="w-7 h-7 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center border border-blue-500/20" title={t.dashboard.analytics.processingAutomatic}>
+                      <Zap size={13} />
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
             {processedData.upcomingPayments.length === 0 && (
               <p className="text-center text-slate-500 text-xs italic py-10">{t.dashboard.analytics.noUpcomingPayments}</p>
@@ -1276,35 +1314,38 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Recent Transactions Feed */}
-        <section className={`bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6`}>
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
-            <History className="text-blue-500" size={20} />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50">{t.dashboard.analytics.recentActivity}</h3>
+        <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <History size={16} className="text-blue-400" />
+            </div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.analytics.recentActivity}</h3>
           </div>
-          <div className="space-y-4">
-            {processedData.recentTransactions.map((t: any, i: number) => {
-              // Para transações do cofre: positivo = depósito (receita), negativo = resgate (despesa)
-              // Para transações normais: usar category.type
-              const isVault = t.category?.vault_type && t.category.vault_type !== 'none';
-              const isIncome = isVault 
-                ? t.amount_cents > 0  // Depósito no cofre = receita
-                : t.category?.type === 'income';  // Transação normal
-              
+          <div className="space-y-2">
+            {processedData.recentTransactions.map((tx: any, i: number) => {
+              const isVault = tx.category?.vault_type && tx.category.vault_type !== 'none';
+              const isIncome = isVault ? tx.amount_cents > 0 : tx.category?.type === 'income';
               return (
-                <div key={i} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-transparent hover:border-white/[0.05] transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isIncome ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                      {isIncome ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center justify-between p-3 bg-slate-950/50 rounded-xl border border-slate-700/30 hover:border-slate-600/50 transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {isIncome ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-white truncate max-w-[120px]">{t.description || t.dashboard.analytics.noDescription}</p>
-                      <p className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">{new Date(t.transaction_date).toLocaleDateString()}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{tx.description || 'N/A'}</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{new Date(tx.transaction_date).toLocaleDateString('pt-PT')}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-black ${isIncome ? 'text-emerald-400' : 'text-white'}`}>
-                    {isIncome ? '+' : '-'}{formatCurrency(Math.abs(t.amount_cents) / 100)}
+                  <span className={`text-sm font-black tabular-nums shrink-0 ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.amount_cents) / 100)}
                   </span>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -1318,95 +1359,140 @@ export default function AnalyticsPage() {
       {/* AI Deep Dive Cards */}
       {hasEnoughData && (
       <section className="space-y-6">
+        {/* Section Header with animated gradient */}
         <div className="flex items-center gap-3">
-          <Brain className="text-blue-500 fill-blue-500/20" size={24} />
-          <h2 className="text-xl font-black text-white tracking-tighter uppercase tracking-widest text-[11px] opacity-60">
-            {t.dashboard.analytics.aiInsights}
-          </h2>
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <Brain size={20} className="text-white" />
+            </div>
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black text-white uppercase tracking-widest">
+              {t.dashboard.analytics.aiInsights}
+            </h2>
+            <p className="text-[10px] text-slate-500">Powered by AI</p>
+          </div>
         </div>
 
-        {/* Previsões Avançadas - Seção Especial */}
+        {/* Previsões Avançadas - 3 Months Forecast */}
         {rawData.insights?.predictions && rawData.insights.predictions.months_ahead && rawData.insights.predictions.months_ahead.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-slate-900/40 backdrop-blur-xl border border-blue-500/20 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden"
+            className="relative overflow-hidden rounded-2xl"
           >
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6">
-                <Sparkles className="text-blue-400" size={20} />
-                <h3 className="text-sm font-black uppercase tracking-widest text-blue-400">{t.dashboard.analytics.projectionNext3Months}</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {rawData.insights.predictions.months_ahead.map((month: any, idx: number) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className={`bg-slate-900/60 border rounded-2xl p-6 ${
-                      month.balance < 0 ? 'border-red-500/30' : 'border-slate-800'
-                    }`}
-                  >
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">
-                      {(() => {
-                        const currentDate = new Date();
-                        const projectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + idx + 1, 1);
-                        return projectedDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-                      })()}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">{t.dashboard.analytics.income}</span>
-                        <span className="text-sm font-black text-emerald-400">+{formatCurrency(month.income)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400">{t.dashboard.analytics.expenses}</span>
-                        <span className="text-sm font-black text-red-400">-{formatCurrency(month.expenses)}</span>
-                      </div>
-                      <div className="pt-2 border-t border-slate-800 flex justify-between items-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.analytics.projectedBalance}</span>
-                        <span className={`text-lg font-black ${month.balance < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                          {month.balance < 0 ? '-' : '+'}{formatCurrency(Math.abs(month.balance))}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Confiança da projeção */}
-              {rawData.insights.predictions.confidence != null && (
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                    <ShieldCheck size={14} />
-                    {t.dashboard.analytics.projectionConfidence ?? 'Confiança da projeção'}
-                  </h4>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(rawData.insights.predictions.confidence, 100)}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className={`h-full rounded-full ${
-                          rawData.insights.predictions.confidence >= 70 ? 'bg-emerald-500' :
-                          rawData.insights.predictions.confidence >= 50 ? 'bg-amber-500' : 'bg-slate-500'
-                        }`}
-                      />
-                    </div>
-                    <span className="text-sm font-black text-white shrink-0">
+            {/* Background glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/8 via-purple-500/5 to-indigo-600/8" />
+            <div className="absolute top-0 left-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="relative border border-blue-500/15 rounded-2xl backdrop-blur-sm">
+              {/* Header strip */}
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-blue-500/10 bg-blue-500/5">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-blue-300">{t.dashboard.analytics.projectionNext3Months}</h3>
+                </div>
+                {/* Confidence badge inline */}
+                {rawData.insights.predictions.confidence != null && (
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={12} className={
+                      rawData.insights.predictions.confidence >= 70 ? 'text-emerald-400' :
+                      rawData.insights.predictions.confidence >= 50 ? 'text-amber-400' : 'text-slate-400'
+                    } />
+                    <span className={`text-[10px] font-bold tabular-nums ${
+                      rawData.insights.predictions.confidence >= 70 ? 'text-emerald-400' :
+                      rawData.insights.predictions.confidence >= 50 ? 'text-amber-400' : 'text-slate-400'
+                    }`}>
                       {rawData.insights.predictions.confidence.toFixed(0)}%
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-2 italic">
+                )}
+              </div>
+
+              {/* Month cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-800/30">
+                {rawData.insights.predictions.months_ahead.map((month: any, idx: number) => {
+                  const isNegative = month.balance < 0;
+                  const monthName = (() => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() + idx + 1);
+                    return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+                  })();
+                  const total = month.income + month.expenses;
+                  const incPct = total > 0 ? (month.income / total) * 100 : 50;
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.08 }}
+                      className={`p-4 sm:p-5 ${idx < 2 ? 'border-b md:border-b-0 md:border-r border-slate-700/30' : ''} bg-slate-900/40`}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 capitalize">{monthName}</p>
+                      
+                      {/* Income / Expense bar visual */}
+                      <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden mb-4 flex">
+                        <div className="h-full bg-emerald-500/70 rounded-l-full transition-all" style={{ width: `${incPct}%` }} />
+                        <div className="h-full bg-red-500/70 rounded-r-full transition-all" style={{ width: `${100 - incPct}%` }} />
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-[10px] text-slate-400">{t.dashboard.analytics.income}</span>
+                          </div>
+                          <span className="text-sm font-bold text-emerald-400 tabular-nums">+{formatCurrency(month.income)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="text-[10px] text-slate-400">{t.dashboard.analytics.expenses}</span>
+                          </div>
+                          <span className="text-sm font-bold text-red-400 tabular-nums">-{formatCurrency(month.expenses)}</span>
+                        </div>
+                      </div>
+
+                      {/* Balance highlight */}
+                      <div className={`mt-4 pt-3 border-t flex justify-between items-center ${isNegative ? 'border-red-500/20' : 'border-slate-700/50'}`}>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.analytics.projectedBalance}</span>
+                        <div className="flex items-center gap-1.5">
+                          {isNegative ? <TrendingDown size={14} className="text-red-400" /> : <TrendingUp size={14} className="text-emerald-400" />}
+                          <span className={`text-base font-black tabular-nums ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+                            {isNegative ? '-' : '+'}{formatCurrency(Math.abs(month.balance))}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom confidence bar */}
+              {rawData.insights.predictions.confidence != null && (
+                <div className="px-4 sm:px-6 py-3 border-t border-slate-700/30 bg-slate-950/30 flex items-center gap-3">
+                  <span className="text-[10px] text-slate-500 shrink-0">{t.dashboard.analytics.projectionConfidence ?? 'Confiança'}</span>
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(rawData.insights.predictions.confidence, 100)}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className={`h-full rounded-full ${
+                        rawData.insights.predictions.confidence >= 70 ? 'bg-emerald-500' :
+                        rawData.insights.predictions.confidence >= 50 ? 'bg-amber-500' : 'bg-slate-500'
+                      }`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 italic shrink-0">
                     {rawData.insights.predictions.confidence >= 70
                       ? (t.dashboard.analytics.confidenceHigh ?? 'Baseado em 6+ meses de histórico.')
                       : rawData.insights.predictions.confidence >= 50
                         ? (t.dashboard.analytics.confidenceMedium ?? 'Mais dados melhoram a precisão.')
-                        : (t.dashboard.analytics.confidenceLow ?? 'Histórico limitado. Projeções preliminares.')
+                        : (t.dashboard.analytics.confidenceLow ?? 'Histórico limitado.')
                     }
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
@@ -1414,57 +1500,61 @@ export default function AnalyticsPage() {
         )}
 
         {/* Insights Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {processedData.insights.map((insight: any, index: number) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -5 }}
-              className={`bg-slate-900/40 backdrop-blur-xl border rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden ${
-                insight.type === 'warning' ? 'border-red-500/20 shadow-red-500/5 shadow-2xl' : 
-                insight.type === 'danger' ? 'border-red-500/30 shadow-red-500/10 shadow-2xl' :
-                insight.type === 'success' ? 'border-emerald-500/20 shadow-emerald-500/5 shadow-2xl' :
-                'border-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                  insight.type === 'warning' ? 'bg-red-500/10 text-red-500' : 
-                  insight.type === 'danger' ? 'bg-red-500/20 text-red-400' :
-                  insight.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-                }`}>
-                  <Activity size={24} />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-black text-white text-sm tracking-tight leading-tight">{insight.title}</h4>
-                  {insight.value !== undefined && insight.value !== null && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-black text-slate-400">{insight.value.toFixed(insight.value < 1 ? 1 : 0)}</span>
-                      {insight.trend && (
-                        <span className={`text-[10px] font-black uppercase ${
-                          insight.trend === 'up' ? 'text-emerald-400' : 
-                          insight.trend === 'down' ? 'text-red-400' : 
-                          'text-slate-400'
-                        }`}>
-                          {insight.trend === 'up' ? '↑' : insight.trend === 'down' ? '↓' : '→'}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <p className="text-slate-200 text-sm leading-relaxed italic font-semibold">
-                "{insight.message}"
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {processedData.insights.map((insight: any, index: number) => {
+            const typeConfig = {
+              warning: { border: 'border-amber-500/25 hover:border-amber-500/40', bg: 'bg-amber-500/8', text: 'text-amber-400', icon: 'bg-amber-500/10 text-amber-400 border-amber-500/20', glow: 'shadow-amber-500/5' },
+              danger:  { border: 'border-red-500/25 hover:border-red-500/40', bg: 'bg-red-500/8', text: 'text-red-400', icon: 'bg-red-500/10 text-red-400 border-red-500/20', glow: 'shadow-red-500/5' },
+              success: { border: 'border-emerald-500/25 hover:border-emerald-500/40', bg: 'bg-emerald-500/8', text: 'text-emerald-400', icon: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', glow: 'shadow-emerald-500/5' },
+              info:    { border: 'border-blue-500/25 hover:border-blue-500/40', bg: 'bg-blue-500/8', text: 'text-blue-400', icon: 'bg-blue-500/10 text-blue-400 border-blue-500/20', glow: 'shadow-blue-500/5' },
+            } as any;
+            const cfg = typeConfig[insight.type] || typeConfig.info;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.06 }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                className={`group bg-slate-900/60 backdrop-blur-sm border rounded-2xl p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden shadow-lg ${cfg.border} ${cfg.glow}`}
+              >
+                {/* Left accent line */}
+                <div className={`absolute top-0 left-0 w-0.5 h-full ${cfg.bg}`} style={{ backgroundColor: cfg.text.includes('amber') ? 'rgb(251 191 36 / 0.4)' : cfg.text.includes('red') ? 'rgb(248 113 113 / 0.4)' : cfg.text.includes('emerald') ? 'rgb(52 211 153 / 0.4)' : 'rgb(96 165 250 / 0.4)' }} />
 
-              <button className="mt-auto flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors cursor-pointer group">
-                {t.dashboard.analytics.viewDetails} <ArrowUpRight size={12} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </button>
-            </motion.div>
-          ))}
+                <div className="flex items-start gap-3 pl-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.icon}`}>
+                    <Activity size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-white text-sm leading-snug">{insight.title}</h4>
+                    {insight.value !== undefined && insight.value !== null && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold tabular-nums ${cfg.text}`}>{insight.value.toFixed(insight.value < 1 ? 1 : 0)}</span>
+                        {insight.trend && (
+                          <span className={`text-[10px] font-bold ${
+                            insight.trend === 'up' ? 'text-emerald-400' : insight.trend === 'down' ? 'text-red-400' : 'text-slate-400'
+                          }`}>
+                            {insight.trend === 'up' ? '▲' : insight.trend === 'down' ? '▼' : '●'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <p className="text-slate-300 text-xs leading-relaxed pl-2 line-clamp-3">
+                  {insight.message}
+                </p>
+
+                <div className="mt-auto pt-2 pl-2">
+                  <button className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-white transition-colors cursor-pointer group/btn">
+                    {t.dashboard.analytics.viewDetails}
+                    <ArrowUpRight size={10} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
       )}

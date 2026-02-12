@@ -394,7 +394,7 @@ export const fr = {
           codeError: "Le code doit contenir 6 chiffres.",
           passwordLabel: "Nouveau mot de passe",
           passwordPlaceholder: "••••••••••••",
-          passwordError: "Le nouveau mot de passe doit contenir au moins 6 caractères.",
+          passwordError: "Minimum 8 caractères, avec majuscule, minuscule et chiffre.",
           submit: "Confirmer le nouveau mot de passe",
           loadingConfirming: "Enregistrement…",
           successMessage: "Mot de passe modifié avec succès ! Redirection...",

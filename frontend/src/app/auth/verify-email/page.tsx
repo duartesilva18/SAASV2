@@ -3,9 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
-import confetti from 'canvas-confetti';
 import { useUser } from '@/lib/UserContext';
 import { useTranslation } from '@/lib/LanguageContext';
 
@@ -54,7 +53,7 @@ function VerifyEmailContent() {
         }
         localStorage.removeItem('pending_verification_expires_at');
 
-        // Notificar outras abas (como a check-email)
+        // Notificar outras abas
         const channel = new BroadcastChannel('email-verification');
         channel.postMessage({ 
           status: 'verified', 
@@ -80,11 +79,13 @@ function VerifyEmailContent() {
         setStatus('success');
         setMessage(t.auth.verifyEmail?.successMessage ?? 'Email verificado com sucesso!');
         
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#3b82f6', '#10b981', '#ffffff']
+        import('canvas-confetti').then((mod) => {
+          mod.default({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#ffffff']
+          });
         });
 
         // Redirecionar após um pequeno delay para garantir que tudo está atualizado
@@ -135,14 +136,16 @@ function VerifyEmailContent() {
             onClick={() => router.push('/auth/login')}
             className="bg-slate-900 border border-slate-800 hover:border-slate-700 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
           >
-            Voltar ao Login
+            {t.auth.forgotPassword?.backToLogin ?? 'Voltar ao Login'}
           </button>
         )}
       </motion.div>
 
-      <div className="absolute bottom-8 lg:bottom-12 right-12 text-[10px] font-black text-slate-700 uppercase tracking-[0.5em] opacity-50 flex items-center gap-3">
-        <Sparkles size={14} />
-        Finly Portugal 2026
+      <div className="relative z-20 py-3 text-center">
+        <p className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3 h-3" />
+          {t.auth.login?.sslSecured ?? 'SSL Secured'}
+        </p>
       </div>
     </div>
   );

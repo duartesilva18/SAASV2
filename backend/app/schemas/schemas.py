@@ -193,8 +193,8 @@ class ZenInsightsResponse(BaseModel):
 
 class RecurringTransactionBase(BaseModel):
     description: str
-    amount_cents: int
-    day_of_month: int
+    amount_cents: int = Field(..., ne=0)
+    day_of_month: int = Field(..., ge=1, le=31)
     category_id: Optional[UUID] = None
     is_active: bool = True
     process_automatically: bool = True
@@ -204,8 +204,8 @@ class RecurringTransactionCreate(RecurringTransactionBase):
 
 class RecurringTransactionUpdate(BaseModel):
     description: Optional[str] = None
-    amount_cents: Optional[int] = None
-    day_of_month: Optional[int] = None
+    amount_cents: Optional[int] = Field(None, ne=0)
+    day_of_month: Optional[int] = Field(None, ge=1, le=31)
     category_id: Optional[UUID] = None
     is_active: Optional[bool] = None
     process_automatically: Optional[bool] = None
@@ -354,8 +354,8 @@ class BroadcastRequest(BaseModel):
 class SavingsGoalBase(BaseModel):
     name: str
     goal_type: str = 'expense'
-    target_amount_cents: int
-    current_amount_cents: int = 0
+    target_amount_cents: int = Field(..., gt=0)
+    current_amount_cents: int = Field(0, ge=0)
     target_date: date
     icon: str = 'Target'
     color_hex: str = '#3B82F6'
@@ -366,8 +366,8 @@ class SavingsGoalCreate(SavingsGoalBase):
 class SavingsGoalUpdate(BaseModel):
     name: Optional[str] = None
     goal_type: Optional[str] = None
-    target_amount_cents: Optional[int] = None
-    current_amount_cents: Optional[int] = None
+    target_amount_cents: Optional[int] = Field(None, gt=0)
+    current_amount_cents: Optional[int] = Field(None, ge=0)
     target_date: Optional[date] = None
     icon: Optional[str] = None
     color_hex: Optional[str] = None

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, AlertCircle, ChevronLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
@@ -53,11 +52,14 @@ function VerifyRegisterContent() {
       await refreshUser();
       setSuccess(true);
 
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#10b981', '#3b82f6', '#ffffff'],
+      import('canvas-confetti').then((mod) => {
+        const confetti = mod.default;
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#3b82f6', '#ffffff'],
+        });
       });
 
       setTimeout(() => {

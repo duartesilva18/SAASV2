@@ -284,144 +284,122 @@ export default function RecurringPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 pb-20 px-4 md:px-8">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-20 px-4 md:px-8">
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { height: 0px; background: transparent; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       
-      <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8 relative z-10">
+      <section className="space-y-5">
+        {/* Header row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full mb-4 sm:mb-6 text-blue-400 text-[10px] font-black uppercase tracking-widest">
-              {t.dashboard.recurring.title}
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-lg mb-3">
+              <CreditCard size={12} className="text-blue-400" />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.recurring.title}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white leading-tight uppercase">
-              {t.dashboard.recurring.mySubscriptions} <span className="text-blue-500 italic">{t.dashboard.recurring.subscriptionsAccent}</span>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white mb-1">
+              {t.dashboard.recurring.mySubscriptions}
             </h1>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium italic">{t.dashboard.recurring.subscriptionsAccent}</p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 w-full max-w-4xl">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 min-w-0">
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-emerald-500/10 rounded-lg md:rounded-xl flex items-center justify-center text-emerald-500 shrink-0">
-                    <ArrowUpCircle size={18} />
-                  </div>
-                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedIncome}</span>
-                </div>
-                <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalIncomes / 100)}</p>
-                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-700/60 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-emerald-500/50" />
-                </div>
-              </motion.div>
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: true, type: activeTab });
+              setShowAddModal(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
+          >
+            <Plus size={16} className="shrink-0" />
+            <span>{activeTab === 'expense' ? t.dashboard.recurring.addNew : t.dashboard.recurring.newIncome}</span>
+          </button>
+        </div>
 
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-slate-500">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-red-500/10 rounded-lg md:rounded-xl flex items-center justify-center text-red-500 shrink-0">
-                    <ArrowDownCircle size={18} />
-                  </div>
-                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.fixedExpenses}</span>
-                </div>
-                <p className="text-2xl md:text-4xl font-black text-white tracking-tighter">{formatCurrency(totalExpenses / 100)}</p>
-                <div className="mt-auto pt-1.5 md:pt-2 h-0.5 md:h-1 w-full bg-slate-700/60 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} className="h-full bg-red-500/50" />
-                </div>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="bg-blue-600/10 border border-blue-500/20 p-4 md:p-6 rounded-2xl shadow-2xl relative overflow-hidden group h-full flex flex-col"
-              >
-                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-blue-400">
-                  <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-500/20 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
-                    <Sparkles size={18} className="animate-pulse" />
-                  </div>
-                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t.dashboard.recurring.netZenBalance}</span>
-                </div>
-                <p className={`text-2xl md:text-4xl font-black tracking-tighter ${netZen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {formatCurrency(netZen / 100)}
-                </p>
-                <div className="mt-auto pt-2 md:pt-3 flex items-center gap-2">
-                  <div className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full ${netZen >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                    {netZen >= 0 ? t.dashboard.recurring.zenEquilibrium : t.dashboard.recurring.criticalAttention}
-                  </div>
-                </div>
-              </motion.div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-center">
+                <ArrowUpCircle size={14} className="text-emerald-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.recurring.fixedIncome}</span>
             </div>
-
-            <button
-              onClick={() => {
-                setEditingId(null);
-                setFormData({ description: '', amount: '', day_of_month: 1, category_id: '', process_automatically: true, type: activeTab });
-                setShowAddModal(true);
-              }}
-              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
-            >
-              <Plus size={18} className="shrink-0" />
-              <span>{activeTab === 'expense' ? t.dashboard.recurring.addNew : t.dashboard.recurring.newIncome}</span>
-            </button>
+            <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums">{formatCurrency(totalIncomes / 100)}</p>
+          </div>
+          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-center">
+                <ArrowDownCircle size={14} className="text-red-400" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.recurring.fixedExpenses}</span>
+            </div>
+            <p className="text-lg sm:text-xl font-black text-red-400 tabular-nums">{formatCurrency(totalExpenses / 100)}</p>
+          </div>
+          <div className={`backdrop-blur-md border p-4 rounded-2xl shadow-2xl ${netZen >= 0 ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${netZen >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                <Sparkles size={14} className={netZen >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.recurring.netZenBalance}</span>
+            </div>
+            <p className={`text-lg sm:text-xl font-black tabular-nums ${netZen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {netZen >= 0 ? '+' : ''}{formatCurrency(netZen / 100)}
+            </p>
           </div>
         </div>
 
-        {/* Main Selection Tabs */}
-        <div className="flex justify-center mt-8 sm:mt-12 overflow-x-auto">
-          <div className="bg-slate-900/70 backdrop-blur-md p-2 rounded-xl border border-slate-700/60 flex gap-2 min-w-0 shrink-0">
+        {/* Tabs */}
+        <div className="flex justify-center">
+          <div className="bg-slate-900/70 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 flex gap-1">
             <button
               onClick={() => setActiveTab('income')}
-              className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-[22px] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold uppercase tracking-wider text-[10px] transition-all cursor-pointer ${
                 activeTab === 'income' 
-                  ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/20' 
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' 
+                  : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              <ArrowUpCircle size={18} />
+              <ArrowUpCircle size={14} />
               {t.dashboard.recurring.fixedIncomes}
             </button>
             <button
               onClick={() => setActiveTab('expense')}
-              className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-10 py-3 sm:py-4 rounded-xl sm:rounded-[22px] font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold uppercase tracking-wider text-[10px] transition-all cursor-pointer ${
                 activeTab === 'expense' 
-                  ? 'bg-red-600 text-white shadow-xl shadow-red-600/20' 
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
+                  : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              <ArrowDownCircle size={18} />
+              <ArrowDownCircle size={14} />
               {t.dashboard.recurring.fixedExpenses}
             </button>
           </div>
         </div>
       </section>
 
-      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
-        <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
-              <PieChartIcon size={16} />
+      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
+              <CalendarDays size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Fluxo de Pressão</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Fluxo de Pressão</h2>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 px-2 py-0.5 bg-slate-800/60 border border-slate-700/50 rounded-md">
             {activeTab === 'expense' ? t.dashboard.recurring.fixedExpenses : t.dashboard.recurring.fixedIncomes}
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {weeklyPressure.map((week, index) => (
-            <div key={index} className="bg-slate-950/60 border border-slate-700/60 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{week.name}</span>
-                <span className={`text-lg font-black ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+            <div key={index} className="bg-slate-950/50 border border-slate-700/40 rounded-xl p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{week.name}</span>
+                <span className={`text-sm font-black tabular-nums ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
                   {formatCurrency(Math.abs(week.value))}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {currentList
                   .filter(r => {
                     if (index === 0) return r.day_of_month <= 7;
@@ -439,24 +417,20 @@ export default function RecurringPage() {
                       <div 
                         key={item.id} 
                         onClick={() => handleEditClick(item)}
-                        className={`p-3 bg-white/5 border-2 rounded-xl cursor-pointer transition-all ${
-                          activeTab === 'expense'
-                            ? alreadyPaid
-                              ? 'border-red-500/40 bg-red-500/5 hover:border-red-500/60'
-                              : 'border-red-500 bg-red-500/10 hover:border-red-500/90'
-                            : alreadyPaid
-                              ? 'border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500/70'
-                              : 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500/80'
+                        className={`p-2.5 border rounded-lg cursor-pointer transition-all ${
+                          alreadyPaid
+                            ? 'border-slate-700/40 bg-slate-900/40 opacity-60'
+                            : activeTab === 'expense'
+                              ? 'border-red-500/30 bg-red-500/5 hover:border-red-500/50'
+                              : 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] font-black text-slate-400">Dia {item.day_of_month}</span>
-                          {alreadyPaid && (
-                            <CheckCircle2 size={12} className="text-emerald-400" />
-                          )}
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[8px] font-bold text-slate-500">Dia {item.day_of_month}</span>
+                          {alreadyPaid && <CheckCircle2 size={10} className="text-emerald-400" />}
                         </div>
-                        <p className="text-xs font-black text-white uppercase truncate mb-1">{item.description}</p>
-                        <p className={`text-sm font-black ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+                        <p className="text-[10px] font-bold text-white truncate">{item.description}</p>
+                        <p className={`text-xs font-black tabular-nums mt-0.5 ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
                           {formatCurrency(Math.abs(item.amount_cents) / 100)}
                         </p>
                       </div>
@@ -468,7 +442,7 @@ export default function RecurringPage() {
                   if (index === 2) return r.day_of_month > 14 && r.day_of_month <= 21;
                   return r.day_of_month > 21;
                 }).length === 0 && (
-                  <p className="text-[10px] text-slate-600 font-medium italic text-center py-4">Sem subscrições</p>
+                  <p className="text-[9px] text-slate-600 italic text-center py-3">Sem subscrições</p>
                 )}
               </div>
             </div>
@@ -477,118 +451,127 @@ export default function RecurringPage() {
       </section>
 
       {/* Gráficos de Análise */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 1: Proporção Receitas vs Despesas */}
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-              <PieChartIcon size={16} />
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
+              <PieChartIcon size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Proporção Mensal</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Proporção Mensal</h2>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] w-full">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={5} dataKey="value">
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                    formatter={(value: number | undefined) => {
-                      if (value === undefined) return '';
-                      return formatCurrency(value);
-                    }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }}
+                    itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                    formatter={(value: number | undefined) => value === undefined ? '' : formatCurrency(value)}
                   />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-600">
-                <p className="text-xs font-black uppercase tracking-widest">Sem dados</p>
-              </div>
+              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">Sem dados</p></div>
             )}
           </div>
-          <div className="flex items-center justify-center gap-6 mt-6">
+          <div className="flex items-center justify-center gap-4 mt-3">
             {pieData.map((item, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{item.name}</span>
+              <div key={index} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-[9px] font-bold text-slate-400">{item.name}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Gráfico 2: Distribuição por Categoria */}
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500/10 rounded-lg sm:rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-              <TrendingUp size={16} />
+        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
+              <TrendingUp size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-blue-500">Por Categoria</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Por Categoria</h2>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] w-full">
             {barData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#1e293b" />
-                  <XAxis type="number" stroke="#475569" fontSize={10} fontWeight="900" tickFormatter={(value) => formatCurrency(value)} />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    stroke="#475569" 
-                    fontSize={9} 
-                    fontWeight="900"
-                    width={100}
-                  />
+                  <XAxis type="number" stroke="#475569" fontSize={10} fontWeight="bold" tickFormatter={(value) => formatCurrency(value)} />
+                  <YAxis type="category" dataKey="name" stroke="#475569" fontSize={9} fontWeight="bold" width={90} />
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
-                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                    formatter={(value: number | undefined) => {
-                      if (value === undefined) return '';
-                      return formatCurrency(value);
-                    }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }}
+                    itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                    formatter={(value: number | undefined) => value === undefined ? '' : formatCurrency(value)}
                   />
                   <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#3b82f6" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-600">
-                <p className="text-xs font-black uppercase tracking-widest">Sem dados</p>
-              </div>
+              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">Sem dados</p></div>
             )}
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <AnimatePresence>
-          {filteredRecurring.map((item) => (
-            <motion.div key={item.id} layout onClick={() => handleEditClick(item)} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 cursor-pointer hover:border-blue-500/50 transition-all">
-              <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
-                  <Zap size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-700 hover:text-red-500 cursor-pointer">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-              <h3 className="text-lg font-black text-white uppercase truncate mb-1">{item.description}</h3>
-              <p className={`text-2xl font-black mb-4 ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>{formatCurrency(Math.abs(item.amount_cents) / 100)}</p>
-              <span className="text-[10px] font-black uppercase text-slate-600">Dia {item.day_of_month} • Auto</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      {/* Subscription Cards */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Zap size={13} className="text-blue-400" />
+          </div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white">{activeTab === 'expense' ? t.dashboard.recurring.fixedExpenses : t.dashboard.recurring.fixedIncomes}</h2>
+          <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-800 border border-slate-700/50 rounded-md text-slate-400">{filteredRecurring.length}</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <AnimatePresence>
+            {filteredRecurring.map((item, i) => {
+              const cat = allCategories.find((c: any) => c.id === item.category_id);
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.02 }}
+                  onClick={() => handleEditClick(item)}
+                  className={`group bg-slate-900/70 backdrop-blur-md border rounded-2xl p-4 cursor-pointer transition-all hover:border-blue-500/40 ${
+                    activeTab === 'expense' ? 'border-slate-700/60' : 'border-slate-700/60'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'expense' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'
+                      }`} style={cat?.color_hex ? { backgroundColor: `${cat.color_hex}15`, color: cat.color_hex } : {}}>
+                        <Zap size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">{item.description}</h3>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                          Dia {item.day_of_month} {item.process_automatically ? '• Auto' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={(e) => handleDelete(e, item.id)} className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-lg font-black tabular-nums ${activeTab === 'expense' ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {activeTab === 'expense' ? '-' : '+'}{formatCurrency(Math.abs(item.amount_cents) / 100)}
+                    </p>
+                    {cat && <span className="text-[8px] font-bold px-1.5 py-0.5 bg-slate-800/60 border border-slate-700/40 rounded-md text-slate-400 truncate max-w-[80px]">{cat.name}</span>}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
       </section>
 
       <AnimatePresence>

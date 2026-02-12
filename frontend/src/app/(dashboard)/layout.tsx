@@ -17,6 +17,7 @@ import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function DashboardLayout({
   children,
@@ -168,8 +169,8 @@ export default function DashboardLayout({
       if (user.currency && (user.currency === 'EUR' || user.currency === 'USD' || user.currency === 'BRL')) {
         setCurrency(user.currency as 'EUR' | 'USD' | 'BRL');
       }
-      if (user.language && (user.language === 'pt' || user.language === 'en')) {
-        setLanguage(user.language as 'pt' | 'en');
+      if (user.language && (user.language === 'pt' || user.language === 'en' || user.language === 'fr')) {
+        setLanguage(user.language as 'pt' | 'en' | 'fr');
       }
     }
   }, [user, loading, router, setCurrency, setLanguage, refreshUser]);
@@ -512,6 +513,7 @@ function MobileHeaderWithNotifications({
             >
               <Bell size={20} />
             </button>
+            <ThemeToggle />
             <LanguageSelector />
             <button
               onClick={onOpenMenu}

@@ -61,7 +61,9 @@ function LoginPageContent() {
   const { refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams?.get('redirect') || '/dashboard';
+  const rawRedirect = searchParams?.get('redirect') || '/dashboard';
+  // Prevent open redirect: only allow relative paths starting with /
+  const redirectUrl = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/dashboard';
 
   const validateEmail = (email: string) =>
     String(email).toLowerCase().match(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
@@ -96,7 +98,7 @@ function LoginPageContent() {
       setTimeout(() => setIsShaking(false), 500);
       return;
     }
-    if (password.length < 4) {
+    if (password.length < 8) {
       setError(t.auth.login.shortPassword);
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
@@ -145,7 +147,7 @@ function LoginPageContent() {
       const lower = String(raw).toLowerCase();
 
       let msg: string;
-      if (status === 403 || lower.includes('verif') || lower.includes('confirme') || lower.includes('confirm') && lower.includes('email')) {
+      if (status === 403 || lower.includes('verif') || lower.includes('confirme') || (lower.includes('confirm') && lower.includes('email'))) {
         msg = t.auth.login.errorNotVerified;
         setShowResendVerification(true);
       } else if (status === 401 && (lower.includes('session') || lower.includes('sessão') || lower.includes('expir') || lower.includes('token'))) {
@@ -435,6 +437,7 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+
 
 
 

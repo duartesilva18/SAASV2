@@ -6,14 +6,16 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  // Enviar idioma atual para o backend (para respostas localizadas)
-  const language = localStorage.getItem('language');
-  if (language) {
-    config.headers['Accept-Language'] = language;
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Enviar idioma atual para o backend (para respostas localizadas)
+    const language = localStorage.getItem('language');
+    if (language) {
+      config.headers['Accept-Language'] = language;
+    }
   }
   return config;
 });

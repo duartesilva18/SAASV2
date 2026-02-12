@@ -42,12 +42,14 @@ async def _send_verification_email_background(to_email: str, subject: str, body_
     if not (body_html and str(body_html).strip()):
         logger.warning(f'Email de verificação ignorado: corpo vazio (para {to_email}).')
         return
+    mail_user = (getattr(settings, 'MAIL_USERNAME', '') or '').strip()
+    mail_from = (getattr(settings, 'MAIL_FROM', '') or '').strip() or mail_user
     conf = ConnectionConfig(
-        MAIL_USERNAME=settings.MAIL_USERNAME.strip(),
-        MAIL_PASSWORD=settings.MAIL_PASSWORD.strip(),
-        MAIL_FROM=settings.MAIL_FROM.strip(),
-        MAIL_PORT=settings.MAIL_PORT,
-        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_USERNAME=mail_user,
+        MAIL_PASSWORD=(getattr(settings, 'MAIL_PASSWORD', '') or '').strip(),
+        MAIL_FROM=mail_from,
+        MAIL_PORT=getattr(settings, 'MAIL_PORT', 587),
+        MAIL_SERVER=(getattr(settings, 'MAIL_SERVER', '') or 'smtp.gmail.com').strip(),
         MAIL_STARTTLS=True,
         MAIL_SSL_TLS=False,
         USE_CREDENTIALS=True,
@@ -122,6 +124,11 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
         email: str = payload.get('sub')
         if email is None:
             raise credentials_exception
+        # Reject refresh tokens used as access tokens
+        token_type = payload.get('type', 'access')
+        if token_type != 'access':
+            logger.warning(f'❌ Token rejeitado: tipo "{token_type}" não é "access"')
+            raise credentials_exception
     except JWTError as e:
         logger.warning(f'❌ JWTError ao validar token: {str(e)}')
         raise credentials_exception
@@ -132,6 +139,10 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     if user is None:
         logger.warning(f'❌ Token válido mas utilizador não encontrado: {email}')
         raise credentials_exception
+    # Block deactivated users
+    if not getattr(user, 'is_active', True):
+        logger.warning(f'❌ Conta desativada: {email}')
+        raise HTTPException(status_code=403, detail='Account deactivated')
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
@@ -215,7 +226,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         conf = ConnectionConfig(
             MAIL_USERNAME=(getattr(settings, 'MAIL_USERNAME', '') or '').strip(),
             MAIL_PASSWORD=(getattr(settings, 'MAIL_PASSWORD', '') or '').strip(),
-            MAIL_FROM=(getattr(settings, 'MAIL_FROM', '') or '').strip() or mail_user,
+            MAIL_FROM=(getattr(settings, 'MAIL_FROM', '') or '').strip() or (getattr(settings, 'MAIL_USERNAME', '') or '').strip(),
             MAIL_PORT=getattr(settings, 'MAIL_PORT', 587),
             MAIL_SERVER=(getattr(settings, 'MAIL_SERVER', '') or 'smtp.gmail.com').strip(),
             MAIL_STARTTLS=True,
@@ -1142,8 +1153,8 @@ async def validate_referral_code(code: Optional[str] = None, db: Session = Depen
 async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     email_lower = normalize_email(form_data.username or '')
     user = db.query(models.User).filter(models.User.email == email_lower).first()
-    if not user or not security.verify_password(form_data.password, user.password_hash):
-        logger.warning(f'Falha de login para: {form_data.username} de {request.client.host}')
+    if not user or not user.password_hash or not security.verify_password(form_data.password, user.password_hash):
+        logger.warning(f'Falha de login para: {form_data.username} de {request.client.host if request.client else "unknown"}')
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Incorrect email or password',
@@ -1195,12 +1206,13 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     
     html = f'''<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body,table,td{{margin:0;padding:0;-webkit-text-size-adjust:100%}}img{{border:0;display:block}}table{{border-collapse:collapse}}@media only screen and (max-width:600px){{.mpad{{padding:16px 12px!important}}.card{{max-width:100%!important;width:100%!important;border-radius:20px!important}}.hpad{{padding:28px 20px!important}}.ctpad{{padding:24px 20px 28px!important}}.ctpad h2{{font-size:20px!important}}.codebox{{padding:28px 20px!important}}.code{{font-size:40px!important;letter-spacing:8px!important}}.fpad{{padding:20px 16px!important;font-size:9px!important}}}}</style></head><body style="margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0f172a;min-height:100vh"><tr><td align="center" class="mpad" style="padding:32px 20px"><table role="presentation" class="card" width="520" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;width:100%;background:#0f172a;border-radius:24px;overflow:hidden;border:1px solid #1e293b;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)"><tr><td style="height:4px;background:linear-gradient(90deg,#3b82f6 0%,#6366f1 100%)"></td></tr><tr><td class="hpad" style="background:#020617;padding:36px 28px;text-align:center;border-bottom:1px solid #1e293b"><img src="https://app.finlybot.com/images/logo/logo-semfundo.png" alt="" width="72" height="72" style="display:block;margin:0 auto 8px;width:72px;height:72px;object-fit:contain" /><p style="margin:0;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">Finly</p></td></tr><tr><td class="ctpad" style="padding:32px 28px 36px;color:#94a3b8;line-height:1.65;font-size:15px;text-align:center"><h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">{t['title']}</h2><p style="margin:0 0 24px;color:#94a3b8">{t['message']}</p><div class="codebox" style="background:#020617;border:2px dashed #1e293b;border-radius:20px;padding:36px 24px;text-align:center;margin:0 0 24px"><p style="margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#64748b;font-weight:700">{t['code_label']}</p><p class="code" style="font-size:48px;font-weight:800;color:#3b82f6;letter-spacing:10px;margin:0;font-family:ui-monospace,monospace">{code}</p></div><p style="margin:0;font-size:12px;color:#64748b;font-style:italic">{t['security_notice']}</p></td></tr><tr><td class="fpad" style="background:#020617;padding:24px 28px;text-align:center;border-top:1px solid #1e293b;color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em">{t['footer']}</td></tr></table></td></tr></table></body></html>'''
     
+    _mail_user = (getattr(settings, 'MAIL_USERNAME', '') or '').strip()
     current_conf = ConnectionConfig(
-        MAIL_USERNAME=settings.MAIL_USERNAME.strip(),
-        MAIL_PASSWORD=settings.MAIL_PASSWORD.strip(),
-        MAIL_FROM=settings.MAIL_FROM.strip(),
-        MAIL_PORT=settings.MAIL_PORT,
-        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_USERNAME=_mail_user,
+        MAIL_PASSWORD=(getattr(settings, 'MAIL_PASSWORD', '') or '').strip(),
+        MAIL_FROM=(getattr(settings, 'MAIL_FROM', '') or '').strip() or _mail_user,
+        MAIL_PORT=getattr(settings, 'MAIL_PORT', 587),
+        MAIL_SERVER=(getattr(settings, 'MAIL_SERVER', '') or 'smtp.gmail.com').strip(),
         MAIL_STARTTLS=True,
         MAIL_SSL_TLS=False,
         USE_CREDENTIALS=True,

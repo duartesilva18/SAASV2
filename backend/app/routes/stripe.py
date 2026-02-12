@@ -317,7 +317,7 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
         return {'success': True, 'message': 'Plano alterado.', 'subscription_status': sub_after.status}
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao alterar plano: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail='Erro ao alterar plano. Tenta novamente.')
     except HTTPException:
         raise
     except Exception as e:
@@ -349,7 +349,7 @@ async def customer_portal(db: Session = Depends(get_db), current_user: models.Us
         logger.error(f'Erro Stripe Portal: {str(e)}')
         raise HTTPException(
             status_code=400, 
-            detail=f'Erro ao aceder ao portal: {str(e)}'
+            detail='Erro ao aceder ao portal. Tenta novamente.'
         )
     except HTTPException:
         raise
@@ -387,7 +387,7 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                 # Atualizar o utilizador na base de dados
                 # Usar uma sessão de DB separada para garantir atualização
                 from ..core.dependencies import SessionLocal
-                from datetime import datetime
+                from datetime import datetime, timezone as _tz
                 db = SessionLocal()
                 try:
                     user = db.query(models.User).filter(models.User.id == current_user.id).first()
@@ -405,7 +405,8 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                             ).first()
                             if referral and not referral.has_subscribed:
                                 referral.has_subscribed = True
-                                referral.subscription_date = datetime.now()
+                                from datetime import timezone as _tz
+                                referral.subscription_date = datetime.now(_tz.utc)
                                 logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (verify-session)')
                             elif referral:
                                 logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
@@ -433,7 +434,7 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
         }
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao verificar sessão: {str(e)}')
-        raise HTTPException(status_code=400, detail=f'Erro ao verificar sessão: {str(e)}')
+        raise HTTPException(status_code=400, detail='Erro ao verificar sessão. Tenta novamente.')
     except Exception as e:
         logger.error(f'Erro inesperado ao verificar sessão: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao verificar sessão')
@@ -586,10 +587,10 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
         raise
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao cancelar subscrição: {str(e)}, tipo: {type(e).__name__}')
-        raise HTTPException(status_code=400, detail=f'Erro ao cancelar subscrição: {str(e)}')
+        raise HTTPException(status_code=400, detail='Erro ao cancelar subscrição. Tenta novamente.')
     except Exception as e:
         logger.error(f'Erro inesperado ao cancelar subscrição: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=500, detail=f'Erro ao cancelar subscrição: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao cancelar subscrição. Tenta novamente.')
 
 @router.get('/invoices')
 async def get_stripe_invoices(current_user: models.User = Depends(get_current_user)):

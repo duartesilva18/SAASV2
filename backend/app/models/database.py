@@ -148,18 +148,12 @@ class Transaction(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
-    __table_args__ = (
-        CheckConstraint('amount_cents <> 0'),
-    )
-    
     workspace = relationship('Workspace', back_populates='transactions')
     category = relationship('Category', back_populates='transactions')
     installment_group = relationship('InstallmentGroup', back_populates='transactions')
     
     __table_args__ = (
         CheckConstraint('amount_cents <> 0'),
-        # Índices compostos para queries frequentes
-        # Nota: SQLAlchemy cria índices automaticamente para ForeignKeys, mas adicionamos índices compostos
     )
 
 class SystemSetting(Base):
@@ -173,7 +167,7 @@ class SystemSetting(Base):
 class RecurringTransaction(Base):
     __tablename__ = 'recurring_transactions'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
     description = Column(String(255), nullable=False)
     amount_cents = Column(Integer, nullable=False)
@@ -185,6 +179,11 @@ class RecurringTransaction(Base):
     
     workspace = relationship('Workspace', back_populates='recurring_transactions')
     category = relationship('Category')
+
+    __table_args__ = (
+        CheckConstraint('amount_cents <> 0'),
+        CheckConstraint('day_of_month >= 1 AND day_of_month <= 31'),
+    )
 
 class EmailVerification(Base):
     __tablename__ = 'email_verifications'
