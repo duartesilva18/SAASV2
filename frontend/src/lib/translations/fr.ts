@@ -1478,7 +1478,18 @@ export const fr = {
           closeCreateTransactionQuestion: "Voulez-vous créer une transaction automatiquement ?",
           asIncome: "En revenu",
           asExpense: "En dépense",
-          noTransaction: "Ne pas créer de transaction"
+          noTransaction: "Ne pas créer de transaction",
+          totalGoals: "Total objectifs",
+          totalSaved: "Total épargné",
+          totalTarget: "Objectif total",
+          globalProgress: "Progression globale",
+          createFirstGoal: "Créer un premier objectif",
+          startByDefining: "Commencez par définir un objectif et faites le premier pas.",
+          zenTip: "Diviser les grands objectifs en étapes plus petites rend tout plus atteignable. Célébrez chaque victoire.",
+          quickAmounts: "Montant rapide",
+          goalCompleted: "Terminé",
+          icon: "Icône",
+          depositValue: "Montant"
       },
       fire: {
           title: "FIRE",
