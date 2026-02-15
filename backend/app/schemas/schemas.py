@@ -317,6 +317,7 @@ class AdminUserResponse(BaseModel):
     marketing_opt_in: bool = False
     subscription_status: str
     pro_granted_until: Optional[datetime] = None
+    had_refund: bool = False
     created_at: datetime
     is_active: bool
     is_admin: bool

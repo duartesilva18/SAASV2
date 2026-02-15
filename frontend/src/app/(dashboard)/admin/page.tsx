@@ -250,11 +250,23 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap inline-flex w-fit ${
-                        ['active', 'trialing'].includes(u.subscription_status) || isProGranted(u) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5'
-                      }`}>
-                        {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : isProGranted(u) ? t.dashboard.admin.dashboard.proUntil.replace('{date}', formatProUntil(u.pro_granted_until!)) : 'Free Plan'}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`px-2 sm:px-3 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap inline-flex w-fit ${
+                          ['active', 'trialing'].includes(u.subscription_status) || isProGranted(u) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5'
+                        }`}>
+                          {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : isProGranted(u) ? t.dashboard.admin.dashboard.proUntil.replace('{date}', formatProUntil(u.pro_granted_until!)) : 'Free Plan'}
+                        </span>
+                        {(u.subscription_status === 'canceled' || u.subscription_status === 'cancel_at_period_end') && (
+                          <span className="px-2 sm:px-2.5 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-orange-500/10 text-orange-400 border-orange-500/20" title="Plano cancelado ou a terminar">
+                            Cancelado
+                          </span>
+                        )}
+                        {u.had_refund === true && (
+                          <span className="px-2 sm:px-2.5 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-amber-500/10 text-amber-400 border-amber-500/20" title="Reembolso dado">
+                            Reembolso
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">

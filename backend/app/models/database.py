@@ -32,6 +32,7 @@ class User(Base):
     telegram_default_category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
     # Pro concedido por admin até uma data (acesso Pro temporário sem subscrição Stripe)
     pro_granted_until = Column(DateTime(timezone=True), nullable=True)
+    had_refund = Column(Boolean, nullable=False, default=False)  # True se alguma vez teve reembolso (Stripe)
     # Campos de afiliado
     is_affiliate = Column(Boolean, nullable=False, default=False)
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)

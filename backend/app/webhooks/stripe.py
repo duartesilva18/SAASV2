@@ -316,6 +316,8 @@ def handle_charge_refunded(charge: dict, db: Session):
         logger.warning(f'Utilizador não encontrado para reembolso charge {charge_id}')
         return
 
+    user.had_refund = True  # Marcar para exibir no admin (gestão de utilizadores)
+
     # Bloquear acesso de imediato: sincronizar subscription_status com o Stripe (reembolso pode ter cancelado a sub)
     if invoice_id and settings.STRIPE_API_KEY:
         try:
