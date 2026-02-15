@@ -256,7 +256,7 @@ export default function AdminDashboardPage() {
                         }`}>
                           {['active', 'trialing'].includes(u.subscription_status) ? 'Pro Plan' : isProGranted(u) ? t.dashboard.admin.dashboard.proUntil.replace('{date}', formatProUntil(u.pro_granted_until!)) : 'Free Plan'}
                         </span>
-                        {(u.subscription_status === 'canceled' || u.subscription_status === 'cancel_at_period_end') && (
+                        {(u.subscription_status === 'canceled' || u.subscription_status === 'cancel_at_period_end') && !isProGranted(u) && (
                           <span className="px-2 sm:px-2.5 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-orange-500/10 text-orange-400 border-orange-500/20" title="Plano cancelado ou a terminar">
                             Cancelado
                           </span>
