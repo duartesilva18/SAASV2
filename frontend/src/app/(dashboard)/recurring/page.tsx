@@ -580,8 +580,9 @@ export default function RecurringPage() {
                         </p>
                       </div>
                     </div>
-                    <button onClick={(e) => handleDelete(e, item.id)} className="p-1.5 text-slate-600 hover:text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100 cursor-pointer">
+                    <button type="button" onClick={(e) => handleDelete(e, item.id)} className="flex items-center gap-1.5 px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-red-500/30" aria-label={t.dashboard.recurring.cycleRemoved || 'Eliminar subscrição'}>
                       <Trash2 size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Eliminar</span>
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
@@ -739,6 +740,21 @@ export default function RecurringPage() {
                 </div>
 
                 <button type="submit" className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer">Guardar</button>
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingId && (typeof window !== 'undefined' && window.confirm(t.dashboard?.recurring?.removeConfirm ?? 'Eliminar esta subscrição? Esta ação não pode ser desfeita.'))) {
+                        handleDelete({ stopPropagation: () => {} } as React.MouseEvent, editingId);
+                        setShowAddModal(false);
+                        setEditingId(null);
+                      }
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={16} /> {t.dashboard?.recurring?.deleteSubscription ?? 'Eliminar subscrição'}
+                  </button>
+                )}
               </form>
             </motion.div>
           </div>
