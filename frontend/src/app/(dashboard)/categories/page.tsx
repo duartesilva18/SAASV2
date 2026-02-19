@@ -857,7 +857,7 @@ export default function CategoriesPage() {
                       }}
                       className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <Trash2 size={16} /> {t.dashboard.categories.deleteCategory ?? 'Eliminar categoria'}
+                      <Trash2 size={16} /> Eliminar categoria
                     </button>
                   )}
                 </form>

@@ -744,7 +744,7 @@ export default function RecurringPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (editingId && (typeof window !== 'undefined' && window.confirm(t.dashboard?.recurring?.removeConfirm ?? 'Eliminar esta subscrição? Esta ação não pode ser desfeita.'))) {
+                      if (editingId && (typeof window !== 'undefined' && window.confirm('Eliminar esta subscrição? Esta ação não pode ser desfeita.'))) {
                         handleDelete({ stopPropagation: () => {} } as React.MouseEvent, editingId);
                         setShowAddModal(false);
                         setEditingId(null);
@@ -752,7 +752,7 @@ export default function RecurringPage() {
                     }}
                     className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Trash2 size={16} /> {t.dashboard?.recurring?.deleteSubscription ?? 'Eliminar subscrição'}
+                    <Trash2 size={16} /> Eliminar subscrição
                   </button>
                 )}
               </form>

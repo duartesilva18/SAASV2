@@ -381,7 +381,7 @@ export default function GoalsPage() {
               key={goal.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group relative flex flex-col w-full bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300"
+              className="group relative flex flex-col w-full bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 cursor-pointer"
               style={{
                 boxShadow: canComplete
                   ? `0 0 24px ${goal.color_hex}15, 0 4px 32px rgba(0,0,0,0.3)`
