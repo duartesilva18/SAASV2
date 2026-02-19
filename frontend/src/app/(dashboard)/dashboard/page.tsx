@@ -652,14 +652,16 @@ export default function DashboardPage() {
             })()}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAddTransactionModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 w-full sm:w-auto"
-        >
-          <Plus size={16} className="shrink-0" />
-          <span>{t.dashboard.page.newTransaction}</span>
-        </button>
+        {hasActiveSub && (
+          <button
+            type="button"
+            onClick={() => setShowAddTransactionModal(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 w-full sm:w-auto"
+          >
+            <Plus size={16} className="shrink-0" />
+            <span>{t.dashboard.page.newTransaction}</span>
+          </button>
+        )}
       </div>
 
       {/* 3 cards: Receitas | Despesas | Saldo */}
