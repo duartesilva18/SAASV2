@@ -1082,7 +1082,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
-                  <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} />
+                  <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} activeBar={{ fill: '#06b6d4' }} cursor="default" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
