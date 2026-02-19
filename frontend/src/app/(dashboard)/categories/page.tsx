@@ -598,7 +598,7 @@ export default function CategoriesPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0">
                       {!isSelectionMode && (
                         <>
                           {isSystemLocked ? (
@@ -607,18 +607,23 @@ export default function CategoriesPage() {
                             </span>
                           ) : (
                             <button 
+                              type="button"
                               onClick={(e) => { e.stopPropagation(); openEdit(cat); }}
-                              className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:bg-blue-500/10 hover:text-blue-400 rounded-lg transition-colors cursor-pointer"
+                              aria-label={t.dashboard.categories.edit}
                             >
                               <Edit2 size={14} />
                             </button>
                           )}
                           {!isProtected ? (
                             <button 
+                              type="button"
                               onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat); }}
-                              className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors cursor-pointer"
+                              className="flex items-center gap-1.5 px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-500/30"
+                              aria-label={t.dashboard.categories.deleteConfirm ?? 'Eliminar categoria'}
                             >
                               <Trash2 size={14} />
+                              <span className="text-[10px] font-bold uppercase tracking-wider">Eliminar</span>
                             </button>
                           ) : isSystemLocked ? (
                             <span className="p-1.5 text-slate-500 rounded-lg" title={t.dashboard.categories.protectedCategoryTooltip}>
@@ -842,6 +847,19 @@ export default function CategoriesPage() {
                     {editingCategory ? t.dashboard.categories.saveChanges : t.dashboard.categories.createNew}
                     <ArrowRight size={18} />
                   </button>
+                  {editingCategory && !isProtectedSystemCategory(editingCategory.name) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryToDelete(editingCategory);
+                        setShowAddModal(false);
+                        setEditingCategory(null);
+                      }}
+                      className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={16} /> {t.dashboard.categories.deleteCategory ?? 'Eliminar categoria'}
+                    </button>
+                  )}
                 </form>
               </div>
             </motion.div>
