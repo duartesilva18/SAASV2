@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Toast from '@/components/Toast';
 import PageLoading from '@/components/PageLoading';
+import { useUser } from '@/lib/UserContext';
 import { 
   Plus, Trash2, Calendar, CreditCard, 
   Sparkles, AlertCircle, CheckCircle2,
@@ -39,6 +40,7 @@ export default function RecurringPage() {
     isVisible: false
   });
   const router = useRouter();
+  const { user, isPro, loading: userLoading } = useUser();
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -90,6 +92,27 @@ export default function RecurringPage() {
       }
     }
   };
+
+  // Guardar acesso: apenas utilizadores Pro podem usar /recurring
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      router.replace('/dashboard');
+      return;
+    }
+    if (!isPro) {
+      setToastInfo({
+        message: t.dashboard?.transactions?.proRequiredMessage
+          ?? 'Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para gerir subscrições.',
+        type: 'error',
+        isVisible: true,
+      });
+      const timeout = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timeout);
+    }
+  }, [userLoading, user, isPro, router, t.dashboard]);
 
   useEffect(() => {
     fetchData();
@@ -279,7 +302,7 @@ export default function RecurringPage() {
     return { day: sortedByDay[0]?.day_of_month, month: nextMonthDate.toLocaleString('pt-PT', { month: 'short' }).replace('.', '') };
   })();
 
-  if (loading) {
+  if (loading || userLoading || !user || !isPro) {
     return <PageLoading message="Sincronizando Ciclos..." />;
   }
 

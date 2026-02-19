@@ -13,6 +13,8 @@ import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageLoading from '@/components/PageLoading';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/lib/UserContext';
 
 const ICONS = [
   { name: 'Target', icon: Target },
@@ -77,6 +79,8 @@ function ProgressRing({ progress, color, size = 64, strokeWidth = 5, completed =
 
 export default function GoalsPage() {
   const { t, formatCurrency } = useTranslation();
+  const router = useRouter();
+  const { user, isPro, loading: userLoading } = useUser();
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -118,6 +122,27 @@ export default function GoalsPage() {
       setLoading(false);
     }
   };
+
+  // Guardar acesso: apenas utilizadores Pro podem usar /goals
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      router.replace('/dashboard');
+      return;
+    }
+    if (!isPro) {
+      setToast({
+        show: true,
+        message: t.dashboard?.transactions?.proRequiredMessage
+          ?? 'Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder às Metas.',
+        type: 'error',
+      });
+      const timeout = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timeout);
+    }
+  }, [userLoading, user, isPro, router, t.dashboard]);
 
   useEffect(() => {
     fetchGoals();
@@ -277,7 +302,7 @@ export default function GoalsPage() {
     setShowModal(true);
   };
 
-  if (loading) {
+  if (loading || userLoading || !user || !isPro) {
     return <PageLoading message={t.dashboard.goals.loading} />;
   }
 

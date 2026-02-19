@@ -15,11 +15,15 @@ import { useTranslation } from '@/lib/LanguageContext';
 import AlertModal from '@/components/AlertModal';
 import PageLoading from '@/components/PageLoading';
 import Toast from '@/components/Toast';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/lib/UserContext';
 
 const QUICK_AMOUNTS = [25, 50, 100, 250];
 
 export default function VaultPage() {
   const { t, formatCurrency } = useTranslation();
+  const router = useRouter();
+  const { user, isPro, loading: userLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -35,6 +39,27 @@ export default function VaultPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'7D' | '30D' | '12M' | 'Tudo'>('Tudo');
   const [isMobile, setIsMobile] = useState(false);
   const reduceMotion = useReducedMotion();
+
+  // Guardar acesso: apenas utilizadores Pro podem usar /vault
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      router.replace('/dashboard');
+      return;
+    }
+    if (!isPro) {
+      setToast({
+        message: t.dashboard?.transactions?.proRequiredMessage
+          ?? 'Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder ao Cofre.',
+        type: 'error',
+        isVisible: true,
+      });
+      const timeout = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timeout);
+    }
+  }, [userLoading, user, isPro, router, t.dashboard]);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -217,7 +242,7 @@ export default function VaultPage() {
     };
   }, [transactions, categories, selectedPeriod]);
 
-  if (loading) return <PageLoading />;
+  if (loading || userLoading || !user || !isPro) return <PageLoading />;
 
   const grandTotal = vaultData.emergencyTotal + vaultData.investmentTotal;
 

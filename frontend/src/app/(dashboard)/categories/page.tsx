@@ -18,6 +18,9 @@ import {
   PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, 
   Tooltip
 } from 'recharts';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/lib/UserContext';
+import PageLoading from '@/components/PageLoading';
 
 interface Category {
   id: string;
@@ -61,6 +64,8 @@ function isProtectedSystemCategory(name: string): boolean {
 
 export default function CategoriesPage() {
   const { t, currency, formatCurrency } = useTranslation();
+  const router = useRouter();
+  const { user, isPro, loading: userLoading } = useUser();
   const [categories, setCategories] = useState<Category[]>([]);
   const [stats, setStats] = useState<CategoryStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +99,27 @@ export default function CategoriesPage() {
   const sortedStats = [...filteredStats].sort(
     (a, b) => Math.abs(b.percentage) - Math.abs(a.percentage)
   );
+
+  // Guardar acesso: apenas utilizadores Pro podem usar /categories
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      router.replace('/dashboard');
+      return;
+    }
+    if (!isPro) {
+      setToastMsg(
+        t.dashboard?.transactions?.proRequiredMessage
+          ?? 'Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para gerir categorias.',
+      );
+      setToastType('error');
+      setShowToast(true);
+      const timeout = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timeout);
+    }
+  }, [userLoading, user, isPro, router, t.dashboard]);
 
   useEffect(() => {
     fetchData();
@@ -265,7 +291,7 @@ export default function CategoriesPage() {
     return found ? found.icon : Tag;
   };
 
-  if (loading && categories.length === 0) {
+  if ((loading && categories.length === 0) || userLoading || !user || !isPro) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <motion.div 

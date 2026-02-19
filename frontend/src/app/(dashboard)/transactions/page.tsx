@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { TransactionSkeleton } from '@/components/LoadingSkeleton';
@@ -44,6 +45,8 @@ interface Category {
 
 function TransactionsPageContent() {
   const { t, formatCurrency, currency } = useTranslation();
+  const router = useRouter();
+  const { user, isPro, loading: userLoading } = useUser();
   const searchParams = useSearchParams();
   const { transactions: transactionsFromHook, isLoading: transactionsLoading, mutate: mutateTransactions } = useTransactions();
   const { categories: categoriesFromHook, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories();
@@ -81,6 +84,29 @@ function TransactionsPageContent() {
     mutateTransactions();
     mutateCategories();
   }, [mutateTransactions, mutateCategories]);
+
+  // Guardar acesso: apenas utilizadores Pro podem usar /transactions
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) {
+      // Sem sessão → manda para login/dashboard conforme fluxo global
+      router.replace('/dashboard');
+      return;
+    }
+    if (!isPro) {
+      // Mostrar alerta bonito e redirecionar para o dashboard
+      setToastInfo({
+        message: t.dashboard?.transactions?.proRequiredMessage 
+          ?? 'Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder às transações.',
+        type: 'error',
+        isVisible: true,
+      });
+      const timeout = setTimeout(() => {
+        router.replace('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timeout);
+    }
+  }, [userLoading, user, isPro, router]);
 
   // Atualizar dados a cada 60s apenas quando o separador está visível
   useEffect(() => {
@@ -402,7 +428,7 @@ function TransactionsPageContent() {
     setShowAddModal(true);
   };
 
-  if (loading) {
+  if (loading || userLoading || !user || !isPro) {
     return <PageLoading />;
   }
 
