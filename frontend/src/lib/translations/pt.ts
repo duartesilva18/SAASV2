@@ -1474,7 +1474,8 @@ export const pt = {
           descriptionPlaceholder: "Insira o nome",
           investmentsAndSavings: "Investimentos e Poupança",
           typeLabel: "Tipo:",
-          deleteSuccess: "Transação eliminada."
+          deleteSuccess: "Transação eliminada.",
+          proRequiredMessage: "Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder às transações."
       },
       vault: {
           title: "Cofre de Reservas",

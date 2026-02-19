@@ -1002,7 +1002,8 @@ export const en = {
           descriptionPlaceholder: "Enter name",
           investmentsAndSavings: "Investments & Savings",
           typeLabel: "Type:",
-          deleteSuccess: "Transaction deleted."
+          deleteSuccess: "Transaction deleted.",
+          proRequiredMessage: "This feature is only available for Pro users. Upgrade your plan to access transactions."
       },
       recurring: {
           title: "Monthly Subscriptions",
