@@ -480,7 +480,7 @@ export default function GoalsPage() {
                   <button
                     type="button"
                     onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
-                    className="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-1.5"
+                    className="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Plus size={14} className="shrink-0" />
                     <span>{t.dashboard.goals?.addMoney ?? 'Adicionar'}</span>
@@ -488,7 +488,7 @@ export default function GoalsPage() {
                   <button
                     type="button"
                     onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
-                    className="py-2.5 px-3 bg-slate-700/80 hover:bg-slate-600 text-slate-200 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center"
+                    className="py-2.5 px-3 bg-slate-700/80 hover:bg-slate-600 text-slate-200 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center cursor-pointer"
                   >
                     {t.dashboard.goals?.finishGoal ?? 'Terminar meta'}
                   </button>
