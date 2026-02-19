@@ -20,6 +20,8 @@ async def get_goals(db: Session = Depends(get_db), current_user: models.User = D
 
 @router.post('/', response_model=schemas.SavingsGoalResponse)
 async def create_goal(goal: schemas.SavingsGoalCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -32,6 +34,8 @@ async def create_goal(goal: schemas.SavingsGoalCreate, db: Session = Depends(get
 
 @router.patch('/{goal_id}', response_model=schemas.SavingsGoalResponse)
 async def update_goal(goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -50,6 +54,8 @@ async def update_goal(goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db:
 
 @router.delete('/{goal_id}')
 async def delete_goal(goal_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -69,7 +75,9 @@ async def deposit_into_goal(
     body: dict,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-):
+    ):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     """Adicionar dinheiro à meta (cofre). Cria uma despesa para refletir o valor retirado do saldo disponível."""
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
@@ -103,7 +111,9 @@ async def close_goal(
     body: dict = Body(default=None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-):
+    ):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     """Terminar a meta. Opcionalmente cria uma transação (receita ou despesa) com o valor acumulado."""
     body = body or {}
     create_transaction = body.get('create_transaction', False)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -139,7 +139,7 @@ class Transaction(Base):
     workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True, index=True)
     installment_group_id = Column(UUID(as_uuid=True), ForeignKey('installment_groups.id', ondelete='SET NULL'), nullable=True)
-    amount_cents = Column(Integer, nullable=False)
+    amount_cents = Column(BigInteger, nullable=False)
     description = Column(String(255), nullable=True)
     transaction_date = Column(Date, nullable=False, index=True)
     inference_source = Column(String(50), nullable=True)

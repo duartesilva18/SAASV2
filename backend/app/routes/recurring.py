@@ -24,6 +24,8 @@ async def get_recurring_transactions(db: Session = Depends(get_db), current_user
 
 @router.post('/', response_model=schemas.RecurringTransactionResponse)
 async def create_recurring_transaction(request: Request, recurring_in: schemas.RecurringTransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -41,6 +43,8 @@ async def create_recurring_transaction(request: Request, recurring_in: schemas.R
 
 @router.patch('/{recurring_id}', response_model=schemas.RecurringTransactionResponse)
 async def update_recurring_transaction(request: Request, recurring_id: UUID, recurring_in: schemas.RecurringTransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -64,6 +68,8 @@ async def update_recurring_transaction(request: Request, recurring_id: UUID, rec
 
 @router.post('/{recurring_id}/confirm', response_model=schemas.TransactionResponse)
 async def confirm_recurring_transaction(request: Request, recurring_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -108,6 +114,8 @@ async def confirm_recurring_transaction(request: Request, recurring_id: UUID, db
 
 @router.delete('/{recurring_id}')
 async def delete_recurring_transaction(request: Request, recurring_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')

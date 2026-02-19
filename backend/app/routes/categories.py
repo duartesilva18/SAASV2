@@ -128,6 +128,8 @@ async def get_category_stats(request: Request, db: Session = Depends(get_db), cu
 
 @router.post('/', response_model=schemas.CategoryResponse)
 async def create_category(request: Request, category_in: schemas.CategoryBase, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -164,6 +166,8 @@ async def create_category(request: Request, category_in: schemas.CategoryBase, d
 
 @router.patch('/{category_id}', response_model=schemas.CategoryResponse)
 async def update_category(request: Request, category_id: UUID, category_in: schemas.CategoryUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
@@ -210,6 +214,8 @@ async def update_category(request: Request, category_id: UUID, category_in: sche
 
 @router.delete('/{category_id}')
 async def delete_category(request: Request, category_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
@@ -245,6 +251,8 @@ async def delete_category(request: Request, category_id: UUID, db: Session = Dep
 
 @router.post('/bulk-delete')
 async def bulk_delete_categories(request: Request, category_ids: List[UUID], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')

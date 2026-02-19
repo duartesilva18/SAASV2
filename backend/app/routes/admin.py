@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc
 from typing import List, Optional
 from uuid import UUID
@@ -120,8 +120,18 @@ async def get_admin_stats(db: Session = Depends(get_db), admin: models.User = De
     total_users = db.query(func.count(models.User.id)).scalar()
     total_transactions = db.query(func.count(models.Transaction.id)).scalar()
     total_recurring = db.query(func.count(models.RecurringTransaction.id)).scalar()
-    active_subscriptions = db.query(func.count(models.User.id)).filter(models.User.subscription_status != 'none').scalar()
-    
+
+    # Subscrições ativas reais: apenas utilizadores com subscrição Stripe ativa/trial
+    # e que nunca tiveram reembolso (had_refund = FALSE). Admin/Pro concedido não contam aqui.
+    active_subscriptions = (
+        db.query(func.count(models.User.id))
+        .filter(
+            models.User.subscription_status.in_(['active', 'trialing', 'cancel_at_period_end']),
+            models.User.had_refund == False,
+        )
+        .scalar()
+    )
+
     total_visits = db.query(func.sum(models.User.login_count)).scalar() or 0
     # No longer returning recent logs here to avoid confusion with paginated ones
     
@@ -330,19 +340,31 @@ async def get_audit_logs(
 ):
     limit = min(max(limit, 1), 100)  # Cap entre 1 e 100
     page = max(page, 1)
-    query = db.query(models.AuditLog)
+    query = db.query(models.AuditLog).options(joinedload(models.AuditLog.user))
     
     if action and action != 'all':
         query = query.filter(models.AuditLog.action.contains(action))
         
     total = query.count()
     logs = query.order_by(models.AuditLog.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
-    
-    # SQLAlchemy will handle the relationship if it's defined in the model
-    # and the schema has 'user: UserResponse'
-    
+
+    logs_payload = []
+    for log in logs:
+        user = log.user
+        logs_payload.append(
+            {
+                "id": str(log.id),
+                "user_id": log.user_id,
+                "user_email": user.email if user else None,
+                "action": log.action,
+                "details": log.details,
+                "ip_address": log.ip_address,
+                "created_at": log.created_at,
+            }
+        )
+
     return {
-        "logs": logs,
+        "logs": logs_payload,
         "total": total,
         "page": page,
         "pages": (total + limit - 1) // limit

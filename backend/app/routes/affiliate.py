@@ -295,6 +295,8 @@ async def request_affiliate_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     """Solicita para se tornar afiliado - aprova baseado no plano"""
     logger.info(f"📝 POST /affiliate/request - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings

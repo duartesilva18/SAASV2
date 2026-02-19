@@ -107,6 +107,8 @@ async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db
 
 @router.post('/', response_model=schemas.TransactionResponse)
 async def create_transaction(request: Request, transaction_in: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -214,6 +216,8 @@ async def create_transaction(request: Request, transaction_in: schemas.Transacti
 
 @router.patch('/{transaction_id}', response_model=schemas.TransactionResponse)
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
@@ -264,6 +268,8 @@ async def update_transaction(request: Request, transaction_id: UUID, transaction
 
 @router.delete('/{transaction_id}')
 async def delete_transaction(request: Request, transaction_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')

@@ -32,6 +32,8 @@ async def scan_receipt(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user)
 ) -> ScanResponse:
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
     if file.content_type not in IMAGE_TYPES:
