@@ -443,7 +443,6 @@ export default function CategoriesPage() {
         {/* Right: Zen Tips & Legend */}
         <div className="space-y-4">
           <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-2xl rounded-full translate-x-8 -translate-y-8" />
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                 <Sparkles size={14} className="text-blue-400" />
