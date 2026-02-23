@@ -1,9 +1,15 @@
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
+# Carregar .env da pasta backend; .env.local sobrepõe (override=True para ter prioridade)
+_backend_dir = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_backend_dir / ".env")
+load_dotenv(_backend_dir / ".env.local", override=True)
+load_dotenv()  # fallback: cwd
 
 
 def _get_stripe_api_key() -> str:
@@ -28,10 +34,15 @@ def _get_stripe_webhook_secret() -> str:
     return (os.getenv('STRIPE_WEBHOOK_SECRET_LIVE') or '').strip()
 
 
+# DATABASE_URL vem do .env ou .env.local. Para usar a BD do Render localmente: põe a connection string no .env.local
+_LOCAL_DB_URL = 'postgresql://postgres:postgres@localhost:5432/saas_db'
+_def_db = os.getenv('DATABASE_URL', _LOCAL_DB_URL)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra='ignore')
     PROJECT_NAME: str = 'FinSaaS - Gestão Financeira'
-    DATABASE_URL: str = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/saas_db')
+    DATABASE_URL: str = _def_db
     
     # SECRET_KEY - OBRIGATÓRIO em produção via env
     _secret_key = os.getenv('SECRET_KEY', '').strip()

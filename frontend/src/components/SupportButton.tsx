@@ -177,6 +177,7 @@ export default function SupportButton() {
     <>
       <motion.button
         type="button"
+        data-onboarding-target="support"
         drag
         dragMomentum={false}
         dragElastic={0.05}

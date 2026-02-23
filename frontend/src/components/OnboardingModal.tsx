@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, User, Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing } from 'lucide-react';
+import { Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import confetti from 'canvas-confetti';
@@ -85,73 +85,82 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     }
   };
 
+  const inputBase = 'w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 transition-colors';
+  const labelBase = 'block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5';
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-8 overflow-y-auto">
-      <motion.div 
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right))',
+      }}
+    >
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="fixed inset-0 bg-black/90 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        aria-hidden
       />
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-2xl max-h-[100dvh] sm:max-h-[90vh] bg-[#020617] border border-slate-800 rounded-t-3xl sm:rounded-[32px] overflow-hidden shadow-2xl flex flex-col"
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[min(32rem,100%)] sm:max-w-[28rem] md:max-w-xl max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md shadow-2xl flex flex-col overflow-hidden"
       >
-        {/* Progress Bar */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-slate-900 shrink-0">
-          <motion.div 
+        <div className="absolute top-0 left-0 w-full h-0.5 bg-slate-800 shrink-0">
+          <motion.div
             initial={{ width: 0 }}
             animate={{ width: '100%' }}
             transition={{ duration: 2 }}
-            className="h-full bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+            className="h-full bg-blue-500"
           />
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-12 overflow-y-auto flex-1 min-h-0 pb-[env(safe-area-inset-bottom)]">
-          <div className="mb-6 sm:mb-10 text-center">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mx-auto mb-4 sm:mb-6">
-              <Sparkles className="w-7 h-7 sm:w-8 sm:h-8" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter text-white mb-2 sm:mb-3">
-              Bem-vindo ao seu <span className="text-blue-500 italic">Novo Eu Financeiro</span>
+        <div className="p-5 sm:p-6 md:p-8 overflow-y-auto flex-1 min-h-0 overscroll-contain">
+          <div className="mb-5 sm:mb-6 text-center">
+            <img
+              src="/images/logo/logo-semfundo.png"
+              alt="Finly"
+              className="h-14 w-14 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 object-contain select-none"
+              draggable={false}
+            />
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white mb-1.5 sm:mb-2">
+              Bem-vindo ao seu <span className="text-blue-400 italic">Novo Eu Financeiro</span>
             </h2>
-            <p className="text-slate-400 font-medium italic">
+            <p className="text-slate-400 text-sm sm:text-base">
               Apenas alguns detalhes para começarmos a sua jornada Zen.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Full Name */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  Primeiro e Último Nome
-                </label>
-                <div className="relative group">
-                  <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={20} />
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className={labelBase}>Primeiro e Último Nome</label>
+                <div className="relative">
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium"
+                    className={`${inputBase} pl-10 pr-3`}
                     placeholder="Ex: Duarte Silva"
                   />
                 </div>
               </div>
 
-              {/* Currency */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  Moeda Base
-                </label>
-                <div className="relative group">
-                  <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={20} />
+              <div>
+                <label className={labelBase}>Moeda Base</label>
+                <div className="relative">
+                  <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none"
+                    className={`${inputBase} pl-10 pr-8 appearance-none cursor-pointer`}
                   >
                     <option value="EUR">Euro (€)</option>
                     <option value="USD">Dólar ($)</option>
@@ -160,16 +169,13 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 </div>
               </div>
 
-              {/* Phone Number */}
-              <div className="md:col-span-2 space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  Número de Telegram (para registar despesas)
-                </label>
-                <div className="flex gap-3">
+              <div className="md:col-span-2">
+                <label className={labelBase}>Número de Telegram (para registar despesas)</label>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <select
                     value={formData.country_code}
                     onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                    className="bg-slate-950 border border-slate-800 rounded-2xl py-4 px-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none w-32 shrink-0"
+                    className={`${inputBase} sm:w-28 shrink-0 px-3`}
                   >
                     {countries.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -182,21 +188,18 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                     required
                     value={formData.phone_number}
                     onChange={(e) => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-blue-500 transition-all font-medium"
+                    className={`${inputBase} flex-1 min-w-0 pl-4 pr-3`}
                     placeholder="912 345 678"
                   />
                 </div>
               </div>
 
-              {/* Gender */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-2">
-                  Gênero (opcional)
-                </label>
+              <div className="md:col-span-2">
+                <label className={labelBase}>Género (opcional)</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-blue-500 transition-all font-medium appearance-none"
+                  className={`${inputBase} px-4 cursor-pointer`}
                 >
                   <option value="male">Masculino</option>
                   <option value="female">Feminino</option>
@@ -205,41 +208,32 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 </select>
               </div>
 
-              {/* Marketing Opt-in */}
               <div className="md:col-span-2">
-                <div 
+                <div
                   onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
-                  className={`group flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${
-                    formData.marketing_opt_in 
-                    ? 'bg-blue-600/5 border-blue-500/30' 
-                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                  className={`flex items-center justify-between gap-3 p-4 sm:p-5 rounded-xl border transition-all duration-300 cursor-pointer ${
+                    formData.marketing_opt_in
+                      ? 'bg-blue-600/10 border-blue-500/30'
+                      : 'bg-slate-950/60 border-slate-700 hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-xl transition-colors ${
-                      formData.marketing_opt_in ? 'text-blue-400 bg-blue-400/10' : 'text-slate-600 bg-slate-900'
-                    }`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg shrink-0 ${formData.marketing_opt_in ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 bg-slate-800/60'}`}>
                       <BellRing size={18} />
                     </div>
-                    <div>
-                      <p className={`text-xs font-black uppercase tracking-widest transition-colors ${
-                        formData.marketing_opt_in ? 'text-white' : 'text-slate-500'
-                      }`}>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-bold uppercase tracking-wider ${formData.marketing_opt_in ? 'text-white' : 'text-slate-400'}`}>
                         Dicas & Novidades Zen
                       </p>
-                      <p className="text-[10px] text-slate-600 font-medium italic">
+                      <p className="text-[11px] text-slate-500 mt-0.5">
                         Relatórios e insights exclusivos no teu email.
                       </p>
                     </div>
                   </div>
-                  
-                  {/* Minimal Toggle */}
-                  <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 relative ${
-                    formData.marketing_opt_in ? 'bg-blue-600' : 'bg-slate-800'
-                  }`}>
-                    <motion.div 
-                      animate={{ x: formData.marketing_opt_in ? 24 : 0 }}
-                      className="w-4 h-4 bg-white rounded-full shadow-sm"
+                  <div className={`w-11 h-6 rounded-full p-0.5 shrink-0 transition-colors duration-300 ${formData.marketing_opt_in ? 'bg-blue-600' : 'bg-slate-700'}`}>
+                    <motion.div
+                      animate={{ x: formData.marketing_opt_in ? 20 : 0 }}
+                      className="w-5 h-5 bg-white rounded-full shadow-sm"
                     />
                   </div>
                 </div>
@@ -249,12 +243,12 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-xs font-black tracking-tight"
+                  exit={{ opacity: 0, y: -6 }}
+                  className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-2 text-red-400 text-xs font-medium"
                 >
-                  <AlertCircle size={16} />
+                  <AlertCircle size={16} className="shrink-0" />
                   {error}
                 </motion.div>
               )}
@@ -263,13 +257,14 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 sm:py-6 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-2xl sm:rounded-[24px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-4 text-sm group cursor-pointer min-h-[48px]"
+              className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[48px] group"
             >
               {loading ? (
-                <Loader2 size={20} className="animate-spin" />
+                <Loader2 size={20} className="animate-spin shrink-0" />
               ) : (
                 <>
-                  Entrar no Ecossistema <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  Entrar no Ecossistema
+                  <ArrowRight size={18} className="shrink-0 group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
             </button>

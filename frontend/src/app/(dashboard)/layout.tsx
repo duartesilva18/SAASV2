@@ -2,6 +2,7 @@
 
 import Sidebar from '@/components/Sidebar';
 import OnboardingModal from '@/components/OnboardingModal';
+import OnboardingSpotlight, { hasSeenOnboardingSpotlight, type OnboardingStep } from '@/components/OnboardingSpotlight';
 import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
 import SupportButton, { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -19,6 +20,21 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
 import ThemeToggle from '@/components/ThemeToggle';
 
+/** Uma única lista: no desktop aparecem os da sidebar (visível); no mobile avança até bot/mobile/support. */
+const ONBOARDING_STEPS: OnboardingStep[] = [
+  { target: 'sidebar-dashboard', message: 'A tua visão geral. Totais do mês e atalhos rápidos.' },
+  { target: 'sidebar-transactions', message: 'Transações, categorias e subscrições. É aqui que registas e organizas tudo.' },
+  { target: 'sidebar-analytics', message: 'Gráficos e números para perceberes para onde vai o dinheiro.' },
+  { target: 'sidebar-vault', message: 'Cofre e metas. Para guardar e definir objetivos de poupança.' },
+  { target: 'sidebar-affiliate', message: 'Programa de afiliados. Convida amigos e ganha recompensas.' },
+  { target: 'sidebar-settings', message: 'Definições, faturação e plano. Para alterar a tua conta.' },
+  { target: 'upgrade-pro', message: 'O teu plano atual. Clica aqui para subscrever e ver os teus dados reais.' },
+  { target: 'sidebar-admin', message: 'Painel de administração.' },
+  { target: 'bot', message: 'Regista despesas em segundos pelo Telegram. Texto, voz ou foto.' },
+  { target: 'mobile', message: 'Queres a app no telemóvel? Adiciona ao ecrã inicial por aqui.' },
+  { target: 'support', message: 'Sugestões ou encontaste um erro? Escreve aqui.' },
+];
+
 export default function DashboardLayout({
   children,
 }: {
@@ -29,6 +45,7 @@ export default function DashboardLayout({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [showBotSpotlight, setShowBotSpotlight] = useState(false);
   // Inicializar sempre false para evitar hydration mismatch (server não tem localStorage)
   const [supportHidden, setSupportHidden] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -46,6 +63,11 @@ export default function DashboardLayout({
     window.addEventListener('support-hidden', onHidden);
     return () => window.removeEventListener('support-hidden', onHidden);
   }, []);
+
+  // Durante o onboarding, abrir a sidebar no mobile para os alvos (planos, etc.) estarem visíveis
+  useEffect(() => {
+    if (showBotSpotlight && isMobileViewport) setIsMobileSidebarOpen(true);
+  }, [showBotSpotlight, isMobileViewport]);
 
   // Mobile viewport: desativar animações de transição de página (reduz lag)
   useEffect(() => {
@@ -172,8 +194,16 @@ export default function DashboardLayout({
       if (user.language && (user.language === 'pt' || user.language === 'en' || user.language === 'fr')) {
         setLanguage(user.language as 'pt' | 'en' | 'fr');
       }
+      // Spotlight do bot: só para contas criadas há pouco tempo (14 dias), após onboarding e termos, uma vez por utilizador
+      const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+      const daysSinceCreation = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+      const isRecentAccount = daysSinceCreation <= 14;
+      if (user.is_onboarded && user.terms_accepted && !showOnboarding && !showTermsAcceptance && isRecentAccount && !hasSeenOnboardingSpotlight()) {
+        const t = setTimeout(() => setShowBotSpotlight(true), 500);
+        return () => clearTimeout(t);
+      }
     }
-  }, [user, loading, router, setCurrency, setLanguage, refreshUser]);
+  }, [user, loading, router, setCurrency, setLanguage, refreshUser, showOnboarding, showTermsAcceptance]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -205,6 +235,10 @@ export default function DashboardLayout({
 
       {showTermsAcceptance && (
         <TermsAcceptanceModal onAccept={() => setShowTermsAcceptance(false)} />
+      )}
+
+      {showBotSpotlight && (
+        <OnboardingSpotlight onComplete={() => setShowBotSpotlight(false)} steps={ONBOARDING_STEPS} />
       )}
 
       {showSessionExpired && (
@@ -295,12 +329,12 @@ export default function DashboardLayout({
                   <Mail size={18} />
                 </button>
               )}
-              <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
+              <a href="https://t.me/FinanZenApp_bot" target="_blank" rel="noopener noreferrer" data-onboarding-target="bot" className="flex items-center justify-center w-9 h-9 rounded-full bg-[#0088cc] text-white hover:bg-[#006699] transition-colors shrink-0" title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'} aria-label="Bot Telegram">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden>
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
                 </svg>
               </a>
-              <Link href="/add-to-home" className="p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-xl hover:bg-slate-700/50 shrink-0" title="App no telemóvel" aria-label="App no telemóvel">
+              <Link href="/add-to-home" data-onboarding-target="mobile" className="p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-xl hover:bg-slate-700/50 shrink-0" title="App no telemóvel" aria-label="App no telemóvel">
                 <Smartphone className="w-5 h-5" />
               </Link>
               <Link href="/guide" className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-xl hover:bg-slate-700/50" title={t.dashboard?.sidebar?.guide || 'Guia do Mestre'} aria-label="Guia do Mestre">
@@ -473,6 +507,7 @@ function MobileHeaderWithNotifications({
                         href="https://t.me/FinanZenApp_bot"
                         target="_blank"
                         rel="noopener noreferrer"
+                        data-onboarding-target="bot"
                         className="flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] cursor-pointer active:scale-95 transition-transform"
                         title={t.dashboard?.sidebar?.telegramBot || 'Bot Telegram'}
                         onClick={() => setToolsOpen(false)}
@@ -485,6 +520,7 @@ function MobileHeaderWithNotifications({
                       </a>
                       <Link
                         href="/add-to-home"
+                        data-onboarding-target="mobile"
                         className="flex items-center justify-center w-11 h-11 rounded-xl text-blue-400 hover:bg-blue-500/15 active:scale-95 transition-all cursor-pointer min-w-[44px] min-h-[44px]"
                         title="App no telemóvel"
                         onClick={() => setToolsOpen(false)}

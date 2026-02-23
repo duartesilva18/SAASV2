@@ -234,6 +234,7 @@ export default function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              data-onboarding-target={`sidebar-${item.href.replace(/^\//, '')}`}
               onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
               className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400 border border-blue-500/20') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:border-slate-700/40')} border border-transparent ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
             >
@@ -314,6 +315,7 @@ export default function Sidebar({
                 <div className="flex items-center justify-between gap-2 md:gap-2">
                   <Link
                     href="/plans"
+                    data-onboarding-target="plans"
                     className={`inline-block text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest transition-colors hover:opacity-80 !cursor-pointer ${
                       user.is_admin 
                         ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 

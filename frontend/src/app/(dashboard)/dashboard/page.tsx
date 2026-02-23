@@ -589,6 +589,7 @@ export default function DashboardPage() {
         </div>
         {!isPro && (
           <motion.div
+            data-onboarding-target="upgrade-pro"
             initial={isMobile ? false : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={isMobile ? { duration: 0 } : undefined}
