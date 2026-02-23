@@ -22,6 +22,7 @@ interface User {
   subscription_status?: string;
   terms_accepted?: boolean;
   terms_accepted_at?: string;
+  onboarding_spotlight_seen?: boolean;
   created_at: string;
 }
 

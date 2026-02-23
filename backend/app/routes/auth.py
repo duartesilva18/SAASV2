@@ -703,6 +703,19 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
 async def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
+
+@router.post('/spotlight-seen', response_model=schemas.UserResponse)
+async def set_spotlight_seen(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Marca que o utilizador já viu o onboarding spotlight (guardado na BD)."""
+    current_user.onboarding_spotlight_seen = True
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.post('/onboarding', response_model=schemas.UserResponse)
 async def complete_onboarding(request: Request, onboarding_data: schemas.UserUpdateOnboarding, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Verificar se o número de telefone já existe noutra conta

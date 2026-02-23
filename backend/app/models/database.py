@@ -23,6 +23,7 @@ class User(Base):
     marketing_opt_in = Column(Boolean, nullable=False, default=False)
     terms_accepted = Column(Boolean, nullable=False, default=False)
     terms_accepted_at = Column(DateTime(timezone=True), nullable=True)
+    onboarding_spotlight_seen = Column(Boolean, nullable=False, default=False)
     login_count = Column(Integer, nullable=False, default=0)
     last_login = Column(DateTime(timezone=True), nullable=True)
     subscription_status = Column(String(50), nullable=False, default='none')

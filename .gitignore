@@ -7,6 +7,13 @@ env/
 venv/
 ENV/
 .env
+.env.local
+.env.*
+!.env.example
+backend/.env
+backend/.env.local
+frontend/.env
+frontend/.env.local
 
 # Next.js
 node_modules/

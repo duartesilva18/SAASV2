@@ -22,7 +22,7 @@ export type OnboardingStep = {
 };
 
 interface OnboardingSpotlightProps {
-  onComplete: () => void;
+  onComplete: () => void | Promise<void>;
   steps: OnboardingStep[];
 }
 
@@ -104,7 +104,6 @@ export default function OnboardingSpotlight({
       setTargetRect(null);
       setCardPosition(null);
     } else {
-      setOnboardingSpotlightSeen();
       onComplete();
     }
   }, [currentStep, selector, onComplete]);
@@ -137,7 +136,6 @@ export default function OnboardingSpotlight({
       setTargetRect(null);
       setCardPosition(null);
     } else {
-      setOnboardingSpotlightSeen();
       onComplete();
     }
   };

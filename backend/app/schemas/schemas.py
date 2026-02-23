@@ -27,6 +27,7 @@ class UserResponse(UserBase):
     pro_granted_until: Optional[datetime] = None  # Pro concedido por admin até esta data
     terms_accepted: bool = False
     terms_accepted_at: Optional[datetime] = None
+    onboarding_spotlight_seen: bool = False
     created_at: datetime
     has_password: bool = True  # True = conta criada com email/password; False = só Google/social
 

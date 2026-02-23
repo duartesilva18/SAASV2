@@ -12,15 +12,15 @@ import sys
 import psycopg2
 from psycopg2 import sql
 
-# Connection string do Render
-# Pode ser passada como argumento, variável de ambiente, ou usar a default abaixo
+# NUNCA coloques a connection string no código. Usa variável de ambiente ou argumento.
 if len(sys.argv) > 1:
     DATABASE_URL = sys.argv[1]
 elif os.getenv('DATABASE_URL'):
     DATABASE_URL = os.getenv('DATABASE_URL')
 else:
-    # Connection string padrão (substituir pela tua)
-    DATABASE_URL = "postgresql://finanzen_user:TbHInWyPfDRu7bsdOsHo9WRWWAL919zO@dpg-d5q03on5c7fs73fngvrg-a:5432/finanzen_db_nrpl"
+    print("Erro: define DATABASE_URL no ambiente ou passa como argumento.", file=sys.stderr)
+    print("Exemplo: DATABASE_URL='postgresql://...' python apply_migration.py", file=sys.stderr)
+    sys.exit(1)
 
 def apply_migration():
     """Aplica a migração SQL na base de dados"""

@@ -2,7 +2,8 @@
 
 import Sidebar from '@/components/Sidebar';
 import OnboardingModal from '@/components/OnboardingModal';
-import OnboardingSpotlight, { hasSeenOnboardingSpotlight, type OnboardingStep } from '@/components/OnboardingSpotlight';
+import OnboardingSpotlight, { type OnboardingStep } from '@/components/OnboardingSpotlight';
+import api from '@/lib/api';
 import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
 import SupportButton, { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -198,7 +199,7 @@ export default function DashboardLayout({
       const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
       const daysSinceCreation = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
       const isRecentAccount = daysSinceCreation <= 14;
-      if (user.is_onboarded && user.terms_accepted && !showOnboarding && !showTermsAcceptance && isRecentAccount && !hasSeenOnboardingSpotlight()) {
+      if (user.is_onboarded && user.terms_accepted && !showOnboarding && !showTermsAcceptance && isRecentAccount && !user.onboarding_spotlight_seen) {
         const t = setTimeout(() => setShowBotSpotlight(true), 500);
         return () => clearTimeout(t);
       }
@@ -238,7 +239,16 @@ export default function DashboardLayout({
       )}
 
       {showBotSpotlight && (
-        <OnboardingSpotlight onComplete={() => setShowBotSpotlight(false)} steps={ONBOARDING_STEPS} />
+        <OnboardingSpotlight
+          onComplete={async () => {
+            try {
+              await api.post('/auth/spotlight-seen');
+              await refreshUser();
+            } catch (_) {}
+            setShowBotSpotlight(false);
+          }}
+          steps={ONBOARDING_STEPS}
+        />
       )}
 
       {showSessionExpired && (
