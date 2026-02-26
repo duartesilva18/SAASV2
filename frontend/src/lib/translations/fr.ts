@@ -966,6 +966,8 @@ export const fr = {
           zenTipText: "Cliquez sur une ligne du tableau pour modifier ou supprimer un enregistrement.",
           editRecord: "Modifier l'enregistrement",
           newRecord: "Nouvel enregistrement",
+          type: "Type",
+          selectTypeFirst: "Sélectionnez d'abord le type ci-dessus",
           value: "Montant",
           date: "Date",
           category: "Catégorie",
@@ -979,6 +981,7 @@ export const fr = {
           validation: {
               invalidAmount: "Veuillez entrer un montant valide supérieur à zéro.",
               noCategory: "Veuillez sélectionner une catégorie.",
+              noType: "Sélectionnez le type (revenu ou dépense).",
               zeroAmount: "Le montant de la transaction ne peut pas être zéro.",
               invalidDate: "Le parcours Zen n'enregistre que le présent ou le passé. Choisissez une date valide.",
               invalidCategory: "Catégorie invalide. Veuillez sélectionner à nouveau.",

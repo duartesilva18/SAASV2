@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Activity, Wallet, Calendar, Tag, ChevronDown } from 'lucide-react';
+import { X, Activity, Wallet, Calendar, Tag, ChevronDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
@@ -32,6 +32,7 @@ export default function TransactionAddModal({
 }: TransactionAddModalProps) {
   const { t, formatCurrency } = useTranslation();
   const [formData, setFormData] = useState({
+    transaction_type: '' as '' | 'income' | 'expense',
     amount: '',
     description: '',
     category_id: '',
@@ -46,8 +47,15 @@ export default function TransactionAddModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!formData.amount?.trim() || parseFloat(formData.amount) <= 0) {
+      const normalizedAmount = formData.amount.replace(',', '.');
+      const parsedAmount = parseFloat(normalizedAmount);
+
+      if (!formData.amount?.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
         setToast({ message: t.dashboard.transactions.validation.invalidAmount, type: 'error', visible: true });
+        return;
+      }
+      if (!formData.transaction_type) {
+        setToast({ message: (t.dashboard.transactions.validation as any)?.noType ?? 'Seleciona o tipo (receita ou despesa).', type: 'error', visible: true });
         return;
       }
       if (!formData.category_id?.trim()) {
@@ -67,7 +75,7 @@ export default function TransactionAddModal({
         return;
       }
 
-      let amount_cents = Math.round(parseFloat(formData.amount) * 100);
+      let amount_cents = Math.round(parsedAmount * 100);
       const isVaultCategory = selectedCategory.vault_type !== 'none';
       if (isVaultCategory) {
         amount_cents = selectedCategory.type === 'income' ? -Math.abs(amount_cents) : Math.abs(amount_cents);
@@ -106,7 +114,7 @@ export default function TransactionAddModal({
         is_installment: false,
       });
       setToast({ message: t.dashboard.transactions.success, type: 'success', visible: true });
-      setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+      setFormData({ transaction_type: '', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -126,6 +134,17 @@ export default function TransactionAddModal({
       document.body.style.touchAction = '';
     };
   }, [isOpen]);
+
+  // Categorias filtradas pelo tipo selecionado (receita vs despesa)
+  const categoriesByType = formData.transaction_type === 'income'
+    ? categories.filter((c) => c.type === 'income' || (c.type === 'expense' && c.vault_type !== 'none'))
+    : formData.transaction_type === 'expense'
+      ? categories.filter((c) => c.type === 'expense')
+      : [];
+
+  const setTransactionType = (type: 'income' | 'expense') => {
+    setFormData((prev) => ({ ...prev, transaction_type: type, category_id: '' }));
+  };
 
   if (!isOpen) return null;
 
@@ -158,6 +177,35 @@ export default function TransactionAddModal({
                 </button>
               </div>
               <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.type ?? 'Tipo'}</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTransactionType('income')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-bold text-sm transition-colors cursor-pointer min-h-[48px] ${
+                        formData.transaction_type === 'income'
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                          : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                      }`}
+                    >
+                      <ArrowUpCircle size={20} className="shrink-0" />
+                      {t.dashboard.transactions.filters?.income ?? 'Receitas'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTransactionType('expense')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-bold text-sm transition-colors cursor-pointer min-h-[48px] ${
+                        formData.transaction_type === 'expense'
+                          ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                          : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                      }`}
+                    >
+                      <ArrowDownCircle size={20} className="shrink-0" />
+                      {t.dashboard.transactions.filters?.expense ?? 'Despesas'}
+                    </button>
+                  </div>
+                </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.table.description}</label>
                   <div className="relative">
@@ -212,27 +260,38 @@ export default function TransactionAddModal({
                       required
                       value={formData.category_id}
                       onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-10 text-base sm:text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer min-h-[48px] [color-scheme:dark]"
+                      disabled={!formData.transaction_type}
+                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-10 text-base sm:text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer min-h-[48px] disabled:opacity-60 disabled:cursor-not-allowed [color-scheme:dark]"
                     >
-                      <option value="">{t.dashboard.transactions.selectCategory}</option>
-                      <optgroup label={t.dashboard.transactions.filters.income} className="bg-slate-900">
-                        {categories.filter((c) => c.type === 'income').map((c) => (
-                          <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                        ))}
-                        {categories.filter((c) => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
-                          <option key={c.id} value={c.id} className="bg-slate-900">{c.name} (Resgate)</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label={t.dashboard.transactions.filters.expense} className="bg-slate-900">
-                        {categories.filter((c) => c.type === 'expense' && c.vault_type === 'none').map((c) => (
-                          <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label={t.dashboard.transactions.investmentsAndSavings} className="bg-slate-900">
-                        {categories.filter((c) => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
-                          <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                        ))}
-                      </optgroup>
+                      <option value="">
+                        {formData.transaction_type
+                          ? t.dashboard.transactions.selectCategory
+                          : (t.dashboard.transactions.selectTypeFirst ?? 'Seleciona primeiro o tipo acima')}
+                      </option>
+                      {formData.transaction_type === 'income' && (
+                        <>
+                          {categoriesByType.filter((c) => c.type === 'income').map((c) => (
+                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                          ))}
+                          {categoriesByType.filter((c) => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
+                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name} (Resgate)</option>
+                          ))}
+                        </>
+                      )}
+                      {formData.transaction_type === 'expense' && (
+                        <>
+                          {categoriesByType.filter((c) => c.vault_type === 'none').map((c) => (
+                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                          ))}
+                          {categoriesByType.filter((c) => c.vault_type !== 'none').length > 0 && (
+                            <optgroup label={t.dashboard.transactions.investmentsAndSavings} className="bg-slate-900">
+                              {categoriesByType.filter((c) => c.vault_type !== 'none').map((c) => (
+                                <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </>
+                      )}
                     </select>
                     <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none shrink-0" />
                   </div>

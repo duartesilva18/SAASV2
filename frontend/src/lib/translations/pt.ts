@@ -1438,6 +1438,8 @@ export const pt = {
           zenTipText: "Clica em qualquer linha da tabela para editar ou eliminar um registo.",
           editRecord: "Editar Registo",
           newRecord: "Novo Registo",
+          type: "Tipo",
+          selectTypeFirst: "Seleciona primeiro o tipo acima",
           value: "Valor",
           date: "Data",
           category: "Categoria",
@@ -1451,6 +1453,7 @@ export const pt = {
           validation: {
               invalidAmount: "Por favor, insere um valor válido maior que zero.",
               noCategory: "Por favor, seleciona uma categoria.",
+              noType: "Seleciona o tipo (receita ou despesa).",
               invalidDate: "A jornada Zen só regista o presente ou o passado. Escolha uma data válida.",
               invalidCategory: "Categoria inválida. Por favor, seleciona novamente.",
               zeroAmount: "O valor da transação não pode ser zero.",

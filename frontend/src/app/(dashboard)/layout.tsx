@@ -19,7 +19,6 @@ import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import LanguageSelector from '@/components/LanguageSelector';
-import ThemeToggle from '@/components/ThemeToggle';
 
 /** Uma única lista: no desktop aparecem os da sidebar (visível); no mobile avança até bot/mobile/support. */
 const ONBOARDING_STEPS: OnboardingStep[] = [
@@ -558,7 +557,6 @@ function MobileHeaderWithNotifications({
             >
               <Bell size={20} />
             </button>
-            <ThemeToggle />
             <LanguageSelector />
             <button
               onClick={onOpenMenu}

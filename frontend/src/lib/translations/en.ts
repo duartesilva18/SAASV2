@@ -966,6 +966,8 @@ export const en = {
           zenTipText: "Click on any row in the table to edit or delete a record.",
           editRecord: "Edit Record",
           newRecord: "New Record",
+          type: "Type",
+          selectTypeFirst: "Select the type above first",
           value: "Amount",
           date: "Date",
           category: "Category",
@@ -979,6 +981,7 @@ export const en = {
           validation: {
               invalidAmount: "Please enter a valid amount greater than zero.",
               noCategory: "Please select a category.",
+              noType: "Select the type (income or expense).",
               zeroAmount: "Transaction amount cannot be zero.",
               invalidDate: "The Zen journey only records the present or the past. Choose a valid date.",
               invalidCategory: "Invalid category. Please select again.",

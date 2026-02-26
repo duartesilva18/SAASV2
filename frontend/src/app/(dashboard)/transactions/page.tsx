@@ -7,7 +7,8 @@ import {
   Plus, Search, ArrowUpRight, ArrowDownRight, 
   Calendar, Tag, History, Check, X, Wallet, 
   ChevronDown, Sparkles, Activity, CreditCard,
-  Edit2, Trash2, Info, Filter, SearchX
+  Edit2, Trash2, Info, Filter, SearchX,
+  ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -72,8 +73,9 @@ function TransactionsPageContent() {
     type: 'success',
     isVisible: false
   });
-
+ 
   const [formData, setFormData] = useState({
+    transaction_type: '' as '' | 'income' | 'expense',
     amount: '',
     description: '',
     category_id: '',
@@ -133,7 +135,7 @@ function TransactionsPageContent() {
     if (searchParams.get('add') === '1') {
       setShowAddModal(true);
       setEditingTransaction(null);
-      setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+      setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
       window.history.replaceState({}, '', '/transactions');
       return;
     }
@@ -150,6 +152,7 @@ function TransactionsPageContent() {
       if (category) {
         setFormData(prev => ({
           ...prev,
+          transaction_type: category.type as 'income' | 'expense',
           category_id: categoryId,
           description: action === 'add' ? `${t.dashboard.transactions.depositIn} ${category.name}` : `${t.dashboard.transactions.withdrawalFrom} ${category.name}`
         }));
@@ -218,12 +221,32 @@ function TransactionsPageContent() {
     return { income, expenses, balance: income - expenses };
   }, [transactions, categories]);
 
+  const categoriesByType = useMemo(() => {
+    if (formData.transaction_type === 'income') {
+      return categories.filter(c => c.type === 'income' || (c.type === 'expense' && c.vault_type !== 'none'));
+    }
+    if (formData.transaction_type === 'expense') {
+      return categories.filter(c => c.type === 'expense');
+    }
+    return [];
+  }, [formData.transaction_type, categories]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Normalizar valor para suportar vírgula e ponto
+      const normalizedAmount = formData.amount.replace(',', '.');
+      const parsedAmount = parseFloat(normalizedAmount);
+
       // Validar que o valor foi inserido
-      if (!formData.amount || formData.amount.trim() === '' || parseFloat(formData.amount) <= 0) {
+      if (!formData.amount || formData.amount.trim() === '' || isNaN(parsedAmount) || parsedAmount <= 0) {
         setToastInfo({ message: t.dashboard.transactions.validation.invalidAmount, type: 'error', isVisible: true });
+        return;
+      }
+
+      // Validar que o tipo foi selecionado (receita vs despesa)
+      if (!formData.transaction_type) {
+        setToastInfo({ message: (t.dashboard.transactions.validation as any)?.noType ?? 'Seleciona o tipo (receita ou despesa).', type: 'error', isVisible: true });
         return;
       }
 
@@ -258,7 +281,7 @@ function TransactionsPageContent() {
       // vault deposit → amount_cents > 0 (independente do type)
       // vault withdraw → amount_cents < 0 (independente do type)
       
-      let amount_cents = Math.round(parseFloat(formData.amount) * 100);
+      let amount_cents = Math.round(parsedAmount * 100);
       const isVaultCategory = selectedCategory.vault_type !== 'none';
       
       // Determinar sinal baseado no tipo da categoria
@@ -349,6 +372,7 @@ function TransactionsPageContent() {
       setEditingTransaction(null);
       setSelectedTransaction(null); // Reset selection
       setFormData({
+        transaction_type: '' as '' | 'income' | 'expense',
         amount: '',
         description: '',
         category_id: '',
@@ -418,7 +442,12 @@ function TransactionsPageContent() {
 
   const handleEdit = (t: Transaction) => {
     setEditingTransaction(t);
+    const category = categories.find(c => c.id === t.category_id);
+    const transactionType: '' | 'income' | 'expense' = category
+      ? category.type
+      : (t.amount_cents >= 0 ? 'income' : 'expense');
     setFormData({
+      transaction_type: transactionType,
       amount: Math.abs(t.amount_cents / 100).toString(),
       description: t.description,
       category_id: t.category_id,
@@ -454,7 +483,7 @@ function TransactionsPageContent() {
           <button
             onClick={() => {
               setEditingTransaction(null);
-              setFormData({ amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+              setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
               setShowAddModal(true);
             }}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
@@ -776,6 +805,37 @@ function TransactionsPageContent() {
 
                 <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
                   <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                      {t.dashboard.transactions.type ?? 'Tipo'}
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, transaction_type: 'income', category_id: '' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-xs sm:text-sm transition-colors cursor-pointer ${
+                          formData.transaction_type === 'income'
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                            : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                        }`}
+                      >
+                        <ArrowUpCircle size={18} className="shrink-0" />
+                        {t.dashboard.transactions.filters?.income ?? 'Receitas'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, transaction_type: 'expense', category_id: '' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border font-bold text-xs sm:text-sm transition-colors cursor-pointer ${
+                          formData.transaction_type === 'expense'
+                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                            : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                        }`}
+                      >
+                        <ArrowDownCircle size={18} className="shrink-0" />
+                        {t.dashboard.transactions.filters?.expense ?? 'Despesas'}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.transactions.table.description}</label>
                     <div className="relative">
                       <Activity size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
@@ -799,6 +859,7 @@ function TransactionsPageContent() {
                           required
                           type="number"
                           step="0.01"
+                          inputMode="decimal"
                           value={formData.amount}
                           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                           placeholder="0.00"
@@ -830,31 +891,40 @@ function TransactionsPageContent() {
                         required
                         value={formData.category_id}
                         onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                        disabled={!formData.transaction_type}
+                        className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-10 text-sm text-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        <option value="">{t.dashboard.transactions.selectCategory}</option>
-                        {/* Separar receitas e despesas para facilitar seleção */}
-                        <optgroup label={t.dashboard.transactions.filters.income} className="bg-slate-900">
-                          {categories.filter(c => c.type === 'income').map((c) => (
-                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                          ))}
-                          {/* Permitir resgates de Fundo de Emergência e Investimentos como receita */}
-                          {categories.filter(c => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
-                            <option key={c.id} value={c.id} className="bg-slate-900">
-                              {c.name} {c.vault_type === 'emergency' ? '(Resgate)' : '(Resgate)'}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label={t.dashboard.transactions.filters.expense} className="bg-slate-900">
-                          {categories.filter(c => c.type === 'expense' && c.vault_type === 'none').map((c) => (
-                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                          ))}
-                        </optgroup>
-                        <optgroup label={t.dashboard.transactions.investmentsAndSavings} className="bg-slate-900">
-                          {categories.filter(c => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
-                            <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                          ))}
-                        </optgroup>
+                        <option value="">
+                          {formData.transaction_type
+                            ? t.dashboard.transactions.selectCategory
+                            : (t.dashboard.transactions.selectTypeFirst ?? 'Seleciona primeiro o tipo acima')}
+                        </option>
+                        {formData.transaction_type === 'income' && (
+                          <>
+                            {categoriesByType.filter(c => c.type === 'income').map((c) => (
+                              <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                            ))}
+                            {categoriesByType.filter(c => c.type === 'expense' && c.vault_type !== 'none').map((c) => (
+                              <option key={c.id} value={c.id} className="bg-slate-900">
+                                {c.name} (Resgate)
+                              </option>
+                            ))}
+                          </>
+                        )}
+                        {formData.transaction_type === 'expense' && (
+                          <>
+                            {categoriesByType.filter(c => c.vault_type === 'none').map((c) => (
+                              <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                            ))}
+                            {categoriesByType.filter(c => c.vault_type !== 'none').length > 0 && (
+                              <optgroup label={t.dashboard.transactions.investmentsAndSavings} className="bg-slate-900">
+                                {categoriesByType.filter(c => c.vault_type !== 'none').map((c) => (
+                                  <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </>
+                        )}
                       </select>
                       <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     </div>
