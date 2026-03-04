@@ -326,7 +326,12 @@ export default function Sidebar({
                     }`}
                     title={t.dashboard.sidebar.plans}
                   >
-                    {user.is_admin ? t.dashboard.sidebar.rootAdmin : isPro ? (currentPlan?.label ?? t.dashboard.sidebar.planPro) : t.dashboard.sidebar.planFree}
+                    {user.is_admin
+                      ? t.dashboard.sidebar.rootAdmin
+                      : isPro
+                        ? (user.subscription_status === 'trialing' ? 'Trial 7 dias' : (currentPlan?.label ?? t.dashboard.sidebar.planPro))
+                        : t.dashboard.sidebar.planFree
+                    }
                   </Link>
                   {/* Notificações: escondido no mobile (sino fica só no header) */}
                   <div className="hidden md:hidden shrink-0 ml-1">

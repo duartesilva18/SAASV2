@@ -35,6 +35,9 @@ export default function PlansPage() {
   // Determinar se é elegível para trial (nunca teve subscrição -- status 'none' ou vazio)
   const isTrialEligible = needsSubscription;
 
+  // Determinar se está em período de trial
+  const isTrialing = user?.subscription_status === 'trialing';
+
   // Bloquear popstate (botão voltar do browser) se precisa de subscrição
   useEffect(() => {
     if (!needsSubscription) return;
@@ -328,10 +331,14 @@ export default function PlansPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute -top-2.5 3xl:-top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-600 text-white px-4 py-2 3xl:px-6 3xl:py-2.5 rounded-xl 3xl:rounded-2xl text-sm 3xl:text-sm font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] shadow-lg flex items-center gap-1.5 3xl:gap-2 z-30 whitespace-nowrap"
+                  className={`absolute -top-2.5 3xl:-top-3 left-1/2 -translate-x-1/2 text-white px-4 py-2 3xl:px-6 3xl:py-2.5 rounded-xl 3xl:rounded-2xl text-sm 3xl:text-sm font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] shadow-lg flex items-center gap-1.5 3xl:gap-2 z-30 whitespace-nowrap ${
+                    isTrialing
+                      ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600'
+                      : 'bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-600'
+                  }`}
                 >
                   <CheckCircle2 size={14} className="animate-pulse 3xl:w-4 3xl:h-4" />
-                  <span>Plano ativo</span>
+                  <span>{isTrialing ? 'Trial ativo — 7 dias grátis' : 'Plano ativo'}</span>
                 </motion.div>
               )}
               {plan.popular && plan.popularLabel && !isCurrentPlan(plan.priceId) && (
@@ -388,13 +395,18 @@ export default function PlansPage() {
                   disabled={isCurrentPlan(plan.priceId)}
                   className={`mt-auto w-full block text-center px-4 3xl:px-6 py-3.5 3xl:py-4 rounded-xl 3xl:rounded-2xl text-sm 3xl:text-base font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] transition-all cursor-pointer ${
                     isCurrentPlan(plan.priceId)
-                      ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 cursor-not-allowed'
+                      ? isTrialing
+                        ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30 cursor-not-allowed'
+                        : 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 cursor-not-allowed'
                       : plan.popular
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
                       : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600'
                   }`}
                 >
-                  {isCurrentPlan(plan.priceId) ? t.dashboard.pricing.activePlan : plan.buttonText}
+                  {isCurrentPlan(plan.priceId)
+                    ? (isTrialing ? 'Em trial — 7 dias grátis' : t.dashboard.pricing.activePlan)
+                    : plan.buttonText
+                  }
                 </button>
               </div>
             </motion.div>
