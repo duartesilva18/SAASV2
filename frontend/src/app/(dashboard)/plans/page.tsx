@@ -409,12 +409,18 @@ export default function PlansPage() {
                 </div>
 
                 <button
-                  onClick={() => handlePlanSelect(plan.priceId)}
-                  disabled={isCurrentPlan(plan.priceId)}
+                  onClick={() => {
+                    if (isCurrentPlan(plan.priceId) && isTrialing) {
+                      setEndTrialModal(true);
+                    } else if (!isCurrentPlan(plan.priceId)) {
+                      handlePlanSelect(plan.priceId);
+                    }
+                  }}
+                  disabled={isCurrentPlan(plan.priceId) && !isTrialing}
                   className={`mt-auto w-full block text-center px-4 3xl:px-6 py-3.5 3xl:py-4 rounded-xl 3xl:rounded-2xl text-sm 3xl:text-base font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] transition-all cursor-pointer ${
                     isCurrentPlan(plan.priceId)
                       ? isTrialing
-                        ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30 cursor-not-allowed'
+                        ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 hover:border-blue-500/50'
                         : 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 cursor-not-allowed'
                       : plan.popular
                       ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25'
@@ -422,18 +428,10 @@ export default function PlansPage() {
                   }`}
                 >
                   {isCurrentPlan(plan.priceId)
-                    ? (isTrialing ? 'Em trial — 7 dias grátis' : t.dashboard.pricing.activePlan)
+                    ? (isTrialing ? 'Ativar plano agora' : t.dashboard.pricing.activePlan)
                     : plan.buttonText
                   }
                 </button>
-                {isCurrentPlan(plan.priceId) && isTrialing && (
-                  <button
-                    onClick={() => setEndTrialModal(true)}
-                    className="w-full mt-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer"
-                  >
-                    Ativar plano agora e pagar já
-                  </button>
-                )}
               </div>
             </motion.div>
           ))}
