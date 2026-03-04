@@ -1006,6 +1006,14 @@ export const en = {
           investmentsAndSavings: "Investments & Savings",
           typeLabel: "Type:",
           deleteSuccess: "Transaction deleted.",
+          selectedCount: "selected",
+          clearSelection: "Clear",
+          deleteSelected: "Delete selected",
+          bulkDeleteConfirm: "Delete multiple transactions?",
+          bulkDeleteConfirmText: "You are about to delete",
+          bulkDeleteConfirmSuffix: "transactions. This action cannot be undone.",
+          bulkDeleteButton: "Delete",
+          bulkDeleteSuccess: "Transactions deleted successfully.",
           proRequiredMessage: "This feature is only available for Pro users. Upgrade your plan to access transactions."
       },
       recurring: {

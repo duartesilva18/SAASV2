@@ -64,6 +64,8 @@ function TransactionsPageContent() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [evolutionPeriod, setEvolutionPeriod] = useState<'weekly' | 'daily'>('weekly');
   const itemsPerPage = 13;
@@ -418,26 +420,63 @@ function TransactionsPageContent() {
     if (!transactionToDelete) return;
     setIsDeleting(true);
     try {
-      // Garantir que o ID está no formato correto
       const transactionId = String(transactionToDelete).trim();
-      console.log('Eliminando transação com ID:', transactionId);
-      
       await api.delete(`/transactions/${transactionId}`);
-      setToastInfo({ message: t.dashboard.transactions.deleteSuccess, type: 'success', isVisible: true });
-      setTransactionToDelete(null);
       setSelectedTransaction(null);
-      // Atualizar dados imediatamente após eliminar
       refetchData();
+      setToastInfo({ message: t.dashboard.transactions.deleteSuccess, type: 'success', isVisible: true });
     } catch (err: any) {
       console.error('Erro ao eliminar transação:', err);
-      console.error('ID da transação:', transactionToDelete);
-      console.error('Resposta do erro:', err.response?.data);
       const errorMessage = err.response?.data?.detail || err.message || t.dashboard.transactions.deleteError;
       setToastInfo({ message: errorMessage, type: 'error', isVisible: true });
     } finally {
       setIsDeleting(false);
       setTransactionToDelete(null);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await api.post('/transactions/bulk-delete', { ids });
+      setSelectedIds(new Set());
+      refetchData();
+      const msg = (t.dashboard.transactions as any).bulkDeleteSuccess
+        ?? `${ids.length} transações eliminadas.`;
+      setToastInfo({ message: msg, type: 'success', isVisible: true });
+    } catch (err: any) {
+      console.error('Erro ao eliminar transações em massa:', err);
+      const errorMessage = err.response?.data?.detail || err.message || t.dashboard.transactions.deleteError;
+      setToastInfo({ message: errorMessage, type: 'error', isVisible: true });
+    } finally {
+      setIsDeleting(false);
+      setBulkDeleteConfirm(false);
+    }
+  };
+
+  const toggleSelectId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = paginatedTransactions.map(tx => tx.id);
+    const allSelected = pageIds.every(id => selectedIds.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach(id => next.delete(id));
+      } else {
+        pageIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
   };
 
   const handleEdit = (t: Transaction) => {
@@ -590,6 +629,42 @@ function TransactionsPageContent() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
         {/* Left: Transactions Table (desktop) / Cards (mobile) */}
         <section className="xl:col-span-2 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl h-fit">
+
+        {/* Bulk action bar */}
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-4 py-2.5 bg-red-500/10 border-b border-red-500/20">
+                <span className="text-xs font-bold text-red-400">
+                  {selectedIds.size} {(t.dashboard.transactions as any).selectedCount ?? 'selecionadas'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-white border border-slate-700/50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    {(t.dashboard.transactions as any).clearSelection ?? 'Limpar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteConfirm(true)}
+                    className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-white bg-red-500/20 hover:bg-red-600 border border-red-500/30 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Trash2 size={12} />
+                    {(t.dashboard.transactions as any).deleteSelected ?? 'Eliminar selecionadas'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Mobile: card list */}
         <div className="md:hidden px-3 py-3 space-y-2">
           {filteredTransactions.length === 0 ? (
@@ -607,40 +682,52 @@ function TransactionsPageContent() {
                 const isIncome = cat && cat.vault_type !== 'none'
                   ? transaction.amount_cents > 0
                   : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
+                const isChecked = selectedIds.has(transaction.id);
                 return (
-                  <motion.button
+                  <motion.div
                     key={transaction.id}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    type="button"
-                    onClick={() => setSelectedTransaction(transaction)}
-                    className="w-full text-left bg-slate-950/50 hover:bg-slate-800/60 border border-slate-700/30 hover:border-slate-600/50 rounded-xl p-3 active:scale-[0.99] transition-all touch-manipulation"
+                    className={`flex items-center gap-2 bg-slate-950/50 hover:bg-slate-800/60 border rounded-xl p-3 transition-all touch-manipulation ${isChecked ? 'border-red-500/40 bg-red-500/5' : 'border-slate-700/30 hover:border-slate-600/50'}`}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {isIncome ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white truncate">{transaction.description}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[9px] font-bold text-slate-500">
-                              {new Date(transaction.transaction_date).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
-                            </span>
-                            <span className="text-slate-700">·</span>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
-                              <span className="text-[9px] font-bold text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSelectId(transaction.id)}
+                      className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${isChecked ? 'bg-red-500 border-red-500 text-white' : 'border-slate-600 hover:border-slate-400'}`}
+                    >
+                      {isChecked && <Check size={12} strokeWidth={3} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTransaction(transaction)}
+                      className="flex-1 text-left min-w-0"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {isIncome ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white truncate">{transaction.description}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[9px] font-bold text-slate-500">
+                                {new Date(transaction.transaction_date).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                              </span>
+                              <span className="text-slate-700">·</span>
+                              <div className="flex items-center gap-1 min-w-0">
+                                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
+                                <span className="text-[9px] font-bold text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <span className={`text-sm font-black shrink-0 tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
+                        </span>
                       </div>
-                      <span className={`text-sm font-black shrink-0 tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
-                      </span>
-                    </div>
-                  </motion.button>
+                    </button>
+                  </motion.div>
                 );
               })}
               {filteredTransactions.length > itemsPerPage && (
@@ -669,6 +756,19 @@ function TransactionsPageContent() {
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-700/40">
+                  <th className="pl-4 pr-1 py-3 w-10">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors cursor-pointer ${
+                        paginatedTransactions.length > 0 && paginatedTransactions.every(tx => selectedIds.has(tx.id))
+                          ? 'bg-red-500 border-red-500 text-white'
+                          : 'border-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      {paginatedTransactions.length > 0 && paginatedTransactions.every(tx => selectedIds.has(tx.id)) && <Check size={12} strokeWidth={3} />}
+                    </button>
+                  </th>
                   <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.table.date}</th>
                   <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.table.description}</th>
                   <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-wider text-slate-500 hidden sm:table-cell">{t.dashboard.transactions.table.category}</th>
@@ -682,6 +782,7 @@ function TransactionsPageContent() {
                     const isIncome = cat && cat.vault_type !== 'none'
                       ? transaction.amount_cents > 0
                       : (cat ? cat.type === 'income' : transaction.amount_cents > 0);
+                    const isChecked = selectedIds.has(transaction.id);
                     return (
                       <motion.tr 
                         key={transaction.id}
@@ -689,10 +790,18 @@ function TransactionsPageContent() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -16 }}
                         transition={{ delay: index * 0.03 }}
-                        onClick={() => setSelectedTransaction(transaction)}
-                        className="group hover:bg-white/[0.03] transition-colors cursor-pointer"
+                        className={`group hover:bg-white/[0.03] transition-colors cursor-pointer ${isChecked ? 'bg-red-500/5' : ''}`}
                       >
-                        <td className="px-5 py-3.5">
+                        <td className="pl-4 pr-1 py-3.5 w-10">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleSelectId(transaction.id); }}
+                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors cursor-pointer ${isChecked ? 'bg-red-500 border-red-500 text-white' : 'border-slate-600 hover:border-slate-400'}`}
+                          >
+                            {isChecked && <Check size={12} strokeWidth={3} />}
+                          </button>
+                        </td>
+                        <td className="px-5 py-3.5" onClick={() => setSelectedTransaction(transaction)}>
                           <div className="flex flex-col">
                             <span className="text-xs font-bold text-white tabular-nums">{new Date(transaction.transaction_date).getDate()}</span>
                             <span className="text-[9px] font-bold uppercase text-slate-500">
@@ -700,16 +809,16 @@ function TransactionsPageContent() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-3.5" onClick={() => setSelectedTransaction(transaction)}>
                           <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate max-w-[250px]">{transaction.description}</p>
                         </td>
-                        <td className="px-5 py-3.5 hidden sm:table-cell">
+                        <td className="px-5 py-3.5 hidden sm:table-cell" onClick={() => setSelectedTransaction(transaction)}>
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
                             <span className="text-[10px] font-bold text-slate-400">{cat?.name || t.dashboard.transactions.noCategory}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-right">
+                        <td className="px-5 py-3.5 text-right" onClick={() => setSelectedTransaction(transaction)}>
                           <span className={`text-sm font-black tabular-nums ${isIncome ? 'text-emerald-400' : 'text-red-400'}`}>
                             {isIncome ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount_cents) / 100)}
                           </span>
@@ -1078,14 +1187,27 @@ function TransactionsPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Confirm Delete Modal */}
+      {/* Confirm Delete Modal (single) */}
       <ConfirmModal
         isOpen={!!transactionToDelete}
-        onClose={() => setTransactionToDelete(null)}
+        onClose={() => { if (!isDeleting) setTransactionToDelete(null); }}
         onConfirm={handleDelete}
         title={t.dashboard.transactions.deleteConfirm}
         message={t.dashboard.transactions.deleteConfirmText}
         confirmText={t.dashboard.transactions.delete}
+        cancelText={t.dashboard.analytics.cancel}
+        variant="danger"
+        isLoading={isDeleting}
+      />
+
+      {/* Confirm Bulk Delete Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm}
+        onClose={() => { if (!isDeleting) setBulkDeleteConfirm(false); }}
+        onConfirm={handleBulkDelete}
+        title={(t.dashboard.transactions as any).bulkDeleteConfirm ?? 'Eliminar várias transações?'}
+        message={`${(t.dashboard.transactions as any).bulkDeleteConfirmText ?? 'Vais eliminar'} ${selectedIds.size} ${(t.dashboard.transactions as any).bulkDeleteConfirmSuffix ?? 'transações. Esta ação não pode ser desfeita.'}`}
+        confirmText={`${(t.dashboard.transactions as any).bulkDeleteButton ?? 'Eliminar'} (${selectedIds.size})`}
         cancelText={t.dashboard.analytics.cancel}
         variant="danger"
         isLoading={isDeleting}

@@ -619,11 +619,10 @@ export default function CategoriesPage() {
                             <button 
                               type="button"
                               onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat); }}
-                              className="flex items-center gap-1.5 px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-500/30"
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-500/30"
                               aria-label={t.dashboard.categories.deleteConfirm ?? 'Eliminar categoria'}
                             >
                               <Trash2 size={14} />
-                              <span className="text-[10px] font-bold uppercase tracking-wider">Eliminar</span>
                             </button>
                           ) : isSystemLocked ? (
                             <span className="p-1.5 text-slate-500 rounded-lg" title={t.dashboard.categories.protectedCategoryTooltip}>

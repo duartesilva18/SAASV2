@@ -1478,6 +1478,14 @@ export const pt = {
           investmentsAndSavings: "Investimentos e Poupança",
           typeLabel: "Tipo:",
           deleteSuccess: "Transação eliminada.",
+          selectedCount: "selecionadas",
+          clearSelection: "Limpar",
+          deleteSelected: "Eliminar selecionadas",
+          bulkDeleteConfirm: "Eliminar várias transações?",
+          bulkDeleteConfirmText: "Vais eliminar",
+          bulkDeleteConfirmSuffix: "transações. Esta ação não pode ser desfeita.",
+          bulkDeleteButton: "Eliminar",
+          bulkDeleteSuccess: "Transações eliminadas com sucesso.",
           proRequiredMessage: "Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder às transações."
       },
       vault: {

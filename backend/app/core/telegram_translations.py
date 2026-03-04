@@ -274,6 +274,106 @@ TELEGRAM_TRANSLATIONS = {
         'ai_no_data': "📭 Ainda não tens dados suficientes para responder a esta pergunta. Regista mais transações primeiro!",
         'ai_question_header': "📊 <b>Consulta Financeira</b>\n\n",
         'ai_advice_header': "🧘 <b>Análise Zen</b>\n\n",
+
+        # --- Resumo semanal ---
+        'summary_week': (
+            "📊 <b>Resumo da semana</b>\n\n"
+            "📉 Despesas: <b>{expenses}€</b>\n"
+            "📈 Receitas: <b>{income}€</b>\n"
+            "📝 Transações: <b>{count}</b>\n"
+            "🏷️ Top categoria: <b>{top_category}</b> ({top_amount}€)\n\n"
+            "{comparison}"
+            "🧘‍♂️ <i>Saldo da semana: {balance}€</i>"
+        ),
+        'week_comparison_better': "📉 Gastaste <b>menos {diff}€</b> que a semana passada. Bom trabalho!\n\n",
+        'week_comparison_worse': "📈 Gastaste <b>mais {diff}€</b> que a semana passada.\n\n",
+        'week_comparison_equal': "",
+
+        # --- Boas-vindas melhorada ---
+        'welcome_tutorial': (
+            "🎉 <b>Conta associada! Vamos começar?</b>\n\n"
+            "Aqui vão exemplos rápidos para experimentares agora:\n\n"
+            "💬 <b>Texto:</b> <code>Café 3.50€</code>\n"
+            "📸 <b>Foto:</b> Envia uma foto de um recibo\n"
+            "🎤 <b>Voz:</b> Envia uma mensagem de voz a dizer a transação\n"
+            "📄 <b>Ficheiro:</b> Envia um PDF ou CSV com extratos\n\n"
+            "⚡ <b>Dicas:</b>\n"
+            "• Podes enviar várias: <code>Almoço 12€ Café 2€</code>\n"
+            "• Com data: <code>Jantar ontem 25€</code>\n"
+            "• Com categoria: <code>Uber - Transportes 8€</code>\n\n"
+            "📖 Envia <code>/info</code> para ver todos os comandos."
+        ),
+
+        # --- Exportar ---
+        'export_header': "📎 <b>Exportação de transações</b>\n\n",
+        'export_no_data': "📭 Sem transações neste período para exportar.",
+        'export_error': "⚠️ Erro ao gerar o ficheiro. Tenta novamente.",
+        'export_usage': "💡 Uso: <code>/exportar mes</code> ou <code>/exportar semana</code>",
+
+        # --- Alertas de orçamento ---
+        'budget_alert_warning': "⚠️ <b>Alerta de orçamento</b>\n\n🏷️ <b>{category}</b>: já gastaste <b>{spent}€</b> de <b>{limit}€</b> ({percent}%)\n\n💡 Restam <b>{remaining}€</b> este mês.",
+        'budget_alert_exceeded': "🚨 <b>Orçamento ultrapassado!</b>\n\n🏷️ <b>{category}</b>: gastaste <b>{spent}€</b> de <b>{limit}€</b> ({percent}%)\n\n⚠️ Ultrapassaste em <b>{over}€</b>.",
+
+        # --- Recorrentes ---
+        'recurring_list_header': "🔄 <b>Despesas recorrentes</b>\n\n",
+        'recurring_list_line': "• {description} — <b>{amount}€</b>/mês (dia {day})\n",
+        'recurring_list_empty': "📭 Não tens despesas recorrentes.",
+        'recurring_created': "✅ Recorrente criada: <b>{description}</b> — <code>{amount}€</code>/mês (dia {day})",
+        'recurring_usage': "💡 Uso: <code>/recorrente Spotify 6.99€ dia 15</code>\nVer lista: <code>/recorrentes</code>",
+        'recurring_parse_error': "⚠️ Formato inválido. Usa: <code>/recorrente Spotify 6.99€ dia 15</code>",
+
+        # --- Desfazer ---
+        'undo_success': "↩️ <b>Transação desfeita!</b>\n\n🗑️ <b>{description}</b> — <code>{amount}€</code> foi removida.",
+        'undo_no_recent': "⚠️ Nenhuma transação recente para desfazer (apenas nos últimos 5 minutos).",
+        'undo_expired': "⏰ A transação mais recente foi criada há mais de 5 minutos. Usa a plataforma web para editar.",
+
+        # --- Emojis ---
+        'emoji_detected': "💡 Emoji detetado! Categoria sugerida: <b>{category}</b>",
+
+        # --- Streaks ---
+        'streak_message': "🔥 <b>{days} dias seguidos</b> a registar transações! Continua assim!",
+        'streak_milestone_7': "🏆 <b>1 semana seguida!</b> Estás a criar um hábito financeiro saudável!",
+        'streak_milestone_30': "🎖️ <b>1 mês seguido!</b> És um verdadeiro mestre das finanças!",
+        'streak_milestone_100': "👑 <b>100 dias seguidos!</b> Lendário! O teu eu financeiro agradece!",
+
+        # --- Insights ---
+        'insight_spending_up': "📊 <b>Insight:</b> Este mês já gastaste <b>{percent}% mais</b> em <b>{category}</b> comparado com o mês passado.",
+        'insight_spending_down': "📊 <b>Insight:</b> Boa! Gastaste <b>{percent}% menos</b> em <b>{category}</b> este mês. Continua assim!",
+        'insight_top_expense': "💡 <b>Insight:</b> A tua maior despesa este mês é <b>{description}</b> ({amount}€) em {category}.",
+
+        # --- Comparação mensal ---
+        'month_comparison': (
+            "📊 <b>Comparação Mensal</b>\n\n"
+            "📅 <b>{prev_month}:</b> {prev_expenses}€ gastos\n"
+            "📅 <b>{curr_month}:</b> {curr_expenses}€ gastos\n\n"
+            "{trend}"
+        ),
+        'month_trend_better': "📉 Gastaste <b>menos {diff}€</b> ({percent}%). Bom trabalho!",
+        'month_trend_worse': "📈 Gastaste <b>mais {diff}€</b> ({percent}%). Atenção!",
+        'month_trend_equal': "📊 Gastos iguais ao mês anterior.",
+
+        # --- Help atualizado ---
+        'help_guide_v2': (
+            "<b>Comandos · Finan</b><i>Zen</i>\n\n"
+            "🧾 <b>Formato rápido:</b> <code>Descrição Valor€</code>\n"
+            "Ex.: <code>Almoço 15€</code>, <code>Salário 1000€</code>\n\n"
+            "⚙️ <b>Comandos:</b>\n"
+            "• <code>/hoje</code> — resumo do dia\n"
+            "• <code>/semana</code> — resumo da semana\n"
+            "• <code>/mes</code> — resumo do mês\n"
+            "• <code>/exportar mes</code> — exportar CSV\n"
+            "• <code>/recorrentes</code> — ver despesas fixas\n"
+            "• <code>/desfazer</code> — anular última transação\n"
+            "• <code>/pendentes</code> — ver pendentes\n"
+            "• <code>/clear</code> — limpar pendentes\n"
+            "• <code>/categoria Nome</code> — categoria por defeito\n"
+            "• <code>/revoke</code> — desligar Telegram\n\n"
+            "💡 <b>Dicas:</b>\n"
+            "• Emojis: <code>🍕 15€</code> → Alimentação\n"
+            "• Com data: <code>Jantar ontem 25€</code>\n"
+            "• Várias: <code>Almoço 12€ Café 2€</code>\n\n"
+            "🧘‍♂️ <i>Envia transações simples todos os dias e eu trato do resto.</i>"
+        ),
     },
     'en': {
         'welcome_new': (
@@ -557,6 +657,106 @@ TELEGRAM_TRANSLATIONS = {
         'ai_no_data': "📭 Not enough data to answer this question yet. Record more transactions first!",
         'ai_question_header': "📊 <b>Financial Query</b>\n\n",
         'ai_advice_header': "🧘 <b>Zen Analysis</b>\n\n",
+
+        # --- Weekly summary ---
+        'summary_week': (
+            "📊 <b>Weekly summary</b>\n\n"
+            "📉 Expenses: <b>{expenses}€</b>\n"
+            "📈 Income: <b>{income}€</b>\n"
+            "📝 Transactions: <b>{count}</b>\n"
+            "🏷️ Top category: <b>{top_category}</b> ({top_amount}€)\n\n"
+            "{comparison}"
+            "🧘‍♂️ <i>Weekly balance: {balance}€</i>"
+        ),
+        'week_comparison_better': "📉 You spent <b>{diff}€ less</b> than last week. Well done!\n\n",
+        'week_comparison_worse': "📈 You spent <b>{diff}€ more</b> than last week.\n\n",
+        'week_comparison_equal': "",
+
+        # --- Welcome tutorial ---
+        'welcome_tutorial': (
+            "🎉 <b>Account linked! Let's get started?</b>\n\n"
+            "Here are quick examples to try right now:\n\n"
+            "💬 <b>Text:</b> <code>Coffee 3.50€</code>\n"
+            "📸 <b>Photo:</b> Send a photo of a receipt\n"
+            "🎤 <b>Voice:</b> Send a voice message with the transaction\n"
+            "📄 <b>File:</b> Send a PDF or CSV with statements\n\n"
+            "⚡ <b>Tips:</b>\n"
+            "• Multiple: <code>Lunch 12€ Coffee 2€</code>\n"
+            "• With date: <code>Dinner yesterday 25€</code>\n"
+            "• With category: <code>Uber - Transport 8€</code>\n\n"
+            "📖 Send <code>/info</code> to see all commands."
+        ),
+
+        # --- Export ---
+        'export_header': "📎 <b>Transaction export</b>\n\n",
+        'export_no_data': "📭 No transactions in this period to export.",
+        'export_error': "⚠️ Error generating file. Please try again.",
+        'export_usage': "💡 Usage: <code>/exportar month</code> or <code>/exportar week</code>",
+
+        # --- Budget alerts ---
+        'budget_alert_warning': "⚠️ <b>Budget alert</b>\n\n🏷️ <b>{category}</b>: you've spent <b>{spent}€</b> of <b>{limit}€</b> ({percent}%)\n\n💡 <b>{remaining}€</b> remaining this month.",
+        'budget_alert_exceeded': "🚨 <b>Budget exceeded!</b>\n\n🏷️ <b>{category}</b>: you've spent <b>{spent}€</b> of <b>{limit}€</b> ({percent}%)\n\n⚠️ Over budget by <b>{over}€</b>.",
+
+        # --- Recurring ---
+        'recurring_list_header': "🔄 <b>Recurring expenses</b>\n\n",
+        'recurring_list_line': "• {description} — <b>{amount}€</b>/month (day {day})\n",
+        'recurring_list_empty': "📭 You have no recurring expenses.",
+        'recurring_created': "✅ Recurring created: <b>{description}</b> — <code>{amount}€</code>/month (day {day})",
+        'recurring_usage': "💡 Usage: <code>/recorrente Spotify 6.99€ day 15</code>\nView list: <code>/recorrentes</code>",
+        'recurring_parse_error': "⚠️ Invalid format. Use: <code>/recorrente Spotify 6.99€ day 15</code>",
+
+        # --- Undo ---
+        'undo_success': "↩️ <b>Transaction undone!</b>\n\n🗑️ <b>{description}</b> — <code>{amount}€</code> was removed.",
+        'undo_no_recent': "⚠️ No recent transaction to undo (only within the last 5 minutes).",
+        'undo_expired': "⏰ The most recent transaction was created over 5 minutes ago. Use the web platform to edit.",
+
+        # --- Emojis ---
+        'emoji_detected': "💡 Emoji detected! Suggested category: <b>{category}</b>",
+
+        # --- Streaks ---
+        'streak_message': "🔥 <b>{days} days in a row</b> recording transactions! Keep it up!",
+        'streak_milestone_7': "🏆 <b>1 week streak!</b> You're building a healthy financial habit!",
+        'streak_milestone_30': "🎖️ <b>1 month streak!</b> You're a true finance master!",
+        'streak_milestone_100': "👑 <b>100 day streak!</b> Legendary! Your financial self thanks you!",
+
+        # --- Insights ---
+        'insight_spending_up': "📊 <b>Insight:</b> This month you've spent <b>{percent}% more</b> on <b>{category}</b> compared to last month.",
+        'insight_spending_down': "📊 <b>Insight:</b> Great! You spent <b>{percent}% less</b> on <b>{category}</b> this month. Keep it up!",
+        'insight_top_expense': "💡 <b>Insight:</b> Your biggest expense this month is <b>{description}</b> ({amount}€) in {category}.",
+
+        # --- Monthly comparison ---
+        'month_comparison': (
+            "📊 <b>Monthly Comparison</b>\n\n"
+            "📅 <b>{prev_month}:</b> {prev_expenses}€ spent\n"
+            "📅 <b>{curr_month}:</b> {curr_expenses}€ spent\n\n"
+            "{trend}"
+        ),
+        'month_trend_better': "📉 You spent <b>{diff}€ less</b> ({percent}%). Well done!",
+        'month_trend_worse': "📈 You spent <b>{diff}€ more</b> ({percent}%). Be careful!",
+        'month_trend_equal': "📊 Same spending as last month.",
+
+        # --- Updated help ---
+        'help_guide_v2': (
+            "<b>Commands · Finan</b><i>Zen</i>\n\n"
+            "🧾 <b>Quick format:</b> <code>Description Amount€</code>\n"
+            "Ex.: <code>Lunch 15€</code>, <code>Salary 1000€</code>\n\n"
+            "⚙️ <b>Commands:</b>\n"
+            "• <code>/hoje</code> — today's summary\n"
+            "• <code>/semana</code> — weekly summary\n"
+            "• <code>/mes</code> — monthly summary\n"
+            "• <code>/exportar month</code> — export CSV\n"
+            "• <code>/recorrentes</code> — recurring expenses\n"
+            "• <code>/desfazer</code> — undo last transaction\n"
+            "• <code>/pendentes</code> — view pending\n"
+            "• <code>/clear</code> — clear pending\n"
+            "• <code>/categoria Name</code> — default category\n"
+            "• <code>/revoke</code> — unlink Telegram\n\n"
+            "💡 <b>Tips:</b>\n"
+            "• Emojis: <code>🍕 15€</code> → Food\n"
+            "• With date: <code>Dinner yesterday 25€</code>\n"
+            "• Multiple: <code>Lunch 12€ Coffee 2€</code>\n\n"
+            "🧘‍♂️ <i>Send simple transactions every day and I'll handle the rest.</i>"
+        ),
     }
 }
 

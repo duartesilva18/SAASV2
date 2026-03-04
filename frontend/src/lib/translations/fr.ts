@@ -1006,6 +1006,14 @@ export const fr = {
           investmentsAndSavings: "Investissements et épargne",
           typeLabel: "Type :",
           deleteSuccess: "Transaction supprimée.",
+          selectedCount: "sélectionnées",
+          clearSelection: "Effacer",
+          deleteSelected: "Supprimer la sélection",
+          bulkDeleteConfirm: "Supprimer plusieurs transactions ?",
+          bulkDeleteConfirmText: "Vous allez supprimer",
+          bulkDeleteConfirmSuffix: "transactions. Cette action est irréversible.",
+          bulkDeleteButton: "Supprimer",
+          bulkDeleteSuccess: "Transactions supprimées avec succès.",
           proRequiredMessage: "Cette fonctionnalité est uniquement disponible pour les utilisateurs Pro. Mettez à jour votre plan pour accéder aux transactions."
       },
       recurring: {

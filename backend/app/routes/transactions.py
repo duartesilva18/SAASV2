@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from typing import List
@@ -213,6 +214,37 @@ async def create_transaction(request: Request, transaction_in: schemas.Transacti
     
     await log_action(db, action='create_transaction', user_id=current_user.id, details=f'amount: {new_transaction.amount_cents}, category_id: {new_transaction.category_id}', request=request)
     return new_transaction
+
+
+class BulkDeleteRequest(BaseModel):
+    ids: List[str]
+
+
+@router.post('/bulk-delete')
+async def bulk_delete_transactions(request: Request, body: BulkDeleteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
+    if not body.ids or len(body.ids) == 0:
+        raise HTTPException(status_code=400, detail='Nenhuma transação selecionada.')
+    if len(body.ids) > 500:
+        raise HTTPException(status_code=400, detail='Máximo de 500 transações por operação.')
+    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
+    uuids = []
+    for tid in body.ids:
+        try:
+            uuids.append(UUID(str(tid).strip()))
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f'ID inválido: {tid}')
+    deleted = db.query(models.Transaction).filter(
+        models.Transaction.id.in_(uuids),
+        models.Transaction.workspace_id == workspace.id
+    ).delete(synchronize_session=False)
+    db.commit()
+    await log_action(db, action='bulk_delete_transactions', user_id=current_user.id, details=f'count: {deleted}, ids: {body.ids[:10]}', request=request)
+    return {'message': f'{deleted} transações eliminadas.', 'deleted_count': deleted}
+
 
 @router.patch('/{transaction_id}', response_model=schemas.TransactionResponse)
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

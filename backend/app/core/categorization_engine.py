@@ -28,33 +28,84 @@ STOPWORDS = frozenset({
 
 # Merchants conhecidos -> categoria (nome exato ou parcial)
 KNOWN_MERCHANTS: Dict[str, str] = {
-    'continente': 'Alimentação',
-    'pingo doce': 'Alimentação',
-    'lidl': 'Alimentação',
-    'auchan': 'Alimentação',
-    'minipreco': 'Alimentação',
-    'uber eats': 'Alimentação',
-    'glovo': 'Alimentação',
-    'bolt food': 'Alimentação',
-    'uber': 'Transportes',
-    'bolt': 'Transportes',
-    'cabify': 'Transportes',
-    'cp': 'Transportes',
-    'metro': 'Transportes',
-    'edp': 'Habitação',
-    'meo': 'Habitação',
-    'nos': 'Habitação',
-    'vodafone': 'Habitação',
-    'galp': 'Transportes',
-    'repsol': 'Transportes',
-    'bp': 'Transportes',
-    'prio': 'Transportes',
-    'netflix': 'Entretenimento',
-    'spotify': 'Entretenimento',
-    'amazon': 'Compras',
-    'salário': 'Salário',
-    'ordenado': 'Salário',
-    'vencimento': 'Salário',
+    # Alimentação
+    'continente': 'Alimentação', 'pingo doce': 'Alimentação', 'lidl': 'Alimentação',
+    'auchan': 'Alimentação', 'minipreco': 'Alimentação', 'minipreço': 'Alimentação',
+    'intermarche': 'Alimentação', 'intermarché': 'Alimentação', 'mercadona': 'Alimentação',
+    'uber eats': 'Alimentação', 'glovo': 'Alimentação', 'bolt food': 'Alimentação',
+    'just eat': 'Alimentação', 'mcdonalds': 'Alimentação', "mcdonald's": 'Alimentação',
+    'burger king': 'Alimentação', 'kfc': 'Alimentação', 'pizza hut': 'Alimentação',
+    'telepizza': 'Alimentação', 'starbucks': 'Alimentação', 'padaria': 'Alimentação',
+    'pastelaria': 'Alimentação', 'talho': 'Alimentação', 'peixaria': 'Alimentação',
+    # Transportes
+    'uber': 'Transportes', 'bolt': 'Transportes', 'cabify': 'Transportes',
+    'cp': 'Transportes', 'metro': 'Transportes', 'carris': 'Transportes',
+    'galp': 'Transportes', 'repsol': 'Transportes', 'bp': 'Transportes',
+    'prio': 'Transportes', 'cepsa': 'Transportes',
+    'via verde': 'Transportes', 'brisa': 'Transportes', 'emel': 'Transportes',
+    # Habitação
+    'edp': 'Habitação', 'meo': 'Habitação', 'nos': 'Habitação', 'vodafone': 'Habitação',
+    'nowo': 'Habitação', 'epal': 'Habitação', 'galp gás': 'Habitação',
+    'condomínio': 'Habitação', 'condominio': 'Habitação',
+    # Entretenimento
+    'netflix': 'Entretenimento', 'spotify': 'Entretenimento', 'disney+': 'Entretenimento',
+    'disney plus': 'Entretenimento', 'hbo': 'Entretenimento', 'amazon prime': 'Entretenimento',
+    'playstation': 'Entretenimento', 'xbox': 'Entretenimento', 'steam': 'Entretenimento',
+    'cinema': 'Entretenimento', 'fnac': 'Entretenimento', 'wook': 'Entretenimento',
+    # Saúde
+    'farmácia': 'Saúde', 'farmacia': 'Saúde', 'wells': 'Saúde',
+    'celeiro': 'Saúde', 'dentista': 'Saúde', 'hospital': 'Saúde',
+    'clínica': 'Saúde', 'clinica': 'Saúde', 'ginásio': 'Saúde', 'ginasio': 'Saúde',
+    'gym': 'Saúde', 'fitness': 'Saúde', 'solinca': 'Saúde', 'holmes place': 'Saúde',
+    # Compras / outros merchants
+    'amazon': 'Entretenimento', 'worten': 'Entretenimento', 'ikea': 'Habitação',
+    'primark': 'Entretenimento', 'zara': 'Entretenimento', 'h&m': 'Entretenimento',
+    'decathlon': 'Entretenimento', 'sport zone': 'Entretenimento',
+    # Salário
+    'salário': 'Salário', 'ordenado': 'Salário', 'vencimento': 'Salário',
+}
+
+# Keywords genéricos -> categoria (usados como step 2.5 entre regras determinísticas e token scoring)
+CATEGORY_KEYWORDS: Dict[str, str] = {
+    # Alimentação
+    'supermercado': 'Alimentação', 'restaurante': 'Alimentação', 'almoço': 'Alimentação',
+    'almoco': 'Alimentação', 'jantar': 'Alimentação', 'café': 'Alimentação',
+    'cafe': 'Alimentação', 'lanche': 'Alimentação', 'pequeno almoço': 'Alimentação',
+    'comida': 'Alimentação', 'refeição': 'Alimentação', 'refeicao': 'Alimentação',
+    'mercearia': 'Alimentação', 'frutaria': 'Alimentação', 'snack': 'Alimentação',
+    'cerveja': 'Alimentação', 'vinho': 'Alimentação', 'sushi': 'Alimentação',
+    'pizza': 'Alimentação', 'hamburguer': 'Alimentação', 'hambúrguer': 'Alimentação',
+    'groceries': 'Alimentação', 'lunch': 'Alimentação', 'dinner': 'Alimentação',
+    'breakfast': 'Alimentação', 'food': 'Alimentação', 'restaurant': 'Alimentação',
+    # Transportes
+    'gasolina': 'Transportes', 'gasóleo': 'Transportes', 'gasoleo': 'Transportes',
+    'combustível': 'Transportes', 'combustivel': 'Transportes', 'portagem': 'Transportes',
+    'estacionamento': 'Transportes', 'parking': 'Transportes', 'autocarro': 'Transportes',
+    'comboio': 'Transportes', 'táxi': 'Transportes', 'taxi': 'Transportes',
+    'bilhete': 'Transportes', 'passe': 'Transportes', 'revisão carro': 'Transportes',
+    'seguro carro': 'Transportes', 'oficina': 'Transportes', 'fuel': 'Transportes',
+    'gas': 'Transportes', 'petrol': 'Transportes',
+    # Habitação
+    'renda': 'Habitação', 'aluguel': 'Habitação', 'rent': 'Habitação',
+    'água': 'Habitação', 'agua': 'Habitação', 'luz': 'Habitação',
+    'eletricidade': 'Habitação', 'electricidade': 'Habitação', 'electricity': 'Habitação',
+    'gás': 'Habitação', 'internet': 'Habitação', 'wifi': 'Habitação',
+    'hipoteca': 'Habitação', 'mortgage': 'Habitação', 'seguro casa': 'Habitação',
+    # Saúde
+    'médico': 'Saúde', 'medico': 'Saúde', 'doctor': 'Saúde',
+    'consulta': 'Saúde', 'medicamento': 'Saúde', 'remédio': 'Saúde',
+    'remedio': 'Saúde', 'medicina': 'Saúde', 'análises': 'Saúde',
+    'analises': 'Saúde', 'exame': 'Saúde', 'fisioterapia': 'Saúde',
+    'psicólogo': 'Saúde', 'psicologo': 'Saúde', 'oftalmologista': 'Saúde',
+    'pharmacy': 'Saúde', 'health': 'Saúde', 'medicine': 'Saúde',
+    # Entretenimento
+    'cinema': 'Entretenimento', 'filme': 'Entretenimento', 'concerto': 'Entretenimento',
+    'teatro': 'Entretenimento', 'museu': 'Entretenimento', 'bar': 'Entretenimento',
+    'discoteca': 'Entretenimento', 'festa': 'Entretenimento', 'jogo': 'Entretenimento',
+    'livro': 'Entretenimento', 'revista': 'Entretenimento', 'assinatura': 'Entretenimento',
+    'subscricao': 'Entretenimento', 'subscrição': 'Entretenimento', 'streaming': 'Entretenimento',
+    'movie': 'Entretenimento', 'book': 'Entretenimento', 'game': 'Entretenimento',
+    'entertainment': 'Entretenimento', 'subscription': 'Entretenimento',
 }
 
 # Keywords receita
@@ -276,6 +327,22 @@ def check_gemini_circuit_breaker(db, models, workspace_id: Optional[UUID] = None
     return count >= CIRCUIT_BREAKER_COUNT
 
 
+GENERIC_CATEGORY_NAMES = frozenset({
+    'despesas gerais', 'general expenses', 'dépenses générales',
+    'outros', 'other', 'autres', 'geral', 'general',
+})
+
+
+def _pick_fallback_category(categories: List[Any]) -> Any:
+    """Pick the best fallback category, preferring specific categories over generic ones."""
+    if not categories:
+        return None
+    for c in categories:
+        if c.name.lower() not in GENERIC_CATEGORY_NAMES:
+            return c
+    return categories[0]
+
+
 def infer_category(
     description_raw: str,
     workspace_id: UUID,
@@ -306,7 +373,8 @@ def infer_category(
 
     canonical = canonicalize(description_raw)
     if not canonical:
-        return (filtered_categories[0].id, 'fallback', True, 0.0, 'fallback:empty', [])
+        fb = _pick_fallback_category(filtered_categories)
+        return (fb.id, 'fallback', True, 0.0, 'fallback:empty', [])
 
     # 1b. Merchant registry (aliases)
     merchant_match = lookup_merchant_registry(description_raw, tipo, db, models)
@@ -322,6 +390,14 @@ def infer_category(
         for c in filtered_categories:
             if c.name.lower() == rule_cat.lower():
                 return (c.id, 'deterministic', False, 1.0, f"rule:{rule_cat}", [rule_cat])
+
+    # 2.5 Keyword matching (keywords genéricos -> categoria)
+    text_lower = description_raw.lower().strip()
+    for keyword, cat_name in CATEGORY_KEYWORDS.items():
+        if keyword in text_lower:
+            for c in filtered_categories:
+                if c.name.lower() == cat_name.lower():
+                    return (c.id, 'keyword_match', False, 0.90, f"keyword:{keyword}", [keyword])
 
     # 3. Cache privada (description_canonical)
     cache_entry = db.query(models.CategoryMappingCache).filter(
@@ -364,7 +440,8 @@ def infer_category(
     if use_gemini and getattr(settings, 'OPENAI_API_KEY', None):
         if check_gemini_circuit_breaker(db, models, workspace_id):
             logger.warning("Circuit-breaker AI aberto. Usando fallback.")
-            return (filtered_categories[0].id, 'fallback', True, 0.0, "fallback:circuit_breaker", [])
+            fb = _pick_fallback_category(filtered_categories)
+            return (fb.id, 'fallback', True, 0.0, "fallback:circuit_breaker", [])
 
         try:
             cat_id, ai_response = _call_openai_fallback(
@@ -375,8 +452,9 @@ def infer_category(
         except Exception as e:
             logger.warning(f"OpenAI fallback falhou: {e}")
 
-    # 8. Fallback final
-    return (filtered_categories[0].id, 'fallback', True, 0.0, "fallback:default", [])
+    # 8. Fallback final (prefer specific categories over generic)
+    fb = _pick_fallback_category(filtered_categories)
+    return (fb.id, 'fallback', True, 0.0, "fallback:default", [])
 
 
 def _call_openai_fallback(
@@ -394,8 +472,18 @@ def _call_openai_fallback(
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     categories_list = [c.name for c in categories]
     categories_text = ", ".join(categories_list)
-    prompt = f'''Categoriza: "{description}"
-Categorias: {categories_text}
+
+    # Detect generic category names to instruct the AI to avoid them
+    generic_names = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
+    generic_in_list = [n for n in categories_list if n.lower() in generic_names]
+    avoid_instruction = ""
+    if generic_in_list:
+        avoid_instruction = f'\nIMPORTANTE: Evita "{generic_in_list[0]}" — usa-a APENAS se nenhuma outra categoria se aplica.'
+
+    prompt = f'''Categoriza esta transacao na categoria mais especifica possivel.
+Transacao: "{description}"
+Categorias disponiveis: {categories_text}
+Dicas: supermercado/restaurante/cafe=Alimentacao, farmacia/medico/ginasio=Saude, gasolina/uber/metro=Transportes, netflix/cinema/jogos=Entretenimento, renda/agua/luz=Habitacao.{avoid_instruction}
 Responde APENAS com o nome exato da categoria:'''
 
     response_text = None
