@@ -1229,7 +1229,7 @@ async def validate_referral_code(code: Optional[str] = None, db: Session = Depen
 
 @router.post('/login', response_model=schemas.Token)
 @limiter.limit('5/minute')
-async def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     email_lower = normalize_email(form_data.username or '')
     user = db.query(models.User).filter(models.User.email == email_lower).first()
     if not user or not user.password_hash or not security.verify_password(form_data.password, user.password_hash):
@@ -1239,17 +1239,31 @@ async def login(request: Request, db: Session = Depends(get_db), form_data: OAut
             detail='Incorrect email or password',
             headers={'WWW-Authenticate': 'Bearer'}
         )
-    
-    user.login_count += 1
-    user.last_login = datetime.now(timezone.utc)
-    db.commit()
-    
-    await log_action(db, action='login', user_id=user.id, details=f'Login bem-sucedido: {user.email}', request=request)
-    
+
     access_token = security.create_access_token(subject=user.email)
     refresh_token = security.create_refresh_token(subject=user.email)
-    
-    logger.info(f'Login bem-sucedido: {user.email}')
+
+    user_id = user.id
+    user_email = user.email
+    client_host = request.client.host if request.client else 'unknown'
+
+    def _post_login():
+        from ..core.dependencies import SessionLocal
+        bg_db = SessionLocal()
+        try:
+            bg_user = bg_db.query(models.User).filter(models.User.id == user_id).first()
+            if bg_user:
+                bg_user.login_count += 1
+                bg_user.last_login = datetime.now(timezone.utc)
+                bg_db.commit()
+        except Exception as e:
+            bg_db.rollback()
+            logger.error(f'Erro ao atualizar login_count: {e}')
+        finally:
+            bg_db.close()
+
+    background_tasks.add_task(_post_login)
+    logger.info(f'Login bem-sucedido: {user_email}')
     return {
         'access_token': access_token,
         'refresh_token': refresh_token,
@@ -1363,7 +1377,7 @@ async def confirm_password_reset(request: Request, data: schemas.PasswordResetCo
     return {'message': 'Password alterada com sucesso!'}
 
 @router.post('/social-login', response_model=schemas.Token)
-async def social_login(request: Request, data: schemas.SocialLoginRequest, db: Session = Depends(get_db)):
+async def social_login(request: Request, background_tasks: BackgroundTasks, data: schemas.SocialLoginRequest, db: Session = Depends(get_db)):
     try:
         email = None
         social_id = None
@@ -1473,17 +1487,31 @@ async def social_login(request: Request, data: schemas.SocialLoginRequest, db: S
         else:
             if data.provider == 'google' and not user.google_id:
                 user.google_id = social_id
-            user.login_count += 1
-            user.last_login = datetime.now(timezone.utc)
-            db.commit()
-        
-        try:
-            await log_action(db, action='login_social', user_id=user.id, details=f'Login via {data.provider}: {user.email}', request=request)
-        except Exception as e:
-            logger.warning(f'Erro ao logar ação (não crítico): {str(e)}')
-        
+                db.commit()
+
         access_token = security.create_access_token(subject=user.email)
         refresh_token = security.create_refresh_token(subject=user.email)
+
+        user_id = user.id
+        user_email = user.email
+        provider = data.provider
+
+        def _post_social_login():
+            from ..core.dependencies import SessionLocal
+            bg_db = SessionLocal()
+            try:
+                bg_user = bg_db.query(models.User).filter(models.User.id == user_id).first()
+                if bg_user:
+                    bg_user.login_count += 1
+                    bg_user.last_login = datetime.now(timezone.utc)
+                    bg_db.commit()
+            except Exception as e:
+                bg_db.rollback()
+                logger.error(f'Erro ao atualizar login_count social: {e}')
+            finally:
+                bg_db.close()
+
+        background_tasks.add_task(_post_social_login)
         
         logger.info(f"Login social bem-sucedido para {user.email}. Token gerado.")
         

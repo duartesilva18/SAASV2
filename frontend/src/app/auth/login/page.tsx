@@ -8,8 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Mail, Lock, AlertCircle, ChevronLeft, CheckCircle2, Eye, EyeOff, Check, ShieldCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
-import { useUser } from '@/lib/UserContext';
-import { hasProAccess } from '@/lib/utils';
+
 
 const MagneticButton = ({ children, className, onClick, disabled, type = "button" }: any) => (
   <button type={type} onClick={onClick} disabled={disabled} className={className}>
@@ -58,7 +57,6 @@ function LoginPageContent() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
   const [resendError, setResendError] = useState('');
-  const { refreshUser } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawRedirect = searchParams?.get('redirect') || '/dashboard';
@@ -116,30 +114,22 @@ function LoginPageContent() {
       storage.setItem('token', response.data.access_token);
       if (response.data.refresh_token) storage.setItem('refresh_token', response.data.refresh_token);
       api.defaults.headers.common.Authorization = `Bearer ${response.data.access_token}`;
-      await refreshUser();
-      const prefetchData = async () => {
-        try {
-          const [transRes, catRes, insightsRes, invoicesRes] = await Promise.all([
-            api.get('/transactions/?limit=100'),
-            api.get('/categories/'),
-            api.get('/insights/'),
-            api.get('/stripe/invoices').catch(() => null)
-          ]);
-          const userRes = await api.get('/auth/me').catch(() => null);
+      router.push('/dashboard');
+      // Prefetch em background (nao bloqueia navegacao)
+      Promise.all([
+        api.get('/transactions/?limit=100'),
+        api.get('/categories/'),
+        api.get('/stripe/invoices').catch(() => null)
+      ]).then(([transRes, catRes, invoicesRes]) => {
+        api.get('/auth/me').then(userRes => {
           if (userRes?.data) {
-            const user = userRes.data;
             localStorage.setItem('dashboard_cache', JSON.stringify({
-              data: { user, transactions: transRes.data, categories: catRes.data, invoices: invoicesRes?.data || [] },
+              data: { user: userRes.data, transactions: transRes.data, categories: catRes.data, invoices: invoicesRes?.data || [] },
               timestamp: Date.now()
             }));
-            if (hasProAccess(user)) {
-              localStorage.setItem('zen_insights_cache', JSON.stringify({ data: insightsRes.data, timestamp: Date.now() }));
-            }
           }
-        } catch (_) {}
-      };
-      prefetchData();
-      router.push('/dashboard');
+        }).catch(() => {});
+      }).catch(() => {});
     } catch (err: any) {
       const status = err.response?.status;
       const detail = err.response?.data?.detail;
@@ -179,30 +169,22 @@ function LoginPageContent() {
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem('token', response.data.access_token);
       if (response.data.refresh_token) storage.setItem('refresh_token', response.data.refresh_token);
-      await refreshUser();
-      const prefetchData = async () => {
-        try {
-          const [transRes, catRes, insightsRes, invoicesRes] = await Promise.all([
-            api.get('/transactions/?limit=100'),
-            api.get('/categories/'),
-            api.get('/insights/'),
-            api.get('/stripe/invoices').catch(() => null)
-          ]);
-          const userRes = await api.get('/auth/me').catch(() => null);
+      api.defaults.headers.common.Authorization = `Bearer ${response.data.access_token}`;
+      router.push(redirectUrl);
+      Promise.all([
+        api.get('/transactions/?limit=100'),
+        api.get('/categories/'),
+        api.get('/stripe/invoices').catch(() => null)
+      ]).then(([transRes, catRes, invoicesRes]) => {
+        api.get('/auth/me').then(userRes => {
           if (userRes?.data) {
-            const user = userRes.data;
             localStorage.setItem('dashboard_cache', JSON.stringify({
-              data: { user, transactions: transRes.data, categories: catRes.data, invoices: invoicesRes?.data || [] },
+              data: { user: userRes.data, transactions: transRes.data, categories: catRes.data, invoices: invoicesRes?.data || [] },
               timestamp: Date.now()
             }));
-            if (hasProAccess(user)) {
-              localStorage.setItem('zen_insights_cache', JSON.stringify({ data: insightsRes.data, timestamp: Date.now() }));
-            }
           }
-        } catch (_) {}
-      };
-      prefetchData();
-      router.push(redirectUrl);
+        }).catch(() => {});
+      }).catch(() => {});
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || t.auth.login.googleError);
