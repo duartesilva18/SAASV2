@@ -66,13 +66,15 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Finly",
-    "alternateName": ["Finly Bot", "finlybot"],
+    "alternateName": ["Finly App", "Finly Bot", "Finly Finanças", "finlybot", "Finly gestão financeira"],
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Telegram",
     "offers": { "@type": "Offer", "price": "9.99", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
     "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "2800" },
     "description": t.hero.description,
-    "featureList": t.resources.items.slice(0, 5).map((r: { d: string }) => r.d.split('.')[0])
+    "featureList": t.resources.items.slice(0, 5).map((r: { d: string }) => r.d.split('.')[0]),
+    "author": { "@type": "Organization", "name": "Finly" },
+    "url": "https://app.finlybot.com"
   };
 
   return (

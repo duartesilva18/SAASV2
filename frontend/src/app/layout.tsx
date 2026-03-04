@@ -27,22 +27,29 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com';
 
 export const metadata: Metadata = {
   title: {
-    default: "Finly - Gestão Financeira Pessoal | Telegram Bot",
+    default: "Finly | Gestão Financeira Pessoal Inteligente",
     template: "%s | Finly"
   },
-  description: "Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e ajuda-te a alcançar a paz financeira. Gráficos inteligentes, categorização automática e insights de IA. App finanças Portugal.",
+  description: "Finly é a app de gestão financeira pessoal que te permite registar despesas pelo Telegram em 3 segundos. Finly oferece gráficos inteligentes, categorização automática por IA e insights financeiros. Controla o teu dinheiro com o Finly.",
   keywords: [
     "Finly",
-    "gestão financeira",
+    "Finly app",
+    "Finly finanças",
+    "Finly gestão financeira",
+    "Finly bot",
+    "Finly Portugal",
+    "gestão financeira pessoal",
     "controlo de despesas",
-    "telegram bot",
+    "app finanças pessoais",
     "telegram bot finanças",
     "finanças pessoais",
-    "orçamento",
+    "orçamento pessoal",
     "poupança",
     "gestão de dinheiro",
-    "app finanças",
-    "Portugal"
+    "app finanças Portugal",
+    "expense tracker",
+    "finance app",
+    "Finly expense tracker"
   ],
   authors: [{ name: "Finly" }],
   creator: "Finly",
@@ -77,21 +84,21 @@ export const metadata: Metadata = {
     alternateLocale: ['en_US', 'fr_FR'],
     url: '/',
     siteName: 'Finly',
-    title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
-    description: 'Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e ajuda-te a alcançar a paz financeira.',
+    title: 'Finly | Gestão Financeira Pessoal Inteligente',
+    description: 'Finly é a app de gestão financeira pessoal com Telegram bot. Regista despesas em 3 segundos, gráficos inteligentes e IA. Experimenta o Finly.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Finly - Gestão Financeira Pessoal',
+        alt: 'Finly - App de Gestão Financeira Pessoal',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Finly - Gestão Financeira Pessoal | Telegram Bot',
-    description: 'Finly: regista despesas no Telegram em 3 segundos. Elimina a confusão das contas e paz financeira.',
+    title: 'Finly | Gestão Financeira Pessoal Inteligente',
+    description: 'Finly é a app de gestão financeira pessoal com Telegram bot. Regista despesas em 3 segundos e controla o teu dinheiro com o Finly.',
     images: ['/og-image.png'],
     creator: '@finlypt',
   },
@@ -131,13 +138,27 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Finly',
+    alternateName: ['Finly App', 'Finly Bot', 'Finly Finanças', 'finlybot'],
     url: siteUrl,
     logo: `${siteUrl}/images/logo/logo-semfundo.png`,
-    description: 'Finly - Gestão financeira pessoal e bot Telegram para registar despesas em segundos.',
+    description: 'Finly é a app de gestão financeira pessoal com bot Telegram. Regista despesas em segundos com o Finly.',
     sameAs: [
       'https://t.me/FinanZenApp_bot',
       ...(process.env.NEXT_PUBLIC_TWITTER_URL ? [process.env.NEXT_PUBLIC_TWITTER_URL] : []),
     ].filter(Boolean),
+  };
+
+  const websiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Finly',
+    alternateName: ['Finly App', 'Finly Bot', 'finlybot'],
+    url: siteUrl,
+    description: 'Finly - Gestão financeira pessoal inteligente com bot Telegram.',
+    publisher: {
+      '@type': 'Organization',
+      name: 'Finly',
+    },
   };
 
   return (
@@ -148,6 +169,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <ErrorBoundary>
           <ThemeProvider>
