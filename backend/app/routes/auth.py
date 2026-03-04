@@ -11,6 +11,7 @@ import requests
 from jose import jwt, JWTError
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 import logging
+import stripe
 from ..core import security
 from ..core.config import settings
 from ..core.dependencies import get_db
@@ -22,6 +23,7 @@ from ..core.email_translations import get_email_translation
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/auth', tags=['auth'])
+stripe.api_key = settings.STRIPE_API_KEY
 VERIFICATION_EXPIRY_MINUTES = 30
 
 
@@ -1154,6 +1156,28 @@ async def import_user_data(
 async def delete_user_account(request: Request, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
         user_email = current_user.email
+
+        # Cancelar subscricao Stripe antes de apagar (evita cobranças futuras)
+        if current_user.stripe_subscription_id:
+            try:
+                stripe.Subscription.delete(current_user.stripe_subscription_id)
+                logger.info(f'Subscricao Stripe cancelada ao apagar conta: {current_user.stripe_subscription_id} ({user_email})')
+            except stripe.error.InvalidRequestError as e:
+                if getattr(e, 'code', None) == 'resource_missing':
+                    logger.info(f'Subscricao ja nao existe no Stripe: {current_user.stripe_subscription_id} ({user_email})')
+                else:
+                    logger.warning(f'Erro ao cancelar subscricao Stripe ao apagar conta: {e} ({user_email})')
+            except Exception as e:
+                logger.warning(f'Erro ao cancelar subscricao Stripe ao apagar conta: {e} ({user_email})')
+
+        # Eliminar customer Stripe para nao deixar dados orfaos
+        if current_user.stripe_customer_id and not current_user.stripe_customer_id.startswith(('sim_', 'test_')):
+            try:
+                stripe.Customer.delete(current_user.stripe_customer_id)
+                logger.info(f'Customer Stripe eliminado ao apagar conta: {current_user.stripe_customer_id} ({user_email})')
+            except Exception as e:
+                logger.warning(f'Erro ao eliminar customer Stripe ao apagar conta: {e} ({user_email})')
+
         # user_id=None: o user vai ser apagado; audit_logs.user_id tem FK CASCADE — gravar com NULL evita violação e o log não é apagado
         await log_action(db, action='account_delete', user_id=None, details=f'Conta eliminada por utilizador: {user_email}', request=request)
         db.delete(current_user)
