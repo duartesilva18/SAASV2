@@ -374,8 +374,11 @@ async def get_audit_logs(
 async def get_admin_users(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
     """
     Lista utilizadores com métricas agregadas (inclui contagem de transações criadas via bot/Telegram).
-    Consideramos como "via bot" as transações nos workspaces do utilizador cujo decision_reason contenha 'telegram'
-    ou cuja descrição padrão seja 'Transação Telegram'.
+    Consideramos como "via bot" as transações nos workspaces do utilizador que passaram pelo fluxo do bot,
+    identificadas por:
+      - inference_source não nulo (setado apenas nos fluxos automáticos: Telegram/AI/vision), ou
+      - decision_reason a conter 'telegram', ou
+      - descrição padrão 'Transação Telegram'.
     """
     # Subquery: contagem de transações criadas via bot por owner_id (utilizador)
     tx_bot_subq = (
@@ -386,6 +389,7 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
                     case(
                         (
                             or_(
+                                models.Transaction.inference_source.isnot(None),
                                 models.Transaction.decision_reason.ilike('%telegram%'),
                                 models.Transaction.description == 'Transação Telegram',
                             ),
