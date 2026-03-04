@@ -29,6 +29,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   { target: 'sidebar-dashboard', message: 'A tua visão geral. Totais do mês e atalhos rápidos.' },
   { target: 'sidebar-transactions', message: 'Transações, categorias e subscrições. É aqui que registas e organizas tudo.' },
   { target: 'sidebar-analytics', message: 'Gráficos e números para perceberes para onde vai o dinheiro.' },
+  { target: 'sidebar-assistant', message: 'Copiloto IA. Pergunta qualquer coisa sobre as tuas finanças e recebe respostas inteligentes.' },
   { target: 'sidebar-vault', message: 'Cofre e metas. Para guardar e definir objetivos de poupança.' },
   { target: 'sidebar-affiliate', message: 'Programa de afiliados. Convida amigos e ganha recompensas.' },
   { target: 'sidebar-settings', message: 'Definições, faturação e plano. Para alterar a tua conta.' },

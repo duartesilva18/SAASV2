@@ -28,6 +28,7 @@ import {
   Target,
   Lock,
   Trophy,
+  BotMessageSquare,
 } from 'lucide-react';
 
 const IconComponent = ({ name, size = 20 }: { name: string, size?: number }) => {
@@ -58,6 +59,7 @@ const getMainMenu = (t: any) => [
   { name: t.dashboard.sidebar.dashboard, href: '/dashboard', icon: LayoutDashboard, activePaths: ['/dashboard'] },
   { name: t.dashboard.sidebar.transactions, href: '/transactions', icon: Receipt, activePaths: ['/transactions', '/categories', '/recurring'] },
   { name: t.dashboard.sidebar.analytics, href: '/analytics', icon: PieChart, activePaths: ['/analytics'] },
+  { name: t.dashboard.sidebar.assistant || 'Copiloto IA', href: '/assistant', icon: BotMessageSquare, activePaths: ['/assistant'], isAssistant: true },
   { name: 'Cofre e Reservas', href: '/vault', icon: Landmark, activePaths: ['/vault', '/goals'] },
   { name: 'Afiliados', href: '/affiliate', icon: Trophy, isAffiliateSection: true, activePaths: ['/affiliate'] },
   { name: t.dashboard.sidebar.settings, href: '/settings', icon: Settings, activePaths: ['/settings', '/billing', '/plans'] },
@@ -198,6 +200,7 @@ export default function Sidebar({
           const isActive = item.adminOnly ? (pathname?.startsWith(item.href)) : (item.activePaths || [item.href]).includes(pathname);
           const isAdminItem = item.adminOnly;
           const isAffiliateItem = item.isAffiliateSection;
+          const isAssistantItem = item.isAssistant;
           const isBlocked = item.isBlocked;
 
           const badge = badgeForItem(item);
@@ -237,10 +240,10 @@ export default function Sidebar({
               href={item.href}
               data-onboarding-target={`sidebar-${item.href.replace(/^\//, '')}`}
               onMouseEnter={() => { if (item.href.startsWith('/')) router.prefetch(item.href); }}
-              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-blue-600/10 text-blue-400 border border-blue-500/20') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:border-slate-700/40')} border border-transparent ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
+              className={`flex items-center gap-2 xl:gap-2.5 p-2.5 xl:p-3 min-h-[44px] lg:min-h-0 rounded-xl transition-all relative group cursor-pointer ${isActive ? (isAdminItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : isAffiliateItem ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : isAssistantItem ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' : 'bg-blue-600/10 text-blue-400 border border-blue-500/20') : (isAdminItem ? 'text-amber-500/60 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : isAffiliateItem ? 'text-amber-500/70 hover:bg-amber-500/5 hover:text-amber-400 hover:border-amber-500/10' : isAssistantItem ? 'text-violet-400/70 hover:bg-violet-500/5 hover:text-violet-400 hover:border-violet-500/10' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:border-slate-700/40')} border border-transparent ${isCollapsed && !isMobileOpen ? 'lg:justify-center' : ''}`}
             >
               <div className="relative shrink-0">
-                <Icon size={20} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : '')}`} />
+                <Icon size={20} className={`xl:w-5 xl:h-5 ${isActive ? (isAdminItem ? 'text-amber-500' : isAffiliateItem ? 'text-amber-400' : isAssistantItem ? 'text-violet-400' : 'text-blue-500') : (isAffiliateItem ? 'text-amber-500/70' : isAssistantItem ? 'text-violet-400/70' : '')}`} />
                 {badge.show && (
                   <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0f172a] ${dotClasses[badge.type]}`} aria-hidden />
                 )}
@@ -251,7 +254,7 @@ export default function Sidebar({
                 </span>
               )}
               {isActive && (
-                <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : isAffiliateItem ? 'bg-amber-500' : 'bg-blue-500'}`} />
+                <div className={`absolute left-0 w-1 h-6 rounded-r-full ${isAdminItem ? 'bg-amber-500' : isAffiliateItem ? 'bg-amber-500' : isAssistantItem ? 'bg-violet-500' : 'bg-blue-500'}`} />
               )}
             </Link>
           );

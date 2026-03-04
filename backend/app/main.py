@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate, support
+from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate, support, assistant
 from .routes.auth import create_default_categories
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
@@ -122,6 +122,7 @@ app.include_router(dashboard.router)
 app.include_router(stripe_routes.router)
 app.include_router(affiliate.router)
 app.include_router(support.router)
+app.include_router(assistant.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(whatsapp_webhooks.router)
 app.include_router(telegram_webhooks.router)

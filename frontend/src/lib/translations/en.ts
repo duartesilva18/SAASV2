@@ -659,6 +659,7 @@ export const en = {
           billing: "Billing",
           vault: "Reserve Vault",
           goals: "Savings Goals",
+          assistant: "AI Copilot",
           fire: "FIRE Simulator",
           telegramBot: "Telegram Bot",
           adminPanel: "Command Panel",
@@ -729,6 +730,18 @@ export const en = {
           paymentVerifyError: "Error verifying payment. Please refresh the page.",
           paymentError: "Error processing payment",
           alreadyPro: "You're already Pro"
+      },
+      assistant: {
+          title: "AI Copilot",
+          subtitle: "Ask anything about your finances",
+          placeholder: "Ask something about your finances...",
+          thinking: "Thinking...",
+          clearChat: "Clear chat",
+          emptyTitle: "Hi! I'm your financial copilot.",
+          emptySubtitle: "I have access to your real data. Ask me anything.",
+          proRequired: "The AI Copilot is available on Pro plans. Upgrade to unlock.",
+          upgrade: "View Plans",
+          disclaimer: "The AI Copilot uses your real data. Responses are AI-generated and may not be 100% accurate.",
       },
       billing: {
           title: "Billing ",

@@ -659,6 +659,7 @@ export const pt = {
           billing: "Faturação",
           vault: "Cofre de Reservas",
           goals: "Metas de Poupança",
+          assistant: "Copiloto IA",
           fire: "Simulador FIRE",
           telegramBot: "Bot Telegram",
           adminPanel: "Painel de Comando",
@@ -695,6 +696,18 @@ export const pt = {
               warning: "Aviso",
               info: "Informação"
           }
+      },
+      assistant: {
+          title: "Copiloto IA",
+          subtitle: "Pergunta qualquer coisa sobre as tuas finanças",
+          placeholder: "Pergunta algo sobre as tuas finanças...",
+          thinking: "A pensar...",
+          clearChat: "Limpar conversa",
+          emptyTitle: "Olá! Sou o teu copiloto financeiro.",
+          emptySubtitle: "Tenho acesso aos teus dados reais. Pergunta o que quiseres.",
+          proRequired: "O Copiloto IA está disponível nos planos Pro. Faz upgrade para desbloquear.",
+          upgrade: "Ver Planos",
+          disclaimer: "O Copiloto IA usa os teus dados reais. As respostas são geradas por IA e podem não ser 100% precisas.",
       },
       billing: {
           title: "Histórico de ",

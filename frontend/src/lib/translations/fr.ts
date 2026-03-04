@@ -659,6 +659,7 @@ export const fr = {
           billing: "Facturation",
           vault: "Coffre de réserve",
           goals: "Objectifs d'épargne",
+          assistant: "Copilote IA",
           fire: "Simulateur FIRE",
           telegramBot: "Bot Telegram",
           adminPanel: "Panneau de commande",
@@ -729,6 +730,18 @@ export const fr = {
           paymentVerifyError: "Erreur de vérification du paiement. Actualisez la page.",
           paymentError: "Erreur de traitement du paiement",
           alreadyPro: "Vous êtes déjà Pro"
+      },
+      assistant: {
+          title: "Copilote IA",
+          subtitle: "Posez n'importe quelle question sur vos finances",
+          placeholder: "Posez une question sur vos finances...",
+          thinking: "Réflexion en cours...",
+          clearChat: "Effacer la conversation",
+          emptyTitle: "Bonjour ! Je suis votre copilote financier.",
+          emptySubtitle: "J'ai accès à vos données réelles. Demandez-moi ce que vous voulez.",
+          proRequired: "Le Copilote IA est disponible sur les forfaits Pro. Passez à Pro pour débloquer.",
+          upgrade: "Voir les forfaits",
+          disclaimer: "Le Copilote IA utilise vos données réelles. Les réponses sont générées par IA et peuvent ne pas être 100% précises.",
       },
       billing: {
           title: "Historique de ",
