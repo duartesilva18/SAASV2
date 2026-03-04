@@ -13,7 +13,7 @@ import NotificationsPanel from '@/components/NotificationsPanel';
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings, Mail } from 'lucide-react';
 import Link from 'next/link';
@@ -51,7 +51,6 @@ export default function DashboardLayout({
   const [supportHidden, setSupportHidden] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
   const sessionVerifiedRef = useRef(false);
@@ -161,8 +160,10 @@ export default function DashboardLayout({
 
   // Verificar sessão Stripe após checkout (o webhook pode não ter processado ainda)
   useEffect(() => {
-    const sessionId = searchParams?.get('session_id');
-    if (!sessionId || sessionVerifiedRef.current || !user) return;
+    if (sessionVerifiedRef.current || !user) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (!sessionId) return;
     sessionVerifiedRef.current = true;
     setVerifyingSession(true);
     api.get(`/stripe/verify-session/${sessionId}`)
@@ -170,12 +171,9 @@ export default function DashboardLayout({
       .catch(() => {})
       .finally(() => {
         setVerifyingSession(false);
-        // Limpar o session_id do URL sem reload
-        const url = new URL(window.location.href);
-        url.searchParams.delete('session_id');
-        window.history.replaceState({}, '', url.pathname);
+        window.history.replaceState({}, '', window.location.pathname);
       });
-  }, [searchParams, user, refreshUser]);
+  }, [user, refreshUser]);
 
   useEffect(() => {
     if (!loading && !verifyingSession) {
