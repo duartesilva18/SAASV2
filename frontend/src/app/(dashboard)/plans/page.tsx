@@ -21,6 +21,8 @@ export default function PlansPage() {
   const [changePlanModal, setChangePlanModal] = useState<{ isOpen: boolean; priceId: string | null }>({ isOpen: false, priceId: null });
   const [changePlanLoading, setChangePlanLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [endTrialModal, setEndTrialModal] = useState(false);
+  const [endTrialLoading, setEndTrialLoading] = useState(false);
 
   const priceIdMap = PLAN_SLUG_BY_PRICE_ID;
 
@@ -220,6 +222,22 @@ export default function PlansPage() {
     }
   };
 
+  const handleEndTrial = async () => {
+    setEndTrialLoading(true);
+    try {
+      const res = await api.post('/stripe/end-trial');
+      setEndTrialModal(false);
+      await refreshUser();
+      setToast({ isVisible: true, message: res.data?.message || 'Plano ativado com sucesso!', type: 'success' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail;
+      const detail = typeof msg === 'string' ? msg : 'Erro ao ativar plano.';
+      setToast({ isVisible: true, message: detail, type: 'error' });
+    } finally {
+      setEndTrialLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 3xl:space-y-16 3xl:md:space-y-20 pb-20 3xl:pb-20 px-3 sm:px-4 md:px-8 3xl:pt-10 pt-4 sm:pt-6 max-w-7xl mx-auto">
       {/* Modal de loading ao abrir Stripe Checkout */}
@@ -408,6 +426,14 @@ export default function PlansPage() {
                     : plan.buttonText
                   }
                 </button>
+                {isCurrentPlan(plan.priceId) && isTrialing && (
+                  <button
+                    onClick={() => setEndTrialModal(true)}
+                    className="w-full mt-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer"
+                  >
+                    Ativar plano agora e pagar já
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}
@@ -497,6 +523,18 @@ export default function PlansPage() {
         cancelText="Cancelar"
         variant="info"
         isLoading={changePlanLoading}
+      />
+
+      <ConfirmModal
+        isOpen={endTrialModal}
+        onClose={() => setEndTrialModal(false)}
+        onConfirm={handleEndTrial}
+        title="Ativar plano agora?"
+        message="O teu período de teste gratuito vai terminar e serás cobrado imediatamente pelo plano escolhido. Tens a certeza?"
+        confirmText="Sim, pagar agora"
+        cancelText="Manter trial"
+        variant="info"
+        isLoading={endTrialLoading}
       />
 
       <Toast

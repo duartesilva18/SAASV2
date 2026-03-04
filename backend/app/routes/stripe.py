@@ -336,6 +336,33 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
         logger.error(f'Erro inesperado ao alterar plano: {str(e)}', exc_info=True)
         raise HTTPException(status_code=500, detail='Erro ao alterar plano.')
 
+@router.post('/end-trial')
+async def end_trial(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """Termina o trial antecipadamente e inicia a cobrança imediata."""
+    try:
+        if not current_user.stripe_subscription_id:
+            raise HTTPException(status_code=400, detail='Não tens uma subscrição ativa.')
+        if current_user.subscription_status != 'trialing':
+            raise HTTPException(status_code=400, detail='Não estás em período de trial.')
+
+        stripe.Subscription.modify(
+            current_user.stripe_subscription_id,
+            trial_end='now',
+        )
+        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        current_user.subscription_status = sub.status
+        db.commit()
+        logger.info(f'Trial terminado antecipadamente para {current_user.email}: status={sub.status}')
+        return {'success': True, 'message': 'Trial terminado. A tua subscrição está agora ativa.', 'subscription_status': sub.status}
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        logger.error(f'Erro Stripe ao terminar trial: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=400, detail='Erro ao terminar trial. Tenta novamente.')
+    except Exception as e:
+        logger.error(f'Erro inesperado ao terminar trial: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=500, detail='Erro ao terminar trial.')
+
 @router.post('/portal')
 async def customer_portal(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
