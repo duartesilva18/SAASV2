@@ -34,6 +34,7 @@ class User(Base):
     # Pro concedido por admin até uma data (acesso Pro temporário sem subscrição Stripe)
     pro_granted_until = Column(DateTime(timezone=True), nullable=True)
     had_refund = Column(Boolean, nullable=False, default=False)  # True se alguma vez teve reembolso (Stripe)
+    had_trial = Column(Boolean, nullable=False, default=False)  # True se já usou trial grátis (impede trial repetido)
     # Campos de afiliado
     is_affiliate = Column(Boolean, nullable=False, default=False)
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)

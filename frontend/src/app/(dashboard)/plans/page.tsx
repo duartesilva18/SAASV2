@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
-import { Zap, Trophy, Crown, Check, CheckCircle2 } from 'lucide-react';
+import { Zap, Trophy, Crown, Check, CheckCircle2, Gift, Shield, Clock } from 'lucide-react';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
@@ -23,6 +23,28 @@ export default function PlansPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const priceIdMap = PLAN_SLUG_BY_PRICE_ID;
+
+  // Determinar se o utilizador precisa de escolher plano (sem subscrição)
+  // Admins e users com pro_granted_until já têm subscription_status='active' via backend
+  const needsSubscription = !!(
+    user
+    && !user.is_admin
+    && (!user.subscription_status || user.subscription_status === 'none')
+  );
+
+  // Determinar se é elegível para trial (nunca teve subscrição -- status 'none' ou vazio)
+  const isTrialEligible = needsSubscription;
+
+  // Bloquear popstate (botão voltar do browser) se precisa de subscrição
+  useEffect(() => {
+    if (!needsSubscription) return;
+    const blockBack = (e: PopStateEvent) => {
+      window.history.pushState(null, '', '/plans');
+    };
+    window.history.pushState(null, '', '/plans');
+    window.addEventListener('popstate', blockBack);
+    return () => window.removeEventListener('popstate', blockBack);
+  }, [needsSubscription]);
 
   useEffect(() => {
     const fetchCurrentPlan = async () => {
@@ -96,7 +118,7 @@ export default function PlansPage() {
       quote: 'Quero organizar o meu dinheiro antes de pensar em ganhar com isso.',
       features: ['Registo simples de todos os gastos', 'Categorias automáticas', 'Visão clara do teu mês financeiro', 'Relatórios mensais'],
       limitation: 'Programa de afiliados bloqueado nos primeiros 3 meses',
-      buttonText: 'Começar agora',
+      buttonText: isTrialEligible ? 'Experimentar 7 dias grátis' : 'Começar agora',
       priceId: STRIPE_PRICE_IDS.basic,
       icon: Zap,
       popular: false,
@@ -111,7 +133,7 @@ export default function PlansPage() {
       quote: 'Já uso a FinLy e quero que ela comece a trabalhar para mim.',
       features: ['Tudo do FinLy Basic', 'Acesso imediato ao programa de afiliados', '20% de comissão recorrente', 'Dashboard de ganhos em tempo real', 'Link exclusivo para indicações'],
       limitation: null,
-      buttonText: 'Quero começar a ganhar com a FinLy',
+      buttonText: isTrialEligible ? 'Experimentar 7 dias grátis' : 'Quero começar a ganhar com a FinLy',
       priceId: STRIPE_PRICE_IDS.plus,
       icon: Trophy,
       popular: true,
@@ -127,7 +149,7 @@ export default function PlansPage() {
       quote: 'Quero tudo. O menor preço e o maior retorno.',
       features: ['Tudo do FinLy Plus', '25% de comissão recorrente (mais ganhos por indicação)', 'Relatório anual inteligente', 'Insights automáticos de gastos e padrões', 'Acesso antecipado a novas funcionalidades'],
       limitation: null,
-      buttonText: 'Quero o plano mais completo',
+      buttonText: isTrialEligible ? 'Experimentar 7 dias grátis' : 'Quero o plano mais completo',
       priceId: STRIPE_PRICE_IDS.pro,
       icon: Crown,
       popular: false,
@@ -221,15 +243,47 @@ export default function PlansPage() {
         )}
       </AnimatePresence>
 
-      {/* Header — compacto abaixo de 1600px; tamanho grande a partir de 1600px */}
+      {/* Banner de trial obrigatório */}
+      {needsSubscription && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-600/10 p-5 sm:p-6"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+              <Gift className="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-black text-base sm:text-lg mb-1">
+                Experimenta 7 dias grátis
+              </h3>
+              <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+                Escolhe o teu plano para começar. Os primeiros 7 dias são por nossa conta — só precisas de associar o cartão. Se não gostares, cancela antes do 8.º dia e não pagas nada.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Header */}
       <section className="text-center mb-6 3xl:mb-12 3xl:md:mb-20 3xl:lg:mb-28">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-xl sm:text-2xl md:text-3xl 3xl:text-5xl 3xl:lg:text-6xl font-black tracking-tighter mb-3 3xl:mb-6 uppercase leading-tight"
         >
-          Quanto vale ter{' '}
-          <span className="text-blue-500 italic block 3xl:md:inline">controlo total do teu dinheiro</span>?
+          {isTrialEligible ? (
+            <>
+              Começa com{' '}
+              <span className="text-blue-500 italic block 3xl:md:inline">7 dias grátis</span>
+            </>
+          ) : (
+            <>
+              Quanto vale ter{' '}
+              <span className="text-blue-500 italic block 3xl:md:inline">controlo total do teu dinheiro</span>?
+            </>
+          )}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -237,7 +291,10 @@ export default function PlansPage() {
           transition={{ delay: 0.1 }}
           className="text-sm sm:text-base 3xl:text-base 3xl:md:text-lg 3xl:lg:text-2xl text-slate-400 mb-3 3xl:mb-6 3xl:md:mb-8 max-w-2xl mx-auto"
         >
-          A maioria das pessoas não sabe para onde o dinheiro vai.
+          {isTrialEligible
+            ? 'Escolhe o teu plano. Só és cobrado ao 8.º dia.'
+            : 'A maioria das pessoas não sabe para onde o dinheiro vai.'
+          }
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -245,7 +302,10 @@ export default function PlansPage() {
           transition={{ delay: 0.15 }}
           className="text-sm sm:text-base 3xl:text-base 3xl:md:text-lg 3xl:lg:text-2xl text-white font-semibold mb-5 3xl:mb-8 3xl:md:mb-10 max-w-2xl mx-auto"
         >
-          Quem usa a FinLy sabe. E alguns ainda ganham com isso.
+          {isTrialEligible
+            ? 'Acesso total a todas as funcionalidades durante o trial.'
+            : 'Quem usa a FinLy sabe. E alguns ainda ganham com isso.'
+          }
         </motion.p>
       </section>
 
@@ -297,7 +357,10 @@ export default function PlansPage() {
                         {plan.price}
                       </p>
                       <p className="text-xs 3xl:text-sm text-slate-400 font-semibold mt-0.5">{plan.priceSuffix}</p>
-                      {plan.priceSecondary && (
+                      {isTrialEligible && (
+                        <p className="text-xs text-blue-400 font-semibold mt-1">após 7 dias grátis</p>
+                      )}
+                      {plan.priceSecondary && !isTrialEligible && (
                         <p className="text-sm 3xl:text-base text-emerald-400 font-semibold mt-1 3xl:mt-1.5">{plan.priceSecondary}</p>
                       )}
                     </div>
@@ -373,7 +436,7 @@ export default function PlansPage() {
         </div>
       </motion.section>
 
-      {/* Sem risco — compacto abaixo de 1600px */}
+      {/* Sem risco */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -385,8 +448,20 @@ export default function PlansPage() {
           </span>
         </div>
         <div className="flex flex-wrap justify-center gap-6 3xl:gap-12">
+          {isTrialEligible && (
+            <>
+              <div className="flex items-center gap-2 3xl:gap-3 text-slate-400 text-sm 3xl:text-base">
+                <Gift size={16} className="text-blue-400 shrink-0 3xl:w-5 3xl:h-5" />
+                7 dias grátis
+              </div>
+              <div className="flex items-center gap-2 3xl:gap-3 text-slate-400 text-sm 3xl:text-base">
+                <Clock size={16} className="text-blue-400 shrink-0 3xl:w-5 3xl:h-5" />
+                Só pagas ao 8.º dia
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-2 3xl:gap-3 text-slate-400 text-sm 3xl:text-base">
-            <Check size={16} className="text-emerald-400 shrink-0 3xl:w-5 3xl:h-5" />
+            <Shield size={16} className="text-emerald-400 shrink-0 3xl:w-5 3xl:h-5" />
             Pagamento seguro
           </div>
           <div className="flex items-center gap-2 3xl:gap-3 text-slate-400 text-sm 3xl:text-base">

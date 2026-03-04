@@ -169,6 +169,10 @@ def handle_checkout_completed(session: dict, db: Session):
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 user.subscription_status = subscription.status  # 'active', 'trialing', etc.
+                # Marcar que já usou trial para impedir reutilização
+                if subscription.status == 'trialing':
+                    user.had_trial = True
+                    logger.info(f'Trial marcado para {user.email} (had_trial=True)')
                 logger.info(f'Status da subscrição do Stripe: {subscription.status}')
             except Exception as e:
                 logger.warning(f'Erro ao buscar subscrição do Stripe: {str(e)}, usando status "active"')
@@ -213,6 +217,9 @@ def handle_subscription_created(subscription: dict, db: Session):
     if user:
         user.stripe_subscription_id = subscription_id
         user.subscription_status = status
+        if status == 'trialing':
+            user.had_trial = True
+            logger.info(f'Trial marcado para {user.email} (subscription.created, had_trial=True)')
         
         # Marcar conversão de afiliado se aplicável
         if user.referrer_id:
@@ -432,6 +439,14 @@ def handle_charge_refunded(charge: dict, db: Session):
     logger.info(f'Reembolso processado: {user.email}, afiliado referrer_id={referral.referrer_id}')
 
 
+def _is_trial_invoice(invoice: dict) -> bool:
+    """True se a invoice é de trial (valor 0, sem cobrança real)."""
+    amount_paid = invoice.get('amount_paid', 0)
+    amount_due = invoice.get('amount_due', 0)
+    billing_reason = invoice.get('billing_reason', '')
+    return amount_paid == 0 and amount_due == 0 and billing_reason == 'subscription_create'
+
+
 def handle_invoice_payment_failed(invoice: dict, db: Session):
     """Processa invoice.payment_failed - quando um pagamento falha"""
     customer_id = invoice.get('customer')
@@ -475,6 +490,17 @@ def handle_invoice_paid(invoice: dict, db: Session):
     subscription_id = invoice.get('subscription')
     
     logger.info(f'Fatura paga com sucesso - Invoice: {invoice.get("id")}, Customer: {customer_id}, Subscription: {subscription_id}')
+    
+    # Invoices de trial ($0) não precisam de processamento de comissões
+    if _is_trial_invoice(invoice):
+        logger.info(f'Invoice de trial (valor 0) ignorada para comissões: {invoice.get("id")}')
+        if subscription_id:
+            user = db.query(models.User).filter(models.User.stripe_subscription_id == subscription_id).first()
+            if user and user.subscription_status not in ('trialing', 'active'):
+                user.subscription_status = 'trialing'
+                db.commit()
+                logger.info(f'Status atualizado para trialing (invoice trial): {user.email}')
+        return
     
     # Se a fatura está associada a uma subscrição, garantir que o status está correto
     if subscription_id:

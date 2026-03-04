@@ -13,7 +13,7 @@ import NotificationsPanel from '@/components/NotificationsPanel';
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 import { Menu, AlertTriangle, CreditCard, HelpCircle, Bell, Smartphone, Settings, Mail } from 'lucide-react';
 import Link from 'next/link';
@@ -46,12 +46,15 @@ export default function DashboardLayout({
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
   const [showBotSpotlight, setShowBotSpotlight] = useState(false);
+  const [verifyingSession, setVerifyingSession] = useState(false);
   // Inicializar sempre false para evitar hydration mismatch (server não tem localStorage)
   const [supportHidden, setSupportHidden] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
+  const sessionVerifiedRef = useRef(false);
 
   const supportRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supportDidRestoreRef = useRef(false);
@@ -156,8 +159,26 @@ export default function DashboardLayout({
     };
   }, []);
 
+  // Verificar sessão Stripe após checkout (o webhook pode não ter processado ainda)
   useEffect(() => {
-    if (!loading) {
+    const sessionId = searchParams?.get('session_id');
+    if (!sessionId || sessionVerifiedRef.current || !user) return;
+    sessionVerifiedRef.current = true;
+    setVerifyingSession(true);
+    api.get(`/stripe/verify-session/${sessionId}`)
+      .then(() => refreshUser())
+      .catch(() => {})
+      .finally(() => {
+        setVerifyingSession(false);
+        // Limpar o session_id do URL sem reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete('session_id');
+        window.history.replaceState({}, '', url.pathname);
+      });
+  }, [searchParams, user, refreshUser]);
+
+  useEffect(() => {
+    if (!loading && !verifyingSession) {
       if (!user) {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         console.info('[auth] layout no user. token present:', !!token);
@@ -194,18 +215,34 @@ export default function DashboardLayout({
       if (user.language && (user.language === 'pt' || user.language === 'en' || user.language === 'fr')) {
         setLanguage(user.language as 'pt' | 'en' | 'fr');
       }
-      // Spotlight do bot: só para contas criadas há pouco tempo (14 dias), após onboarding e termos, uma vez por utilizador
+      // Após onboarding e termos: forçar escolha de plano se sem subscrição
+      // (admins e users com pro_granted_until já têm subscription_status='active' via backend)
+      const allowedWithoutSub = ['/plans', '/settings', '/billing'];
+      const needsSubscription = (
+        user.is_onboarded
+        && user.terms_accepted
+        && !user.is_admin
+        && (!user.subscription_status || user.subscription_status === 'none')
+      );
+      if (needsSubscription && !allowedWithoutSub.includes(pathname || '')) {
+        router.push('/plans');
+        return;
+      }
+
+      // Spotlight do bot: só após onboarding + termos + plano escolhido (trialing/active), contas recentes, uma vez
+      const hasActiveSub = user.subscription_status && ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
       const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
       const daysSinceCreation = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
       const isRecentAccount = daysSinceCreation <= 14;
-      if (user.is_onboarded && user.terms_accepted && !showOnboarding && !showTermsAcceptance && isRecentAccount && !user.onboarding_spotlight_seen) {
+      if (user.is_onboarded && user.terms_accepted && hasActiveSub && !showOnboarding && !showTermsAcceptance && isRecentAccount && !user.onboarding_spotlight_seen) {
         const t = setTimeout(() => setShowBotSpotlight(true), 500);
         return () => clearTimeout(t);
       }
     }
-  }, [user, loading, router, setCurrency, setLanguage, refreshUser, showOnboarding, showTermsAcceptance]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, verifyingSession, router, setCurrency, setLanguage, refreshUser, showOnboarding, showTermsAcceptance, pathname]);
 
-  if (loading) {
+  if (loading || verifyingSession) {
     return <LoadingScreen />;
   }
 

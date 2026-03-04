@@ -160,6 +160,18 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         subscription_data['metadata']['original_price_id'] = price_id
         subscription_data['metadata']['base_amount_cents'] = str(total_amount_cents)
         
+        # Trial de 7 dias para novos utilizadores que nunca tiveram subscrição nem trial
+        is_first_subscription = (
+            not current_user.stripe_subscription_id
+            and current_user.subscription_status in (None, 'none', '')
+            and not current_user.had_trial
+        )
+        if is_first_subscription:
+            subscription_data['trial_period_days'] = 7
+            logger.info(f'[Checkout] Trial de 7 dias ativado para {current_user.email} (primeira subscrição)')
+        else:
+            logger.info(f'[Checkout] Sem trial: user {current_user.email} (had_trial={current_user.had_trial}, sub_id={current_user.stripe_subscription_id}, status={current_user.subscription_status})')
+        
         # Total cobrado ao cliente: com taxa Stripe (duas linhas) ou só o preço base (uma linha)
         total_charged_cents = _charge_amount_with_stripe_fee(total_amount_cents) if total_amount_cents >= 1 else total_amount_cents
         
@@ -236,7 +248,7 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             'mode': 'subscription',
             'client_reference_id': str(current_user.id),
             'success_url': f"{settings.FRONTEND_URL}/dashboard?session_id={{CHECKOUT_SESSION_ID}}",
-            'cancel_url': f"{settings.FRONTEND_URL}/pricing",
+            'cancel_url': f"{settings.FRONTEND_URL}/plans",
             'subscription_data': subscription_data
         }
         
@@ -394,6 +406,8 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                     if user:
                         user.stripe_subscription_id = subscription_id
                         user.subscription_status = subscription_status
+                        if subscription_status == 'trialing':
+                            user.had_trial = True
                         session_customer = getattr(session, 'customer', None)
                         if not user.stripe_customer_id and session_customer:
                             user.stripe_customer_id = session_customer
