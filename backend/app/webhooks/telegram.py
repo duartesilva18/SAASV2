@@ -3417,7 +3417,7 @@ async def telegram_webhook(
                     ).count()
                     if total_tx == 1:
                         send_telegram_msg(chat_id, t('tip_multi'))
-                    # Budget alert, streak, insight after confirm
+                    # Budget alert e streak após confirmação
                     try:
                         alert = _check_budget_alerts(transaction.workspace_id, category_id_for_msg, db, t)
                         if alert:
@@ -3425,9 +3425,6 @@ async def telegram_webhook(
                         streak_msg = _check_streak(transaction.workspace_id, db, t)
                         if streak_msg:
                             send_telegram_msg(chat_id, streak_msg)
-                        insight_msg = _generate_insight(transaction.workspace_id, category_id_for_msg, db, t)
-                        if insight_msg:
-                            send_telegram_msg(chat_id, insight_msg)
                         month_cmp = _check_month_comparison(transaction.workspace_id, db, t)
                         if month_cmp:
                             send_telegram_msg(chat_id, month_cmp)
@@ -4528,7 +4525,7 @@ async def telegram_webhook(
                 origin_line=origin_line,
                 date_line=_date_line(transaction_date, t),
             ))
-            # Budget alert, streak, insight after auto-confirm
+            # Budget alert e streak após auto-confirmação
             try:
                 alert = _check_budget_alerts(workspace.id, parsed['category_id'], db, t)
                 if alert:
@@ -4536,9 +4533,6 @@ async def telegram_webhook(
                 streak_msg = _check_streak(workspace.id, db, t)
                 if streak_msg:
                     send_telegram_msg(chat_id, streak_msg)
-                insight_msg = _generate_insight(workspace.id, parsed['category_id'], db, t)
-                if insight_msg:
-                    send_telegram_msg(chat_id, insight_msg)
                 month_cmp = _check_month_comparison(workspace.id, db, t, user.language or 'pt')
                 if month_cmp:
                     send_telegram_msg(chat_id, month_cmp)
