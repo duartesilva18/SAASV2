@@ -534,7 +534,7 @@ function TransactionsPageContent() {
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
                 <ArrowUpRight size={14} className="text-emerald-400" />
@@ -543,7 +543,7 @@ function TransactionsPageContent() {
             </div>
             <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate">{formatCurrency(stats.income)}</p>
           </div>
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                 <ArrowDownRight size={14} className="text-red-400" />
@@ -552,7 +552,7 @@ function TransactionsPageContent() {
             </div>
             <p className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate">{formatCurrency(stats.expenses)}</p>
           </div>
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl col-span-2 sm:col-span-1">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 mb-2">
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${(stats.income - stats.expenses) >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
                 <Wallet size={14} className={(stats.income - stats.expenses) >= 0 ? 'text-emerald-400' : 'text-red-400'} />
@@ -567,7 +567,7 @@ function TransactionsPageContent() {
       </section>
 
       {/* Filters & Search */}
-      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4">
+      <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Tabs */}
           <div className="flex items-center bg-slate-950/60 border border-slate-700/50 rounded-xl p-1 shrink-0">
@@ -628,7 +628,7 @@ function TransactionsPageContent() {
       {/* Transactions List & Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
         {/* Left: Transactions Table (desktop) / Cards (mobile) */}
-        <section className="xl:col-span-2 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl h-fit">
+        <section className="xl:col-span-2 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl h-fit">
 
         {/* Bulk action bar */}
         <AnimatePresence>

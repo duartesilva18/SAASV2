@@ -1,17 +1,21 @@
 'use client';
 
 import Sidebar from '@/components/Sidebar';
-import OnboardingModal from '@/components/OnboardingModal';
-import OnboardingSpotlight, { type OnboardingStep } from '@/components/OnboardingSpotlight';
+import dynamic from 'next/dynamic';
 import api from '@/lib/api';
-import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
-import SupportButton, { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
-import LoadingIndicator from '@/components/LoadingIndicator';
+import { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
 import LoadingScreen from '@/components/LoadingScreen';
-import AlertModal from '@/components/AlertModal';
-import NotificationsPanel from '@/components/NotificationsPanel';
+
+const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
+const OnboardingSpotlight = dynamic(() => import('@/components/OnboardingSpotlight'), { ssr: false });
+import type { OnboardingStep } from '@/components/OnboardingSpotlight';
+const TermsAcceptanceModal = dynamic(() => import('@/components/TermsAcceptanceModal'), { ssr: false });
+const SupportButton = dynamic(() => import('@/components/SupportButton'), { ssr: false });
+const LoadingIndicator = dynamic(() => import('@/components/LoadingIndicator'), { ssr: false });
+const AlertModal = dynamic(() => import('@/components/AlertModal'), { ssr: false });
+const NotificationsPanel = dynamic(() => import('@/components/NotificationsPanel'), { ssr: false });
 import { NotificationsProvider, useNotifications } from '@/lib/NotificationsContext';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
@@ -106,8 +110,7 @@ export default function DashboardLayout({
 
   const isAdminPage = pathname?.startsWith('/admin');
 
-  // Menu secundário no header: tabs contextuais conforme a página
-  const secondaryTabs = (() => {
+  const secondaryTabs = useMemo(() => {
     const s = t?.dashboard?.sidebar;
     if (!s) return null;
     if (['/transactions', '/categories', '/recurring'].includes(pathname || '')) {
@@ -141,7 +144,7 @@ export default function DashboardLayout({
       ];
     }
     return null;
-  })();
+  }, [pathname, t]);
 
   // Ao mudar de rota (nav do header/sidebar): scroll ao topo e evento para páginas refetcharem
   useEffect(() => {
@@ -314,7 +317,7 @@ export default function DashboardLayout({
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
       
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24 2xl:ml-20' : 'lg:ml-72 2xl:ml-60'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-[margin-left] duration-500 ease-[0.16,1,0.3,1] ${isSidebarCollapsed ? 'lg:ml-24 2xl:ml-20' : 'lg:ml-72 2xl:ml-60'}`}>
         {/* Mobile Header – sino abre só o card de notificações (não a sidebar) */}
         <MobileHeaderWithNotifications
           t={t}
@@ -483,7 +486,7 @@ function MobileHeaderWithNotifications({
 
   return (
     <>
-      <header className={`lg:hidden flex flex-col gap-3 px-4 py-3 bg-slate-900/70 backdrop-blur-md sticky top-0 z-40 ${secondaryTabs && secondaryTabs.length > 0 ? 'border-b border-slate-700/60' : ''}`} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <header className={`lg:hidden flex flex-col gap-3 px-4 py-3 bg-slate-900 sticky top-0 z-40 ${secondaryTabs && secondaryTabs.length > 0 ? 'border-b border-slate-700/60' : ''}`} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <div className="flex items-center justify-between gap-3 min-h-[56px]">
           <Link href="/dashboard" className="flex items-center gap-2 select-none min-h-[44px] w-fit -m-2 p-2 rounded-xl active:scale-[0.98] shrink-0">
             <img
@@ -513,7 +516,7 @@ function MobileHeaderWithNotifications({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
+                    className="absolute right-0 top-full mt-2 rounded-2xl bg-slate-900 border border-slate-700/60 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 p-1.5"
                   >
                     <div className="flex items-center gap-0.5">
                       {supportHidden && onOpenSupport && (

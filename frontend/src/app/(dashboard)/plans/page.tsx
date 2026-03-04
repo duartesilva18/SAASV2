@@ -302,7 +302,7 @@ export default function PlansPage() {
           ) : (
             <>
               Quanto vale ter{' '}
-              <span className="text-blue-500 italic block 3xl:md:inline">controlo total do teu dinheiro</span>?
+              <span className="text-blue-500 italic block 3xl:md:inline">controlo total do teu dinheiro?</span>
             </>
           )}
         </motion.h2>

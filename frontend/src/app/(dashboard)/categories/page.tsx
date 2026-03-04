@@ -355,7 +355,7 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Left: Charts & Stats */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-5">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
                 <PieChart size={16} className="text-emerald-400" />
@@ -442,7 +442,7 @@ export default function CategoriesPage() {
 
         {/* Right: Zen Tips & Legend */}
         <div className="space-y-4">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 relative overflow-hidden">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                 <Sparkles size={14} className="text-blue-400" />
@@ -454,7 +454,7 @@ export default function CategoriesPage() {
             </p>
           </div>
 
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                 <Target size={13} className="text-amber-400" />
@@ -553,7 +553,7 @@ export default function CategoriesPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: catIdx * 0.02 }}
                   onClick={() => toggleSelect(cat.id, isProtected)}
-                  className={`group relative bg-slate-900/70 backdrop-blur-md border rounded-2xl p-4 transition-all ${
+                  className={`group relative bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border rounded-2xl p-4 transition-all ${
                     isSelectionMode && !isProtected ? 'cursor-pointer hover:border-blue-500/40' : ''
                   } ${
                     isSelected ? 'border-blue-500 bg-blue-500/[0.05] ring-1 ring-blue-500/20' : 

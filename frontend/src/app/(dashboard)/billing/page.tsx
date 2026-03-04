@@ -311,19 +311,6 @@ export default function BillingPage() {
         </div>
       </section>
 
-      {/* Cancel Subscription Button - Outside Table */}
-      {['active', 'trialing'].includes(subData?.status || '') && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowCancelModal(true)}
-            className="text-sm text-slate-400 hover:text-red-400 font-medium transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Trash2 size={16} />
-            Cancelar Subscrição
-          </button>
-        </div>
-      )}
-
       {/* Info Banner */}
       <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center gap-4 sm:gap-6 shadow-2xl">
         <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
@@ -333,6 +320,19 @@ export default function BillingPage() {
           {b.stripeInfo}
         </p>
       </section>
+
+      {/* Cancel Subscription Button - Centered below info banner */}
+      {['active', 'trialing'].includes(subData?.status || '') && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setShowCancelModal(true)}
+            className="text-sm text-slate-400 hover:text-red-400 font-medium transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            <Trash2 size={16} />
+            {b.cancelSubscription}
+          </button>
+        </div>
+      )}
 
       {/* Cancel Subscription Modal — estilo login */}
       <AnimatePresence>

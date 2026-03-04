@@ -339,7 +339,7 @@ export default function RecurringPage() {
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-center">
                 <ArrowUpCircle size={14} className="text-emerald-400" />
@@ -348,7 +348,7 @@ export default function RecurringPage() {
             </div>
             <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums">{formatCurrency(totalIncomes / 100)}</p>
           </div>
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-center">
                 <ArrowDownCircle size={14} className="text-red-400" />
@@ -372,7 +372,7 @@ export default function RecurringPage() {
 
         {/* Tabs */}
         <div className="flex justify-center">
-          <div className="bg-slate-900/70 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 flex gap-1">
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-1 rounded-xl border border-slate-700/60 flex gap-1">
             <button
               onClick={() => setActiveTab('income')}
               className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold uppercase tracking-wider text-[10px] transition-all cursor-pointer ${
@@ -399,7 +399,7 @@ export default function RecurringPage() {
         </div>
       </section>
 
-      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+      <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
@@ -473,7 +473,7 @@ export default function RecurringPage() {
 
       {/* Gráficos de Análise */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+        <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
               <PieChartIcon size={14} className="text-blue-400" />
@@ -510,7 +510,7 @@ export default function RecurringPage() {
           </div>
         </div>
 
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+        <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
               <TrendingUp size={14} className="text-blue-400" />
@@ -560,7 +560,7 @@ export default function RecurringPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.02 }}
                   onClick={() => handleEditClick(item)}
-                  className={`group bg-slate-900/70 backdrop-blur-md border rounded-2xl p-4 cursor-pointer transition-all hover:border-blue-500/40 ${
+                  className={`group bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border rounded-2xl p-4 cursor-pointer transition-all hover:border-blue-500/40 ${
                     activeTab === 'expense' ? 'border-slate-700/60' : 'border-slate-700/60'
                   }`}
                 >

@@ -47,7 +47,7 @@ Base.metadata.create_all(bind=engine)
 # Admin criado ao arrancar (se CREATE_DEFAULT_ADMIN=true e não existir)
 # No Render: define DEFAULT_ADMIN_EMAIL e DEFAULT_ADMIN_PASSWORD e altera a password após 1º login.
 # Para não criar admin automaticamente: CREATE_DEFAULT_ADMIN=false
-CREATE_DEFAULT_ADMIN = os.getenv('CREATE_DEFAULT_ADMIN', 'true').lower() in ('1', 'true', 'yes')
+CREATE_DEFAULT_ADMIN = os.getenv('CREATE_DEFAULT_ADMIN', 'false').lower() in ('1', 'true', 'yes')
 DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@admin.pt')
 DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
 

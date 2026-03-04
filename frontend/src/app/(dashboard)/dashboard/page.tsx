@@ -7,9 +7,11 @@ import { useDashboardSnapshot } from '@/lib/hooks/useDashboard';
 import { ArrowUpCircle, ArrowDownCircle, Wallet, ChevronRight, AlertCircle, Zap, Target, Loader2, ShieldCheck, Sparkles, TrendingUp, TrendingDown, Plus, Calendar, ChevronLeft, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/LanguageContext';
-import PricingModal from '@/components/PricingModal';
-import TransactionAddModal from '@/components/TransactionAddModal';
+
+const PricingModal = dynamic(() => import('@/components/PricingModal'), { ssr: false });
+const TransactionAddModal = dynamic(() => import('@/components/TransactionAddModal'), { ssr: false });
 import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -47,14 +49,12 @@ export default function DashboardPage() {
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Detectar se é mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const mql = window.matchMedia('(max-width: 1023px)');
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
   }, []);
   
   // Guardar último valor válido das percentagens para evitar que desapareçam quando dados recalculam
@@ -102,12 +102,7 @@ export default function DashboardPage() {
     dedupingInterval: 60000,
   });
   
-  // Ao carregar o dashboard, forçar recarga de dados (snapshot, user, invoices)
-  useEffect(() => {
-    mutateSnapshot();
-    mutateUserData();
-    mutate('/stripe/invoices');
-  }, [mutateSnapshot, mutateUserData]);
+  // SWR já faz fetch no mount; revalidação forçada removida para evitar requests duplicados
 
   // Verificar se voltou do pagamento: aguardar refresh de user/snapshot antes de limpar, para o modo Pro aparecer sem F5
   useEffect(() => {
@@ -663,7 +658,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <motion.div
             whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center shrink-0">
@@ -682,7 +677,7 @@ export default function DashboardPage() {
 
           <motion.div
             whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-7 h-7 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg flex items-center justify-center shrink-0">
@@ -701,7 +696,7 @@ export default function DashboardPage() {
 
           <motion.div
             whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group sm:col-span-2 md:col-span-1"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-2xl group sm:col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between mb-2">
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${stats.balance >= 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
@@ -743,7 +738,7 @@ export default function DashboardPage() {
             initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={isMobile ? { duration: 0 } : {}}
-            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-2"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-2"
           >
             <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-0.5">{t.dashboard.page.financialEvolution}</h3>
             <p className="text-[10px] text-slate-500 font-medium italic mb-3">{t.dashboard.page.last6Months}</p>
@@ -789,7 +784,7 @@ export default function DashboardPage() {
             initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={isMobile ? { duration: 0 } : { delay: 0.05 }}
-            className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
           >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
@@ -883,7 +878,7 @@ export default function DashboardPage() {
               initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={isMobile ? { duration: 0 } : { delay: 0.08 }}
-              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1"
+              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1"
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-3">{t.dashboard.page.fundsInvestmentsEmergency}</h3>
               <div className="space-y-3 flex-1 min-w-0">
@@ -942,7 +937,7 @@ export default function DashboardPage() {
               initial={isMobile ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={isMobile ? { duration: 0 } : { delay: 0.1 }}
-              className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-2"
+              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-2"
             >
             <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-3">{t.dashboard.page.fundsDistributionByMonth}</h3>
             <div className="flex-1 min-h-[180px] flex items-center justify-center">
@@ -999,7 +994,7 @@ export default function DashboardPage() {
           {quickInsights.map((insight, index) => (
             <div
               key={index}
-              className="bg-slate-900/70 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/60 shadow-xl text-xs text-slate-300 font-medium italic flex items-center gap-2.5"
+              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/60 shadow-xl text-xs text-slate-300 font-medium italic flex items-center gap-2.5"
             >
               <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
                 <Sparkles size={12} />

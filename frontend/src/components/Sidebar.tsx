@@ -502,7 +502,7 @@ export default function Sidebar({
         aria-hidden={!isMobileOpen}
       />
       <aside
-        className={`fixed left-0 top-0 h-full w-56 max-w-[70vw] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-150 ease-out ${
+        className={`fixed left-0 top-0 h-full w-56 max-w-[70vw] bg-slate-900 border-r border-slate-700/60 z-[70] flex flex-col overflow-y-auto overflow-x-hidden lg:hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-150 ease-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ 
@@ -515,7 +515,7 @@ export default function Sidebar({
       </aside>
 
       <aside 
-        className={`fixed left-0 top-0 h-screen bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 transition-all duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24 2xl:w-20' : 'w-72 2xl:w-60'}`}
+        className={`fixed left-0 top-0 h-screen bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 transition-[width] duration-500 ease-[0.16,1,0.3,1] z-50 hidden lg:flex flex-col overflow-visible ${isCollapsed ? 'w-24 2xl:w-20' : 'w-72 2xl:w-60'}`}
       >
         {sidebarContent}
         <button 
