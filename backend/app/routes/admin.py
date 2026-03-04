@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, and_, desc
+from sqlalchemy import func, and_, desc, case, or_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, date, timedelta, timezone
@@ -372,7 +372,53 @@ async def get_audit_logs(
 
 @router.get('/users', response_model=List[schemas.AdminUserResponse])
 async def get_admin_users(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
-    return db.query(models.User).order_by(models.User.created_at.desc()).all()
+    """
+    Lista utilizadores com métricas agregadas (inclui contagem de transações criadas via bot/Telegram).
+    Consideramos como "via bot" as transações nos workspaces do utilizador cujo decision_reason contenha 'telegram'
+    ou cuja descrição padrão seja 'Transação Telegram'.
+    """
+    # Subquery: contagem de transações criadas via bot por owner_id (utilizador)
+    tx_bot_subq = (
+        db.query(
+            models.Workspace.owner_id.label('owner_id'),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            or_(
+                                models.Transaction.decision_reason.ilike('%telegram%'),
+                                models.Transaction.description == 'Transação Telegram',
+                            ),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label('bot_transactions_count'),
+        )
+        .outerjoin(models.Transaction, models.Transaction.workspace_id == models.Workspace.id)
+        .group_by(models.Workspace.owner_id)
+        .subquery()
+    )
+
+    rows = (
+        db.query(
+            models.User,
+            func.coalesce(tx_bot_subq.c.bot_transactions_count, 0).label('bot_transactions_count'),
+        )
+        .outerjoin(tx_bot_subq, tx_bot_subq.c.owner_id == models.User.id)
+        .order_by(models.User.created_at.desc())
+        .all()
+    )
+
+    users_with_metrics: List[schemas.AdminUserResponse] = []
+    for user, bot_tx_count in rows:
+        base = schemas.AdminUserResponse.from_orm(user).dict()
+        base['bot_transactions_count'] = int(bot_tx_count or 0)
+        users_with_metrics.append(schemas.AdminUserResponse(**base))
+
+    return users_with_metrics
 
 @router.get('/users/{user_id}', response_model=schemas.AdminUserDetail)
 async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
