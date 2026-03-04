@@ -14,7 +14,6 @@ import { DEMO_TRANSACTIONS, DEMO_CATEGORIES } from '@/lib/mockData';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
-// canvas-confetti carregado dinamicamente (só quando necessário -- raro)
 import { useUser } from '@/lib/UserContext';
 import LoadingScreen from '@/components/LoadingScreen';
 import { hasProAccess } from '@/lib/utils';
@@ -294,12 +293,6 @@ export default function DashboardPage() {
             setShowPaywall(false);
             setIsProcessingUpgrade(false);
             window.history.replaceState({}, '', '/dashboard');
-            import('canvas-confetti').then(mod => mod.default({
-              particleCount: 200,
-              spread: 100,
-              origin: { y: 0.6 },
-              colors: ['#3b82f6', '#fbbf24', '#ffffff']
-            })).catch(() => {});
           } else if (retryCount < 5) {
             // Ainda não está completo, tentar novamente
             setTimeout(() => verifyAndActivate(retryCount + 1), 1500);

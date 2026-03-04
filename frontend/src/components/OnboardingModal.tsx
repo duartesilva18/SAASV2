@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
-import confetti from 'canvas-confetti';
-
 interface OnboardingModalProps {
   onComplete: () => void;
 }
@@ -68,16 +66,9 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
       setCurrency(formData.currency as any);
 
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#3b82f6', '#10b981', '#ffffff']
-      });
-
       setTimeout(() => {
         onComplete();
-      }, 2000);
+      }, 1000);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Erro ao guardar os teus dados.');
     } finally {

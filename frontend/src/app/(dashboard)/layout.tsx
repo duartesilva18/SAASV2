@@ -46,7 +46,12 @@ export default function DashboardLayout({
   const [showTermsAcceptance, setShowTermsAcceptance] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
   const [showBotSpotlight, setShowBotSpotlight] = useState(false);
-  const [verifyingSession, setVerifyingSession] = useState(false);
+  const [verifyingSession, setVerifyingSession] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).has('session_id');
+    }
+    return false;
+  });
   // Inicializar sempre false para evitar hydration mismatch (server não tem localStorage)
   const [supportHidden, setSupportHidden] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -163,7 +168,10 @@ export default function DashboardLayout({
     if (sessionVerifiedRef.current || !user) return;
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
-    if (!sessionId) return;
+    if (!sessionId) {
+      if (verifyingSession) setVerifyingSession(false);
+      return;
+    }
     sessionVerifiedRef.current = true;
     setVerifyingSession(true);
     api.get(`/stripe/verify-session/${sessionId}`)
@@ -173,7 +181,7 @@ export default function DashboardLayout({
         setVerifyingSession(false);
         window.history.replaceState({}, '', window.location.pathname);
       });
-  }, [user, refreshUser]);
+  }, [user, refreshUser, verifyingSession]);
 
   useEffect(() => {
     if (!loading && !verifyingSession) {

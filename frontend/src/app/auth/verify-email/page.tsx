@@ -78,15 +78,6 @@ function VerifyEmailContent() {
 
         setStatus('success');
         setMessage(t.auth.verifyEmail?.successMessage ?? 'Email verificado com sucesso!');
-        
-        import('canvas-confetti').then((mod) => {
-          mod.default({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#3b82f6', '#10b981', '#ffffff']
-          });
-        });
 
         // Redirecionar após um pequeno delay para garantir que tudo está atualizado
         setTimeout(() => {

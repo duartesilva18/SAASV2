@@ -52,16 +52,6 @@ function VerifyRegisterContent() {
       await refreshUser();
       setSuccess(true);
 
-      import('canvas-confetti').then((mod) => {
-        const confetti = mod.default;
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#3b82f6', '#ffffff'],
-        });
-      });
-
       setTimeout(() => {
         router.replace('/dashboard');
       }, 1500);

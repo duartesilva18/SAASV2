@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import { ArrowRight, Mail, Lock, AlertCircle, ChevronLeft, CheckCircle2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -111,8 +110,7 @@ function RegisterPageContent() {
       storage.setItem('token', response.data.access_token);
       if (response.data.refresh_token) storage.setItem('refresh_token', response.data.refresh_token);
       await refreshUser();
-      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#10b981', '#3b82f6', '#ffffff'] });
-      setTimeout(() => router.push('/dashboard'), 1000);
+      setTimeout(() => router.push('/dashboard'), 500);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       setError(detail || 'Erro ao registar com Google');
