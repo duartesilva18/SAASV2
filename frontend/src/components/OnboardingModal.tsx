@@ -1,18 +1,53 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing } from 'lucide-react';
+import { Coins, UserCircle, ArrowRight, Check, AlertCircle, Loader2, BellRing, Phone } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+
 interface OnboardingModalProps {
   onComplete: () => void;
+}
+
+const NAME_REGEX = /^[\p{L}\s'\-]+$/u;
+const MAX_NAME_LENGTH = 60;
+const MIN_PHONE_DIGITS = 7;
+const MAX_PHONE_DIGITS = 15;
+
+function capitalizeName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function validateName(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return 'Introduz o teu nome completo.';
+  if (trimmed.length > MAX_NAME_LENGTH) return `Nome demasiado longo (máx. ${MAX_NAME_LENGTH} caracteres).`;
+  if (!NAME_REGEX.test(trimmed)) return 'O nome só pode conter letras, espaços, hífens e apóstrofos.';
+  const parts = trimmed.replace(/\s+/g, ' ').split(' ').filter(p => p.length > 0);
+  if (parts.length < 2) return 'Introduz o primeiro e último nome.';
+  if (parts.some(p => p.length < 2)) return 'Cada nome deve ter pelo menos 2 letras.';
+  return null;
+}
+
+function validatePhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return 'Introduz o teu número de telefone.';
+  if (digits.length < MIN_PHONE_DIGITS) return `Mínimo ${MIN_PHONE_DIGITS} dígitos.`;
+  if (digits.length > MAX_PHONE_DIGITS) return `Máximo ${MAX_PHONE_DIGITS} dígitos.`;
+  return null;
 }
 
 export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const { t, setCurrency } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     full_name: '',
     country_code: '+351',
@@ -37,30 +72,45 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     { code: '+258', flag: '🇲🇿', name: t.dashboard.onboarding.countries.mozambique },
   ];
 
+  const nameError = useMemo(() => validateName(formData.full_name), [formData.full_name]);
+  const phoneError = useMemo(() => validatePhone(formData.phone_number), [formData.phone_number]);
+
+  const nameOk = touched.full_name && !nameError;
+  const phoneOk = touched.phone_number && !phoneError;
+
+  const markTouched = useCallback((field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  }, []);
+
+  const handleNameChange = useCallback((val: string) => {
+    const cleaned = val.replace(/[^\p{L}\s'\-]/gu, '').slice(0, MAX_NAME_LENGTH);
+    setFormData(prev => ({ ...prev, full_name: cleaned }));
+    setError('');
+  }, []);
+
+  const handlePhoneChange = useCallback((val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, MAX_PHONE_DIGITS);
+    setFormData(prev => ({ ...prev, phone_number: digits }));
+    setError('');
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setTouched({ full_name: true, phone_number: true });
 
-    // Validação de Nome (Pelo menos dois nomes)
-    const nameParts = formData.full_name.trim().split(/\s+/);
-    if (nameParts.length < 2) {
-      setError(t.dashboard.onboarding.validation.fullNameRequired);
-      return;
-    }
-
-    // Validação de Telefone (Mínimo de 7 dígitos além do código do país)
-    const cleanPhone = formData.phone_number.replace(/\D/g, '');
-    if (cleanPhone.length < 7) {
-      setError(t.dashboard.onboarding.validation.phoneRequired);
-      return;
-    }
+    if (nameError) { setError(nameError); return; }
+    if (phoneError) { setError(phoneError); return; }
 
     setLoading(true);
     try {
+      const cleanPhone = formData.phone_number.replace(/\D/g, '');
       const fullPhone = `${formData.country_code}${cleanPhone}`;
+      const sanitizedName = capitalizeName(formData.full_name);
+
       await api.post('/auth/onboarding', {
         ...formData,
-        full_name: formData.full_name.trim(),
+        full_name: sanitizedName,
         phone_number: fullPhone
       });
 
@@ -76,8 +126,15 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     }
   };
 
-  const inputBase = 'w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500 transition-colors';
+  const inputBase = 'w-full bg-slate-950/60 border rounded-xl py-2.5 sm:py-3 text-sm text-white focus:outline-none focus:ring-2 placeholder:text-slate-500 transition-all duration-200';
   const labelBase = 'block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5';
+
+  const fieldBorder = (ok: boolean, hasError: boolean, isTouched: boolean) => {
+    if (!isTouched) return 'border-slate-700 focus-within:ring-blue-500/50';
+    if (hasError) return 'border-red-500/50 focus-within:ring-red-500/50';
+    if (ok) return 'border-emerald-500/40 focus-within:ring-emerald-500/50';
+    return 'border-slate-700 focus-within:ring-blue-500/50';
+  };
 
   return (
     <div
@@ -129,21 +186,34 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              {/* Nome */}
               <div>
-                <label className={labelBase}>Primeiro e Último Nome</label>
-                <div className="relative">
+                <label className={labelBase}>
+                  Primeiro e Último Nome
+                  {nameOk && <Check size={12} className="inline ml-1.5 text-emerald-400" />}
+                </label>
+                <div className={`relative ${fieldBorder(nameOk, !!nameError && touched.full_name, touched.full_name)}`}>
                   <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                   <input
                     type="text"
                     required
+                    autoComplete="name"
                     value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className={`${inputBase} pl-10 pr-3`}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    onBlur={() => markTouched('full_name')}
+                    className={`${inputBase} pl-10 pr-3 ${fieldBorder(nameOk, !!nameError && touched.full_name, touched.full_name)}`}
                     placeholder="Ex: Duarte Silva"
                   />
                 </div>
+                {touched.full_name && nameError && (
+                  <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1">
+                    <AlertCircle size={11} className="shrink-0" />
+                    {nameError}
+                  </p>
+                )}
               </div>
 
+              {/* Moeda */}
               <div>
                 <label className={labelBase}>Moeda Base</label>
                 <div className="relative">
@@ -151,7 +221,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   <select
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className={`${inputBase} pl-10 pr-8 appearance-none cursor-pointer`}
+                    className={`${inputBase} pl-10 pr-8 appearance-none cursor-pointer border-slate-700 focus-within:ring-blue-500/50`}
                   >
                     <option value="EUR">Euro (€)</option>
                     <option value="USD">Dólar ($)</option>
@@ -160,13 +230,17 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 </div>
               </div>
 
+              {/* Telefone */}
               <div className="md:col-span-2">
-                <label className={labelBase}>Número de Telegram (para registar despesas)</label>
+                <label className={labelBase}>
+                  Número de Telegram (para registar despesas)
+                  {phoneOk && <Check size={12} className="inline ml-1.5 text-emerald-400" />}
+                </label>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <select
                     value={formData.country_code}
                     onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
-                    className={`${inputBase} sm:w-28 shrink-0 px-3`}
+                    className={`${inputBase} sm:w-28 shrink-0 px-3 border-slate-700 focus-within:ring-blue-500/50`}
                   >
                     {countries.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -174,23 +248,41 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone_number}
-                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
-                    className={`${inputBase} flex-1 min-w-0 pl-4 pr-3`}
-                    placeholder="912 345 678"
-                  />
+                  <div className="relative flex-1 min-w-0">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <input
+                      type="tel"
+                      required
+                      autoComplete="tel-national"
+                      inputMode="numeric"
+                      value={formData.phone_number}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      onBlur={() => markTouched('phone_number')}
+                      className={`${inputBase} pl-10 pr-3 ${fieldBorder(phoneOk, !!phoneError && touched.phone_number, touched.phone_number)}`}
+                      placeholder="912 345 678"
+                    />
+                  </div>
                 </div>
+                {touched.phone_number && phoneError && (
+                  <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1">
+                    <AlertCircle size={11} className="shrink-0" />
+                    {phoneError}
+                  </p>
+                )}
+                {phoneOk && (
+                  <p className="mt-1 text-[11px] text-emerald-400/70">
+                    {formData.country_code} {formData.phone_number.replace(/(\d{3})(\d{3})(\d+)/, '$1 $2 $3')}
+                  </p>
+                )}
               </div>
 
+              {/* Genero */}
               <div className="md:col-span-2">
                 <label className={labelBase}>Género (opcional)</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  className={`${inputBase} px-4 cursor-pointer`}
+                  className={`${inputBase} px-4 cursor-pointer border-slate-700 focus-within:ring-blue-500/50`}
                 >
                   <option value="male">Masculino</option>
                   <option value="female">Feminino</option>
@@ -199,6 +291,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 </select>
               </div>
 
+              {/* Marketing */}
               <div className="md:col-span-2">
                 <div
                   onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
@@ -265,4 +358,3 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     </div>
   );
 }
-

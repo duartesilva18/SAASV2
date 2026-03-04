@@ -235,6 +235,16 @@ export default function DashboardLayout({
         return;
       }
 
+      // Bloquear acesso a afiliados durante trial (só admin pode)
+      if (
+        !user.is_admin
+        && user.subscription_status === 'trialing'
+        && pathname === '/affiliate'
+      ) {
+        router.push('/dashboard');
+        return;
+      }
+
       // Spotlight do bot: só após onboarding + termos + plano escolhido (trialing/active), contas recentes, uma vez
       const hasActiveSub = user.subscription_status && ['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status);
       const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;

@@ -58,6 +58,9 @@ def check_user_has_affiliate_access(user: models.User, db: Session) -> Tuple[boo
         if subscription.status not in ['active', 'trialing']:
             return (False, 'Subscrição não está ativa')
         
+        if subscription.status == 'trialing':
+            return (False, 'O programa de afiliados não está disponível durante o período de teste gratuito. Aguarda o fim do trial.')
+        
         # Verificar qual o plano atual (compatível com StripeObject e dict)
         items = getattr(subscription, 'items', None)
         if callable(items):
@@ -295,9 +298,11 @@ async def request_affiliate_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    """Solicita para se tornar afiliado - aprova baseado no plano"""
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    """Solicita para se tornar afiliado - aprova baseado no plano"""
+    if current_user.subscription_status == 'trialing' and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="O programa de afiliados não está disponível durante o período de teste gratuito. Aguarda o fim do trial para te tornares afiliado.")
     logger.info(f"📝 POST /affiliate/request - User: {current_user.email} (ID: {current_user.id})")
     from ..core.config import settings
     
