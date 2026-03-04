@@ -166,14 +166,11 @@ export default function Sidebar({
     return { show: true, type: 'info' };
   };
 
-  const isTrialing = user?.subscription_status === 'trialing';
   const mainMenu = getMainMenu(t)
     .filter((item: any) => !item.adminOnly || user?.is_admin)
     .map((item: any) => ({
       ...item,
-      isBlocked: item.isAffiliateSection
-        ? (isTrialing && !user?.is_admin)
-        : (!isPro && !item.adminOnly && !allowedHrefsFree.includes(item.href)),
+      isBlocked: !isPro && !item.adminOnly && !item.isAffiliateSection && !allowedHrefsFree.includes(item.href),
     }));
 
   const sidebarContent = (
