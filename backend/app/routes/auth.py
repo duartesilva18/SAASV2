@@ -187,7 +187,7 @@ async def register(request: Request, user_in: schemas.UserCreate, background_tas
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_msg)
 
-        db_user = db.query(models.User).filter(models.User.email == email_normalized).first()
+        db_user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
         if db_user:
             logger.warning(f'Tentativa de registo com email já existente: {email_normalized}')
             raise HTTPException(status_code=400, detail='Este email já está registado. Inicia sessão na página de login.')
@@ -359,25 +359,56 @@ async def resend_verification(
             detail='Não existe registo pendente para este email. Regista-te primeiro ou faz login.'
         )
 
-    ev = db.query(models.EmailVerification).filter(
-        models.EmailVerification.email == email_lower,
-        models.EmailVerification.is_used == False,
+    # Tentar novo fluxo (RegistrationVerification com código 6 dígitos)
+    rv = db.query(models.RegistrationVerification).filter(
+        models.RegistrationVerification.email == email_lower,
+        models.RegistrationVerification.is_used == False,
     ).first()
-    if not ev:
+
+    # Fallback: fluxo antigo (EmailVerification com token)
+    ev = None
+    if not rv:
+        ev = db.query(models.EmailVerification).filter(
+            models.EmailVerification.email == email_lower,
+            models.EmailVerification.is_used == False,
+        ).first()
+
+    if not rv and not ev:
         raise HTTPException(
             status_code=400,
             detail='Não existe pedido de verificação pendente. Regista-te primeiro.'
         )
 
+    user_lang = getattr(user, 'language', 'pt') or 'pt'
+    if user_lang not in ('pt', 'en'):
+        user_lang = 'pt'
+
+    if rv:
+        import random, string
+        new_code = ''.join(random.choices(string.digits, k=6))
+        new_expires = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
+        rv.code = new_code
+        rv.expires_at = new_expires
+        db.commit()
+
+        t = get_email_translation(user_lang, 'verify_register')
+        btn_style = (
+            'display:inline-block;margin:24px 0 0;background:#3b82f6;color:#ffffff !important;text-decoration:none;'
+            'padding:14px 28px;border-radius:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;font-size:12px;'
+        )
+        html = f'''<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0f172a;min-height:100vh"><tr><td align="center" style="padding:32px 20px"><table role="presentation" width="520" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;width:100%;background:#0f172a;border-radius:24px;overflow:hidden;border:1px solid #1e293b;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)"><tr><td style="height:4px;background:linear-gradient(90deg,#3b82f6 0%,#6366f1 100%)"></td></tr><tr><td style="background:#020617;padding:36px 28px;text-align:center;border-bottom:1px solid #1e293b"><img src="https://app.finlybot.com/images/logo/logo-semfundo.png" alt="" width="72" height="72" style="display:block;margin:0 auto 8px" /><p style="margin:0;font-size:22px;font-weight:700;color:#fff">Finly</p></td></tr><tr><td style="padding:32px 28px 36px;color:#94a3b8;line-height:1.65;font-size:15px;text-align:center"><h2 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px">{t.get("title", "Verificação")}</h2><p style="margin:0 0 16px;color:#94a3b8">{t.get("welcome", "O teu código de verificação:")}</p><p style="margin:0;font-size:36px;font-weight:700;color:#3b82f6;letter-spacing:8px">{new_code}</p><p style="margin:20px 0 0;font-size:12px;color:#64748b;font-style:italic">{t.get("security_notice", "Este código expira em 30 minutos.")}</p></td></tr><tr><td style="background:#020617;padding:24px 28px;text-align:center;border-top:1px solid #1e293b;color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em">{t.get("footer", "Finly")}</td></tr></table></td></tr></table></body></html>'''
+
+        background_tasks.add_task(_send_verification_email_background, email_lower, t.get('subject', 'Verificação Finly'), html)
+        logger.info(f'Código de verificação reenviado para {email_lower}')
+        return {'message': 'Código de verificação reenviado. Verifica o teu email (e a pasta de spam).'}
+
+    # Fluxo antigo com token
     new_token = secrets.token_urlsafe(32)
     new_expires = datetime.now(timezone.utc) + timedelta(minutes=VERIFICATION_EXPIRY_MINUTES)
     ev.token = new_token
     ev.expires_at = new_expires
     db.commit()
 
-    user_lang = getattr(user, 'language', 'pt') or 'pt'
-    if user_lang not in ('pt', 'en'):
-        user_lang = 'pt'
     t = get_email_translation(user_lang, 'verify_email')
     base = _frontend_base_url()
     verify_url = f"{base}/auth/verify-email?token={new_token}"
@@ -398,7 +429,18 @@ async def resend_verification(
 async def check_verification_status(email: str, db: Session = Depends(get_db)):
     purge_expired_unverified_users(db)
     email_norm = normalize_email(email or '')
-    user = db.query(models.User).filter(models.User.email == email_norm).first()
+    user = db.query(models.User).filter(func.lower(models.User.email) == email_norm).first()
+    # Check new flow first
+    rv = db.query(models.RegistrationVerification).filter(
+        models.RegistrationVerification.email == email_norm,
+        models.RegistrationVerification.is_used == False,
+    ).first()
+    if rv:
+        return {
+            'is_verified': user.is_email_verified if user else False,
+            'verification_expires_at': rv.expires_at,
+        }
+    # Fallback: old flow
     ev = db.query(models.EmailVerification).filter(
         models.EmailVerification.email == email_norm,
         models.EmailVerification.is_used == False

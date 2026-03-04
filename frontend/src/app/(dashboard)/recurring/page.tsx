@@ -245,19 +245,17 @@ export default function RecurringPage() {
   const currentList = activeTab === 'expense' ? recurringExpenses : recurringIncomes;
   const sortedByDay = [...currentList].sort((a: any, b: any) => a.day_of_month - b.day_of_month);
 
-  const pendingItems: RecurringTransaction[] = [];
-
   const weeklyPressure = [
-    { name: 'Sem 1', value: Math.abs(currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
-    { name: 'Sem 2', value: Math.abs(currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
-    { name: 'Sem 3', value: Math.abs(currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
-    { name: 'Sem 4', value: Math.abs(currentList.filter(r => r.day_of_month > 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: t.dashboard.recurring.week1, value: Math.abs(currentList.filter(r => r.day_of_month <= 7).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: t.dashboard.recurring.week2, value: Math.abs(currentList.filter(r => r.day_of_month > 7 && r.day_of_month <= 14).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: t.dashboard.recurring.week3, value: Math.abs(currentList.filter(r => r.day_of_month > 14 && r.day_of_month <= 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
+    { name: t.dashboard.recurring.week4, value: Math.abs(currentList.filter(r => r.day_of_month > 21).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents) / 100, 0)) },
   ];
 
   // Dados para gráfico de pizza - Proporção Receitas vs Despesas
   const pieData = [
-    { name: 'Receitas', value: totalIncomes / 100, color: '#10b981' },
-    { name: 'Despesas', value: totalExpenses / 100, color: '#ef4444' }
+    { name: t.dashboard.recurring.incomeLabel, value: totalIncomes / 100, color: '#10b981' },
+    { name: t.dashboard.recurring.expenseLabel, value: totalExpenses / 100, color: '#ef4444' }
   ].filter(item => item.value > 0);
 
   // Dados para gráfico de barras - Distribuição por categoria
@@ -303,7 +301,7 @@ export default function RecurringPage() {
   })();
 
   if (loading || userLoading || !user || !isPro) {
-    return <PageLoading message="Sincronizando Ciclos..." />;
+    return <PageLoading message={t.dashboard.recurring.syncingCycles} />;
   }
 
   return (
@@ -407,7 +405,7 @@ export default function RecurringPage() {
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
               <CalendarDays size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Fluxo de Pressão</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">{t.dashboard.recurring.pressureFlow}</h2>
           </div>
           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 px-2 py-0.5 bg-slate-800/60 border border-slate-700/50 rounded-md">
             {activeTab === 'expense' ? t.dashboard.recurring.fixedExpenses : t.dashboard.recurring.fixedIncomes}
@@ -449,7 +447,7 @@ export default function RecurringPage() {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[8px] font-bold text-slate-500">Dia {item.day_of_month}</span>
+                          <span className="text-[8px] font-bold text-slate-500">{t.dashboard.recurring.dayPrefix} {item.day_of_month}</span>
                           {alreadyPaid && <CheckCircle2 size={10} className="text-emerald-400" />}
                         </div>
                         <p className="text-[10px] font-bold text-white truncate">{item.description}</p>
@@ -465,7 +463,7 @@ export default function RecurringPage() {
                   if (index === 2) return r.day_of_month > 14 && r.day_of_month <= 21;
                   return r.day_of_month > 21;
                 }).length === 0 && (
-                  <p className="text-[9px] text-slate-600 italic text-center py-3">Sem subscrições</p>
+                  <p className="text-[9px] text-slate-600 italic text-center py-3">{t.dashboard.recurring.noSubscriptions}</p>
                 )}
               </div>
             </div>
@@ -480,7 +478,7 @@ export default function RecurringPage() {
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
               <PieChartIcon size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Proporção Mensal</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">{t.dashboard.recurring.monthlyProportion}</h2>
           </div>
           <div className="h-[250px] w-full">
             {pieData.length > 0 ? (
@@ -499,7 +497,7 @@ export default function RecurringPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">Sem dados</p></div>
+              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">{t.dashboard.recurring.noDataAvailable}</p></div>
             )}
           </div>
           <div className="flex items-center justify-center gap-4 mt-3">
@@ -517,7 +515,7 @@ export default function RecurringPage() {
             <div className="w-7 h-7 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
               <TrendingUp size={14} className="text-blue-400" />
             </div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-white">Por Categoria</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-white">{t.dashboard.recurring.byCategory}</h2>
           </div>
           <div className="h-[250px] w-full">
             {barData.length > 0 ? (
@@ -535,7 +533,7 @@ export default function RecurringPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">Sem dados</p></div>
+              <div className="h-full flex items-center justify-center"><p className="text-xs text-slate-600 italic">{t.dashboard.recurring.noDataAvailable}</p></div>
             )}
           </div>
         </div>
@@ -576,13 +574,13 @@ export default function RecurringPage() {
                       <div className="min-w-0">
                         <h3 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">{item.description}</h3>
                         <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                          Dia {item.day_of_month} {item.process_automatically ? '• Auto' : ''}
+                          {t.dashboard.recurring.dayPrefix} {item.day_of_month} {item.process_automatically ? '• Auto' : ''}
                         </p>
                       </div>
                     </div>
-                    <button type="button" onClick={(e) => handleDelete(e, item.id)} className="flex items-center gap-1.5 px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-red-500/30" aria-label={t.dashboard.recurring.cycleRemoved || 'Eliminar subscrição'}>
+                    <button type="button" onClick={(e) => handleDelete(e, item.id)} className="flex items-center gap-1.5 px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-red-500/30" aria-label={t.dashboard.recurring.deleteButton}>
                       <Trash2 size={14} />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Eliminar</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{t.dashboard.recurring.deleteButton}</span>
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
@@ -616,7 +614,7 @@ export default function RecurringPage() {
                       formData.type === 'expense' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-slate-950/60 border border-slate-700 text-slate-500'
                     }`}
                   >
-                    <ArrowDownCircle size={14} /> Despesa
+                    <ArrowDownCircle size={14} /> {t.dashboard.categories.expense}
                   </button>
                   <button
                     type="button"
@@ -625,12 +623,12 @@ export default function RecurringPage() {
                       formData.type === 'income' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-950/60 border border-slate-700 text-slate-500'
                     }`}
                   >
-                    <ArrowUpCircle size={14} /> Receita
+                    <ArrowUpCircle size={14} /> {t.dashboard.categories.income}
                   </button>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">NOME DE SUBSCRIÇÃO <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.recurring.subscriptionNameLabel} <span className="text-red-500">*</span></label>
                   <motion.div animate={errors.description ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                     <input 
                       required 
@@ -652,7 +650,7 @@ export default function RecurringPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">VALOR <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.recurring.amount} <span className="text-red-500">*</span></label>
                     <motion.div animate={errors.amount ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                       <input 
                         required 
@@ -671,7 +669,7 @@ export default function RecurringPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">DIA <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.recurring.dayOfMonth} <span className="text-red-500">*</span></label>
                     <motion.div animate={errors.day_of_month ? { x: [-2, 2, -2, 2, 0] } : {}} transition={{ duration: 0.4 }}>
                       <input 
                         required 
@@ -695,7 +693,7 @@ export default function RecurringPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">CATEGORIA <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.recurring.category} <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <Tag size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     <select
@@ -739,12 +737,12 @@ export default function RecurringPage() {
                   )}
                 </div>
 
-                <button type="submit" className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer">Guardar</button>
+                <button type="submit" className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer">{t.dashboard.recurring.saveButton}</button>
                 {editingId && (
                   <button
                     type="button"
                     onClick={() => {
-                      if (editingId && (typeof window !== 'undefined' && window.confirm('Eliminar esta subscrição? Esta ação não pode ser desfeita.'))) {
+                      if (editingId && (typeof window !== 'undefined' && window.confirm(t.dashboard.recurring.deleteSubscriptionConfirm))) {
                         handleDelete({ stopPropagation: () => {} } as React.MouseEvent, editingId);
                         setShowAddModal(false);
                         setEditingId(null);
@@ -752,7 +750,7 @@ export default function RecurringPage() {
                     }}
                     className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Trash2 size={16} /> Eliminar subscrição
+                    <Trash2 size={16} /> {t.dashboard.recurring.deleteSubscription}
                   </button>
                 )}
               </form>

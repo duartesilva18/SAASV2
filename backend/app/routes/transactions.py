@@ -26,47 +26,53 @@ def _effective_day_for_month(year: int, month: int, day_of_month: int) -> int:
 
 def process_automatic_recurring(db: Session, workspace_id: UUID):
     """Cria transações automáticas para regras recorrentes do mês atual (se já passou o dia)."""
-    today = date.today()
-    start_of_month = date(today.year, today.month, 1)
+    try:
+        today = date.today()
+        start_of_month = date(today.year, today.month, 1)
 
-    rules = db.query(models.RecurringTransaction).filter(
-        models.RecurringTransaction.workspace_id == workspace_id,
-        models.RecurringTransaction.is_active == True
-    ).all()
+        rules = db.query(models.RecurringTransaction).filter(
+            models.RecurringTransaction.workspace_id == workspace_id,
+            models.RecurringTransaction.is_active == True
+        ).all()
 
-    for rule in rules:
-        effective_day = _effective_day_for_month(today.year, today.month, rule.day_of_month)
-        target_date = date(today.year, today.month, effective_day)
+        created = 0
+        for rule in rules:
+            effective_day = _effective_day_for_month(today.year, today.month, rule.day_of_month)
+            target_date = date(today.year, today.month, effective_day)
 
-        if today < target_date:
-            continue
+            if today < target_date:
+                continue
 
-        # Evitar duplicado: já existe transação este mês com mesma descrição (ou "(R) descrição") e valor
-        existing = db.query(models.Transaction).filter(
-            models.Transaction.workspace_id == workspace_id,
-            or_(
-                models.Transaction.description == rule.description,
-                models.Transaction.description == f"(R) {rule.description}"
-            ),
-            models.Transaction.amount_cents == rule.amount_cents,
-            models.Transaction.transaction_date >= start_of_month
-        ).first()
+            existing = db.query(models.Transaction).filter(
+                models.Transaction.workspace_id == workspace_id,
+                or_(
+                    models.Transaction.description == rule.description,
+                    models.Transaction.description == f"(R) {rule.description}"
+                ),
+                models.Transaction.amount_cents == rule.amount_cents,
+                models.Transaction.transaction_date >= start_of_month
+            ).first()
 
-        if existing:
-            continue
+            if existing:
+                continue
 
-        # Mesmo formato da confirmação manual para consistência
-        new_t = models.Transaction(
-            workspace_id=workspace_id,
-            category_id=rule.category_id,
-            amount_cents=rule.amount_cents,
-            description=f"(R) {rule.description}",
-            transaction_date=target_date,
-            is_installment=False
-        )
-        db.add(new_t)
+            new_t = models.Transaction(
+                workspace_id=workspace_id,
+                category_id=rule.category_id,
+                amount_cents=rule.amount_cents,
+                description=f"(R) {rule.description}",
+                transaction_date=target_date,
+                is_installment=False
+            )
+            db.add(new_t)
+            created += 1
 
-    db.commit()
+        if created > 0:
+            db.commit()
+    except Exception:
+        db.rollback()
+        import logging
+        logging.getLogger(__name__).warning("Erro ao processar recorrentes automáticas", exc_info=True)
 
 @router.get('/', response_model=List[schemas.TransactionResponse])
 async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

@@ -938,7 +938,22 @@ export const pt = {
           cycleRemoved: "Ciclo removido.",
           saveError: "Erro ao salvar ciclo.",
           removeError: "Erro ao remover ciclo.",
-          noCategory: "Sem categoria"
+          noCategory: "Sem categoria",
+          monthlyProportion: "Proporção Mensal",
+          byCategory: "Por Categoria",
+          noDataAvailable: "Sem dados",
+          noSubscriptions: "Sem subscrições",
+          dayPrefix: "Dia",
+          deleteButton: "Eliminar",
+          subscriptionNameLabel: "Nome de subscrição",
+          saveButton: "Guardar",
+          deleteSubscriptionConfirm: "Eliminar esta subscrição? Esta ação não pode ser desfeita.",
+          deleteSubscription: "Eliminar subscrição",
+          syncingCycles: "A sincronizar ciclos...",
+          week1: "Sem 1",
+          week2: "Sem 2",
+          week3: "Sem 3",
+          week4: "Sem 4"
       },
       onboarding: {
           title: "Bem-vindo ao ",
@@ -1238,7 +1253,12 @@ export const pt = {
           activeVault: "Cofre Ativo",
           activeVaultText: "Tens categorias configuradas para alimentar o teu Cofre de Reservas. Todos os movimentos nestas categorias serão contabilizados como poupança/investimento.",
           harmonizing: "A harmonizar categorias...",
-          protectedCategoryTooltip: "Categoria protegida (Salário e Despesas gerais não podem ser editadas nem eliminadas)."
+          protectedCategoryTooltip: "Categoria protegida (Salário e Despesas gerais não podem ser editadas nem eliminadas).",
+          targetsThisMonth: "Alvos este Mês",
+          myDrawers: "Minhas Gavetas",
+          chooseIcon: "Escolhe o ícone",
+          vaultNatureFixed: "As categorias de Cofre têm uma natureza fixa.",
+          bulkDeletePartialError: "Algumas não puderam ser eliminadas."
       },
           admin: {
               dashboard: {
@@ -1486,6 +1506,7 @@ export const pt = {
           bulkDeleteConfirmSuffix: "transações. Esta ação não pode ser desfeita.",
           bulkDeleteButton: "Eliminar",
           bulkDeleteSuccess: "Transações eliminadas com sucesso.",
+          balance: "Balanço",
           proRequiredMessage: "Funcionalidade disponível apenas para utilizadores Pro. Atualiza o teu plano para aceder às transações."
       },
       vault: {

@@ -604,16 +604,6 @@ TELEGRAM_TRANSLATIONS = {
             "📖 <code>/info</code> for formats.\n\n"
             "🧘‍♂️ <i>Simplicity is key.</i>"
         ),
-        'document_no_data': (
-            "📎 <b>No movements recognised</b>\n\n"
-            "I couldn't extract transactions from this file.\n\n"
-            "💡 <b>Suggestions:</b>\n"
-            "• PDF/CSV/Excel: ensure there's a column with amounts in € (e.g. 15.00 €)\n"
-            "• Image: send a clear photo of the receipt or statement\n"
-            "• Or type in text: <code>Description 10€</code>\n\n"
-            "📖 <code>/info</code> for formats.\n\n"
-            "🧘‍♂️ <i>Simplicity is key.</i>"
-        ),
         'processing_audio': "⏳ Processing audio…",
         'audio_error': (
             "🎤 <b>Audio not processed</b>\n\n"

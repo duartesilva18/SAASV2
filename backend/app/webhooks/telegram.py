@@ -3692,8 +3692,8 @@ async def telegram_webhook(
                 models.Transaction.transaction_date <= today,
                 models.Transaction.amount_cents < 0,
             ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).first()
-            top_category = top_cat[0] if top_cat else "-"
-            top_amount = f"{(top_cat[1] or 0) / 100:.2f}" if top_cat else "0.00"
+            top_category = top_cat[0] if top_cat and len(top_cat) >= 2 else "-"
+            top_amount = f"{(top_cat[1] or 0) / 100:.2f}" if top_cat and len(top_cat) >= 2 else "0.00"
             # Previous week comparison
             prev_week_start = week_start - timedelta(days=7)
             prev_week_end = week_start - timedelta(days=1)
@@ -4011,7 +4011,11 @@ async def telegram_webhook(
             if not last_tx:
                 send_telegram_msg(chat_id, t_undo('undo_no_recent'))
                 return {'status': 'ok'}
-            if last_tx.created_at and last_tx.created_at.replace(tzinfo=timezone.utc if last_tx.created_at.tzinfo is None else last_tx.created_at.tzinfo) < five_min_ago:
+            tx_created = last_tx.created_at
+            if tx_created:
+                if tx_created.tzinfo is None:
+                    tx_created = tx_created.replace(tzinfo=timezone.utc)
+            if tx_created and tx_created < five_min_ago:
                 send_telegram_msg(chat_id, t_undo('undo_expired'))
                 return {'status': 'ok'}
             desc = last_tx.description or "-"

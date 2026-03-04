@@ -557,7 +557,7 @@ function TransactionsPageContent() {
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${(stats.income - stats.expenses) >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
                 <Wallet size={14} className={(stats.income - stats.expenses) >= 0 ? 'text-emerald-400' : 'text-red-400'} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Balanço</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.transactions.balance}</span>
             </div>
             <p className={`text-lg sm:text-xl font-black tabular-nums truncate ${(stats.income - stats.expenses) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {(stats.income - stats.expenses) >= 0 ? '+' : ''}{formatCurrency(stats.income - stats.expenses)}

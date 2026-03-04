@@ -362,13 +362,13 @@ def infer_category(
     """
     filtered_categories = [c for c in categories if c.type == tipo]
     if not filtered_categories:
-        return (filtered_categories[0].id if categories else None, 'fallback', True, 0.0, 'fallback:no_categories', [])
+        return (categories[0].id if categories else None, 'fallback', True, 0.0, 'fallback:no_categories', [])
 
     # 1. Categoria explícita
     if explicit_category_id:
         for c in filtered_categories:
             if c.id == explicit_category_id:
-                return (explicit_category_id, 'explicit', False, 1.0)
+                return (explicit_category_id, 'explicit', False, 1.0, 'explicit', [])
         return (explicit_category_id, 'explicit', False, 1.0, 'explicit', [])
 
     canonical = canonicalize(description_raw)
@@ -596,9 +596,6 @@ def learn_from_correction(
             usage_count=1,
             is_global=False,
         ))
-    db.commit()
-    logger.info(f"Aprendizagem: '{canonical}' -> {category_name} (tokens: {len(tokens)})")
-
     # Heurística simples: promover alias de merchant se descrição é curta/consistente
     try:
         if len(tokens) <= 3:
@@ -622,7 +619,12 @@ def learn_from_correction(
                         confidence=0.6,
                         is_active=True,
                     ))
-                db.commit()
+    except Exception as e:
+        logger.warning(f"Merchant registry update falhou: {e}")
+
+    try:
+        db.commit()
+        logger.info(f"Aprendizagem: '{canonical}' -> {category_name} (tokens: {len(tokens)})")
     except Exception as e:
         db.rollback()
-        logger.warning(f"Merchant registry update falhou: {e}")
+        logger.warning(f"learn_from_correction commit falhou: {e}")

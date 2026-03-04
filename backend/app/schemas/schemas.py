@@ -383,6 +383,13 @@ class SavingsGoalResponse(SavingsGoalBase):
     class Config:
         from_attributes = True
 
+class SavingsGoalDeposit(BaseModel):
+    amount_cents: int = Field(..., gt=0)
+
+class SavingsGoalClose(BaseModel):
+    create_transaction: bool = False
+    transaction_type: str = 'income'
+
 # Schemas de Afiliados
 class AffiliateRequest(BaseModel):
     """Solicitação para se tornar afiliado"""

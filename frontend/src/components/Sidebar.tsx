@@ -131,6 +131,7 @@ export default function Sidebar({
       onMobileClose();
     }
     setShowNotifications(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {

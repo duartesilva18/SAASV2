@@ -223,7 +223,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="min-w-[640px] px-4 sm:px-0">
+          <div className="min-w-[780px] px-4 sm:px-0">
             <table className="w-full border-collapse">
             <thead>
               <tr className="text-left border-b border-white/5">
@@ -231,6 +231,7 @@ export default function AdminDashboardPage() {
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Plano</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Permissões</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Acessos</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Último Acesso</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600 text-right">Ações</th>
               </tr>
             </thead>
@@ -284,6 +285,22 @@ export default function AdminDashboardPage() {
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-white">{u.login_count}</span>
                       <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter whitespace-nowrap">Logins</span>
+                    </div>
+                  </td>
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
+                    <div className="flex flex-col">
+                      {u.last_login ? (
+                        <>
+                          <span className="text-[11px] font-bold text-white whitespace-nowrap">
+                            {new Date(u.last_login).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-medium whitespace-nowrap">
+                            {new Date(u.last_login).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[9px] text-slate-600 italic">Nunca</span>
+                      )}
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4 text-right">

@@ -72,7 +72,7 @@ async def delete_goal(goal_id: UUID, db: Session = Depends(get_db), current_user
 @router.post('/{goal_id}/deposit', response_model=schemas.SavingsGoalResponse)
 async def deposit_into_goal(
     goal_id: UUID,
-    body: dict,
+    body: schemas.SavingsGoalDeposit,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     ):
@@ -88,9 +88,7 @@ async def deposit_into_goal(
     ).first()
     if not db_goal:
         raise HTTPException(status_code=404, detail='Goal not found')
-    amount_cents = body.get('amount_cents')
-    if amount_cents is None or not isinstance(amount_cents, int) or amount_cents <= 0:
-        raise HTTPException(status_code=400, detail='amount_cents must be a positive integer')
+    amount_cents = body.amount_cents
     db_goal.current_amount_cents = (db_goal.current_amount_cents or 0) + amount_cents
     tx = models.Transaction(
         workspace_id=workspace.id,
@@ -108,16 +106,16 @@ async def deposit_into_goal(
 @router.post('/{goal_id}/close')
 async def close_goal(
     goal_id: UUID,
-    body: dict = Body(default=None),
+    body: schemas.SavingsGoalClose = Body(default=None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     ):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     """Terminar a meta. Opcionalmente cria uma transação (receita ou despesa) com o valor acumulado."""
-    body = body or {}
-    create_transaction = body.get('create_transaction', False)
-    transaction_type = (body.get('transaction_type') or 'income').lower()
+    body = body or schemas.SavingsGoalClose()
+    create_transaction = body.create_transaction
+    transaction_type = (body.transaction_type or 'income').lower()
     if transaction_type not in ('income', 'expense'):
         transaction_type = 'income'
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()

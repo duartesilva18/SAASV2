@@ -1014,6 +1014,7 @@ export const en = {
           bulkDeleteConfirmSuffix: "transactions. This action cannot be undone.",
           bulkDeleteButton: "Delete",
           bulkDeleteSuccess: "Transactions deleted successfully.",
+          balance: "Balance",
           proRequiredMessage: "This feature is only available for Pro users. Upgrade your plan to access transactions."
       },
       recurring: {
@@ -1063,7 +1064,22 @@ export const en = {
           cycleRemoved: "Cycle removed.",
           saveError: "Error saving cycle.",
           removeError: "Error removing cycle.",
-          noCategory: "No category"
+          noCategory: "No category",
+          monthlyProportion: "Monthly Proportion",
+          byCategory: "By Category",
+          noDataAvailable: "No data",
+          noSubscriptions: "No subscriptions",
+          dayPrefix: "Day",
+          deleteButton: "Delete",
+          subscriptionNameLabel: "Subscription name",
+          saveButton: "Save",
+          deleteSubscriptionConfirm: "Delete this subscription? This action cannot be undone.",
+          deleteSubscription: "Delete subscription",
+          syncingCycles: "Syncing cycles...",
+          week1: "Week 1",
+          week2: "Week 2",
+          week3: "Week 3",
+          week4: "Week 4"
       },
       onboarding: {
           title: "Welcome to ",
@@ -1267,7 +1283,12 @@ export const en = {
           activeVault: "Active Vault",
           activeVaultText: "You have categories configured to feed your Reserve Vault. All movements in these categories will be counted as savings/investment.",
           harmonizing: "Harmonizing categories...",
-          protectedCategoryTooltip: "Protected category (Salary and General expenses cannot be edited or deleted)."
+          protectedCategoryTooltip: "Protected category (Salary and General expenses cannot be edited or deleted).",
+          targetsThisMonth: "Targets this Month",
+          myDrawers: "My Categories",
+          chooseIcon: "Choose an icon",
+          vaultNatureFixed: "Vault categories have a fixed nature.",
+          bulkDeletePartialError: "Some could not be deleted."
       },
           admin: {
               dashboard: {

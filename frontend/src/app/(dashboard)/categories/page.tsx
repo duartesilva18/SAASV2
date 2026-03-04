@@ -236,7 +236,7 @@ export default function CategoriesPage() {
       const res = await api.post('/categories/bulk-delete', selectedIds);
       
       if (res.data.errors && res.data.errors.length > 0) {
-        setToastMsg(`${res.data.message} Algumas não puderam ser eliminadas.`);
+        setToastMsg(`${res.data.message} ${t.dashboard.categories.bulkDeletePartialError}`);
         setToastType('error');
       } else {
         setToastMsg(res.data.message);
@@ -460,7 +460,7 @@ export default function CategoriesPage() {
                 <Target size={13} className="text-amber-400" />
               </div>
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Alvos este Mês
+                {t.dashboard.categories.targetsThisMonth}
               </h4>
             </div>
             <div className="space-y-3">
@@ -496,7 +496,7 @@ export default function CategoriesPage() {
             <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
               <Tag size={13} className="text-blue-400" />
             </div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Minhas Gavetas</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t.dashboard.categories.myDrawers}</h3>
             <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-800 border border-slate-700/50 rounded-md text-slate-400">{categories.length}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -620,7 +620,7 @@ export default function CategoriesPage() {
                               type="button"
                               onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat); }}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-500/30"
-                              aria-label={t.dashboard.categories.deleteConfirm ?? 'Eliminar categoria'}
+                              aria-label={t.dashboard.categories.delete}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -721,7 +721,7 @@ export default function CategoriesPage() {
                 <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                   {/* Icon Selection - 5 ícones */}
                   <div className="space-y-4">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Escolhe o ícone</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.chooseIcon}</label>
                     <div className="flex gap-4">
                       {AVAILABLE_ICONS.map((item) => (
                         <button
@@ -786,13 +786,13 @@ export default function CategoriesPage() {
                       </div>
                       {editingCategory && (editingCategory.vault_type !== 'none') && (
                         <p className="text-[10px] text-blue-400 font-bold italic ml-4 mt-2">
-                          * As categorias de Cofre têm uma natureza fixa.
+                          * {t.dashboard.categories.vaultNatureFixed}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.limit} (Opcional)</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.categories.limit}</label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">
                           {currency === 'EUR' ? '€' : currency === 'BRL' ? 'R$' : '$'}
@@ -856,7 +856,7 @@ export default function CategoriesPage() {
                       }}
                       className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/15 font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <Trash2 size={16} /> Eliminar categoria
+                      <Trash2 size={16} /> {t.dashboard.categories.delete}
                     </button>
                   )}
                 </form>
