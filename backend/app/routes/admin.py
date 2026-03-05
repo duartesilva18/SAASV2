@@ -406,20 +406,35 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
         .subquery()
     )
 
+    # Subquery: copilot messages count per user
+    copilot_subq = (
+        db.query(
+            models.CopilotConversation.user_id.label('user_id'),
+            func.count(models.CopilotMessage.id).label('copilot_msg_count'),
+        )
+        .join(models.CopilotMessage, models.CopilotMessage.conversation_id == models.CopilotConversation.id)
+        .filter(models.CopilotMessage.role == 'user')
+        .group_by(models.CopilotConversation.user_id)
+        .subquery()
+    )
+
     rows = (
         db.query(
             models.User,
             func.coalesce(tx_bot_subq.c.bot_transactions_count, 0).label('bot_transactions_count'),
+            func.coalesce(copilot_subq.c.copilot_msg_count, 0).label('copilot_msg_count'),
         )
         .outerjoin(tx_bot_subq, tx_bot_subq.c.owner_id == models.User.id)
+        .outerjoin(copilot_subq, copilot_subq.c.user_id == models.User.id)
         .order_by(models.User.created_at.desc())
         .all()
     )
 
     users_with_metrics: List[schemas.AdminUserResponse] = []
-    for user, bot_tx_count in rows:
+    for user, bot_tx_count, copilot_count in rows:
         base = schemas.AdminUserResponse.from_orm(user).dict()
         base['bot_transactions_count'] = int(bot_tx_count or 0)
+        base['copilot_messages_count'] = int(copilot_count or 0)
         users_with_metrics.append(schemas.AdminUserResponse(**base))
 
     return users_with_metrics

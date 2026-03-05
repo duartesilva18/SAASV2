@@ -325,6 +325,7 @@ class AdminUserResponse(BaseModel):
     login_count: int
     last_login: Optional[datetime] = None
     bot_transactions_count: int = 0
+    copilot_messages_count: int = 0
 
     class Config:
         from_attributes = True

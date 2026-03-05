@@ -7,7 +7,7 @@ import {
   Search, Filter, ArrowUpRight, TrendingUp,
   Mail, Calendar, ShieldCheck, Zap, Lock,
   ChevronRight, Loader2, AlertCircle, CheckCircle2,
-  MoreVertical, ShieldAlert, ChevronLeft, ChevronDown, Globe, Gift, X
+  MoreVertical, ShieldAlert, ChevronLeft, ChevronDown, Globe, Gift, X, BotMessageSquare
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -223,7 +223,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="min-w-[880px] px-4 sm:px-0">
+          <div className="min-w-[980px] px-4 sm:px-0">
             <table className="w-full border-collapse">
             <thead>
               <tr className="text-left border-b border-white/5">
@@ -232,6 +232,7 @@ export default function AdminDashboardPage() {
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Permissões</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Acessos</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Tx Bot</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Copiloto IA</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Último Acesso</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600 text-right">Ações</th>
               </tr>
@@ -293,6 +294,13 @@ export default function AdminDashboardPage() {
                       <span className="text-xs font-black text-emerald-400">{u.bot_transactions_count ?? 0}</span>
                       <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter whitespace-nowrap">Tx Bot</span>
                     </div>
+                  </td>
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
+                    <div className="flex items-center gap-1.5">
+                      <BotMessageSquare size={12} className="text-violet-400 shrink-0" />
+                      <span className={`text-xs font-black ${(u.copilot_messages_count ?? 0) > 0 ? 'text-violet-400' : 'text-slate-600'}`}>{u.copilot_messages_count ?? 0}</span>
+                    </div>
+                    <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter whitespace-nowrap">Msgs</span>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex flex-col">
