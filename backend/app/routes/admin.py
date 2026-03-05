@@ -1683,6 +1683,10 @@ async def admin_list_support_conversations(
             .order_by(models.SupportMessage.created_at.desc())
             .first()
         )
+        assignee = None
+        if c.assigned_to:
+            a = db.query(models.User).filter(models.User.id == c.assigned_to).first()
+            assignee = {'id': str(a.id), 'name': a.full_name or a.email, 'email': a.email} if a else None
         results.append({
             'id': str(c.id),
             'subject': c.subject,
@@ -1693,6 +1697,7 @@ async def admin_list_support_conversations(
             'last_message': last_msg[0][:100] if last_msg else None,
             'user_email': user.email if user else 'unknown',
             'user_name': (user.full_name or '') if user else '',
+            'assigned_to': assignee,
         })
     return results
 
@@ -1727,6 +1732,10 @@ async def admin_get_conversation_messages(
     db.commit()
 
     user = db.query(models.User).filter(models.User.id == convo.user_id).first()
+    assignee_info = None
+    if convo.assigned_to:
+        a = db.query(models.User).filter(models.User.id == convo.assigned_to).first()
+        assignee_info = {'id': str(a.id), 'name': a.full_name or a.email} if a else None
     return {
         'conversation': {
             'id': str(convo.id),
@@ -1734,6 +1743,7 @@ async def admin_get_conversation_messages(
             'status': convo.status,
             'user_email': user.email if user else 'unknown',
             'user_name': (user.full_name or '') if user else '',
+            'assigned_to': assignee_info,
         },
         'messages': [
             {
@@ -1743,6 +1753,7 @@ async def admin_get_conversation_messages(
                 'image_url': m.image_url,
                 'is_read': m.is_read,
                 'created_at': m.created_at.isoformat(),
+                'sender_name': None,
             }
             for m in msgs
         ],
@@ -1765,6 +1776,18 @@ async def admin_reply_to_conversation(
     if not convo:
         raise HTTPException(status_code=404, detail='Conversa não encontrada')
 
+    # Auto-assign to first admin who replies (warn if already assigned to someone else)
+    if convo.assigned_to and convo.assigned_to != admin.id:
+        other = db.query(models.User).filter(models.User.id == convo.assigned_to).first()
+        other_name = (other.full_name or other.email) if other else 'outro admin'
+        raise HTTPException(
+            status_code=409,
+            detail=f'Esta conversa está atribuída a {other_name}. Usa "Assumir" para a transferir para ti.'
+        )
+
+    if not convo.assigned_to:
+        convo.assigned_to = admin.id
+
     msg = models.SupportMessage(
         conversation_id=cid,
         sender_type='admin',
@@ -1775,7 +1798,27 @@ async def admin_reply_to_conversation(
     db.add(msg)
     db.commit()
     db.refresh(msg)
-    return {'message_id': str(msg.id)}
+    return {'message_id': str(msg.id), 'assigned_to': str(admin.id)}
+
+
+@router.post('/support/conversations/{conversation_id}/assign')
+async def admin_assign_conversation(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    convo.assigned_to = admin.id
+    db.commit()
+    return {'ok': True, 'assigned_to': str(admin.id)}
 
 
 @router.patch('/support/conversations/{conversation_id}/close')

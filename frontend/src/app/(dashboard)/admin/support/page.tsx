@@ -4,11 +4,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Send, Loader2, User, Headphones, CheckCircle2,
-  X, Mail, Clock, ChevronLeft, Archive, Trash2, Sparkles, Zap,
+  X, Mail, Clock, ChevronLeft, Archive, Trash2, Sparkles, Zap, UserCheck,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useUser } from '@/lib/UserContext';
 import { useRouter } from 'next/navigation';
+
+interface Assignee {
+  id: string;
+  name: string;
+  email?: string;
+}
 
 interface Conversation {
   id: string;
@@ -20,6 +26,7 @@ interface Conversation {
   last_message: string | null;
   user_email: string;
   user_name: string | null;
+  assigned_to: Assignee | null;
 }
 
 interface Message {
@@ -42,7 +49,7 @@ export default function AdminSupportPage() {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
-  const [convoMeta, setConvoMeta] = useState<{ user_email: string; user_name: string; subject: string | null; status: string } | null>(null);
+  const [convoMeta, setConvoMeta] = useState<{ user_email: string; user_name: string; subject: string | null; status: string; assigned_to?: Assignee | null } | null>(null);
   const msgEndRef = useRef<HTMLDivElement>(null);
 
   const [autoReply, setAutoReply] = useState(false);
@@ -110,15 +117,33 @@ export default function AdminSupportPage() {
 
   useEffect(() => { msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  const [replyError, setReplyError] = useState<string | null>(null);
+
   const sendReply = async () => {
     if (!reply.trim() || sending || !selectedId) return;
     setSending(true);
+    setReplyError(null);
     try {
       await api.post(`/admin/support/conversations/${selectedId}/reply`, { content: reply.trim() });
       setReply('');
       const res = await api.get(`/admin/support/conversations/${selectedId}/messages`);
       setMessages(res.data?.messages || []);
-    } catch {} finally { setSending(false); }
+      setConvoMeta(res.data?.conversation || null);
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setReplyError(err.response.data?.detail || 'Conversa atribuída a outro admin.');
+      }
+    } finally { setSending(false); }
+  };
+
+  const claimConversation = async () => {
+    if (!selectedId) return;
+    try {
+      await api.post(`/admin/support/conversations/${selectedId}/assign`);
+      setReplyError(null);
+      setConvoMeta(prev => prev ? { ...prev, assigned_to: { id: user?.id || '', name: user?.full_name || user?.email || '' } } : prev);
+      fetchConversations();
+    } catch {}
   };
 
   const closeConversation = async () => {
@@ -254,6 +279,12 @@ export default function AdminSupportPage() {
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-500 truncate mb-1">{c.user_email}</p>
+                  {c.assigned_to && (
+                    <p className="text-[9px] text-violet-400/80 truncate mb-0.5 flex items-center gap-1">
+                      <UserCheck size={9} />
+                      {c.assigned_to.name}
+                    </p>
+                  )}
                   <p className="text-[11px] text-slate-400 truncate">{c.last_message || c.subject || '...'}</p>
                   <p className="text-[9px] text-slate-600 mt-1">{new Date(c.updated_at).toLocaleDateString()} {new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
@@ -283,18 +314,34 @@ export default function AdminSupportPage() {
                   </button>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">{convoMeta?.user_name || convoMeta?.user_email}</p>
-                    <p className="text-[10px] text-slate-500 truncate">{convoMeta?.user_email} · {convoMeta?.status === 'open' ? '🟢 Aberta' : '⚪ Fechada'}</p>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {convoMeta?.user_email} · {convoMeta?.status === 'open' ? '🟢 Aberta' : '⚪ Fechada'}
+                      {convoMeta?.assigned_to && (
+                        <span className="text-violet-400/80 ml-1">· <UserCheck size={9} className="inline -mt-0.5" /> {convoMeta.assigned_to.name}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
-                {convoMeta?.status === 'open' && (
-                  <button
-                    onClick={closeConversation}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/60 border border-slate-700/40 rounded-xl text-[10px] font-bold text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all cursor-pointer"
-                  >
-                    <Archive size={12} />
-                    Fechar
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {convoMeta?.status === 'open' && convoMeta?.assigned_to?.id !== user?.id && (
+                    <button
+                      onClick={claimConversation}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/10 border border-violet-500/25 rounded-xl text-[10px] font-bold text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/40 transition-all cursor-pointer"
+                    >
+                      <UserCheck size={12} />
+                      Assumir
+                    </button>
+                  )}
+                  {convoMeta?.status === 'open' && (
+                    <button
+                      onClick={closeConversation}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/60 border border-slate-700/40 rounded-xl text-[10px] font-bold text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all cursor-pointer"
+                    >
+                      <Archive size={12} />
+                      Fechar
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Messages */}
@@ -353,6 +400,14 @@ export default function AdminSupportPage() {
                     </button>
                     {aiLoading && <span className="text-[10px] text-slate-500">A pensar...</span>}
                   </div>
+                  {replyError && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/25 rounded-xl">
+                      <p className="text-[11px] text-red-400 flex-1">{replyError}</p>
+                      <button onClick={claimConversation} className="text-[10px] font-bold text-violet-400 hover:text-violet-300 underline cursor-pointer whitespace-nowrap">
+                        Assumir conversa
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-end gap-2 bg-slate-800/30 border border-slate-700/50 rounded-xl p-1.5 focus-within:border-blue-500/30 transition-all">
                     <textarea
                       value={reply}
