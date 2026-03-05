@@ -1989,3 +1989,26 @@ async def admin_total_unread(
         .scalar()
     )
     return {'unread': count or 0}
+
+
+@router.post('/support/conversations/{conversation_id}/typing')
+async def admin_set_typing(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+):
+    from .support import _typing_status
+    import time
+    _typing_status.setdefault(conversation_id, {})['admin'] = time.time()
+    return {"ok": True}
+
+
+@router.get('/support/conversations/{conversation_id}/typing')
+async def admin_get_typing(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+):
+    from .support import _typing_status, TYPING_TTL
+    import time
+    status = _typing_status.get(conversation_id, {})
+    user_typing = (time.time() - status.get('user', 0)) < TYPING_TTL
+    return {"typing": user_typing}

@@ -1,7 +1,7 @@
 import html as html_module
 import os
 import uuid as uuid_mod
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, File, UploadFile, Form, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sa_func, and_
@@ -24,13 +24,28 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ADMIN_EMAIL = 'duarte.nuno.silva18@gmail.com'
 
+# In-memory typing status: { conversation_id: { 'user': timestamp, 'admin': timestamp } }
+import time
+_typing_status: dict[str, dict[str, float]] = {}
+TYPING_TTL = 4  # seconds
+
 
 def _is_auto_reply_enabled(db: Session) -> bool:
     setting = db.query(models.AppSetting).filter(models.AppSetting.key == 'support_auto_reply').first()
     return setting is not None and setting.value == '1'
 
 
-async def _generate_auto_reply(db: Session, conversation_id, user_email: str):
+def _generate_auto_reply_background(conversation_id, user_email: str):
+    """Runs in a background thread with its own DB session."""
+    from ..core.dependencies import SessionLocal
+    db = SessionLocal()
+    try:
+        _do_auto_reply(db, conversation_id, user_email)
+    finally:
+        db.close()
+
+
+def _do_auto_reply(db: Session, conversation_id, user_email: str):
     try:
         msgs = (
             db.query(models.SupportMessage)
@@ -92,6 +107,17 @@ Gera APENAS o texto da resposta, sem prefixos ou aspas."""
             logger.info(f'Auto-reply sent for conversation {conversation_id}')
     except Exception as e:
         logger.error(f'Auto-reply failed: {e}')
+
+
+def _notify_admin_new_message_sync(user_email: str, preview: str):
+    """Sync wrapper for background task email notification."""
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_notify_admin_new_message(user_email, preview))
+        loop.close()
+    except Exception as e:
+        logger.warning(f'Falha ao enviar notificação admin (bg): {e}')
 
 
 async def _notify_admin_new_message(user_email: str, preview: str):
@@ -293,26 +319,49 @@ async def list_my_conversations(
 
 @router.post('/conversations')
 async def create_conversation(
-    content: str = Form(...),
-    image: UploadFile = File(default=None),
+    request: Request,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    content = (content or '').strip()
-    if not content and not image:
+    content = ''
+    image_file = None
+    ct = request.headers.get('content-type', '')
+
+    if 'multipart/form-data' in ct:
+        form = await request.form()
+        content = (form.get('content') or '')
+        if isinstance(content, str):
+            content = content.strip()
+        else:
+            content = str(content).strip()
+        img = form.get('image')
+        if img and hasattr(img, 'filename') and img.filename:
+            image_file = img
+    else:
+        try:
+            body = await request.json()
+            content = (body.get('content') or '').strip()
+        except Exception:
+            content = ''
+
+    if not content and not image_file:
         raise HTTPException(status_code=400, detail='Mensagem vazia.')
 
     image_url = None
-    if image and image.filename and image.content_type in ALLOWED_IMAGE_TYPES:
-        img_data = await image.read()
-        if len(img_data) <= MAX_FILE_SIZE_MB * 1024 * 1024:
-            ext = image.filename.rsplit('.', 1)[-1].lower() if '.' in image.filename else 'jpg'
-            if ext not in ('jpg', 'jpeg', 'png', 'gif', 'webp'):
-                ext = 'jpg'
-            fname = f"{uuid_mod.uuid4().hex}.{ext}"
-            with open(os.path.join(UPLOAD_DIR, fname), 'wb') as f:
-                f.write(img_data)
-            image_url = f"/api/support/images/{fname}"
+    if image_file and hasattr(image_file, 'read'):
+        img_ct = getattr(image_file, 'content_type', '') or ''
+        if img_ct in ALLOWED_IMAGE_TYPES:
+            img_data = await image_file.read()
+            if len(img_data) <= MAX_FILE_SIZE_MB * 1024 * 1024:
+                fname_orig = getattr(image_file, 'filename', '') or 'upload.jpg'
+                ext = fname_orig.rsplit('.', 1)[-1].lower() if '.' in fname_orig else 'jpg'
+                if ext not in ('jpg', 'jpeg', 'png', 'gif', 'webp'):
+                    ext = 'jpg'
+                fname = f"{uuid_mod.uuid4().hex}.{ext}"
+                with open(os.path.join(UPLOAD_DIR, fname), 'wb') as f:
+                    f.write(img_data)
+                image_url = f"/api/support/images/{fname}"
 
     if not content:
         content = '📷 Imagem'
@@ -337,9 +386,9 @@ async def create_conversation(
         db.add(msg)
         db.commit()
         db.refresh(msg)
-        # Follow-up: only auto-reply if enabled, NO email (avoids spam)
+        # Follow-up: auto-reply runs in background so response is instant
         if _is_auto_reply_enabled(db):
-            await _generate_auto_reply(db, active.id, current_user.email)
+            background_tasks.add_task(_generate_auto_reply_background, active.id, current_user.email)
         return {"conversation_id": str(active.id), "message_id": str(msg.id)}
 
     # New conversation: email admin once + auto-reply if enabled
@@ -361,8 +410,8 @@ async def create_conversation(
     db.refresh(convo)
     db.refresh(msg)
     if _is_auto_reply_enabled(db):
-        await _generate_auto_reply(db, convo.id, current_user.email)
-    await _notify_admin_new_message(current_user.email, content)
+        background_tasks.add_task(_generate_auto_reply_background, convo.id, current_user.email)
+    background_tasks.add_task(_notify_admin_new_message_sync, current_user.email, content)
     return {"conversation_id": str(convo.id), "message_id": str(msg.id)}
 
 
@@ -422,3 +471,22 @@ async def get_unread_count(
         .scalar()
     )
     return {"unread": count or 0}
+
+
+@router.post('/conversations/{conversation_id}/typing')
+async def set_typing(
+    conversation_id: str,
+    current_user: models.User = Depends(get_current_user),
+):
+    _typing_status.setdefault(conversation_id, {})['user'] = time.time()
+    return {"ok": True}
+
+
+@router.get('/conversations/{conversation_id}/typing')
+async def get_typing(
+    conversation_id: str,
+    current_user: models.User = Depends(get_current_user),
+):
+    status = _typing_status.get(conversation_id, {})
+    admin_typing = (time.time() - status.get('admin', 0)) < TYPING_TTL
+    return {"typing": admin_typing}

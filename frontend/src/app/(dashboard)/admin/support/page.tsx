@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, Send, Loader2, User, Headphones, CheckCircle2,
-  X, Mail, Clock, ChevronLeft, Archive, Trash2, Sparkles, Zap, UserCheck,
+  X, Mail, Clock, ChevronLeft, Archive, Trash2, Sparkles, Zap, UserCheck, Check, CheckCheck,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useUser } from '@/lib/UserContext';
@@ -98,20 +98,36 @@ export default function AdminSupportPage() {
     } catch {} finally { setMsgsLoading(false); }
   };
 
-  // Poll messages when conversation open (skip when tab hidden)
+  // Typing indicator
+  const [userTyping, setUserTyping] = useState(false);
+  const adminTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sendAdminTypingPing = useCallback(() => {
+    if (!selectedId) return;
+    if (adminTypingTimer.current) clearTimeout(adminTypingTimer.current);
+    adminTypingTimer.current = setTimeout(() => {
+      api.post(`/admin/support/conversations/${selectedId}/typing`).catch(() => {});
+    }, 300);
+  }, [selectedId]);
+
+  // Poll messages + typing when conversation open (skip when tab hidden)
   useEffect(() => {
     if (!selectedId) return;
     const interval = setInterval(async () => {
       if (document.hidden) return;
       try {
-        const res = await api.get(`/admin/support/conversations/${selectedId}/messages`);
+        const [msgRes, typRes] = await Promise.all([
+          api.get(`/admin/support/conversations/${selectedId}/messages`),
+          api.get(`/admin/support/conversations/${selectedId}/typing`),
+        ]);
         setMessages(prev => {
-          const newMsgs = res.data?.messages || [];
+          const newMsgs = msgRes.data?.messages || [];
           if (prev.length === newMsgs.length && prev[prev.length - 1]?.id === newMsgs[newMsgs.length - 1]?.id) return prev;
           return newMsgs;
         });
+        setUserTyping(typRes.data?.typing || false);
       } catch {}
-    }, 8000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [selectedId]);
 
@@ -371,9 +387,16 @@ export default function AdminSupportPage() {
                       {msg.content !== '📷 Imagem' && (
                         <p className="text-[12px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       )}
-                      <p className="text-[9px] mt-1 opacity-50">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        <span className="text-[9px] opacity-50">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {msg.sender_type === 'admin' && (
+                          msg.is_read
+                            ? <CheckCheck size={12} className="text-blue-400" />
+                            : <Check size={12} className="opacity-40" />
+                        )}
+                      </div>
                     </div>
                     {msg.sender_type === 'admin' && (
                       <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center mt-0.5">
@@ -382,6 +405,20 @@ export default function AdminSupportPage() {
                     )}
                   </div>
                 ))}
+                {userTyping && (
+                  <div className="flex gap-2 justify-start pr-8">
+                    <div className="shrink-0 w-7 h-7 rounded-full bg-slate-700/80 flex items-center justify-center mt-0.5 border border-slate-600/40">
+                      <User size={12} className="text-slate-300" />
+                    </div>
+                    <div className="bg-slate-800/60 border border-slate-700/40 rounded-xl rounded-bl-md px-3 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={msgEndRef} />
               </div>
 
@@ -411,7 +448,7 @@ export default function AdminSupportPage() {
                   <div className="flex items-end gap-2 bg-slate-800/30 border border-slate-700/50 rounded-xl p-1.5 focus-within:border-blue-500/30 transition-all">
                     <textarea
                       value={reply}
-                      onChange={e => setReply(e.target.value)}
+                      onChange={e => { setReply(e.target.value); sendAdminTypingPing(); }}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                       placeholder="Escreve a tua resposta..."
                       rows={1}

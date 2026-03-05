@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, X, Send, Loader2, User, Trash2, Lock, BarChart3,
-  BotMessageSquare, Headphones, ChevronRight, ImagePlus,
+  BotMessageSquare, Headphones, ChevronRight, ImagePlus, Check, CheckCheck,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -290,12 +290,13 @@ export default function ChatPanel() {
   const [supportConvoId, setSupportConvoId] = useState<string | null>(null);
   const [supportLoading, setSupportLoading] = useState(false);
   const supportEndRef = useRef<HTMLDivElement>(null);
+  const supportLoaded = useRef(false);
 
   useEffect(() => { supportEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [supportMessages]);
 
-  const loadSupportChat = useCallback(async () => {
+  const loadSupportChat = useCallback(async (showSpinner = false) => {
     if (!user) return;
-    setSupportLoading(true);
+    if (showSpinner) setSupportLoading(true);
     try {
       const res = await api.get('/api/support/conversations');
       const convos = res.data || [];
@@ -313,31 +314,62 @@ export default function ChatPanel() {
         setSupportConvoId(null);
         setSupportMessages([]);
       }
+      supportLoaded.current = true;
     } catch {
       setSupportConvoId(null);
       setSupportMessages([]);
     } finally { setSupportLoading(false); }
   }, [user]);
 
+  // Pre-load support on mount (background, no spinner)
   useEffect(() => {
-    if (isOpen && activeTab === 'support') loadSupportChat();
+    if (user && !supportLoaded.current) loadSupportChat(false);
+  }, [user, loadSupportChat]);
+
+  // When opening support tab, only show spinner if never loaded before
+  useEffect(() => {
+    if (isOpen && activeTab === 'support') {
+      if (!supportLoaded.current) {
+        loadSupportChat(true);
+      } else {
+        loadSupportChat(false);
+      }
+    }
   }, [isOpen, activeTab, loadSupportChat]);
 
-  // Poll for new messages when support tab open (skip when tab is hidden)
+  // Typing indicator
+  const [otherTyping, setOtherTyping] = useState(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Send typing ping when user types (debounced)
+  const sendTypingPing = useCallback(() => {
+    if (!supportConvoId) return;
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => {
+      api.post(`/api/support/conversations/${supportConvoId}/typing`).catch(() => {});
+    }, 300);
+  }, [supportConvoId]);
+
+  // Poll for new messages + typing status when support tab open
   useEffect(() => {
     if (!isOpen || activeTab !== 'support' || !supportConvoId) return;
     const poll = async () => {
       if (document.hidden) return;
       try {
-        const res = await api.get(`/api/support/conversations/${supportConvoId}/messages`);
-        const newMsgs = res.data || [];
+        const [msgRes, typRes] = await Promise.all([
+          api.get(`/api/support/conversations/${supportConvoId}/messages`),
+          api.get(`/api/support/conversations/${supportConvoId}/typing`),
+        ]);
+        const newMsgs = msgRes.data || [];
         setSupportMessages(prev => {
           if (prev.length === newMsgs.length && prev[prev.length - 1]?.id === newMsgs[newMsgs.length - 1]?.id) return prev;
           return newMsgs;
         });
+        setOtherTyping(typRes.data?.typing || false);
       } catch {}
     };
-    const interval = setInterval(poll, 8000);
+    poll();
+    const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
   }, [isOpen, activeTab, supportConvoId]);
 
@@ -515,6 +547,8 @@ export default function ChatPanel() {
                     endRef={supportEndRef}
                     t={cp}
                     conversationId={supportConvoId}
+                    otherTyping={otherTyping}
+                    onTyping={sendTypingPing}
                   />
                 )}
               </div>
@@ -670,7 +704,7 @@ const AIBubble = memo(function AIBubble({ msg, isLast, isStreaming }: { msg: Cha
 // ── Support Tab ──
 
 function SupportTab({
-  messages, input, setInput, sending, loading, sendMessage, endRef, t, conversationId,
+  messages, input, setInput, sending, loading, sendMessage, endRef, t, conversationId, otherTyping, onTyping,
 }: {
   messages: SupportMsg[];
   input: string;
@@ -681,6 +715,8 @@ function SupportTab({
   endRef: React.RefObject<HTMLDivElement | null>;
   t: any;
   conversationId: string | null;
+  otherTyping?: boolean;
+  onTyping?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
@@ -734,7 +770,14 @@ function SupportTab({
                 {msg.content !== '📷 Imagem' && (
                   <p className="text-[12px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 )}
-                <p className="text-[9px] mt-1 opacity-50">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                <div className="flex items-center justify-end gap-1 mt-0.5">
+                  <span className={`text-[9px] ${msg.sender_type === 'user' ? 'text-white/50' : 'opacity-50'}`}>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  {msg.sender_type === 'user' && (
+                    msg.is_read
+                      ? <CheckCheck size={13} className="text-white" />
+                      : <Check size={13} className="text-white/50" />
+                  )}
+                </div>
               </div>
               {msg.sender_type === 'user' && (
                 <div className="shrink-0 w-6 h-6 rounded-full bg-slate-700/80 flex items-center justify-center mt-0.5 border border-slate-600/40">
@@ -743,6 +786,20 @@ function SupportTab({
               )}
             </div>
           ))
+        )}
+        {otherTyping && (
+          <div className="flex gap-2 justify-start pr-8">
+            <div className="shrink-0 w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center mt-0.5">
+              <Headphones size={11} className="text-blue-400" />
+            </div>
+            <div className="bg-slate-800/60 border border-slate-700/40 rounded-xl rounded-bl-md px-3 py-2.5">
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
         )}
         <div ref={endRef} />
       </div>
@@ -760,7 +817,7 @@ function SupportTab({
           </button>
           <textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); onTyping?.(); }}
             onKeyDown={handleKeyDown}
             placeholder={t?.supportPlaceholder || 'Escreve a tua mensagem...'}
             rows={1}
