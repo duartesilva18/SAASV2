@@ -413,7 +413,7 @@ export default function AssistantPage() {
             {t?.dashboard?.assistant?.upgrade || 'Ver Planos'}
           </button>
         </div>
-        {showPaywall && <PricingModal isOpen={showPaywall} onClose={() => setShowPaywall(false)} />}
+        {showPaywall && <PricingModal isVisible={showPaywall} onClose={() => setShowPaywall(false)} />}
       </>
     );
   }
@@ -502,15 +502,15 @@ export default function AssistantPage() {
         )}
 
         {isStreaming && messages[messages.length - 1]?.role === 'assistant' && !getDisplayText(messages[messages.length - 1]?.content || '') && (
-          <div className="flex gap-2.5 items-start">
+          <div className="flex gap-2.5 items-center">
             <AssistantAvatar />
-            <div className="flex items-center gap-2 text-slate-500 pt-1">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 bg-blue-400/70 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-blue-400/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-blue-400/70 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <span className="text-[12px] text-slate-600">{t?.dashboard?.assistant?.thinking || 'A pensar...'}</span>
+              <span className="text-[12px] text-slate-500">{t?.dashboard?.assistant?.thinking || 'A pensar...'}</span>
             </div>
           </div>
         )}
