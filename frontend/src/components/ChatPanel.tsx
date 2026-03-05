@@ -426,9 +426,7 @@ export default function ChatPanel() {
           >
             <Headphones size={20} />
             {supportUnread > 0 && (
-              <span style={{ position: 'absolute', top: -4, left: -4, width: 16, height: 16, background: '#ef4444', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #1a2236' }}>
-                {supportUnread > 9 ? '9+' : supportUnread}
-              </span>
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1a2236] animate-pulse" title={`${supportUnread} mensagem${supportUnread !== 1 ? 's' : ''} não lida${supportUnread !== 1 ? 's' : ''}`} />
             )}
           </button>
         </div>
@@ -516,7 +514,7 @@ export default function ChatPanel() {
                   <Headphones size={13} />
                   {cp?.supportTab || 'Suporte'}
                   {supportUnread > 0 && (
-                    <span className="w-4 h-4 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">{supportUnread > 9 ? '9+' : supportUnread}</span>
+                    <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0" title={`${supportUnread} não lida${supportUnread !== 1 ? 's' : ''}`} />
                   )}
                 </button>
               </div>

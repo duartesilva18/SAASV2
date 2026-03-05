@@ -178,7 +178,8 @@ function TransactionsPageContent() {
         const matchesTab = activeTab === 'all' || transactionType === activeTab;
         const matchesCategory = selectedCategory === 'all' || tx.category_id === selectedCategory;
         return matchesSearch && matchesTab && matchesCategory;
-      });
+      })
+      .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
   }, [transactions, categories, debouncedSearchTerm, activeTab, selectedCategory]);
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);

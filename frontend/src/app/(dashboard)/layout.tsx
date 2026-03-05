@@ -111,6 +111,18 @@ export default function DashboardLayout({
 
   const isAdminPage = pathname?.startsWith('/admin');
 
+  const [adminSupportUnread, setAdminSupportUnread] = useState(0);
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    const fetchUnread = () => {
+      if (document.hidden) return;
+      api.get('/admin/support/unread-total').then(r => setAdminSupportUnread(r.data?.unread || 0)).catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user?.is_admin]);
+
   const secondaryTabs = useMemo(() => {
     const s = t?.dashboard?.sidebar;
     if (!s) return null;
@@ -325,6 +337,7 @@ export default function DashboardLayout({
           t={t}
           pathname={pathname}
           secondaryTabs={secondaryTabs}
+          adminSupportUnread={adminSupportUnread}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
           supportHidden={supportHidden}
           onOpenSupport={openSupport}
@@ -341,9 +354,12 @@ export default function DashboardLayout({
                   <Link
                     key={tab.href}
                     href={tab.href}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
+                    className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2 ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
                   >
                     {tab.label}
+                    {tab.href === '/admin/support' && adminSupportUnread > 0 && (
+                      <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0 animate-pulse" title={`${adminSupportUnread} não lida${adminSupportUnread !== 1 ? 's' : ''}`} />
+                    )}
                   </Link>
                 ))}
               </nav>
@@ -456,6 +472,7 @@ function MobileHeaderWithNotifications({
   t,
   pathname,
   secondaryTabs,
+  adminSupportUnread = 0,
   onOpenMenu,
   supportHidden,
   onOpenSupport,
@@ -464,6 +481,7 @@ function MobileHeaderWithNotifications({
   t: any;
   pathname: string | null;
   secondaryTabs: { label: string; href: string }[] | null;
+  adminSupportUnread?: number;
   onOpenMenu: () => void;
   supportHidden?: boolean;
   onOpenSupport?: () => void;
@@ -620,9 +638,12 @@ function MobileHeaderWithNotifications({
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center touch-manipulation ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
+                className={`px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center gap-1.5 touch-manipulation ${pathname === tab.href ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
               >
                 {tab.label}
+                {tab.href === '/admin/support' && adminSupportUnread > 0 && (
+                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0 animate-pulse" title={`${adminSupportUnread} não lida${adminSupportUnread !== 1 ? 's' : ''}`} />
+                )}
               </Link>
             ))}
           </nav>

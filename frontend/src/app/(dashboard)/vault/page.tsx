@@ -15,6 +15,7 @@ import { useTranslation } from '@/lib/LanguageContext';
 import AlertModal from '@/components/AlertModal';
 import PageLoading from '@/components/PageLoading';
 import Toast from '@/components/Toast';
+import AnimatedNumber from '@/components/AnimatedNumber';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 
@@ -252,11 +253,11 @@ export default function VaultPage() {
     const data = payload[0].payload;
     const val = typeof data.value === 'number' ? data.value : 0;
     return (
-      <div className="bg-slate-900/95 border border-slate-700/60 rounded-xl px-3 py-2 shadow-xl">
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+      <div style={{ background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 12, padding: '8px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+        <p style={{ fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
           {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
-        <p className={`text-sm font-black ${val >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(val)}</p>
+        <p style={{ fontSize: 14, fontWeight: 900, color: val >= 0 ? '#34d399' : '#f87171' }}>{formatCurrency(val)}</p>
       </div>
     );
   };
@@ -280,83 +281,113 @@ export default function VaultPage() {
   ] as const;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-white pb-20 px-4 sm:px-6 md:px-10 xl:px-14 space-y-8 sm:space-y-12">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-white pb-20 space-y-6 sm:space-y-8 -mt-2">
 
       {/* ═══ Header ═══ */}
-      <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
-          <div className="space-y-3 sm:space-y-4 min-w-0">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-xs font-bold uppercase tracking-wider">
-              <Landmark size={14} /> {t.dashboard.vault.title}
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase leading-tight">
-              {t.dashboard.vault.title?.split(' ').slice(0, -1).join(' ')} <span className="text-blue-500 italic">{t.dashboard.vault.title?.split(' ').slice(-1)[0]}</span>
-            </h1>
-            <p className="text-slate-500 font-medium max-w-xl italic text-sm sm:text-base">
-              {t.dashboard.vault.subtitle}
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
+            {t.dashboard.vault.title}
+          </h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">{t.dashboard.vault.subtitle}</p>
         </div>
-      </section>
+        <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider text-slate-600 bg-slate-800/60 px-2 py-0.5 rounded-md shrink-0 mt-2">
+          {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </span>
+      </div>
 
-      {/* ═══ Summary Stats ═══ */}
-      <section className="grid grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Total Reservas</p>
-          <p className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">{formatCurrency(grandTotal)}</p>
-          <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mt-2.5 flex">
-            <motion.div initial={{ width: 0 }} animate={{ width: grandTotal > 0 ? `${(vaultData.emergencyTotal / grandTotal) * 100}%` : '50%' }}
-              transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full bg-blue-500" />
-            <motion.div initial={{ width: 0 }} animate={{ width: grandTotal > 0 ? `${(vaultData.investmentTotal / grandTotal) * 100}%` : '50%' }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }} className="h-full bg-emerald-500" />
+      {/* ═══ Hero Card — Total Reservas ═══ */}
+      <motion.section
+        initial={isMobile ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-blue-500/[0.04] to-emerald-500/[0.04] bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center gap-5 sm:gap-6">
+          {/* Left: Total */}
+          <div className="flex items-center gap-4 min-w-0 lg:flex-1">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+              <Landmark size={22} className="text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Reservas</p>
+              <AnimatedNumber value={grandTotal} formatFn={formatCurrency} className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tabular-nums block truncate" />
+            </div>
+          </div>
+
+          {/* Center: Distribution bar */}
+          <div className="lg:flex-1 min-w-0">
+            <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 flex">
+              <motion.div initial={{ width: 0 }} animate={{ width: grandTotal > 0 ? `${(vaultData.emergencyTotal / grandTotal) * 100}%` : '50%' }}
+                transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full bg-gradient-to-r from-blue-600 to-blue-400" style={{ boxShadow: '0 0 8px rgba(59,130,246,0.3)' }} />
+              <motion.div initial={{ width: 0 }} animate={{ width: grandTotal > 0 ? `${(vaultData.investmentTotal / grandTotal) * 100}%` : '50%' }}
+                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }} className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ boxShadow: '0 0 8px rgba(16,185,129,0.3)' }} />
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{t.dashboard.vault.emergencyFund}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{t.dashboard.vault.zenInvestments || t.dashboard.vault.investments}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Mini cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-3 lg:w-auto shrink-0">
+            <div className="bg-slate-900/70 border border-slate-700/40 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <ShieldCheck size={11} className="text-blue-400" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.vault.emergencyFund}</span>
+              </div>
+              <AnimatedNumber value={vaultData.emergencyTotal} formatFn={formatCurrency} className="text-sm sm:text-base font-black text-white tabular-nums block" />
+            </div>
+            <div className="bg-slate-900/70 border border-slate-700/40 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Target size={11} className="text-emerald-400" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400">{t.dashboard.vault.zenInvestments || t.dashboard.vault.investments}</span>
+              </div>
+              <AnimatedNumber value={vaultData.investmentTotal} formatFn={formatCurrency} className="text-sm sm:text-base font-black text-white tabular-nums block" />
+            </div>
           </div>
         </div>
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.vault.emergencyFund}</p>
-          </div>
-          <p className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">{formatCurrency(vaultData.emergencyTotal)}</p>
-        </div>
-        <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">{t.dashboard.vault.zenInvestments || t.dashboard.vault.investments}</p>
-          </div>
-          <p className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">{formatCurrency(vaultData.investmentTotal)}</p>
-        </div>
-      </section>
+      </motion.section>
 
       {/* ═══ Vault Cards ═══ */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Emergency Fund */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={isMobile ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-blue-500/20 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl group hover:border-blue-500/40 transition-all duration-300"
+          whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-blue-500/20 rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl group hover:border-blue-500/40 hover:shadow-blue-500/[0.06] transition-all duration-300"
         >
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-500/15 rounded-2xl flex items-center justify-center shrink-0 border border-blue-500/20">
-              <ShieldCheck size={24} className="text-blue-400" />
+          <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+            <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(30,41,59,0.6)" strokeWidth="3" />
+                <circle cx="24" cy="24" r="20" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.min(100, (vaultData.emergencyTotal / vaultData.dynamicMax) * 100) * 1.257} 125.7`} className="transition-all duration-700" />
+              </svg>
+              <ShieldCheck size={18} className="text-blue-400 relative z-10" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-0.5">{t.dashboard.vault.emergencyFund}</p>
-              <p className="text-2xl sm:text-3xl font-black text-white tabular-nums truncate">{formatCurrency(vaultData.emergencyTotal)}</p>
+              <AnimatedNumber value={vaultData.emergencyTotal} formatFn={formatCurrency} className="text-xl sm:text-2xl font-black text-white tabular-nums truncate block" />
             </div>
             {vaultData.emergencyTransactions.length > 0 && (
-              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+              <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border ${
                 vaultData.emergencyTransactions[0]?.amount_cents > 0
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-red-400 bg-red-500/10 border-red-500/20'
               }`}>
-                {vaultData.emergencyTransactions[0]?.amount_cents > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                {vaultData.emergencyTransactions[0]?.amount_cents > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {formatCurrency(Math.abs(vaultData.emergencyTransactions[0]?.amount_cents || 0) / 100)}
               </div>
             )}
           </div>
 
-          {/* Progress */}
-          <div className="h-2.5 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-5">
+          <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-4 sm:mb-5">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (vaultData.emergencyTotal / vaultData.dynamicMax) * 100)}%` }}
@@ -368,52 +399,61 @@ export default function VaultPage() {
 
           {vaultData.emergencyCategory && (
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <motion.button
+                whileHover={isMobile ? undefined : { y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setVaultModal({ open: true, category: vaultData.emergencyCategory, action: 'add' })}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/25 rounded-xl transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/25 rounded-xl transition-colors cursor-pointer"
               >
-                <Plus size={16} className="text-blue-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-blue-400">{t.dashboard.vault.add}</span>
-              </button>
-              <button
+                <Plus size={15} className="text-blue-400" />
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-400">{t.dashboard.vault.add}</span>
+              </motion.button>
+              <motion.button
+                whileHover={isMobile ? undefined : { y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setVaultModal({ open: true, category: vaultData.emergencyCategory, action: 'withdraw' })}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-colors cursor-pointer"
               >
-                <Minus size={16} className="text-red-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-red-400">{t.dashboard.vault.withdraw}</span>
-              </button>
+                <Minus size={15} className="text-red-400" />
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-400">{t.dashboard.vault.withdraw}</span>
+              </motion.button>
             </div>
           )}
         </motion.div>
 
         {/* Investments */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={isMobile ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-emerald-500/20 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl group hover:border-emerald-500/40 transition-all duration-300"
+          whileHover={isMobile ? undefined : { y: -3, transition: { duration: 0.2 } }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-emerald-500/20 rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl group hover:border-emerald-500/40 hover:shadow-emerald-500/[0.06] transition-all duration-300"
         >
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-500/15 rounded-2xl flex items-center justify-center shrink-0 border border-emerald-500/20">
-              <Target size={24} className="text-emerald-400" />
+          <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+            <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(30,41,59,0.6)" strokeWidth="3" />
+                <circle cx="24" cy="24" r="20" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.min(100, (vaultData.investmentTotal / vaultData.dynamicMax) * 100) * 1.257} 125.7`} className="transition-all duration-700" />
+              </svg>
+              <Target size={18} className="text-emerald-400 relative z-10" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-0.5">{t.dashboard.vault.zenInvestments || t.dashboard.vault.investments}</p>
-              <p className="text-2xl sm:text-3xl font-black text-white tabular-nums truncate">{formatCurrency(vaultData.investmentTotal)}</p>
+              <AnimatedNumber value={vaultData.investmentTotal} formatFn={formatCurrency} className="text-xl sm:text-2xl font-black text-white tabular-nums truncate block" />
             </div>
             {vaultData.investmentTransactions.length > 0 && (
-              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+              <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border ${
                 vaultData.investmentTransactions[0]?.amount_cents > 0
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-red-400 bg-red-500/10 border-red-500/20'
               }`}>
-                {vaultData.investmentTransactions[0]?.amount_cents > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                {vaultData.investmentTransactions[0]?.amount_cents > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {formatCurrency(Math.abs(vaultData.investmentTransactions[0]?.amount_cents || 0) / 100)}
               </div>
             )}
           </div>
 
-          <div className="h-2.5 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-5">
+          <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-4 sm:mb-5">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (vaultData.investmentTotal / vaultData.dynamicMax) * 100)}%` }}
@@ -425,290 +465,236 @@ export default function VaultPage() {
 
           {vaultData.investmentCategory && (
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <motion.button
+                whileHover={isMobile ? undefined : { y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setVaultModal({ open: true, category: vaultData.investmentCategory, action: 'add' })}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/25 rounded-xl transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/25 rounded-xl transition-colors cursor-pointer"
               >
-                <Plus size={16} className="text-emerald-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-emerald-400">{t.dashboard.vault.add}</span>
-              </button>
-              <button
+                <Plus size={15} className="text-emerald-400" />
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-emerald-400">{t.dashboard.vault.add}</span>
+              </motion.button>
+              <motion.button
+                whileHover={isMobile ? undefined : { y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setVaultModal({ open: true, category: vaultData.investmentCategory, action: 'withdraw' })}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition-colors cursor-pointer"
               >
-                <Minus size={16} className="text-red-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-red-400">{t.dashboard.vault.withdraw}</span>
+                <Minus size={15} className="text-red-400" />
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-400">{t.dashboard.vault.withdraw}</span>
+              </motion.button>
+            </div>
+          )}
+        </motion.div>
+      </section>
+
+      {/* ═══ Evolution Charts (with integrated period selector) ═══ */}
+      <section className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Calendar size={13} className="text-blue-400" />
+            </div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Evolução</h2>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[
+              { key: '7D', label: '7D' },
+              { key: '30D', label: '30D' },
+              { key: '12M', label: '12M' },
+              { key: 'Tudo', label: 'Tudo' }
+            ].map((period) => (
+              <button
+                key={period.key}
+                onClick={() => setSelectedPeriod(period.key as any)}
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                  selectedPeriod === period.key
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
+                    : 'bg-transparent text-slate-500 border-slate-700/60 hover:border-slate-600 hover:text-slate-300'
+                }`}
+              >
+                {period.label}
               </button>
-            </div>
-          )}
-        </motion.div>
-      </section>
-
-      {/* ═══ Period Selector ═══ */}
-      <section className="flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-3 sm:p-4 rounded-2xl shadow-2xl">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-          <Calendar size={14} className="text-blue-500" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Periodo</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {[
-            { key: '7D', label: '7 Dias' },
-            { key: '30D', label: '30 Dias' },
-            { key: '12M', label: '12 Meses' },
-            { key: 'Tudo', label: 'Tudo' }
-          ].map((period) => (
-            <button
-              key={period.key}
-              onClick={() => setSelectedPeriod(period.key as any)}
-              className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border ${
-                selectedPeriod === period.key
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
-                  : 'bg-transparent text-slate-500 border-slate-700 hover:border-slate-600 hover:text-slate-300'
-              }`}
-            >
-              {period.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══ Evolution Charts ═══ */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Emergency Evolution */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <ShieldCheck size={16} className="text-blue-400" />
-            </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionEmergency}</h3>
+            ))}
           </div>
-          {vaultData.emergencyEvolution.length > 1 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={vaultData.emergencyEvolution}>
-                <defs>
-                  <linearGradient id="gradEmergency" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
-                <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
-                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} />
-                <Tooltip content={ChartTooltipContent} />
-                <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#gradEmergency)" strokeWidth={2.5} isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[200px]">
-              <p className="text-xs text-slate-500 italic">{t.dashboard.vault.noTransactions}</p>
-            </div>
-          )}
-        </motion.div>
+        </div>
 
-        {/* Investment Evolution */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Target size={16} className="text-emerald-400" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <ShieldCheck size={13} className="text-blue-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionEmergency}</h3>
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionInvestments}</h3>
-          </div>
-          {vaultData.investmentEvolution.length > 1 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={vaultData.investmentEvolution}>
-                <defs>
-                  <linearGradient id="gradInvestment" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" />
-                <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
-                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} />
-                <Tooltip content={ChartTooltipContent} />
-                <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#gradInvestment)" strokeWidth={2.5} isAnimationActive={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[200px]">
-              <p className="text-xs text-slate-500 italic">{t.dashboard.vault.noTransactions}</p>
+            {vaultData.emergencyEvolution.length > 1 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={vaultData.emergencyEvolution}>
+                  <defs>
+                    <linearGradient id="gradEmergency" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} width={48} />
+                  <Tooltip content={ChartTooltipContent} />
+                  <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#gradEmergency)" strokeWidth={2.5} isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[180px]">
+                <p className="text-xs text-slate-500 italic">{t.dashboard.vault.noTransactions}</p>
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Target size={13} className="text-emerald-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionInvestments}</h3>
             </div>
-          )}
-        </motion.div>
+            {vaultData.investmentEvolution.length > 1 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={vaultData.investmentEvolution}>
+                  <defs>
+                    <linearGradient id="gradInvestment" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} width={48} />
+                  <Tooltip content={ChartTooltipContent} />
+                  <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#gradInvestment)" strokeWidth={2.5} isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[180px]">
+                <p className="text-xs text-slate-500 italic">{t.dashboard.vault.noTransactions}</p>
+              </div>
+            )}
+          </motion.div>
+        </div>
       </section>
 
       {/* ═══ Monthly Activity ═══ */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Emergency Monthly */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <ShieldCheck size={16} className="text-blue-400" />
+        {[
+          { data: vaultData.emergencyMonthly, label: t.dashboard.vault.emergencyFund, icon: <ShieldCheck size={13} className="text-blue-400" />, iconBg: 'bg-blue-500/10 border-blue-500/20', labelColor: 'text-blue-400', barColor: 'from-blue-500 to-blue-400', barGlow: 'rgba(59,130,246,0.3)', accentLine: 'bg-blue-400/40', delay: 0.2 },
+          { data: vaultData.investmentMonthly, label: t.dashboard.vault.investments, icon: <Target size={13} className="text-emerald-400" />, iconBg: 'bg-emerald-500/10 border-emerald-500/20', labelColor: 'text-emerald-400', barColor: 'from-emerald-500 to-emerald-400', barGlow: 'rgba(16,185,129,0.3)', accentLine: 'bg-emerald-400/40', delay: 0.26 },
+        ].map((cfg, si) => (
+          <motion.div key={si} initial={isMobile ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: cfg.delay }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-lg border flex items-center justify-center ${cfg.iconBg}`}>
+                  {cfg.icon}
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.monthlyActivity}</h3>
               </div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.monthlyActivity}</h3>
+              <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${cfg.labelColor}`}>{cfg.label}</span>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">{t.dashboard.vault.emergencyFund}</span>
-          </div>
-          {vaultData.emergencyMonthly.length > 0 ? (
-            <div className="space-y-3">
-              {(vaultData.emergencyMonthly as any[]).slice(-6).reverse().map((month: any, idx: number) => {
-                const total = month.deposits + month.withdrawals;
-                const depositPercent = total > 0 ? (month.deposits / total) * 100 : 0;
-                const net = month.deposits - month.withdrawals;
-                return (
-                  <motion.div key={idx} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.06 }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{month.month}</span>
-                      <div className="flex items-center gap-3">
-                        {month.deposits > 0 && <span className="text-[10px] font-bold text-blue-400">+{formatCurrency(month.deposits)}</span>}
-                        {month.withdrawals > 0 && <span className="text-[10px] font-bold text-red-400">-{formatCurrency(month.withdrawals)}</span>}
-                        <span className={`text-xs font-black ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span>
+            {(cfg.data as any[]).length > 0 ? (
+              <div className="space-y-1.5">
+                {(cfg.data as any[]).slice(-6).reverse().map((month: any, idx: number) => {
+                  const total = month.deposits + month.withdrawals;
+                  const depositPercent = total > 0 ? (month.deposits / total) * 100 : 0;
+                  const net = month.deposits - month.withdrawals;
+                  return (
+                    <motion.div key={idx} initial={isMobile ? false : { opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                      className="relative p-2 sm:p-2.5 rounded-xl hover:bg-slate-800/30 transition-colors group/row">
+                      <div className={`absolute top-0 left-0 w-0.5 h-full rounded-full ${cfg.accentLine} opacity-0 group-hover/row:opacity-100 transition-opacity`} />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">{month.month}</span>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          {month.deposits > 0 && <span className={`text-[9px] sm:text-[10px] font-bold ${cfg.labelColor}`}>+{formatCurrency(month.deposits)}</span>}
+                          {month.withdrawals > 0 && <span className="text-[9px] sm:text-[10px] font-bold text-red-400">-{formatCurrency(month.withdrawals)}</span>}
+                          <span className={`text-[10px] sm:text-xs font-black ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="relative w-full h-2.5 bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/30 flex">
-                      {depositPercent > 0 && (
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.06 }}
-                          className="h-full bg-gradient-to-r from-blue-500 to-blue-400" style={{ boxShadow: '0 0 6px rgba(59,130,246,0.3)' }} />
-                      )}
-                      {total - month.deposits > 0 && (
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${100 - depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.06 + 0.1 }}
-                          className="h-full bg-gradient-to-r from-red-500/60 to-red-400/60" />
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-10">
-              <p className="text-xs text-slate-500 italic">Sem atividade mensal ainda</p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Investment Monthly */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <Target size={16} className="text-emerald-400" />
+                      <div className="w-full h-3 bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/30 flex">
+                        {depositPercent > 0 && (
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.05 }}
+                            className={`h-full rounded-full bg-gradient-to-r ${cfg.barColor}`} style={{ boxShadow: `0 0 6px ${cfg.barGlow}` }} />
+                        )}
+                        {total - month.deposits > 0 && (
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${100 - depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.05 + 0.1 }}
+                            className="h-full rounded-full bg-gradient-to-r from-red-500/60 to-red-400/60" />
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.monthlyActivity}</h3>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">{t.dashboard.vault.investments}</span>
-          </div>
-          {vaultData.investmentMonthly.length > 0 ? (
-            <div className="space-y-3">
-              {(vaultData.investmentMonthly as any[]).slice(-6).reverse().map((month: any, idx: number) => {
-                const total = month.deposits + month.withdrawals;
-                const depositPercent = total > 0 ? (month.deposits / total) * 100 : 0;
-                const net = month.deposits - month.withdrawals;
-                return (
-                  <motion.div key={idx} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.06 }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{month.month}</span>
-                      <div className="flex items-center gap-3">
-                        {month.deposits > 0 && <span className="text-[10px] font-bold text-emerald-400">+{formatCurrency(month.deposits)}</span>}
-                        {month.withdrawals > 0 && <span className="text-[10px] font-bold text-red-400">-{formatCurrency(month.withdrawals)}</span>}
-                        <span className={`text-xs font-black ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</span>
-                      </div>
-                    </div>
-                    <div className="relative w-full h-2.5 bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/30 flex">
-                      {depositPercent > 0 && (
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.06 }}
-                          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ boxShadow: '0 0 6px rgba(16,185,129,0.3)' }} />
-                      )}
-                      {total - month.deposits > 0 && (
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${100 - depositPercent}%` }} transition={{ duration: 0.6, delay: idx * 0.06 + 0.1 }}
-                          className="h-full bg-gradient-to-r from-red-500/60 to-red-400/60" />
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-10">
-              <p className="text-xs text-slate-500 italic">Sem atividade mensal ainda</p>
-            </div>
-          )}
-        </motion.div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-[11px] text-slate-500 italic">Sem atividade mensal ainda</p>
+              </div>
+            )}
+          </motion.div>
+        ))}
       </section>
 
       {/* ═══ Transaction History ═══ */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Emergency Transactions */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <ShieldCheck size={16} className="text-blue-400" />
+        {[
+          { txs: vaultData.emergencyTransactions, title: t.dashboard.vault.transactionsEmergency, icon: <ShieldCheck size={13} className="text-blue-400" />, iconBg: 'bg-blue-500/10 border-blue-500/20', delay: 0.3 },
+          { txs: vaultData.investmentTransactions, title: t.dashboard.vault.transactionsInvestments, icon: <Target size={13} className="text-emerald-400" />, iconBg: 'bg-emerald-500/10 border-emerald-500/20', delay: 0.36 },
+        ].map((cfg, si) => (
+          <motion.div key={si} initial={isMobile ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: cfg.delay }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className={`w-7 h-7 rounded-lg border flex items-center justify-center ${cfg.iconBg}`}>
+                {cfg.icon}
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{cfg.title}</h3>
+              {cfg.txs.length > 0 && (
+                <span className="text-[9px] font-bold text-slate-500 bg-slate-800/60 px-1.5 py-0.5 rounded-md">{cfg.txs.length}</span>
+              )}
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.transactionsEmergency}</h3>
-          </div>
-          <div className="space-y-2 max-h-[360px] overflow-y-auto">
-            {vaultData.emergencyTransactions.length > 0 ? (
-              vaultData.emergencyTransactions.map((tx: any, idx: number) => (
-                <motion.div key={tx.id || idx} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
-                  className="flex items-center justify-between p-3 bg-slate-950/50 rounded-xl border border-slate-700/30 hover:border-slate-600/50 transition-all">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.amount_cents > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {tx.amount_cents > 0 ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
+            <div className="space-y-1.5 sm:space-y-2 max-h-[320px] sm:max-h-[360px] overflow-y-auto">
+              {cfg.txs.length > 0 ? (
+                cfg.txs.map((tx: any, idx: number) => (
+                  <motion.div key={tx.id || idx}
+                    initial={isMobile ? false : { opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    whileHover={isMobile ? undefined : { y: -1, transition: { duration: 0.15 } }}
+                    className="flex items-center justify-between p-2.5 sm:p-3 bg-slate-950/50 rounded-xl border border-slate-700/30 hover:border-slate-600/50 transition-all">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.amount_cents > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {tx.amount_cents > 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] sm:text-xs font-bold text-white truncate">{tx.description || t.dashboard.vault.noDescription}</p>
+                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-500 bg-slate-800/40 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                          {new Date(tx.transaction_date || tx.created_at).toLocaleDateString('pt-PT')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{tx.description || t.dashboard.vault.noDescription}</p>
-                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{new Date(tx.transaction_date || tx.created_at).toLocaleDateString('pt-PT')}</p>
-                    </div>
+                    <span className={`text-[11px] sm:text-sm font-black tabular-nums shrink-0 ml-2 ${tx.amount_cents > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {tx.amount_cents > 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.amount_cents) / 100)}
+                    </span>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800/40 border border-slate-700/40 flex items-center justify-center">
+                    <Landmark size={18} className="text-slate-600" />
                   </div>
-                  <span className={`text-sm font-black tabular-nums shrink-0 ${tx.amount_cents > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {tx.amount_cents > 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.amount_cents) / 100)}
-                  </span>
-                </motion.div>
-              ))
-            ) : (
-              <p className="text-center text-slate-500 text-xs italic py-10">{t.dashboard.vault.noTransactions}</p>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Investment Transactions */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Target size={16} className="text-emerald-400" />
+                  <p className="text-[11px] text-slate-500 italic">{t.dashboard.vault.noTransactions}</p>
+                </div>
+              )}
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.transactionsInvestments}</h3>
-          </div>
-          <div className="space-y-2 max-h-[360px] overflow-y-auto">
-            {vaultData.investmentTransactions.length > 0 ? (
-              vaultData.investmentTransactions.map((tx: any, idx: number) => (
-                <motion.div key={tx.id || idx} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
-                  className="flex items-center justify-between p-3 bg-slate-950/50 rounded-xl border border-slate-700/30 hover:border-slate-600/50 transition-all">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.amount_cents > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {tx.amount_cents > 0 ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{tx.description || t.dashboard.vault.noDescription}</p>
-                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{new Date(tx.transaction_date || tx.created_at).toLocaleDateString('pt-PT')}</p>
-                    </div>
-                  </div>
-                  <span className={`text-sm font-black tabular-nums shrink-0 ${tx.amount_cents > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {tx.amount_cents > 0 ? '+' : '-'}{formatCurrency(Math.abs(tx.amount_cents) / 100)}
-                  </span>
-                </motion.div>
-              ))
-            ) : (
-              <p className="text-center text-slate-500 text-xs italic py-10">{t.dashboard.vault.noTransactions}</p>
-            )}
-          </div>
-        </motion.div>
+          </motion.div>
+        ))}
       </section>
 
       {/* ═══ Vault Transaction Modal ═══ */}

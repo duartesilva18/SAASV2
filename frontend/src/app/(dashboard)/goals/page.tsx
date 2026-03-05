@@ -2,17 +2,22 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Target, Plus, Trash2, Edit2, X, Check, 
-  Calendar, Trophy, Sparkles,
+import {
+  Target, Plus, Trash2, Edit2, X, Check,
+  Calendar, Trophy, Sparkles, Clock,
   Heart, Star, Zap, Plane, Car, Home, Wallet, ChevronDown,
-  PiggyBank, Flame
+  PiggyBank, Flame, TrendingUp
 } from 'lucide-react';
+import {
+  BarChart, Bar, PieChart, Pie, Cell,
+  Tooltip as RTooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid
+} from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageLoading from '@/components/PageLoading';
+import AnimatedNumber from '@/components/AnimatedNumber';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 
@@ -30,52 +35,6 @@ const ICONS = [
 
 const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
 const QUICK_AMOUNTS = [10, 25, 50, 100];
-
-/* ── SVG Circular Progress Ring ─────────────────────────────────── */
-function ProgressRing({ progress, color, size = 64, strokeWidth = 5, completed = false }: {
-  progress: number; color: string; size?: number; strokeWidth?: number; completed?: boolean;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (Math.min(progress, 100) / 100) * circumference;
-
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      {/* Glow when completed */}
-      {completed && (
-        <div
-          className="absolute inset-0 rounded-full animate-pulse"
-          style={{ boxShadow: `0 0 18px ${color}40, 0 0 6px ${color}30` }}
-        />
-      )}
-      <svg width={size} height={size} className="rotate-[-90deg]">
-        {/* Track */}
-        <circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke="rgba(148,163,184,0.12)" strokeWidth={strokeWidth}
-        />
-        {/* Progress */}
-        <motion.circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke={color} strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-        />
-      </svg>
-      {/* Center content */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {completed ? (
-          <Check size={size * 0.35} className="text-emerald-400" />
-        ) : (
-          <span className="text-[10px] font-black text-white tabular-nums">{Math.round(progress)}%</span>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function GoalsPage() {
   const { t, formatCurrency } = useTranslation();
@@ -96,6 +55,15 @@ export default function GoalsPage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; amount?: string; type?: string; date?: string }>({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   const getTomorrowDate = () => {
     const tomorrow = new Date();
@@ -179,6 +147,30 @@ export default function GoalsPage() {
     const total = goals.length || 1;
     return { expenseCount, incomeCount, total };
   }, [goals]);
+
+  const pieData = useMemo(() => {
+    return goals.map((g, i) => ({
+      name: g.name,
+      value: g.target_amount_cents / 100,
+      color: g.color_hex || VIVID_COLORS[i % VIVID_COLORS.length],
+    }));
+  }, [goals]);
+
+  const timelineGoals = useMemo(() => {
+    return [...goals].sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime());
+  }, [goals]);
+
+  const nextDeadline = useMemo(() => {
+    const now = new Date();
+    const upcoming = goals
+      .filter(g => new Date(g.target_date) > now && (g.current_amount_cents || 0) < g.target_amount_cents)
+      .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime());
+    return upcoming[0] || null;
+  }, [goals]);
+
+  const nextDeadlineDays = nextDeadline
+    ? Math.ceil((new Date(nextDeadline.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
 
   /* ── Handlers ───────────────────────────────────────────────── */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,388 +298,339 @@ export default function GoalsPage() {
     return <PageLoading message={t.dashboard.goals.loading} />;
   }
 
-  return (
-    <div className="w-full max-w-none min-w-0 space-y-8 sm:space-y-12 pb-20 px-4 sm:px-6 md:px-10 xl:px-14">
-      {/* ═══ Header ═══ */}
-      <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
-          <div className="space-y-3 sm:space-y-4 min-w-0">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-xs font-bold uppercase tracking-wider">
-              <Trophy size={14} /> {t.dashboard.goals.badge}
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white uppercase leading-tight break-words">
-              {t.dashboard.goals.title.split(' ').slice(0, -1).join(' ')} <span className="text-blue-500 italic">{t.dashboard.goals.title.split(' ').slice(-1)[0]}</span>
-            </h1>
-            <p className="text-slate-500 font-medium max-w-xl italic text-sm sm:text-base md:text-lg">
-              &ldquo;{t.dashboard.goals.subtitle}&rdquo; &mdash; {t.dashboard.goals.subtitleQuote}
-            </p>
-          </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 w-full sm:w-auto"
-          >
-            <Plus size={18} className="shrink-0" />
-            <span>{t.dashboard.goals.newGoal}</span>
-          </button>
-        </div>
-      </section>
+  const barTooltipStyle = { background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 12, padding: '8px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' };
 
-      {/* ═══ Summary Stat Cards ═══ */}
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-none min-w-0 space-y-5 sm:space-y-6 pb-20 -mt-2">
+
+      {/* ═══ 1. Header + Stats ═══ */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-white truncate">{t.dashboard.goals.title}</h1>
+        <motion.button whileTap={{ scale: 0.96 }} onClick={openCreate}
+          className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0">
+          <Plus size={14} /> {t.dashboard.goals.newGoal}
+        </motion.button>
+      </div>
+
       {goals.length > 0 && (
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {[
-            { label: t.dashboard.goals.totalGoals ?? 'Total Metas', value: `${goals.length}`, icon: Target, accent: 'blue' },
-            { label: t.dashboard.goals.totalSaved ?? 'Total Poupado', value: formatCurrency(stats.totalSavedCents / 100), icon: PiggyBank, accent: 'emerald' },
-            { label: t.dashboard.goals.totalTarget ?? 'Objetivo Total', value: formatCurrency(stats.totalTargetCents / 100), icon: Trophy, accent: 'amber' },
-            { label: t.dashboard.goals.globalProgress ?? 'Progresso Global', value: `${Math.round(stats.globalProgress)}%`, icon: Flame, accent: 'violet' },
-          ].map((card, i) => {
-            const accentMap: Record<string, string> = {
-              blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-              emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-              amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-              violet: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
-            };
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Stat: Total Metas */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-3 sm:p-4 shadow-lg">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-2">
+              <Target size={15} className="text-blue-400" />
+            </div>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.goals.totalGoals ?? 'Total Metas'}</p>
+            <AnimatedNumber value={goals.length} className="text-lg sm:text-xl font-black text-white tabular-nums" />
+          </motion.div>
+          {/* Stat: Total Poupado */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-3 sm:p-4 shadow-lg">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
+              <PiggyBank size={15} className="text-emerald-400" />
+            </div>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.goals.totalSaved ?? 'Total Poupado'}</p>
+            <AnimatedNumber value={stats.totalSavedCents / 100} formatFn={formatCurrency} className="text-lg sm:text-xl font-black text-white tabular-nums" />
+            <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden mt-2">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${stats.globalProgress}%` }} transition={{ duration: 0.8 }}
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" />
+            </div>
+          </motion.div>
+          {/* Stat: Progresso Global */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-3 sm:p-4 shadow-lg">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="relative w-10 h-10 shrink-0">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 48 48">
+                  <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(30,41,59,0.6)" strokeWidth="4" />
+                  <circle cx="24" cy="24" r="19" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round"
+                    strokeDasharray={`${Math.min(100, stats.globalProgress) * 1.194} 119.4`} className="transition-all duration-700" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[9px] font-black text-white tabular-nums">{Math.round(stats.globalProgress)}%</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.goals.globalProgress ?? 'Progresso'}</p>
+            <span className="text-xs font-bold text-emerald-400">{stats.completedCount}/{goals.length} {t.dashboard.goals.completed ?? 'concluidas'}</span>
+          </motion.div>
+          {/* Stat: Proxima Deadline */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-3 sm:p-4 shadow-lg">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
+              <Clock size={15} className="text-amber-400" />
+            </div>
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.goals.deadline ?? 'Deadline'}</p>
+            {nextDeadline ? (
+              <>
+                <span className={`text-lg sm:text-xl font-black tabular-nums ${nextDeadlineDays != null && nextDeadlineDays <= 7 ? 'text-amber-400' : 'text-white'}`}>
+                  {nextDeadlineDays}d
+                </span>
+                <p className="text-[9px] font-bold text-slate-500 truncate mt-0.5">{nextDeadline.name}</p>
+              </>
+            ) : (
+              <span className="text-sm font-bold text-slate-500 italic">--</span>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* ═══ 2. Bar Chart — Target vs Poupado ═══ */}
+      {goalsForChart.length > 0 && (
+        <motion.section initial={isMobile ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <TrendingUp size={13} className="text-blue-400" />
+            </div>
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.goals.chartTopTitle}</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={goalsForChart} layout="vertical" margin={{ top: 0, right: 4, bottom: 0, left: 0 }} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+              <XAxis type="number" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v: number) => formatCurrency(v)} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={80} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <RTooltip
+                contentStyle={barTooltipStyle}
+                itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
+                labelStyle={{ color: '#94a3b8', fontWeight: 800, fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}
+                formatter={(value: any, name: any) => [formatCurrency(Number(value ?? 0)), name === 'target' ? 'Objetivo' : 'Poupado']}
+              />
+              <Bar dataKey="target" name="target" fill="#334155" radius={[0, 4, 4, 0]} barSize={10} />
+              <Bar dataKey="current" name="current" radius={[0, 4, 4, 0]} barSize={10}>
+                {goalsForChart.map((g, i) => (
+                  <Cell key={i} fill={g.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center justify-center gap-5 mt-3">
+            <div className="flex items-center gap-1.5"><span className="w-3 h-1.5 rounded-full bg-slate-700" /><span className="text-[9px] sm:text-[10px] font-bold text-slate-500">Objetivo</span></div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-1.5 rounded-full bg-blue-500" /><span className="text-[9px] sm:text-[10px] font-bold text-slate-500">Poupado</span></div>
+          </div>
+        </motion.section>
+      )}
+
+      {/* ═══ 3. Goals Grid ═══ */}
+      {goals.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
+          {goals.map((goal, gi) => {
+            const targetAmountEuros = goal.target_amount_cents / 100;
+            const currentAmountEuros = (goal.current_amount_cents || 0) / 100;
+            const progress = targetAmountEuros > 0 ? Math.min(100, (currentAmountEuros / targetAmountEuros) * 100) : 0;
+            const Icon = ICONS.find(i => i.name === goal.icon)?.icon || Target;
+            const daysLeft = Math.ceil((new Date(goal.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            const canComplete = currentAmountEuros >= targetAmountEuros;
+            const isUrgent = daysLeft <= 7 && daysLeft > 0 && !canComplete;
+
             return (
               <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 12 }}
+                key={goal.id}
+                initial={isMobile ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
+                transition={{ delay: gi * 0.04 }}
+                whileHover={isMobile ? undefined : { y: -2, transition: { duration: 0.15 } }}
+                className="group relative flex flex-col bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200"
+                style={{ borderColor: canComplete ? `${goal.color_hex}30` : undefined }}
               >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 border ${accentMap[card.accent]}`}>
-                  <card.icon size={18} />
+                <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${goal.color_hex}, ${goal.color_hex}60)` }} />
+
+                <div className="flex flex-col flex-1 p-4 sm:p-5">
+                  {/* Top: ring + name + actions */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
+                      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 44 44">
+                        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(30,41,59,0.6)" strokeWidth="3" />
+                        <motion.circle cx="22" cy="22" r="18" fill="none" stroke={goal.color_hex} strokeWidth="3" strokeLinecap="round"
+                          strokeDasharray="113.1"
+                          initial={{ strokeDashoffset: 113.1 }}
+                          animate={{ strokeDashoffset: 113.1 - (Math.min(progress, 100) / 100) * 113.1 }}
+                          transition={{ duration: 0.9, ease: 'easeOut' }}
+                        />
+                      </svg>
+                      {canComplete ? <Check size={15} className="text-emerald-400 relative z-10" /> : <Icon size={15} className="relative z-10" style={{ color: goal.color_hex }} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        <h3 className="text-xs sm:text-sm font-bold text-white truncate">{goal.name}</h3>
+                        {canComplete && <span className="px-1.5 py-0.5 rounded-md text-[7px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">{t.dashboard.goals.goalCompleted ?? 'Concluida'}</span>}
+                        {isUrgent && <span className="px-1.5 py-0.5 rounded-md text-[7px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0 animate-pulse">{daysLeft}d</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                        <span className={goal.goal_type === 'income' ? 'text-emerald-500' : 'text-blue-500'}>
+                          {goal.goal_type === 'income' ? t.dashboard.goals.typeIncome : t.dashboard.goals.typeExpense}
+                        </span>
+                        <span className="text-slate-700">·</span>
+                        <Calendar size={9} className="shrink-0" />
+                        <span className={daysLeft <= 0 ? 'text-red-400' : ''}>{daysLeft > 0 ? `${daysLeft}d` : t.dashboard.goals.dateReached}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button type="button" onClick={() => openEdit(goal)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-600 hover:text-white transition-colors"><Edit2 size={12} /></button>
+                      <button type="button" onClick={() => handleDeleteClick(goal.id)} className="p-1.5 hover:bg-red-500/15 rounded-lg text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
+                    </div>
+                  </div>
+
+                  {/* Amount + bar */}
+                  <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                    <AnimatedNumber value={currentAmountEuros} formatFn={formatCurrency} className="text-base sm:text-lg font-black text-white tabular-nums" />
+                    <span className="text-[10px] font-bold text-slate-500 tabular-nums shrink-0">/ {formatCurrency(targetAmountEuros)}</span>
+                  </div>
+                  <div className="h-2.5 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-1.5">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.8 }}
+                      className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${goal.color_hex}, ${goal.color_hex}cc)`, boxShadow: `0 0 8px ${goal.color_hex}40` }} />
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[9px] font-bold tabular-nums" style={{ color: goal.color_hex }}>{Math.round(progress)}%</span>
+                    {canComplete
+                      ? <span className="text-[9px] font-bold text-emerald-400">+{formatCurrency(currentAmountEuros - targetAmountEuros)}</span>
+                      : <span className="text-[9px] font-bold text-slate-600">{formatCurrency(targetAmountEuros - currentAmountEuros)} {t.dashboard.goals.remaining}</span>
+                    }
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-slate-700/40">
+                    <motion.button type="button" whileTap={{ scale: 0.97 }}
+                      onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
+                      className="py-2 px-2 rounded-xl font-bold uppercase tracking-wider text-[9px] sm:text-[10px] transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      style={{ backgroundColor: `${goal.color_hex}12`, color: goal.color_hex, border: `1px solid ${goal.color_hex}20` }}>
+                      <Plus size={13} /> {t.dashboard.goals?.addMoney ?? 'Adicionar'}
+                    </motion.button>
+                    <motion.button type="button" whileTap={{ scale: 0.97 }}
+                      onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
+                      className="py-2 px-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-400 hover:text-slate-200 rounded-xl font-bold uppercase tracking-wider text-[9px] sm:text-[10px] transition-colors flex items-center justify-center gap-1 cursor-pointer border border-slate-700/40">
+                      <Check size={13} /> {t.dashboard.goals?.finishGoal ?? 'Terminar'}
+                    </motion.button>
+                  </div>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{card.label}</p>
-                <p className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tight">{card.value}</p>
               </motion.div>
             );
           })}
-        </section>
+        </div>
+      ) : (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="py-16 sm:py-24 text-center space-y-5 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md rounded-2xl border border-dashed border-slate-700/40">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full opacity-20 animate-ping" style={{ backgroundColor: '#3b82f6', animationDuration: '3s' }} />
+            <div className="relative w-full h-full bg-slate-800/60 border border-slate-700/40 rounded-full flex items-center justify-center">
+              <Target size={28} className="text-blue-400" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-lg font-black text-white">{t.dashboard.goals.emptyMap}</p>
+            <p className="text-slate-500 text-xs font-medium max-w-sm mx-auto">{t.dashboard.goals.startByDefining ?? 'Comeca por definir um objetivo e dar o primeiro passo.'}</p>
+          </div>
+          <motion.button whileTap={{ scale: 0.97 }} onClick={openCreate}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-blue-600/20 cursor-pointer">
+            <Plus size={15} /> {t.dashboard.goals.createFirstGoal ?? 'Criar Primeira Meta'}
+          </motion.button>
+        </motion.div>
       )}
 
-      {/* ═══ Goals Grid ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-5 min-w-0 w-full">
-        {goals.map((goal) => {
-          const targetAmountEuros = goal.target_amount_cents / 100;
-          const currentAmountEuros = (goal.current_amount_cents || 0) / 100;
-          const progress = targetAmountEuros > 0 ? Math.min(100, (currentAmountEuros / targetAmountEuros) * 100) : 0;
-          const Icon = ICONS.find(i => i.name === goal.icon)?.icon || Target;
-          const daysLeft = Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-          const canComplete = currentAmountEuros >= targetAmountEuros;
-
-          return (
-            <motion.div
-              key={goal.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="group relative flex flex-col w-full bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 cursor-pointer"
-              style={{
-                boxShadow: canComplete
-                  ? `0 0 24px ${goal.color_hex}15, 0 4px 32px rgba(0,0,0,0.3)`
-                  : undefined,
-              }}
-              whileHover={{ borderColor: `${goal.color_hex}40` }}
-            >
-              <div className="relative z-10 flex flex-col flex-1 min-h-0 p-4 md:p-5">
-                {/* Row 1: ring + info + actions */}
-                <div className="flex items-start gap-3 mb-3">
-                  <ProgressRing
-                    progress={progress}
-                    color={goal.color_hex}
-                    size={60}
-                    strokeWidth={5}
-                    completed={canComplete}
-                  />
-                  <div className="flex-1 min-w-0 pt-0.5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${goal.color_hex}20`, color: goal.color_hex }}
-                      >
-                        <Icon size={14} />
-                      </div>
-                      {canComplete ? (
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
-                          {t.dashboard.goals.goalCompleted ?? 'Concluida'}
-                        </span>
-                      ) : (
-                        <span
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shrink-0 ${
-                            goal.goal_type === 'income'
-                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
-                              : 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
-                          }`}
-                        >
-                          {goal.goal_type === 'income' ? t.dashboard.goals.typeIncome : t.dashboard.goals.typeExpense}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-tight truncate" title={goal.name}>
-                      {goal.name}
-                    </h3>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mt-0.5">
-                      <Calendar size={10} className="inline mr-1 align-middle" />
-                      {new Date(goal.target_date).toLocaleDateString('pt-PT')} · {daysLeft > 0 ? `${daysLeft} ${t.dashboard.goals.daysRemaining}` : t.dashboard.goals.dateReached}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button type="button" onClick={() => openEdit(goal)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors" aria-label="Editar">
-                      <Edit2 size={14} />
-                    </button>
-                    <button type="button" onClick={() => handleDeleteClick(goal.id)} className="p-1.5 hover:bg-red-500/15 rounded-lg text-slate-400 hover:text-red-400 transition-colors" aria-label="Eliminar">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Row 2: amounts + progress bar */}
-                <div className="flex-1 min-h-0 flex flex-col gap-2.5 mt-1">
-                  <div className="flex justify-between items-baseline gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.accumulated}</p>
-                      <p className="text-base font-bold text-white tabular-nums truncate">{formatCurrency(currentAmountEuros)}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.target}</p>
-                      <p className="text-sm font-bold text-slate-400 tabular-nums">{formatCurrency(targetAmountEuros)}</p>
-                    </div>
-                  </div>
-
-                  {/* Flat bar as secondary indicator */}
-                  <div className="h-2 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: goal.color_hex }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-                    <span style={{ color: goal.color_hex }}>{Math.round(progress)}%</span>
-                    {canComplete ? (
-                      <span className="text-emerald-400">{formatCurrency(currentAmountEuros - targetAmountEuros)} {t.dashboard.goals.exceeded || 'EXCEDIDO'}</span>
-                    ) : (
-                      <span className="text-slate-500">{formatCurrency(targetAmountEuros - currentAmountEuros)} {t.dashboard.goals.remaining}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row 3: action buttons */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-700/60 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => { setGoalForDeposit(goal); setDepositAmount(''); }}
-                    className="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Plus size={14} className="shrink-0" />
-                    <span>{t.dashboard.goals?.addMoney ?? 'Adicionar'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setGoalToClose(goal); setShowCloseConfirm(true); }}
-                    className="py-2.5 px-3 bg-slate-700/80 hover:bg-slate-600 text-slate-200 rounded-xl font-bold uppercase tracking-wider text-[10px] transition-colors flex items-center justify-center cursor-pointer"
-                  >
-                    {t.dashboard.goals?.finishGoal ?? 'Terminar meta'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {/* ═══ Empty State ═══ */}
-        {goals.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="col-span-full py-20 sm:py-32 text-center space-y-6 bg-slate-900/70 backdrop-blur-md rounded-2xl border border-dashed border-slate-700/60"
-          >
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-              <div className="relative w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-blue-400">
-                <Target size={40} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.emptyMap}</p>
-              <p className="text-slate-500 font-medium max-w-md mx-auto">
-                {t.dashboard.goals.startByDefining ?? 'Comeca por definir um objetivo e dar o primeiro passo.'}
-              </p>
-            </div>
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors shadow-lg shadow-blue-600/20 cursor-pointer"
-            >
-              <Plus size={18} />
-              {t.dashboard.goals.createFirstGoal ?? 'Criar Primeira Meta'}
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* ═══ Insights Section ═══ */}
+      {/* ═══ 4. Insights: Pie Chart + Timeline ═══ */}
       {goals.length >= 2 && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 min-w-0">
-
-          {/* ── Card 1: Goal Progress Leaderboard ── */}
-          <div className="lg:col-span-2 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl">
-            <div className="mb-5 sm:mb-6">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.chartTopLabel}</p>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTopTitle}</h3>
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 min-w-0">
+          {/* Pie Chart */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="lg:col-span-2 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                <PiggyBank size={13} className="text-violet-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.goals.chartTypesTitle ?? 'Distribuicao'}</h3>
             </div>
-            <div className="space-y-4">
-              {goalsForChart.map((g, i) => {
-                const GoalIcon = ICONS.find(ic => ic.name === g.icon)?.icon || Target;
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="relative shrink-0">
+                <ResponsiveContainer width={180} height={180}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <RTooltip
+                      contentStyle={barTooltipStyle}
+                      itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
+                      formatter={(value: any) => [formatCurrency(Number(value ?? 0)), 'Objetivo']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <AnimatedNumber value={stats.totalSavedCents / 100} formatFn={formatCurrency} className="text-sm sm:text-base font-black text-white tabular-nums" />
+                  <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">poupado</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap sm:flex-col gap-2 sm:gap-1.5 justify-center">
+                {pieData.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 truncate max-w-[120px]">{entry.name}</span>
+                    <span className="text-[9px] font-bold text-slate-600 tabular-nums">{formatCurrency(entry.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Timeline */}
+          <motion.div initial={isMobile ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+            className="lg:col-span-1 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <Calendar size={13} className="text-amber-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Timeline</h3>
+            </div>
+            <div className="relative flex-1 space-y-0 overflow-y-auto max-h-[280px]">
+              <div className="absolute left-[9px] top-2 bottom-2 w-px bg-slate-700/60" />
+              {timelineGoals.map((g, i) => {
+                const dl = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                const done = (g.current_amount_cents || 0) >= g.target_amount_cents;
+                const pct = g.target_amount_cents > 0 ? Math.min(100, ((g.current_amount_cents || 0) / g.target_amount_cents) * 100) : 0;
                 return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.07 }}
-                    className="group/bar"
-                  >
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${g.color}20`, color: g.color }}
-                      >
-                        <GoalIcon size={14} />
+                  <div key={g.id || i} className="relative pl-7 py-2 group/tl">
+                    <div className="absolute left-[5px] top-1/2 -translate-y-1/2 w-[9px] h-[9px] rounded-full border-2 z-10"
+                      style={{ borderColor: g.color_hex, backgroundColor: done ? g.color_hex : '#0f172a' }} />
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className={`text-[10px] sm:text-xs font-bold truncate ${done ? 'text-slate-500 line-through' : 'text-white'}`}>{g.name}</p>
+                        <p className="text-[8px] sm:text-[9px] font-bold text-slate-600 uppercase tracking-wider">
+                          {new Date(g.target_date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                        </p>
                       </div>
-                      <span className="text-xs font-bold text-white uppercase tracking-tight truncate flex-1">{g.name}</span>
-                      <span className="text-[10px] font-bold tabular-nums" style={{ color: g.color }}>{Math.round(g.progress)}%</span>
-                      <span className="text-[10px] font-bold text-slate-500 tabular-nums">{formatCurrency(g.current)} / {formatCurrency(g.target)}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[9px] font-bold tabular-nums" style={{ color: g.color_hex }}>{Math.round(pct)}%</span>
+                        <span className={`text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                          done ? 'bg-emerald-500/15 text-emerald-400' : dl <= 0 ? 'bg-red-500/15 text-red-400' : dl <= 7 ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-800/60 text-slate-500'
+                        }`}>
+                          {done ? 'OK' : dl <= 0 ? 'Vencida' : `${dl}d`}
+                        </span>
+                      </div>
                     </div>
-                    <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/30">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${g.progress}%` }}
-                        transition={{ duration: 0.9, delay: i * 0.07, ease: 'easeOut' }}
-                        className="h-full rounded-full relative"
-                        style={{
-                          background: `linear-gradient(90deg, ${g.color}, ${g.color}cc)`,
-                          boxShadow: `0 0 12px ${g.color}40`,
-                        }}
-                      />
-                    </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* ── Card 2: Type Donut + Zen Tip ── */}
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl flex flex-col">
-            {/* Custom SVG donut */}
-            <div className="mb-5 sm:mb-6">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.chartTypesLabel}</p>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight">{t.dashboard.goals.chartTypesTitle}</h3>
-            </div>
-            <div className="flex items-center justify-center mb-5">
-              <div className="relative" style={{ width: 140, height: 140 }}>
-                <svg width={140} height={140} viewBox="0 0 140 140">
-                  <defs>
-                    <linearGradient id="donutExpense" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#3B82F6" />
-                      <stop offset="100%" stopColor="#818CF8" />
-                    </linearGradient>
-                    <linearGradient id="donutIncome" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#10B981" />
-                      <stop offset="100%" stopColor="#34D399" />
-                    </linearGradient>
-                  </defs>
-                  {/* Background track */}
-                  <circle cx={70} cy={70} r={55} fill="none" stroke="rgba(148,163,184,0.08)" strokeWidth={16} />
-                  {/* Expense arc */}
-                  {typeBreakdown.expenseCount > 0 && (
-                    <motion.circle
-                      cx={70} cy={70} r={55}
-                      fill="none" stroke="url(#donutExpense)" strokeWidth={16}
-                      strokeLinecap="round"
-                      strokeDasharray={2 * Math.PI * 55}
-                      initial={{ strokeDashoffset: 2 * Math.PI * 55 }}
-                      animate={{ strokeDashoffset: 2 * Math.PI * 55 * (1 - typeBreakdown.expenseCount / typeBreakdown.total) }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                      style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px' }}
-                    />
-                  )}
-                  {/* Income arc */}
-                  {typeBreakdown.incomeCount > 0 && (
-                    <motion.circle
-                      cx={70} cy={70} r={55}
-                      fill="none" stroke="url(#donutIncome)" strokeWidth={16}
-                      strokeLinecap="round"
-                      strokeDasharray={2 * Math.PI * 55}
-                      initial={{ strokeDashoffset: 2 * Math.PI * 55 }}
-                      animate={{ strokeDashoffset: 2 * Math.PI * 55 * (1 - typeBreakdown.incomeCount / typeBreakdown.total) }}
-                      transition={{ duration: 1, ease: 'easeOut', delay: 0.15 }}
-                      style={{
-                        transform: `rotate(${-90 + (typeBreakdown.expenseCount / typeBreakdown.total) * 360}deg)`,
-                        transformOrigin: '70px 70px',
-                      }}
-                    />
-                  )}
-                </svg>
-                {/* Center text */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-black text-white">{goals.length}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard.goals.totalGoals ?? 'metas'}</span>
-                </div>
+            {/* Zen Tip */}
+            <div className="mt-auto pt-3 border-t border-slate-700/40">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Sparkles size={11} className="text-amber-400" />
+                <span className="text-[8px] font-bold uppercase tracking-wider text-amber-400">Zen Tip</span>
               </div>
-            </div>
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-5 mb-5">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-indigo-400" />
-                <span className="text-xs font-bold text-slate-400">{t.dashboard.goals.typeExpense} ({typeBreakdown.expenseCount})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-300" />
-                <span className="text-xs font-bold text-slate-400">{t.dashboard.goals.typeIncome} ({typeBreakdown.incomeCount})</span>
-              </div>
-            </div>
-
-            {/* Zen Tip below */}
-            <div className="mt-auto pt-5 border-t border-slate-700/40">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={14} className="text-amber-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Zen Tip</span>
-              </div>
-              <p className="text-slate-400 text-xs leading-relaxed italic">
-                &ldquo;{t.dashboard.goals.zenTip ?? 'Dividir grandes objetivos em metas menores torna tudo mais alcancavel. Celebra cada conquista.'}&rdquo;
+              <p className="text-slate-500 text-[10px] leading-relaxed italic">
+                &ldquo;{t.dashboard.goals.zenTip ?? 'Dividir grandes objetivos em metas menores torna tudo mais alcancavel.'}&rdquo;
               </p>
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mt-4">
-                <span className="text-slate-500">{t.dashboard.goals.completed ?? 'Concluido'}</span>
-                <span className="text-emerald-400">{stats.completedCount} / {goals.length}</span>
-              </div>
-              <div className="h-1.5 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mt-1.5">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goals.length > 0 ? (stats.completedCount / goals.length) * 100 : 0}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
-                  style={{ boxShadow: '0 0 8px rgba(16,185,129,0.4)' }}
-                />
-              </div>
             </div>
-          </div>
+          </motion.div>
         </section>
       )}
 
-      {/* Zen tip when only 1 goal */}
       {goals.length === 1 && (
-        <section className="min-w-0">
-          <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 shadow-2xl flex items-start gap-4">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-              <Sparkles size={18} />
-            </div>
-            <p className="text-slate-400 text-sm leading-relaxed italic">
-              &ldquo;{t.dashboard.goals.zenTip ?? 'Dividir grandes objetivos em metas menores torna tudo mais alcancavel. Celebra cada conquista.'}&rdquo;
-            </p>
-          </div>
-        </section>
+        <div className="flex items-start gap-2.5 bg-slate-900 lg:bg-slate-900/60 border border-slate-700/50 rounded-xl p-3 sm:p-4">
+          <Sparkles size={14} className="text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-slate-500 text-[10px] sm:text-xs leading-relaxed italic">
+            {t.dashboard.goals.zenTip ?? 'Dividir grandes objetivos em metas menores torna tudo mais alcancavel. Celebra cada conquista.'}
+          </p>
+        </div>
       )}
 
       {/* ═══ Modal Create/Edit ═══ */}
@@ -1003,6 +946,6 @@ export default function GoalsPage() {
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
-    </div>
+    </motion.div>
   );
 }

@@ -18,6 +18,7 @@ import { useSearchParams } from 'next/navigation';
 import Toast from '@/components/Toast';
 import { useUser } from '@/lib/UserContext';
 import LoadingScreen from '@/components/LoadingScreen';
+import AnimatedNumber from '@/components/AnimatedNumber';
 import { hasProAccess } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -573,7 +574,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
             {greeting}, {userName}
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">{t.dashboard.page.headerSubtitle}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-500 text-xs sm:text-sm font-medium italic">{t.dashboard.page.headerSubtitle}</p>
+            <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider text-slate-600 bg-slate-800/60 px-2 py-0.5 rounded-md">
+              {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+          </div>
         </div>
         {!isPro && (
           <motion.div
@@ -672,7 +678,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate" title={formatCurrency(stats.income)}>{formatCurrency(stats.income)}</p>
+            <AnimatedNumber value={stats.income} formatFn={formatCurrency} className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate block" title={formatCurrency(stats.income)} />
           </motion.div>
 
           <motion.div
@@ -691,7 +697,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
-            <p className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate" title={formatCurrency(stats.expenses)}>{formatCurrency(stats.expenses)}</p>
+            <AnimatedNumber value={stats.expenses} formatFn={formatCurrency} className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate block" title={formatCurrency(stats.expenses)} />
           </motion.div>
 
           <motion.div
@@ -710,9 +716,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
-            <p className={`text-lg sm:text-xl font-black tabular-nums truncate ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)}>
-              {formatCurrency(stats.balance)}
-            </p>
+            <AnimatedNumber value={stats.balance} formatFn={formatCurrency} className={`text-lg sm:text-xl font-black tabular-nums truncate block ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)} />
           </motion.div>
         </div>
       </section>
@@ -767,7 +771,7 @@ export default function DashboardPage() {
                     height={isMobile ? 50 : 30}
                   />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={72} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Area type="monotone" dataKey="income" name={t.dashboard.page.income} stroke="#10b981" fill="url(#dashIncome)" strokeWidth={2} />
                   <Area type="monotone" dataKey="expenses" name={t.dashboard.page.expenses} stroke="#ef4444" fill="url(#dashExpenses)" strokeWidth={2} />
                 </AreaChart>
@@ -815,7 +819,7 @@ export default function DashboardPage() {
                           <Cell key={i} fill={['#38bdf8','#2dd4bf','#a78bfa','#f472b6','#facc15','#fdba74','#34d399','#22d3ee'][i % 8]} stroke="rgba(15,23,42,0.6)" strokeWidth={2} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name ?? '']} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name ?? '']} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -889,7 +893,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="min-w-0 overflow-hidden">
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.vault.emergencyFund}</p>
-                      <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultEmergency)}</p>
+                      <AnimatedNumber value={stats.vaultEmergency} formatFn={formatCurrency} className="text-sm font-black text-white truncate block" />
                     </div>
                   </div>
                   <div className="h-1.5 w-full sm:w-14 sm:shrink-0 sm:min-w-[3.5rem] bg-slate-700 rounded-full overflow-hidden">
@@ -908,7 +912,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="min-w-0 overflow-hidden">
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 truncate">{t.dashboard.vault.investments}</p>
-                      <p className="text-sm font-black text-white truncate">{formatCurrency(stats.vaultInvestment)}</p>
+                      <AnimatedNumber value={stats.vaultInvestment} formatFn={formatCurrency} className="text-sm font-black text-white truncate block" />
                     </div>
                   </div>
                   <div className="h-1.5 w-full sm:w-14 sm:shrink-0 sm:min-w-[3.5rem] bg-slate-700 rounded-full overflow-hidden">
@@ -922,7 +926,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="py-2 px-3 rounded-xl bg-slate-900/70 border border-slate-700/60 flex items-center justify-between">
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{t.dashboard.page.totalFunds}</span>
-                  <span className="text-sm font-black text-white">{formatCurrency(stats.vaultEmergency + stats.vaultInvestment)}</span>
+                  <AnimatedNumber value={stats.vaultEmergency + stats.vaultInvestment} formatFn={formatCurrency} className="text-sm font-black text-white" />
                 </div>
               </div>
               {isPro && (
@@ -956,7 +960,7 @@ export default function DashboardPage() {
                       height={isMobile ? 50 : 30}
                     />
                     <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} />
-                    <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                    <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                     <Line type="monotone" dataKey="Emergência" name={t.dashboard.page.emergency} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
                     <Line type="monotone" dataKey="Investimentos" name={t.dashboard.page.investments} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
                   </LineChart>
@@ -991,17 +995,29 @@ export default function DashboardPage() {
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {quickInsights.map((insight, index) => (
-            <div
-              key={index}
-              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/60 shadow-xl text-xs text-slate-300 font-medium italic flex items-center gap-2.5"
-            >
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                <Sparkles size={12} />
-              </div>
-              <span className="line-clamp-2">{insight}</span>
-            </div>
-          ))}
+          {quickInsights.map((insight, index) => {
+            const iconConfig = [
+              { icon: <TrendingUp size={12} />, color: 'emerald', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', accent: 'bg-emerald-500/40' },
+              { icon: <Sparkles size={12} />, color: 'blue', bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', accent: 'bg-blue-500/40' },
+              { icon: <Target size={12} />, color: 'violet', bg: 'bg-violet-500/10', border: 'border-violet-500/20', text: 'text-violet-400', accent: 'bg-violet-500/40' },
+            ][index] || { icon: <Sparkles size={12} />, color: 'blue', bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', accent: 'bg-blue-500/40' };
+            return (
+              <motion.div
+                key={index}
+                initial={isMobile ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={isMobile ? { duration: 0 } : { delay: index * 0.06 }}
+                whileHover={isMobile ? undefined : { y: -2, transition: { duration: 0.2 } }}
+                className="relative overflow-hidden bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/60 shadow-xl text-xs text-slate-300 font-medium italic flex items-center gap-2.5 group"
+              >
+                <div className={`absolute top-0 left-0 w-0.5 h-full ${iconConfig.accent} rounded-full`} />
+                <div className={`w-7 h-7 rounded-lg ${iconConfig.bg} border ${iconConfig.border} ${iconConfig.text} flex items-center justify-center shrink-0`}>
+                  {iconConfig.icon}
+                </div>
+                <span className="line-clamp-2">{insight}</span>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 

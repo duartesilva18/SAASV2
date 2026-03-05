@@ -21,6 +21,8 @@ import { Lock, ArrowRight } from 'lucide-react';
 import { ChartSkeleton, DashboardSkeleton } from '@/components/LoadingSkeleton';
 import AlertModal from '@/components/AlertModal';
 import PageLoading from '@/components/PageLoading';
+import SpendingHeatmap from '@/components/SpendingHeatmap';
+import AnimatedNumber from '@/components/AnimatedNumber';
 import { hasProAccess } from '@/lib/utils';
 
 export default function AnalyticsPage() {
@@ -548,6 +550,41 @@ export default function AnalyticsPage() {
       });
     });
 
+    // Daily spending aggregation for heatmap (all time, not filtered by period)
+    const dailySpendingMap: Record<string, number> = {};
+    if (!isPro) {
+      // Rich demo data for heatmap visualization
+      const heatToday = new Date();
+      heatToday.setHours(0, 0, 0, 0);
+      for (let i = 0; i < 365; i++) {
+        const hd = new Date(heatToday);
+        hd.setDate(hd.getDate() - i);
+        const dom = hd.getDate();
+        const dow = hd.getDay();
+        const month = hd.getMonth();
+        const seed = (dom * 31 + month * 7 + dow * 13 + i) % 100;
+        let amount = 0;
+        if (dom === 5) amount += 85000;
+        if (dow >= 1 && dow <= 5 && seed > 25) amount += 1500 + seed * 80;
+        if ((dow === 0 || dow === 6) && seed > 45) amount += 2000 + seed * 120;
+        if (seed > 88) amount += 10000 + seed * 250;
+        if (amount > 0) {
+          const hy = hd.getFullYear();
+          const hm = String(hd.getMonth() + 1).padStart(2, '0');
+          const hday = String(hd.getDate()).padStart(2, '0');
+          dailySpendingMap[`${hy}-${hm}-${hday}`] = amount;
+        }
+      }
+    } else {
+      rawData.transactions.forEach((tx: any) => {
+        const txCat = rawData.categories.find((c: any) => c.id === tx.category_id);
+        if (!txCat || txCat.vault_type !== 'none') return;
+        if (txCat.type !== 'expense' && tx.amount_cents >= 0) return;
+        dailySpendingMap[tx.transaction_date] =
+          (dailySpendingMap[tx.transaction_date] || 0) + Math.abs(tx.amount_cents);
+      });
+    }
+
     filteredTransactions.forEach((t: any) => {
       const date = new Date(t.transaction_date);
       const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
@@ -682,7 +719,8 @@ export default function AnalyticsPage() {
       ticketMedioByCategory,
       recurringVsVariable,
       periodComparison,
-      categoriesAtRisk
+      categoriesAtRisk,
+      dailySpending: dailySpendingMap,
     });
   }, [selectedPeriod, rawData]);
 
@@ -870,45 +908,49 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <motion.div
             whileHover={{ y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center border border-blue-500/20">
-                <Activity size={16} />
+              <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 44 44">
+                  <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(30,41,59,0.6)" strokeWidth="3" />
+                  <circle cx="22" cy="22" r="18" fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(processedData.healthScore || 0) * 1.131} 113.1`} className="transition-all duration-700" />
+                </svg>
+                <Activity size={14} className="text-blue-400 relative z-10" />
               </div>
               {healthDelta !== null && (
-                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${healthDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
-                  {healthDelta >= 0 ? '▲' : '▼'} {Math.abs(healthDelta).toFixed(0)}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border ${healthDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'}`}>
+                  {healthDelta >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />} {Math.abs(healthDelta).toFixed(0)}
                 </span>
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
-            <p className="text-xl font-black text-white tabular-nums">{processedData.healthScore}%</p>
+            <AnimatedNumber value={processedData.healthScore || 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Math.round(Number(v))}%`} />
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl group"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center border border-emerald-500/20">
                 <Target size={16} />
               </div>
               {savingRateDelta !== null && (
-                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${savingRateDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
-                  {savingRateDelta >= 0 ? '▲' : '▼'} {Math.abs(savingRateDelta).toFixed(1)}
+                <span className={`text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border ${savingRateDelta >= 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'}`}>
+                  {savingRateDelta >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />} {Math.abs(savingRateDelta).toFixed(1)}
                 </span>
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
-            <p className="text-xl font-black text-white tabular-nums">{processedData.savingRate}%</p>
-            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md ${savingRateBand.color} bg-white/5`}>{savingRateBand.label}</span>
+            <AnimatedNumber value={processedData.savingRate || 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
+            <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${savingRateBand.color} border-white/10`}>{savingRateBand.label}</span>
           </motion.div>
 
           <motion.div
             whileHover={{ y: -3, transition: { duration: 0.2 } }}
-            className="bg-slate-900/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl sm:col-span-2 md:col-span-1 group"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/60 shadow-2xl sm:col-span-2 md:col-span-1 group"
           >
             <div className="flex items-center justify-between mb-2">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${(processedData.netResult || 0) >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
@@ -916,9 +958,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Resultado período</p>
-            <p className={`text-xl font-black tabular-nums ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {formatCurrency(processedData.netResult || 0)}
-            </p>
+            <AnimatedNumber value={processedData.netResult || 0} formatFn={formatCurrency} className={`text-xl font-black tabular-nums block ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
           </motion.div>
         </div>
 
@@ -930,7 +970,7 @@ export default function AnalyticsPage() {
           <p className="text-[10px] font-medium text-slate-300 italic truncate">
             {hasLowConfidence || !processedData?.summary || (String(processedData.summary || '').trim() === '') || maxWeekly.name === 'N/A'
               ? (t.dashboard?.analytics?.zenInsightGeneric || "Ainda a aprender com os teus dados. Mais transações = insights mais precisos.")
-              : `Saving rate ${processedData.savingRate}%. Maior gasto: ${maxWeekly.name}${topExpense ? ` → ${topExpense}` : ''}. ${(processedData.summary || '').slice(0, 80)}…`}
+              : `Taxa de poupança ${processedData.savingRate}%. Maior gasto: ${maxWeekly.name}${topExpense ? ` → ${topExpense}` : ''}. ${(processedData.summary || '').slice(0, 80)}…`}
           </p>
         </div>
       </section>
@@ -939,8 +979,8 @@ export default function AnalyticsPage() {
       <section className="mb-12 space-y-6">
         {/* Linha 1: 2/3 Evolução do saldo | 1/3 Ritmo mensal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">Evolução do saldo</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">Evolução do saldo</h3>
             <p className="text-xs text-slate-500 font-medium italic mb-4">Património acumulado ao longo do tempo</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -948,21 +988,21 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={(v) => v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : ''} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
                   <Area type="monotone" dataKey="balance" name={t.dashboard.analytics.balanceLabel} stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.monthlyRhythm}</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">{t.dashboard.analytics.monthlyRhythm}</h3>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.expensesByWeekday}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.weekly || []} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <XAxis dataKey="name" stroke="#475569" fontSize={9} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={24}>
                     {(processedData.weekly || []).map((_: unknown, i: number) => (
                       <Cell key={i} fill={['#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6', '#ec4899'][i % 7]} />
@@ -1045,8 +1085,8 @@ export default function AnalyticsPage() {
             )}
             <p className="text-[10px] sm:text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-3 sm:pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.comparisonPeriodSubtitle}</p>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -1062,7 +1102,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Line type="monotone" dataKey="atual" name={t.dashboard.analytics.currentPeriodLabel} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
                   <Line type="monotone" dataKey="anterior" name={t.dashboard.analytics.previousPeriodLabel} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
                 </LineChart>
@@ -1071,28 +1111,34 @@ export default function AnalyticsPage() {
           </motion.div>
         </div>
 
-        {/* Linha 3: 3/3 Volume por mês */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{t.dashboard.analytics.volumeByMonthTitle}</h3>
+        {/* Linha 3: 1/2 Volume por mês | 1/2 Mapa de Gastos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">{t.dashboard.analytics.volumeByMonthTitle}</h3>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{t.dashboard.analytics.volumeByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
                   <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} activeBar={{ fill: '#06b6d4' }} cursor="default" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
+          <SpendingHeatmap
+            dailySpending={processedData.dailySpending || {}}
+            transactions={rawData.transactions}
+            categories={rawData.categories}
+            formatCurrency={formatCurrency}
+          />
         </div>
 
         {/* Linha 4: 2/3 Despesas por mês | 1/3 Progresso das metas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-2">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-1">{(t.dashboard.analytics as any).expensesByMonth}</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-2">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">{(t.dashboard.analytics as any).expensesByMonth}</h3>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">{(t.dashboard.analytics as any).expensesByMonthSubtitle}</p>
             <div className="h-[180px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -1100,14 +1146,14 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="day" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={4} />
                   <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: '#334155', border: '1px solid #475569', borderRadius: '12px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
                   <Line type="monotone" dataKey="value" name={t.dashboard.analytics.expenses} stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 shadow-xl lg:col-span-1">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-white mb-3 sm:mb-4">{t.dashboard.analytics.goalsProgressTitle}</h3>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-1">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-3 sm:mb-4">{t.dashboard.analytics.goalsProgressTitle}</h3>
             {goals.length > 0 ? (
               <div className="space-y-4">
                 {goals.slice(0, 4).map((g: any, idx: number) => {
@@ -1147,14 +1193,14 @@ export default function AnalyticsPage() {
         </button>
         {/* Vault (Reservas e Investimentos) */}
         {isVaultOpen && (
-        <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-[32px] p-4 sm:p-6 md:p-8 relative overflow-hidden group">
+        <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 relative overflow-hidden group shadow-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6 md:mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
                 <Landmark size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white opacity-50 mb-1">{t.dashboard.analytics.vaultTitle}</h3>
+                <h3 className="text-sm font-black uppercase tracking-wider text-white mb-1">{t.dashboard.analytics.vaultTitle}</h3>
                 <p className="text-sm text-slate-500 font-medium italic">{t.dashboard.analytics.vaultSubtitle}</p>
               </div>
             </div>
@@ -1168,15 +1214,17 @@ export default function AnalyticsPage() {
               return (
                 <>
                   <motion.div 
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group"
+                    whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                    className="bg-slate-900/70 border border-slate-700/60 p-3 sm:p-4 rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">{t.dashboard.analytics.emergencyFund}</p>
-                    <p className="text-lg font-black text-white text-center mb-3">{formatCurrency(processedData.emergencyTotal)}</p>
-                    <div className="w-full h-1 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
-                      <div 
-                        className="h-full bg-blue-500" 
-                        style={{ width: `${Math.min(100, (processedData.emergencyTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }} 
+                    <AnimatedNumber value={processedData.emergencyTotal} formatFn={formatCurrency} className="text-lg font-black text-white text-center mb-3 block" />
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
+                      <motion.div
+                        className="h-full bg-blue-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, (processedData.emergencyTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }}
+                        transition={{ duration: 0.8 }}
                       />
                     </div>
                     {emergencyCategory && (
@@ -1199,15 +1247,17 @@ export default function AnalyticsPage() {
                     )}
                   </motion.div>
                   <motion.div 
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white/5 border border-white/5 p-3 sm:p-4 rounded-xl sm:rounded-2xl relative group"
+                    whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                    className="bg-slate-900/70 border border-slate-700/60 p-3 sm:p-4 rounded-2xl relative group"
                   >
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">Investimentos</p>
-                    <p className="text-lg font-black text-emerald-400 text-center mb-3">{formatCurrency(processedData.investmentTotal)}</p>
-                    <div className="w-full h-1 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
-                      <div 
-                        className="h-full bg-emerald-500" 
-                        style={{ width: `${Math.min(100, (processedData.investmentTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }} 
+                    <AnimatedNumber value={processedData.investmentTotal} formatFn={formatCurrency} className="text-lg font-black text-emerald-400 text-center mb-3 block" />
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden mb-3">
+                      <motion.div
+                        className="h-full bg-emerald-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, (processedData.investmentTotal / (processedData.evolution.slice(-1)[0]?.balance || 1)) * 100)}%` }}
+                        transition={{ duration: 0.8 }}
                       />
                     </div>
                     {investmentCategory && (
@@ -1261,7 +1311,7 @@ export default function AnalyticsPage() {
       <section className="space-y-4">
       <button
         onClick={() => setIsRecurringOpen(!isRecurringOpen)}
-        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-slate-300 transition-colors"
+        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors"
       >
         <span>{t.dashboard.analytics.futureCommitments}</span>
         {isRecurringOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1518,8 +1568,9 @@ export default function AnalyticsPage() {
                 whileHover={{ y: -3, transition: { duration: 0.2 } }}
                 className={`group bg-slate-900/60 backdrop-blur-sm border rounded-2xl p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden shadow-lg ${cfg.border} ${cfg.glow}`}
               >
-                {/* Left accent line */}
-                <div className={`absolute top-0 left-0 w-0.5 h-full ${cfg.bg}`} style={{ backgroundColor: cfg.text.includes('amber') ? 'rgb(251 191 36 / 0.4)' : cfg.text.includes('red') ? 'rgb(248 113 113 / 0.4)' : cfg.text.includes('emerald') ? 'rgb(52 211 153 / 0.4)' : 'rgb(96 165 250 / 0.4)' }} />
+                <div className={`absolute top-0 left-0 w-0.5 h-full rounded-full ${
+                  cfg.text.includes('amber') ? 'bg-amber-400/40' : cfg.text.includes('red') ? 'bg-red-400/40' : cfg.text.includes('emerald') ? 'bg-emerald-400/40' : 'bg-blue-400/40'
+                }`} />
 
                 <div className="flex items-start gap-3 pl-2">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${cfg.icon}`}>
@@ -1542,16 +1593,9 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
                 
-                <p className="text-slate-300 text-xs leading-relaxed pl-2 line-clamp-3">
+                <p className="text-slate-300 text-xs leading-relaxed pl-2 line-clamp-3 flex-1">
                   {insight.message}
                 </p>
-
-                <div className="mt-auto pt-2 pl-2">
-                  <button className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-white transition-colors cursor-pointer group/btn">
-                    {t.dashboard.analytics.viewDetails}
-                    <ArrowUpRight size={10} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                  </button>
-                </div>
               </motion.div>
             );
           })}
