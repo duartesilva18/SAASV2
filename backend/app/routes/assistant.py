@@ -378,3 +378,96 @@ async def get_suggestions(
         suggestions.append("Posso comprar algo de 500€?")
 
     return {"suggestions": suggestions[:6]}
+
+
+# ── Copilot message persistence ──
+
+@router.get('/messages')
+async def get_copilot_messages(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail='Pro subscription required')
+
+    convo = (
+        db.query(models.CopilotConversation)
+        .filter(models.CopilotConversation.user_id == current_user.id)
+        .order_by(models.CopilotConversation.updated_at.desc())
+        .first()
+    )
+    if not convo:
+        return {'messages': []}
+
+    msgs = (
+        db.query(models.CopilotMessage)
+        .filter(models.CopilotMessage.conversation_id == convo.id)
+        .order_by(models.CopilotMessage.created_at.asc())
+        .all()
+    )
+    return {
+        'conversation_id': str(convo.id),
+        'messages': [
+            {'role': m.role, 'content': m.content}
+            for m in msgs
+        ],
+    }
+
+
+class SaveMessagesRequest(BaseModel):
+    messages: List[ChatMessage] = Field(default_factory=list, max_length=200)
+
+
+@router.post('/messages')
+async def save_copilot_messages(
+    body: SaveMessagesRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail='Pro subscription required')
+
+    convo = (
+        db.query(models.CopilotConversation)
+        .filter(models.CopilotConversation.user_id == current_user.id)
+        .order_by(models.CopilotConversation.updated_at.desc())
+        .first()
+    )
+    if not convo:
+        convo = models.CopilotConversation(user_id=current_user.id)
+        db.add(convo)
+        db.flush()
+
+    db.query(models.CopilotMessage).filter(
+        models.CopilotMessage.conversation_id == convo.id
+    ).delete()
+
+    for msg in body.messages[-100:]:
+        db.add(models.CopilotMessage(
+            conversation_id=convo.id,
+            role=msg.role,
+            content=msg.content,
+        ))
+
+    convo.updated_at = func.now()
+    db.commit()
+    return {'ok': True, 'conversation_id': str(convo.id)}
+
+
+@router.delete('/messages')
+async def clear_copilot_messages(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if not current_user.has_effective_pro():
+        raise HTTPException(status_code=403, detail='Pro subscription required')
+
+    convos = (
+        db.query(models.CopilotConversation)
+        .filter(models.CopilotConversation.user_id == current_user.id)
+        .all()
+    )
+    for c in convos:
+        db.delete(c)
+    db.commit()
+    return {'ok': True}

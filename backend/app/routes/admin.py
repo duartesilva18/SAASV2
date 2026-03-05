@@ -1650,3 +1650,277 @@ async def send_monthly_affiliate_emails(
         'affiliates_emails_sent': sent_count,
         'month': month
     }
+
+
+# ── Admin Support Chat ──
+
+@router.get('/support/conversations')
+async def admin_list_support_conversations(
+    status_filter: Optional[str] = Query(None),
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    q = db.query(models.SupportConversation).order_by(models.SupportConversation.updated_at.desc())
+    if status_filter in ('open', 'closed'):
+        q = q.filter(models.SupportConversation.status == status_filter)
+
+    convos = q.all()
+    results = []
+    for c in convos:
+        user = db.query(models.User).filter(models.User.id == c.user_id).first()
+        unread = (
+            db.query(func.count(models.SupportMessage.id))
+            .filter(
+                models.SupportMessage.conversation_id == c.id,
+                models.SupportMessage.sender_type == 'user',
+                models.SupportMessage.is_read == False,
+            )
+            .scalar()
+        )
+        last_msg = (
+            db.query(models.SupportMessage.content)
+            .filter(models.SupportMessage.conversation_id == c.id)
+            .order_by(models.SupportMessage.created_at.desc())
+            .first()
+        )
+        results.append({
+            'id': str(c.id),
+            'subject': c.subject,
+            'status': c.status,
+            'created_at': c.created_at.isoformat(),
+            'updated_at': c.updated_at.isoformat(),
+            'unread_count': unread or 0,
+            'last_message': last_msg[0][:100] if last_msg else None,
+            'user_email': user.email if user else 'unknown',
+            'user_name': (user.full_name or '') if user else '',
+        })
+    return results
+
+
+@router.get('/support/conversations/{conversation_id}/messages')
+async def admin_get_conversation_messages(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    msgs = (
+        db.query(models.SupportMessage)
+        .filter(models.SupportMessage.conversation_id == cid)
+        .order_by(models.SupportMessage.created_at.asc())
+        .all()
+    )
+
+    db.query(models.SupportMessage).filter(
+        models.SupportMessage.conversation_id == cid,
+        models.SupportMessage.sender_type == 'user',
+        models.SupportMessage.is_read == False,
+    ).update({'is_read': True})
+    db.commit()
+
+    user = db.query(models.User).filter(models.User.id == convo.user_id).first()
+    return {
+        'conversation': {
+            'id': str(convo.id),
+            'subject': convo.subject,
+            'status': convo.status,
+            'user_email': user.email if user else 'unknown',
+            'user_name': (user.full_name or '') if user else '',
+        },
+        'messages': [
+            {
+                'id': str(m.id),
+                'sender_type': m.sender_type,
+                'content': m.content,
+                'image_url': m.image_url,
+                'is_read': m.is_read,
+                'created_at': m.created_at.isoformat(),
+            }
+            for m in msgs
+        ],
+    }
+
+
+@router.post('/support/conversations/{conversation_id}/reply')
+async def admin_reply_to_conversation(
+    conversation_id: str,
+    body: schemas.schemas.SupportAdminReply,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    msg = models.SupportMessage(
+        conversation_id=cid,
+        sender_type='admin',
+        sender_id=admin.id,
+        content=body.content,
+    )
+    convo.updated_at = func.now()
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+    return {'message_id': str(msg.id)}
+
+
+@router.patch('/support/conversations/{conversation_id}/close')
+async def admin_close_conversation(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    convo.status = 'closed'
+    db.commit()
+    return {'ok': True}
+
+
+@router.delete('/support/conversations/{conversation_id}')
+async def admin_delete_conversation(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    db.delete(convo)
+    db.commit()
+    return {'ok': True}
+
+
+@router.post('/support/conversations/{conversation_id}/ai-suggest')
+async def admin_ai_suggest_reply(
+    conversation_id: str,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    """Uses AI to generate a suggested reply based on the conversation history."""
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
+
+    msgs = (
+        db.query(models.SupportMessage)
+        .filter(models.SupportMessage.conversation_id == cid)
+        .order_by(models.SupportMessage.created_at.asc())
+        .all()
+    )
+
+    user = db.query(models.User).filter(models.User.id == convo.user_id).first()
+    user_info = f"User: {user.email}" if user else "User: unknown"
+
+    chat_history = "\n".join([
+        f"{'User' if m.sender_type == 'user' else 'Admin (tu)'}: {m.content}"
+        for m in msgs[-15:]
+    ])
+
+    system_prompt = f"""És o assistente de suporte da Finly, uma plataforma SaaS de gestão financeira pessoal.
+Gera uma resposta profissional, simpática e útil para a última mensagem do utilizador.
+
+Regras:
+- Responde em português de Portugal (não brasileiro)
+- Sê conciso mas completo
+- Se não souberes a resposta, sugere que o admin investigue e dá uma resposta de "aguarda"
+- Mantém um tom profissional mas amigável
+- Não uses emojis em excesso
+- Se for uma questão técnica, sugere passos práticos
+- Se for pedido de parceria/negócio, sê educado e diz que a equipa vai analisar
+
+{user_info}
+
+Histórico da conversa:
+{chat_history}
+
+Gera APENAS o texto da resposta, sem prefixos como "Admin:" ou aspas."""
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": system_prompt}],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        suggestion = response.choices[0].message.content.strip()
+        return {'suggestion': suggestion}
+    except Exception as e:
+        logger.error(f"AI suggest error: {e}")
+        raise HTTPException(status_code=500, detail='Erro ao gerar sugestão IA')
+
+
+@router.get('/support/auto-reply')
+async def admin_get_auto_reply(
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    setting = db.query(models.AppSetting).filter(models.AppSetting.key == 'support_auto_reply').first()
+    return {'enabled': setting.value == '1' if setting else False}
+
+
+@router.post('/support/auto-reply')
+async def admin_set_auto_reply(
+    body: dict,
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    enabled = body.get('enabled', False)
+    setting = db.query(models.AppSetting).filter(models.AppSetting.key == 'support_auto_reply').first()
+    if setting:
+        setting.value = '1' if enabled else '0'
+    else:
+        db.add(models.AppSetting(key='support_auto_reply', value='1' if enabled else '0'))
+    db.commit()
+    return {'enabled': enabled}
+
+
+@router.get('/support/unread-total')
+async def admin_total_unread(
+    admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
+):
+    count = (
+        db.query(func.count(models.SupportMessage.id))
+        .join(models.SupportConversation, models.SupportMessage.conversation_id == models.SupportConversation.id)
+        .filter(
+            models.SupportMessage.sender_type == 'user',
+            models.SupportMessage.is_read == False,
+        )
+        .scalar()
+    )
+    return {'unread': count or 0}

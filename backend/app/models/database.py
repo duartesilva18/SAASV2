@@ -463,3 +463,71 @@ class AdminErrorLog(Base):
     message = Column(Text, nullable=False)
     exc_type = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AppSetting(Base):
+    __tablename__ = 'app_settings'
+    key = Column(String(100), primary_key=True)
+    value = Column(Text, nullable=False, server_default='')
+
+
+class CopilotConversation(Base):
+    __tablename__ = 'copilot_conversations'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship('User')
+    messages = relationship('CopilotMessage', back_populates='conversation', cascade='all, delete-orphan', order_by='CopilotMessage.created_at')
+
+
+class CopilotMessage(Base):
+    __tablename__ = 'copilot_messages'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey('copilot_conversations.id', ondelete='CASCADE'), nullable=False, index=True)
+    role = Column(String(10), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    conversation = relationship('CopilotConversation', back_populates='messages')
+
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant')"),
+    )
+
+
+class SupportConversation(Base):
+    __tablename__ = 'support_conversations'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    subject = Column(String(200), nullable=True)
+    status = Column(String(20), nullable=False, server_default='open')
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship('User')
+    messages = relationship('SupportMessage', back_populates='conversation', cascade='all, delete-orphan', order_by='SupportMessage.created_at')
+
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'closed')"),
+    )
+
+
+class SupportMessage(Base):
+    __tablename__ = 'support_messages'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey('support_conversations.id', ondelete='CASCADE'), nullable=False, index=True)
+    sender_type = Column(String(10), nullable=False)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    content = Column(Text, nullable=False)
+    image_url = Column(String(500), nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    conversation = relationship('SupportConversation', back_populates='messages')
+    sender = relationship('User')
+
+    __table_args__ = (
+        CheckConstraint("sender_type IN ('user', 'admin')"),
+    )

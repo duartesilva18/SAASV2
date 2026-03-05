@@ -668,6 +668,7 @@ export const pt = {
           healthDashboard: "Dashboard Saúde",
           marketing: "Marketing",
           affiliatesManagement: "Gestão de Afiliados",
+          supportChat: "Suporte",
           masterPro: "Mestre Pro",
           planPro: "Plano Pro",
           planFree: "Plano Free",
@@ -1209,6 +1210,14 @@ export const pt = {
           contactSend: "Enviar",
           contactSuccess: "Mensagem enviada. Obrigado!",
           contactError: "Não foi possível enviar. Tenta novamente."
+      },
+      chatPanel: {
+          supportTab: "Suporte",
+          supportTitle: "Suporte",
+          supportSubtitle: "Envia-nos uma mensagem",
+          supportPlaceholder: "Escreve a tua mensagem...",
+          supportEmptyTitle: "Precisas de ajuda?",
+          supportEmptySubtitle: "Envia uma mensagem e respondemos o mais rápido possível.",
       },
       categories: {
           title: "Ecossistema de Categorias",

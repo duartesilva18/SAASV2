@@ -4,13 +4,13 @@ import Sidebar from '@/components/Sidebar';
 import dynamic from 'next/dynamic';
 import api from '@/lib/api';
 import { SUPPORT_HIDDEN_KEY } from '@/components/SupportButton';
+const ChatPanel = dynamic(() => import('@/components/ChatPanel'), { ssr: false });
 import LoadingScreen from '@/components/LoadingScreen';
 
 const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
 const OnboardingSpotlight = dynamic(() => import('@/components/OnboardingSpotlight'), { ssr: false });
 import type { OnboardingStep } from '@/components/OnboardingSpotlight';
 const TermsAcceptanceModal = dynamic(() => import('@/components/TermsAcceptanceModal'), { ssr: false });
-const SupportButton = dynamic(() => import('@/components/SupportButton'), { ssr: false });
 const LoadingIndicator = dynamic(() => import('@/components/LoadingIndicator'), { ssr: false });
 const AlertModal = dynamic(() => import('@/components/AlertModal'), { ssr: false });
 const NotificationsPanel = dynamic(() => import('@/components/NotificationsPanel'), { ssr: false });
@@ -29,7 +29,6 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   { target: 'sidebar-dashboard', message: 'A tua visão geral. Totais do mês e atalhos rápidos.' },
   { target: 'sidebar-transactions', message: 'Transações, categorias e subscrições. É aqui que registas e organizas tudo.' },
   { target: 'sidebar-analytics', message: 'Gráficos e números para perceberes para onde vai o dinheiro.' },
-  { target: 'sidebar-assistant', message: 'Copiloto IA. Pergunta qualquer coisa sobre as tuas finanças e recebe respostas inteligentes.' },
   { target: 'sidebar-vault', message: 'Cofre e metas. Para guardar e definir objetivos de poupança.' },
   { target: 'sidebar-affiliate', message: 'Programa de afiliados. Convida amigos e ganha recompensas.' },
   { target: 'sidebar-settings', message: 'Definições, faturação e plano. Para alterar a tua conta.' },
@@ -37,7 +36,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   { target: 'sidebar-admin', message: 'Painel de administração.' },
   { target: 'bot', message: 'Regista despesas em segundos pelo Telegram. Texto, voz ou foto.' },
   { target: 'mobile', message: 'Queres a app no telemóvel? Adiciona ao ecrã inicial por aqui.' },
-  { target: 'support', message: 'Sugestões ou encontaste um erro? Escreve aqui.' },
+  { target: 'dock-copilot', message: 'Copiloto IA. Clica aqui para abrir o chat e perguntar qualquer coisa sobre as tuas finanças.' },
+  { target: 'dock-support', message: 'Suporte. Clica aqui para falar connosco se precisares de ajuda ou quiseres propor algo.' },
 ];
 
 export default function DashboardLayout({
@@ -142,6 +142,7 @@ export default function DashboardLayout({
         { label: s.healthDashboard ?? 'Dashboard Saúde', href: '/admin/health' },
         { label: s.marketing, href: '/admin/marketing' },
         { label: s.affiliatesManagement, href: '/admin/affiliates' },
+        { label: s.supportChat ?? 'Suporte', href: '/admin/support' },
       ];
     }
     return null;
@@ -443,7 +444,7 @@ export default function DashboardLayout({
         </main>
       </div>
 
-      <SupportButton />
+      <ChatPanel />
       <LoadingIndicator />
     </div>
     </NotificationsProvider>

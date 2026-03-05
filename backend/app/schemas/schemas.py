@@ -490,3 +490,39 @@ class ProjectExpenseCreate(BaseModel):
     class Config:
         extra = 'ignore'
         populate_by_name = True
+
+
+# ── Support Chat ──
+
+class SupportMessageSend(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+class SupportMessageOut(BaseModel):
+    id: str
+    sender_type: str
+    content: str
+    image_url: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class SupportConversationOut(BaseModel):
+    id: str
+    subject: Optional[str] = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    unread_count: int = 0
+    last_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class SupportConversationAdminOut(SupportConversationOut):
+    user_email: str
+    user_name: Optional[str] = None
+
+class SupportAdminReply(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
