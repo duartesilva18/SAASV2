@@ -26,7 +26,7 @@ import AnimatedNumber from '@/components/AnimatedNumber';
 import { hasProAccess } from '@/lib/utils';
 
 export default function AnalyticsPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, formatCurrency, currency, language } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
   const [rawData, setRawData] = useState<{ transactions: any[], categories: any[], insights: any, recurring: any[] }>({ transactions: [], categories: [], insights: null, recurring: [] });
@@ -700,7 +700,7 @@ export default function AnalyticsPage() {
       upcomingPayments,
       topExpenses,
       recurringMonthly,
-      healthScore: dynamicScore,
+      healthScore: Number((dynamicScore).toFixed(1)),
       savingRate: savingRate.toFixed(1),
       prevSavingRate,
       prevHealthScore,
@@ -925,7 +925,7 @@ export default function AnalyticsPage() {
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
-            <AnimatedNumber value={processedData.healthScore || 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Math.round(Number(v))}%`} />
+            <AnimatedNumber value={processedData.healthScore ?? 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
 
@@ -944,7 +944,7 @@ export default function AnalyticsPage() {
               )}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
-            <AnimatedNumber value={processedData.savingRate || 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
+            <AnimatedNumber value={processedData.savingRate ?? 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${savingRateBand.color} border-white/10`}>{savingRateBand.label}</span>
           </motion.div>
 
@@ -958,7 +958,11 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Resultado período</p>
-            <AnimatedNumber value={processedData.netResult || 0} formatFn={formatCurrency} className={`text-xl font-black tabular-nums block ${(processedData.netResult || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+            <AnimatedNumber
+              value={processedData.netResult ?? 0}
+              formatFn={(v) => new Intl.NumberFormat(language === 'en' ? 'en-GB' : 'pt-PT', { style: 'currency', currency: currency || 'EUR', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(Number(v) * 10) / 10)}
+              className={`text-xl font-black tabular-nums block ${(processedData.netResult ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+            />
           </motion.div>
         </div>
 
@@ -988,7 +992,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} interval="preserveStartEnd" tickFormatter={(v) => v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : ''} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} labelFormatter={(label) => label ? new Date(label).toLocaleDateString('pt-PT') : ''} />
                   <Area type="monotone" dataKey="balance" name={t.dashboard.analytics.balanceLabel} stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1002,7 +1006,7 @@ export default function AnalyticsPage() {
                 <BarChart data={processedData.weekly || []} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <XAxis dataKey="name" stroke="#475569" fontSize={9} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={24}>
                     {(processedData.weekly || []).map((_: unknown, i: number) => (
                       <Cell key={i} fill={['#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6', '#ec4899'][i % 7]} />
@@ -1102,7 +1106,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Line type="monotone" dataKey="atual" name={t.dashboard.analytics.currentPeriodLabel} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} />
                   <Line type="monotone" dataKey="anterior" name={t.dashboard.analytics.previousPeriodLabel} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
                 </LineChart>
@@ -1121,7 +1125,7 @@ export default function AnalyticsPage() {
                 <BarChart data={processedData.volumeByMonth || []} margin={{ top: 8, right: 8, bottom: 8 }}>
                   <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value ?? 0, t.dashboard.analytics.transactionsLabel]} />
                   <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} barSize={24} activeBar={{ fill: '#06b6d4' }} cursor="default" />
                 </BarChart>
               </ResponsiveContainer>
@@ -1146,7 +1150,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                   <XAxis dataKey="day" stroke="#475569" fontSize={8} tickLine={false} axisLine={false} interval={4} />
                   <YAxis stroke="#475569" fontSize={9} tickFormatter={(v) => formatCurrency(v)} width={48} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }} formatter={(value: number | undefined) => [value != null ? formatCurrency(value) : '', 'Despesas']} labelFormatter={(d) => `Dia ${d}`} />
                   <Line type="monotone" dataKey="value" name={t.dashboard.analytics.expenses} stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 2 }} />
                 </LineChart>
               </ResponsiveContainer>

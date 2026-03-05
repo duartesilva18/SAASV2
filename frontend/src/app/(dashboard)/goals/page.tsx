@@ -391,6 +391,7 @@ export default function GoalsPage() {
               <XAxis type="number" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v: number) => formatCurrency(v)} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={80} stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
               <RTooltip
+                cursor={false}
                 contentStyle={barTooltipStyle}
                 itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
                 labelStyle={{ color: '#94a3b8', fontWeight: 800, fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}
@@ -547,6 +548,7 @@ export default function GoalsPage() {
                       {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
                     <RTooltip
+                      cursor={false}
                       contentStyle={barTooltipStyle}
                       itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
                       formatter={(value: any) => [formatCurrency(Number(value ?? 0)), 'Objetivo']}

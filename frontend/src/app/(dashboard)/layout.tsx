@@ -358,7 +358,9 @@ export default function DashboardLayout({
                   >
                     {tab.label}
                     {tab.href === '/admin/support' && adminSupportUnread > 0 && (
-                      <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0 animate-pulse" title={`${adminSupportUnread} não lida${adminSupportUnread !== 1 ? 's' : ''}`} />
+                      <span className="min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center shrink-0 animate-pulse" title={`${adminSupportUnread} não lida${adminSupportUnread !== 1 ? 's' : ''}`}>
+                        <span className="text-[9px] font-black text-white leading-none tabular-nums">{adminSupportUnread > 99 ? '99+' : adminSupportUnread}</span>
+                      </span>
                     )}
                   </Link>
                 ))}
@@ -642,7 +644,9 @@ function MobileHeaderWithNotifications({
               >
                 {tab.label}
                 {tab.href === '/admin/support' && adminSupportUnread > 0 && (
-                  <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0 animate-pulse" title={`${adminSupportUnread} não lida${adminSupportUnread !== 1 ? 's' : ''}`} />
+                  <span className="min-w-[16px] h-4 px-1 bg-red-500 rounded-full flex items-center justify-center shrink-0 animate-pulse">
+                    <span className="text-[8px] font-black text-white leading-none tabular-nums">{adminSupportUnread > 99 ? '99+' : adminSupportUnread}</span>
+                  </span>
                 )}
               </Link>
             ))}

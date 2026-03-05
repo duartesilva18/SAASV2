@@ -88,7 +88,7 @@ function InlineChart({ chart }: { chart: ChartData }) {
               <Pie data={dataWithColors} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={55} innerRadius={22} strokeWidth={0} paddingAngle={2}>
                 {dataWithColors.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Pie>
-              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
+              <Tooltip cursor={false} contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
               <Legend wrapperStyle={{ fontSize: '10px', color: '#94a3b8' }} />
             </PieChart>
           ) : chart.type === 'line' ? (
@@ -96,7 +96,7 @@ function InlineChart({ chart }: { chart: ChartData }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#475569' }} axisLine={{ stroke: '#1e293b' }} />
               <YAxis tick={{ fontSize: 10, fill: '#475569' }} axisLine={{ stroke: '#1e293b' }} />
-              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
+              <Tooltip cursor={false} contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
               <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 3 }} />
             </LineChart>
           ) : (
@@ -104,7 +104,7 @@ function InlineChart({ chart }: { chart: ChartData }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#475569' }} angle={-15} textAnchor="end" height={40} axisLine={{ stroke: '#1e293b' }} />
               <YAxis tick={{ fontSize: 10, fill: '#475569' }} axisLine={{ stroke: '#1e293b' }} />
-              <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
+              <Tooltip cursor={false} contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', fontSize: '11px' }} itemStyle={{ color: '#e2e8f0' }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                 {dataWithColors.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Bar>
@@ -186,6 +186,12 @@ export default function ChatPanel() {
     const interval = setInterval(fetchUnread, 60000);
     return () => clearInterval(interval);
   }, [user]);
+
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\)\s*/, '');
+    document.title = supportUnread > 0 ? `(${supportUnread}) ${base}` : base;
+    return () => { document.title = base; };
+  }, [supportUnread]);
 
   // ── AI State ──
   const [aiMessages, setAiMessages] = useState<ChatMsg[]>([]);
@@ -421,12 +427,17 @@ export default function ChatPanel() {
             data-onboarding-target="dock-support"
             onClick={() => { setActiveTab('support'); setIsOpen(!isOpen || activeTab !== 'support'); }}
             className="cursor-pointer"
-            style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: isOpen && activeTab === 'support' ? 'rgba(59,130,246,0.25)' : 'transparent', color: isOpen && activeTab === 'support' ? '#93c5fd' : '#cbd5e1', position: 'relative' }}
+            style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: isOpen && activeTab === 'support' ? 'rgba(59,130,246,0.25)' : supportUnread > 0 ? 'rgba(239,68,68,0.12)' : 'transparent', color: isOpen && activeTab === 'support' ? '#93c5fd' : supportUnread > 0 ? '#fca5a5' : '#cbd5e1', position: 'relative' }}
             title={cp?.supportTab || 'Suporte'}
           >
             <Headphones size={20} />
             {supportUnread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1a2236] animate-pulse" title={`${supportUnread} mensagem${supportUnread !== 1 ? 's' : ''} não lida${supportUnread !== 1 ? 's' : ''}`} />
+              <>
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full border-2 border-[#1a2236] flex items-center justify-center" title={`${supportUnread} mensagem${supportUnread !== 1 ? 's' : ''} não lida${supportUnread !== 1 ? 's' : ''}`}>
+                  <span className="text-[9px] font-black text-white leading-none tabular-nums">{supportUnread > 9 ? '9+' : supportUnread}</span>
+                </span>
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 rounded-full animate-ping opacity-40" />
+              </>
             )}
           </button>
         </div>
@@ -508,13 +519,19 @@ export default function ChatPanel() {
                 <button
                   onClick={() => setActiveTab('support')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer relative ${
-                    activeTab === 'support' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/25' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-transparent'
+                    activeTab === 'support'
+                      ? 'bg-blue-500/15 text-blue-400 border border-blue-500/25'
+                      : supportUnread > 0
+                        ? 'text-red-400 hover:text-red-300 bg-red-500/8 hover:bg-red-500/15 border border-red-500/20'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-transparent'
                   }`}
                 >
                   <Headphones size={13} />
                   {cp?.supportTab || 'Suporte'}
                   {supportUnread > 0 && (
-                    <span className="w-2.5 h-2.5 bg-red-500 rounded-full shrink-0" title={`${supportUnread} não lida${supportUnread !== 1 ? 's' : ''}`} />
+                    <span className="min-w-[16px] h-4 px-1 bg-red-500 rounded-full flex items-center justify-center shrink-0 animate-pulse">
+                      <span className="text-[8px] font-black text-white leading-none tabular-nums">{supportUnread > 9 ? '9+' : supportUnread}</span>
+                    </span>
                   )}
                 </button>
               </div>

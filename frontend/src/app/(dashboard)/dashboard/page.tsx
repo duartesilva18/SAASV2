@@ -771,7 +771,7 @@ export default function DashboardPage() {
                     height={isMobile ? 50 : 30}
                   />
                   <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={72} />
-                  <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                  <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                   <Area type="monotone" dataKey="income" name={t.dashboard.page.income} stroke="#10b981" fill="url(#dashIncome)" strokeWidth={2} />
                   <Area type="monotone" dataKey="expenses" name={t.dashboard.page.expenses} stroke="#ef4444" fill="url(#dashExpenses)" strokeWidth={2} />
                 </AreaChart>
@@ -819,7 +819,7 @@ export default function DashboardPage() {
                           <Cell key={i} fill={['#38bdf8','#2dd4bf','#a78bfa','#f472b6','#facc15','#fdba74','#34d399','#22d3ee'][i % 8]} stroke="rgba(15,23,42,0.6)" strokeWidth={2} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name ?? '']} />
+                      <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined, name: string | undefined) => [formatCurrency(value ?? 0), name ?? '']} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -960,7 +960,7 @@ export default function DashboardPage() {
                       height={isMobile ? 50 : 30}
                     />
                     <YAxis stroke="#475569" fontSize={10} tickFormatter={(v) => formatCurrency(v)} width={56} />
-                    <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
+                    <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#f1f5f9' }} labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }} formatter={(value: number | undefined) => formatCurrency(value ?? 0)} />
                     <Line type="monotone" dataKey="Emergência" name={t.dashboard.page.emergency} stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
                     <Line type="monotone" dataKey="Investimentos" name={t.dashboard.page.investments} stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
                   </LineChart>

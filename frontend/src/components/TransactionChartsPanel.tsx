@@ -154,10 +154,10 @@ export default function TransactionChartsPanel({
                   width={60}
                 />
                 <Tooltip
+                  cursor={false}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   itemStyle={{ color: '#f1f5f9', fontWeight: 'bold' }}
                   labelStyle={{ color: '#94a3b8' }}
-                  cursor={{ fill: 'transparent' }}
                   formatter={(value: unknown) => [formatCurrency(Number(value)), valueLabel]}
                 />
                 <Bar dataKey="value" name={valueLabel} radius={[0, 6, 6, 0]} activeBar={{ fill: '#475569', opacity: 0.85 }}>
@@ -227,6 +227,7 @@ export default function TransactionChartsPanel({
                   tickFormatter={(v) => formatCurrency(v)}
                 />
                 <Tooltip
+                  cursor={false}
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px' }}
                   formatter={(value: unknown) => formatCurrency(Number(value))}
                 />

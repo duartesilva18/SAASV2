@@ -540,7 +540,7 @@ export default function VaultPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
                   <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} width={48} />
-                  <Tooltip content={ChartTooltipContent} />
+                  <Tooltip cursor={false} content={ChartTooltipContent} />
                   <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#gradEmergency)" strokeWidth={2.5} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -571,7 +571,7 @@ export default function VaultPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="date" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={xTickFormatter} axisLine={false} tickLine={false} />
                   <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={yTickFormatter} domain={yDomain as any} axisLine={false} tickLine={false} width={48} />
-                  <Tooltip content={ChartTooltipContent} />
+                  <Tooltip cursor={false} content={ChartTooltipContent} />
                   <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#gradInvestment)" strokeWidth={2.5} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
