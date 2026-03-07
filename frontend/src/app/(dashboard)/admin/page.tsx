@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Activity, Shield, Trash2, Edit2, 
   Search, Filter, ArrowUpRight, TrendingUp,
-  Mail, Calendar, ShieldCheck, Zap, Lock,
+  Mail, Calendar, ShieldCheck, Zap, Lock, CreditCard,
   ChevronRight, Loader2, AlertCircle, CheckCircle2,
   MoreVertical, ShieldAlert, ChevronLeft, ChevronDown, Globe, Gift, X, BotMessageSquare
 } from 'lucide-react';
@@ -223,12 +223,13 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="min-w-[980px] px-4 sm:px-0">
+          <div className="min-w-[1100px] px-4 sm:px-0">
             <table className="w-full border-collapse">
             <thead>
               <tr className="text-left border-b border-white/5">
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Utilizador</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Plano</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Estado</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Permissões</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Acessos</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Tx Bot</th>
@@ -267,6 +268,36 @@ export default function AdminDashboardPage() {
                         {u.had_refund === true && (
                           <span className="px-2 sm:px-2.5 py-1 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-amber-500/10 text-amber-400 border-amber-500/20" title="Reembolso dado">
                             Reembolso
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 sm:py-6 px-2 sm:px-4">
+                    <div className="flex flex-col gap-1">
+                      {u.subscription_status === 'trialing' && (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
+                          Free Trial
+                        </span>
+                      )}
+                      {u.subscription_status !== 'trialing' && u.had_trial && (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-500 border-white/5">
+                          Trial usado
+                        </span>
+                      )}
+                      {u.subscription_status !== 'trialing' && !u.had_trial && (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-600 border-white/5">
+                          Sem trial
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        {u.has_payment_method ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                            <CreditCard size={9} className="shrink-0" /> Cartão
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-red-500/10 text-red-400 border-red-500/20">
+                            <CreditCard size={9} className="shrink-0" /> Sem cartão
                           </span>
                         )}
                       </div>

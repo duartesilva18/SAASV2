@@ -435,6 +435,8 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
         base = schemas.AdminUserResponse.from_orm(user).dict()
         base['bot_transactions_count'] = int(bot_tx_count or 0)
         base['copilot_messages_count'] = int(copilot_count or 0)
+        base['had_trial'] = bool(user.had_trial)
+        base['has_payment_method'] = bool(user.stripe_customer_id)
         users_with_metrics.append(schemas.AdminUserResponse(**base))
 
     return users_with_metrics

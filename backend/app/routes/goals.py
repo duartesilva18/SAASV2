@@ -78,7 +78,7 @@ async def deposit_into_goal(
     ):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    """Adicionar dinheiro à meta (cofre). Cria uma despesa para refletir o valor retirado do saldo disponível."""
+    """Adicionar dinheiro à meta. Apenas atualiza o valor acumulado, sem criar transação."""
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
@@ -90,14 +90,6 @@ async def deposit_into_goal(
         raise HTTPException(status_code=404, detail='Goal not found')
     amount_cents = body.amount_cents
     db_goal.current_amount_cents = (db_goal.current_amount_cents or 0) + amount_cents
-    tx = models.Transaction(
-        workspace_id=workspace.id,
-        category_id=None,
-        amount_cents=-amount_cents,
-        description=f'Depósito na meta: {db_goal.name}',
-        transaction_date=date.today(),
-    )
-    db.add(tx)
     db.commit()
     db.refresh(db_goal)
     return db_goal
