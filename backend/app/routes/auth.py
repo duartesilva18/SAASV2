@@ -1329,6 +1329,7 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     return {'message': 'Código de recuperação enviado para o email.'}
 
 @router.post('/password-reset/verify')
+@limiter.limit('10/hour')
 async def verify_reset_code(request: Request, data: schemas.PasswordResetVerify, db: Session = Depends(get_db)):
     email_norm = normalize_email(data.email or '')
     reset_obj = db.query(models.PasswordReset).filter(
@@ -1348,6 +1349,7 @@ async def verify_reset_code(request: Request, data: schemas.PasswordResetVerify,
     return {'message': 'Código verificado com sucesso.'}
 
 @router.post('/password-reset/confirm')
+@limiter.limit('5/hour')
 async def confirm_password_reset(request: Request, data: schemas.PasswordResetConfirm, db: Session = Depends(get_db)):
     email_norm = normalize_email(data.email or '')
     reset_obj = db.query(models.PasswordReset).filter(
@@ -1377,6 +1379,7 @@ async def confirm_password_reset(request: Request, data: schemas.PasswordResetCo
     return {'message': 'Password alterada com sucesso!'}
 
 @router.post('/social-login', response_model=schemas.Token)
+@limiter.limit('10/minute')
 async def social_login(request: Request, background_tasks: BackgroundTasks, data: schemas.SocialLoginRequest, db: Session = Depends(get_db)):
     try:
         email = None

@@ -9,9 +9,7 @@ from .webhooks.telegram import setup_bot_commands
 from .models.database import Base, SystemSetting, User, Workspace
 from .core.dependencies import engine, get_db, SessionLocal
 from .core import security
-from .core.limiter import limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
+from .core.limiter import limiter, attach_limiter
 from sqlalchemy.orm import Session
 import logging
 import os
@@ -52,8 +50,7 @@ DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@admin.pt')
 DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
 
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+attach_limiter(app)
 
 # Configuração de CORS - em produção sem variáveis usa https://app.finlybot.com como base
 environment = os.getenv('ENVIRONMENT', 'development')
