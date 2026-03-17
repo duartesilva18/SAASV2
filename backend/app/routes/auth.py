@@ -116,10 +116,9 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     )
     try:
         auth_header = request.headers.get("authorization")
-        token_preview = token[:10] + "..." if token else "none"
         logger.info(
             f'🔐 Auth header received: {bool(auth_header)} '
-            f'(token_len={len(token) if token else 0}, token_preview={token_preview}) '
+            f'(token_len={len(token) if token else 0}) '
             f'from {request.client.host if request.client else "unknown"}'
         )
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -145,6 +144,12 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     if not getattr(user, 'is_active', True):
         logger.warning(f'❌ Conta desativada: {email}')
         raise HTTPException(status_code=403, detail='Account deactivated')
+    # Blindagem defensiva para estados legados inconsistentes:
+    # se estiver "trialing" sem validação de trial, bloquear acesso Pro.
+    if user.subscription_status == 'trialing' and not bool(getattr(user, 'had_trial', False)):
+        user.subscription_status = 'incomplete'
+        db.commit()
+        logger.warning(f'⚠️ Estado trial inconsistente corrigido para incomplete: {email}')
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
@@ -1276,8 +1281,9 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
     email_norm = normalize_email(data.email or '')
     user = db.query(models.User).filter(models.User.email == email_norm).first()
     if not user:
-        logger.warning(f'Pedido de reset de password para email inexistente: {data.email}')
-        raise HTTPException(status_code=404, detail='Não existe nenhuma conta associada a este email.')
+        # Resposta neutra para evitar enumeração de utilizadores.
+        logger.info(f'Pedido de reset para email não registado (resposta neutra): {data.email}')
+        return {'message': 'Se existir uma conta associada a este email, foi enviado um código de recuperação.'}
     
     # Usar secrets para código seguro
     code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
@@ -1325,8 +1331,9 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
         await fm.send_message(message)
     except Exception as e:
         logger.error(f'ERRO CRÍTICO EMAIL para {email_norm}: {str(e)}')
+        raise HTTPException(status_code=503, detail='Não foi possível enviar o código de recuperação de momento. Tenta novamente.')
     
-    return {'message': 'Código de recuperação enviado para o email.'}
+    return {'message': 'Se existir uma conta associada a este email, foi enviado um código de recuperação.'}
 
 @router.post('/password-reset/verify')
 @limiter.limit('10/hour')
@@ -1438,7 +1445,7 @@ async def social_login(request: Request, background_tasks: BackgroundTasks, data
                 google_id=social_id if data.provider == 'google' else None,
                 is_email_verified=True,
                 language=user_language,
-                login_count=1,
+                login_count=0,
                 last_login=datetime.now(timezone.utc),
                 referrer_id=referrer_id
             )

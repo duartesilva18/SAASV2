@@ -7,6 +7,12 @@ import sys
 import stripe
 from dotenv import load_dotenv
 
+if __name__ != "__main__":
+    # Evita execução durante pytest collection/import.
+    # Este ficheiro é um script manual de diagnóstico, não um teste unitário.
+    import pytest
+    pytest.skip("Script manual de Stripe Connect (ignorado no pytest).", allow_module_level=True)
+
 load_dotenv()
 
 # Configurar Stripe

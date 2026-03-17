@@ -10,6 +10,21 @@ from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
+def _can_mark_monthly_commission_paid(db: Session, affiliate_id, month_value: date) -> bool:
+    """
+    Só marca comissão mensal como paga automaticamente quando há uma única invoice
+    creditada no mês para o afiliado.
+    """
+    invoice_count = (
+        db.query(models.AffiliateCommissionInvoice)
+        .filter(
+            models.AffiliateCommissionInvoice.affiliate_id == affiliate_id,
+            models.AffiliateCommissionInvoice.month == month_value,
+        )
+        .count()
+    )
+    return invoice_count <= 1
+
 
 def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
     """
@@ -68,12 +83,15 @@ def handle_payment_intent_succeeded(payment_intent: dict, db: Session):
         ).first()
         
         if commission and not commission.is_paid:
-            # Apenas marcar como paga — os valores já foram calculados por invoice.paid
-            commission.is_paid = True
-            commission.paid_at = datetime.now(timezone.utc)
-            commission.transfer_status = 'created'
+            if _can_mark_monthly_commission_paid(db, affiliate.id, current_month):
+                commission.is_paid = True
+                commission.paid_at = datetime.now(timezone.utc)
+                commission.transfer_status = 'created'
+                logger.info(f'✅ Comissão marcada como paga via divisão automática: afiliado {affiliate.email}, payment_intent {payment_intent.get("id")}')
+            else:
+                commission.transfer_status = 'partial'
+                logger.info(f'ℹ️ Payout parcial via divisão automática para {affiliate.email} (mês com múltiplas invoices)')
             db.commit()
-            logger.info(f'✅ Comissão marcada como paga via divisão automática: afiliado {affiliate.email}, payment_intent {payment_intent.get("id")}')
         elif commission:
             logger.info(f'Comissão já estava paga para afiliado {affiliate.email}, mês {current_month}')
         else:
@@ -139,10 +157,14 @@ def handle_transfer_created(transfer: dict, db: Session):
         if commission:
             commission.stripe_transfer_id = transfer_id
             commission.payment_reference = transfer_id
-            commission.is_paid = True
-            commission.paid_at = datetime.now(timezone.utc)
+            if _can_mark_monthly_commission_paid(db, affiliate.id, commission.month):
+                commission.is_paid = True
+                commission.paid_at = datetime.now(timezone.utc)
+                commission.transfer_status = 'created'
+            else:
+                commission.transfer_status = 'partial'
             db.commit()
-            logger.info(f'✅ Transfer ID capturado: {transfer_id} para comissão {commission.id} (marcada como paga)')
+            logger.info(f'✅ Transfer ID capturado: {transfer_id} para comissão {commission.id}')
         else:
             logger.warning(f'Comissão não encontrada para atualizar transfer_id {transfer_id} (mês={target_month})')
         

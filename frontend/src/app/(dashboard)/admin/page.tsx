@@ -287,17 +287,25 @@ export default function AdminDashboardPage() {
                       )}
                       {u.subscription_status !== 'trialing' && !u.had_trial && (
                         <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-600 border-white/5">
-                          Sem trial
+                          Nunca usou trial
                         </span>
                       )}
                       <div className="flex items-center gap-1">
                         {u.has_payment_method ? (
                           <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                            <CreditCard size={9} className="shrink-0" /> Cartão
+                            <CreditCard size={9} className="shrink-0" /> Cartão guardado
+                          </span>
+                        ) : u.subscription_status === 'trialing' && u.has_stripe_customer ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-orange-500/10 text-orange-400 border-orange-500/20" title="Trial ativo sem cartão guardado. A renovação pode falhar se não adicionar método de pagamento.">
+                            <CreditCard size={9} className="shrink-0" /> Trial sem cartão
+                          </span>
+                        ) : u.has_stripe_customer ? (
+                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-amber-500/10 text-amber-400 border-amber-500/20">
+                            <CreditCard size={9} className="shrink-0" /> Cliente Stripe sem cartão
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-red-500/10 text-red-400 border-red-500/20">
-                            <CreditCard size={9} className="shrink-0" /> Sem cartão
+                            <CreditCard size={9} className="shrink-0" /> Sem cliente Stripe
                           </span>
                         )}
                       </div>

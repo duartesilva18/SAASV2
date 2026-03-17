@@ -63,7 +63,10 @@ class User(Base):
         from datetime import datetime, timezone
         if self.is_admin:
             return True
-        if self.subscription_status in ('active', 'trialing', 'cancel_at_period_end'):
+        if self.subscription_status in ('active', 'cancel_at_period_end'):
+            return True
+        # Trial só conta como Pro quando foi validado (cartão válido no Stripe).
+        if self.subscription_status == 'trialing' and bool(getattr(self, 'had_trial', False)):
             return True
         if self.pro_granted_until:
             now = datetime.now(timezone.utc)

@@ -54,6 +54,45 @@ def _get_base_amount_for_commission(invoice: dict) -> int:
             pass
     return invoice.get('amount_paid') or 0
 
+
+def _customer_has_saved_card(customer_id: str) -> bool:
+    """Valida no Stripe se o customer tem método de pagamento de cartão guardado."""
+    if not customer_id or not settings.STRIPE_API_KEY:
+        return False
+    try:
+        customer = stripe.Customer.retrieve(
+            customer_id,
+            expand=['invoice_settings.default_payment_method'],
+        )
+        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
+        default_pm = None
+        if isinstance(invoice_settings, dict):
+            default_pm = invoice_settings.get('default_payment_method')
+        elif invoice_settings is not None:
+            default_pm = getattr(invoice_settings, 'default_payment_method', None)
+        if default_pm:
+            return True
+        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
+        return bool(getattr(cards, 'data', None))
+    except Exception:
+        return False
+
+
+def _can_mark_monthly_commission_paid(db: Session, affiliate_id, month_value: date) -> bool:
+    """
+    Só marca comissão mensal como paga automaticamente quando existe 1 única invoice
+    creditada nesse mês. Evita falso "pago" em meses com múltiplas cobranças.
+    """
+    invoice_count = (
+        db.query(models.AffiliateCommissionInvoice)
+        .filter(
+            models.AffiliateCommissionInvoice.affiliate_id == affiliate_id,
+            models.AffiliateCommissionInvoice.month == month_value,
+        )
+        .count()
+    )
+    return invoice_count <= 1
+
 @router.post('/stripe')
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
@@ -169,14 +208,18 @@ def handle_checkout_completed(session: dict, db: Session):
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 user.subscription_status = subscription.status  # 'active', 'trialing', etc.
-                # Marcar que já usou trial para impedir reutilização
+                # Trial só conta quando há cartão guardado válido no customer Stripe.
                 if subscription.status == 'trialing':
-                    user.had_trial = True
-                    logger.info(f'Trial marcado para {user.email} (had_trial=True)')
+                    customer_for_trial = customer_id or user.stripe_customer_id
+                    if _customer_has_saved_card(customer_for_trial):
+                        user.had_trial = True
+                        logger.info(f'Trial marcado para {user.email} (had_trial=True, cartão válido)')
+                    else:
+                        user.subscription_status = 'incomplete'
+                        logger.warning(f'Trial bloqueado para {user.email}: sem cartão guardado no Stripe')
                 logger.info(f'Status da subscrição do Stripe: {subscription.status}')
             except Exception as e:
-                logger.warning(f'Erro ao buscar subscrição do Stripe: {str(e)}, usando status "active"')
-                user.subscription_status = 'active'
+                logger.warning(f'Erro ao buscar subscrição do Stripe: {str(e)}, mantendo status atual para evitar estado incorreto')
         else:
             user.subscription_status = 'active'
         
@@ -218,8 +261,13 @@ def handle_subscription_created(subscription: dict, db: Session):
         user.stripe_subscription_id = subscription_id
         user.subscription_status = status
         if status == 'trialing':
-            user.had_trial = True
-            logger.info(f'Trial marcado para {user.email} (subscription.created, had_trial=True)')
+            customer_for_trial = customer_id or user.stripe_customer_id
+            if _customer_has_saved_card(customer_for_trial):
+                user.had_trial = True
+                logger.info(f'Trial marcado para {user.email} (subscription.created, cartão válido)')
+            else:
+                user.subscription_status = 'incomplete'
+                logger.warning(f'Trial bloqueado em subscription.created para {user.email}: sem cartão')
         
         # Marcar conversão de afiliado se aplicável
         if user.referrer_id:
@@ -253,6 +301,13 @@ def handle_subscription_updated(subscription: dict, db: Session):
             user.subscription_status = 'cancel_at_period_end'
         else:
             user.subscription_status = status
+        if status == 'trialing':
+            customer_for_trial = subscription.get('customer') or user.stripe_customer_id
+            if _customer_has_saved_card(customer_for_trial):
+                user.had_trial = True
+            else:
+                user.subscription_status = 'incomplete'
+                logger.warning(f'Trial bloqueado em subscription.updated para {user.email}: sem cartão')
         db.commit()
         logger.info(f'Status da subscrição atualizado para {user.email}: {user.subscription_status}')
     else:
@@ -275,21 +330,8 @@ def handle_subscription_deleted(subscription: dict, db: Session):
             referral.has_subscribed = False
             referral.subscription_canceled_at = datetime.now()
             logger.info(f'Afiliado: referência {user.email} marcada como cancelada (referrer_id={referral.referrer_id})')
-            # Ajustar comissão do mês da subscrição: menos uma conversão e valores proporcionais ao mês
-            if referral.subscription_date:
-                commission_month = referral.subscription_date.replace(day=1).date()
-                comm = db.query(models.AffiliateCommission).filter(
-                    models.AffiliateCommission.affiliate_id == referral.referrer_id,
-                    models.AffiliateCommission.month == commission_month
-                ).first()
-                if comm and comm.conversions_count > 0:
-                    # Usar média por conversão do mês (em vez de 999 fixo) para planos diferentes (mensal/anual)
-                    est_revenue_cents = comm.total_revenue_cents // comm.conversions_count
-                    est_commission_cents = comm.commission_amount_cents // comm.conversions_count
-                    comm.total_revenue_cents = max(0, comm.total_revenue_cents - est_revenue_cents)
-                    comm.commission_amount_cents = max(0, comm.commission_amount_cents - est_commission_cents)
-                    comm.conversions_count = max(0, comm.conversions_count - 1)
-                    logger.info(f'Afiliado: comissão ajustada (mês {commission_month}): -{est_revenue_cents} cêntimos receita, -{est_commission_cents} cêntimos comissão, -1 conversão')
+            # Não ajustar comissão aqui. Cancelamento sem reembolso não remove comissão já ganha.
+            # Ajustes financeiros devem acontecer apenas no fluxo de refund (charge.refunded).
         # Não eliminar o subscription_id para manter histórico
         db.commit()
         logger.info(f'Subscrição cancelada para {user.email}')
@@ -496,10 +538,24 @@ def handle_invoice_paid(invoice: dict, db: Session):
         logger.info(f'Invoice de trial (valor 0) ignorada para comissões: {invoice.get("id")}')
         if subscription_id:
             user = db.query(models.User).filter(models.User.stripe_subscription_id == subscription_id).first()
-            if user and user.subscription_status not in ('trialing', 'active'):
-                user.subscription_status = 'trialing'
-                db.commit()
-                logger.info(f'Status atualizado para trialing (invoice trial): {user.email}')
+            if user:
+                updated = False
+                customer_for_trial = customer_id or user.stripe_customer_id
+                if _customer_has_saved_card(customer_for_trial):
+                    if user.subscription_status not in ('trialing', 'active'):
+                        user.subscription_status = 'trialing'
+                        updated = True
+                    if not user.had_trial:
+                        user.had_trial = True
+                        updated = True
+                else:
+                    if user.subscription_status == 'trialing':
+                        user.subscription_status = 'incomplete'
+                        updated = True
+                    logger.warning(f'Invoice trial sem cartão para {user.email}; trial não ativado')
+                if updated:
+                    db.commit()
+                    logger.info(f'Trial sincronizado via invoice trial: {user.email}')
         return
     
     # Se a fatura está associada a uma subscrição, garantir que o status está correto
@@ -653,16 +709,22 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                         commission_cents=commission_amount_cents,
                                     ))
 
-                                # Se foi feito Transfer manual para esta invoice, marcar comissão como paga na dashboard
+                                # Se foi feito Transfer manual para esta invoice, anexar referência de payout.
+                                # Só marcar "is_paid" quando o mês tem uma única invoice creditada.
                                 manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
                                     models.AffiliateInvoiceManualTransfer.invoice_id == invoice.get('id')
                                 ).first()
                                 if manual_done and commission_obj:
                                     commission_obj.stripe_transfer_id = manual_done.transfer_id
                                     commission_obj.payment_reference = manual_done.transfer_id
-                                    commission_obj.is_paid = True
-                                    commission_obj.paid_at = datetime.now()
-                                    logger.info(f'Comissão marcada como paga (Transfer manual) para dashboard: {commission_obj.id}')
+                                    if _can_mark_monthly_commission_paid(db, referral.referrer_id, commission_month):
+                                        commission_obj.is_paid = True
+                                        commission_obj.paid_at = datetime.now(timezone.utc)
+                                        commission_obj.transfer_status = 'created'
+                                        logger.info(f'Comissão marcada como paga (mês com 1 invoice): {commission_obj.id}')
+                                    else:
+                                        commission_obj.transfer_status = 'partial'
+                                        logger.info(f'Payout parcial registado; mês com múltiplas invoices para comissão {commission_obj.id}')
                         except Exception as e:
                             logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
 

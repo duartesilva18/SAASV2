@@ -24,9 +24,143 @@ def _charge_amount_with_stripe_fee(base_cents: int) -> int:
     import math
     return int(math.ceil((base_cents + 25) / 0.985))
 
+
+def _allowed_price_ids() -> set[str]:
+    return {
+        p.strip()
+        for p in [
+            getattr(settings, 'STRIPE_PRICE_BASIC_MONTHLY', ''),
+            getattr(settings, 'STRIPE_PRICE_PLUS', ''),
+            getattr(settings, 'STRIPE_PRICE_YEARLY', ''),
+        ]
+        if (p or '').strip()
+    }
+
+
+def _validate_allowed_price_id(price_id: str) -> None:
+    allowed = _allowed_price_ids()
+    if not allowed:
+        raise HTTPException(status_code=500, detail='Preços Stripe não configurados no servidor.')
+    if price_id not in allowed:
+        raise HTTPException(status_code=400, detail='Plano inválido.')
+
+
+def _customer_has_saved_card(customer_id: str) -> bool:
+    if not customer_id or not settings.STRIPE_API_KEY:
+        return False
+    try:
+        customer = stripe.Customer.retrieve(
+            customer_id,
+            expand=['invoice_settings.default_payment_method'],
+        )
+        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
+        default_pm = None
+        if isinstance(invoice_settings, dict):
+            default_pm = invoice_settings.get('default_payment_method')
+        elif invoice_settings is not None:
+            default_pm = getattr(invoice_settings, 'default_payment_method', None)
+        if default_pm:
+            return True
+        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
+        return bool(getattr(cards, 'data', None))
+    except Exception:
+        return False
+
+
+def _to_dict(obj):
+    return obj if isinstance(obj, dict) else (obj.to_dict_recursive() if hasattr(obj, 'to_dict_recursive') else {})
+
+
+def _item_price_id(item) -> str:
+    price_obj = (item.get('price') if isinstance(item, dict) else getattr(item, 'price', None)) or {}
+    if isinstance(price_obj, dict):
+        return (price_obj.get('id') or '').strip()
+    return str(getattr(price_obj, 'id', '') or '').strip()
+
+
+def _item_id(item) -> str:
+    if isinstance(item, dict):
+        return str(item.get('id') or '').strip()
+    return str(getattr(item, 'id', '') or '').strip()
+
+
+def _looks_like_fee_item(item) -> bool:
+    """
+    Heurística para identificar item recorrente da taxa Stripe.
+    """
+    price_obj = (item.get('price') if isinstance(item, dict) else getattr(item, 'price', None)) or {}
+    product_obj = price_obj.get('product') if isinstance(price_obj, dict) else getattr(price_obj, 'product', None)
+    product_name = ''
+    if isinstance(product_obj, dict):
+        product_name = str(product_obj.get('name') or '').lower()
+    elif hasattr(product_obj, 'get'):
+        product_name = str(product_obj.get('name') or '').lower()
+    if 'taxa de processamento' in product_name or 'processing fee' in product_name:
+        return True
+    # fallback por metadata de price
+    metadata = price_obj.get('metadata') if isinstance(price_obj, dict) else getattr(price_obj, 'metadata', None)
+    if isinstance(metadata, dict) and metadata.get('kind') == 'stripe_processing_fee':
+        return True
+    return False
+
+
+def _price_product_id(price_obj) -> str:
+    if isinstance(price_obj, dict):
+        product = price_obj.get('product')
+    else:
+        product = getattr(price_obj, 'product', None)
+    if isinstance(product, dict):
+        return str(product.get('id') or '').strip()
+    return str(product or '').strip()
+
+
+def _price_recurring(price_obj) -> tuple[str, int]:
+    recurring = price_obj.get('recurring') if isinstance(price_obj, dict) else getattr(price_obj, 'recurring', None)
+    if recurring is None:
+        return 'month', 1
+    if isinstance(recurring, dict):
+        return str(recurring.get('interval') or 'month'), int(recurring.get('interval_count') or 1)
+    return str(getattr(recurring, 'interval', 'month') or 'month'), int(getattr(recurring, 'interval_count', 1) or 1)
+
+
+def _find_or_create_fee_price(
+    fee_product: str,
+    fee_currency: str,
+    fee_interval: str,
+    fee_interval_count: int,
+    fee_amount_cents: int,
+) -> str:
+    """
+    Reutiliza um Price de taxa compatível; cria novo apenas se necessário.
+    """
+    prices = stripe.Price.list(product=fee_product, active=True, limit=100)
+    iterable = prices.auto_paging_iter() if hasattr(prices, 'auto_paging_iter') else (prices.get('data', []) if isinstance(prices, dict) else [])
+    for raw in iterable:
+        price = _to_dict(raw)
+        if (price.get('currency') or '') != fee_currency:
+            continue
+        if int(price.get('unit_amount') or 0) != int(fee_amount_cents):
+            continue
+        recurring = price.get('recurring') or {}
+        if (recurring.get('interval') or '') != fee_interval:
+            continue
+        if int(recurring.get('interval_count') or 1) != int(fee_interval_count or 1):
+            continue
+        return price.get('id')
+
+    created = stripe.Price.create(
+        unit_amount=fee_amount_cents,
+        currency=fee_currency,
+        recurring={'interval': fee_interval, 'interval_count': fee_interval_count},
+        product=fee_product,
+        metadata={'kind': 'stripe_processing_fee'},
+    )
+    return created.get('id') if isinstance(created, dict) else created.id
+
 @router.post('/create-checkout-session')
 async def create_checkout_session(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
+        _validate_allowed_price_id(price_id)
         logger.info(f'[Checkout] Início: user_id={current_user.id} email={current_user.email} referrer_id={current_user.referrer_id} price_id={price_id}')
         customer_id = current_user.stripe_customer_id
         
@@ -205,11 +339,7 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
             fee_cents = total_charged_cents - total_amount_cents
             logger.info(f'[Checkout] Taxa Stripe repassada ao cliente: base={total_amount_cents} cêntimos, taxa={fee_cents} cêntimos, total={total_charged_cents} cêntimos')
             currency = getattr(price, 'currency', 'eur')
-            recurring = getattr(price, 'recurring', None)
-            if not recurring:
-                recurring = {'interval': 'month'}
-            interval = recurring.get('interval', 'month') if isinstance(recurring, dict) else getattr(recurring, 'interval', 'month')
-            interval_count = recurring.get('interval_count', 1) if isinstance(recurring, dict) else getattr(recurring, 'interval_count', 1)
+            interval, interval_count = _price_recurring(price)
             product_name = 'Finly Pro'
             try:
                 if getattr(price, 'product', None):
@@ -217,18 +347,20 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                     product_name = getattr(prod, 'name', product_name) or product_name
             except Exception:
                 pass
-            # Duas linhas: plano (preço base) + taxa de processamento Stripe (cliente vê o breakdown)
-            line_items = [
-                {
-                    'quantity': 1,
-                    'price_data': {
-                        'currency': currency,
-                        'unit_amount': total_amount_cents,
-                        'product_data': {'name': product_name},
-                        'recurring': {'interval': interval, 'interval_count': interval_count},
-                    },
-                },
-                {
+            plan_product_id = _price_product_id(price) or None
+            line_items = [{'price': price_id, 'quantity': 1}]
+            if fee_cents > 0 and plan_product_id:
+                fee_price_id = _find_or_create_fee_price(
+                    fee_product=plan_product_id,
+                    fee_currency=currency,
+                    fee_interval=interval,
+                    fee_interval_count=int(interval_count or 1),
+                    fee_amount_cents=int(fee_cents),
+                )
+                line_items.append({'price': fee_price_id, 'quantity': 1})
+            elif fee_cents > 0:
+                # Fallback raro: sem product id, mantém taxa via price_data.
+                line_items.append({
                     'quantity': 1,
                     'price_data': {
                         'currency': currency,
@@ -236,14 +368,15 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
                         'product_data': {'name': 'Taxa de processamento (Stripe)'},
                         'recurring': {'interval': interval, 'interval_count': interval_count},
                     },
-                },
-            ]
+                })
         else:
             line_items = [{'price': price_id, 'quantity': 1}]
         
         session_params = {
             'customer': customer_id,
             'payment_method_types': ['card'],
+            # Obriga recolha de cartão mesmo quando há trial (evita trial sem método de pagamento).
+            'payment_method_collection': 'always',
             'line_items': line_items,
             'mode': 'subscription',
             'client_reference_id': str(current_user.id),
@@ -295,6 +428,7 @@ def _get_connect_params_for_subscription(user: models.User, price_id: str, db: S
 async def change_plan(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Altera o plano da subscrição ativa do utilizador para o novo price_id (upgrade/downgrade com proration)."""
     try:
+        _validate_allowed_price_id(price_id)
         if not current_user.stripe_subscription_id:
             raise HTTPException(
                 status_code=400,
@@ -306,27 +440,135 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
                 status_code=400,
                 detail='A tua subscrição não está ativa. Subscreve um plano para continuar.'
             )
-        # Verificar que o novo preço existe
-        stripe.Price.retrieve(price_id)
-        sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
-        items = sub.get('items', {}).get('data', [])
+        # Verificar que o novo preço existe e obter valor base
+        new_price = stripe.Price.retrieve(price_id)
+        new_base_amount_cents = int(getattr(new_price, 'unit_amount', None) or 0)
+        sub = _to_dict(stripe.Subscription.retrieve(
+            current_user.stripe_subscription_id,
+            expand=['items.data.price.product'],
+        ))
+        items = (sub.get('items') or {}).get('data') or []
         if not items:
             raise HTTPException(status_code=400, detail='Subscrição sem itens. Contacta o suporte.')
-        item_id = items[0]['id']
-        # Manter divisão Connect em alterações de plano: repassar transfer_data e application_fee_percent
+
+        sub_meta = sub.get('metadata') or {}
+        current_plan_price_id = (sub_meta.get('original_price_id') or '').strip()
+        known_plan_item_id = (sub_meta.get('plan_item_id') or '').strip()
+        known_fee_item_id = (sub_meta.get('fee_item_id') or '').strip()
+
+        # Identificar item de plano sem assumir ordem.
+        plan_item = None
+        if known_plan_item_id:
+            for it in items:
+                if _item_id(it) == known_plan_item_id:
+                    plan_item = it
+                    break
+        if current_plan_price_id:
+            for it in items:
+                if _item_price_id(it) == current_plan_price_id:
+                    plan_item = it
+                    break
+        if not plan_item:
+            for it in items:
+                if not _looks_like_fee_item(it):
+                    plan_item = it
+                    break
+        if not plan_item:
+            plan_item = items[0]
+
+        plan_item_id = _item_id(plan_item)
+        fee_item = None
+        if known_fee_item_id:
+            for it in items:
+                if _item_id(it) == known_fee_item_id:
+                    fee_item = it
+                    break
+        for it in items:
+            if fee_item:
+                break
+            if _item_id(it) != plan_item_id and _looks_like_fee_item(it):
+                fee_item = it
+                break
+
+        # Manter divisão Connect em alterações de plano: repassar transfer_data e application_fee_percent.
         transfer_data, application_fee_percent = _get_connect_params_for_subscription(current_user, price_id, db)
-        modify_params = {'items': [{'id': item_id, 'price': price_id}]}
+        modify_items = [{'id': plan_item_id, 'price': price_id}]
+
+        # Atualizar item de taxa recorrente quando existir (legacy checkout com 2 linhas).
+        if fee_item and fee_item.get('id'):
+            fee_price_obj = fee_item.get('price') or {}
+            fee_currency = fee_price_obj.get('currency') or getattr(new_price, 'currency', 'eur')
+            fee_recurring = fee_price_obj.get('recurring') or {}
+            fee_interval = fee_recurring.get('interval') or (getattr(new_price, 'recurring', {}) or {}).get('interval', 'month')
+            fee_interval_count = fee_recurring.get('interval_count') or (getattr(new_price, 'recurring', {}) or {}).get('interval_count', 1)
+
+            new_total_charged = _charge_amount_with_stripe_fee(new_base_amount_cents) if new_base_amount_cents >= 1 else new_base_amount_cents
+            new_fee_cents = max(0, new_total_charged - new_base_amount_cents)
+
+            if new_fee_cents > 0:
+                fee_product_id = _price_product_id(fee_price_obj)
+                if fee_product_id:
+                    fee_price_id = _find_or_create_fee_price(
+                        fee_product=fee_product_id,
+                        fee_currency=fee_currency,
+                        fee_interval=fee_interval,
+                        fee_interval_count=int(fee_interval_count or 1),
+                        fee_amount_cents=int(new_fee_cents),
+                    )
+                    modify_items.append({'id': fee_item['id'], 'price': fee_price_id})
+                else:
+                    # Sem product no item legado, removemos para evitar preço errado persistente.
+                    modify_items.append({'id': fee_item['id'], 'deleted': True})
+                    logger.warning('[Change-plan] Item de taxa sem product; removido para evitar cobrança inconsistente.')
+            else:
+                modify_items.append({'id': fee_item['id'], 'deleted': True})
+
+        modify_params = {
+            'items': modify_items,
+            'metadata': {
+                # Mantém comissão correta no webhook invoice.paid após alteração de plano.
+                'original_price_id': price_id,
+                'base_amount_cents': str(new_base_amount_cents),
+            }
+        }
+
+        # Preservar referrer_id em metadata se já existir.
+        if sub_meta.get('referrer_id'):
+            modify_params['metadata']['referrer_id'] = sub_meta.get('referrer_id')
+
         if transfer_data is not None and application_fee_percent is not None:
             modify_params['transfer_data'] = transfer_data
             modify_params['application_fee_percent'] = application_fee_percent
             logger.info(f'[Change-plan] Com divisão Connect: application_fee_percent={application_fee_percent}, destination={transfer_data.get("destination")}')
         stripe.Subscription.modify(current_user.stripe_subscription_id, **modify_params)
         # Atualizar localmente para resposta imediata (o webhook subscription.updated também atualiza)
-        sub_after = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
-        current_user.subscription_status = sub_after.status
+        sub_after = _to_dict(stripe.Subscription.retrieve(
+            current_user.stripe_subscription_id,
+            expand=['items.data.price.product'],
+        ))
+        sub_after_items = (sub_after.get('items') or {}).get('data') or []
+        sub_after_meta = sub_after.get('metadata') or {}
+        resolved_plan_item_id = ''
+        resolved_fee_item_id = ''
+        for it in sub_after_items:
+            if _item_price_id(it) == price_id and not resolved_plan_item_id:
+                resolved_plan_item_id = _item_id(it)
+            elif _looks_like_fee_item(it) and not resolved_fee_item_id:
+                resolved_fee_item_id = _item_id(it)
+        metadata_patch = {
+            'original_price_id': price_id,
+            'base_amount_cents': str(new_base_amount_cents),
+            'plan_item_id': resolved_plan_item_id or known_plan_item_id or '',
+            'fee_item_id': resolved_fee_item_id or '',
+        }
+        if sub_meta.get('referrer_id') or sub_after_meta.get('referrer_id'):
+            metadata_patch['referrer_id'] = sub_meta.get('referrer_id') or sub_after_meta.get('referrer_id')
+        stripe.Subscription.modify(current_user.stripe_subscription_id, metadata=metadata_patch)
+        sub_after_status = (sub_after.get('status') or '').strip()
+        current_user.subscription_status = sub_after_status or current_user.subscription_status
         db.commit()
         logger.info(f'Plano alterado para price_id={price_id} para user {current_user.email}')
-        return {'success': True, 'message': 'Plano alterado.', 'subscription_status': sub_after.status}
+        return {'success': True, 'message': 'Plano alterado.', 'subscription_status': current_user.subscription_status}
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao alterar plano: {str(e)}', exc_info=True)
         raise HTTPException(status_code=400, detail='Erro ao alterar plano. Tenta novamente.')
@@ -410,6 +652,12 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
         session_client_ref = getattr(session, 'client_reference_id', None)
         if session_client_ref and session_client_ref != str(current_user.id):
             raise HTTPException(status_code=403, detail='Esta sessão não pertence ao utilizador atual')
+        if not session_client_ref:
+            # Defesa adicional: quando client_reference_id não vier, validar ownership por customer.
+            session_customer = getattr(session, 'customer', None)
+            current_customer = (current_user.stripe_customer_id or '').strip()
+            if not session_customer or not current_customer or str(session_customer) != current_customer:
+                raise HTTPException(status_code=403, detail='Sessão sem ownership válido para o utilizador atual')
         
         # Se a sessão está completa e tem uma subscrição
         session_status = getattr(session, 'status', None)
@@ -428,16 +676,22 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                 from ..core.dependencies import SessionLocal
                 from datetime import datetime, timezone as _tz
                 db = SessionLocal()
+                persist_ok = True
                 try:
                     user = db.query(models.User).filter(models.User.id == current_user.id).first()
                     if user:
                         user.stripe_subscription_id = subscription_id
                         user.subscription_status = subscription_status
-                        if subscription_status == 'trialing':
-                            user.had_trial = True
                         session_customer = getattr(session, 'customer', None)
                         if not user.stripe_customer_id and session_customer:
                             user.stripe_customer_id = session_customer
+                        customer_for_trial = session_customer or user.stripe_customer_id
+                        if subscription_status == 'trialing':
+                            if _customer_has_saved_card(customer_for_trial):
+                                user.had_trial = True
+                            else:
+                                user.subscription_status = 'incomplete'
+                                logger.warning(f'Trial bloqueado em verify-session para {user.email}: sem cartão guardado')
                         
                         # Marcar conversão de afiliado se aplicável (garantir que está marcado)
                         if user.referrer_id and subscription_status in ['active', 'trialing']:
@@ -458,10 +712,14 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                         db.refresh(user)
                         logger.info(f'Subscrição verificada e atualizada para {user.email}: {subscription_status}')
                 except Exception as e:
+                    persist_ok = False
                     db.rollback()
                     logger.error(f'Erro ao atualizar subscrição: {str(e)}')
                 finally:
                     db.close()
+
+                if not persist_ok:
+                    raise HTTPException(status_code=500, detail='Falha ao guardar estado da subscrição na base de dados.')
                 
                 return {
                     'success': True,
@@ -556,21 +814,6 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
             logger.warning(f'Utilizador {current_user.email} tentou cancelar mas não tem subscription_id')
             raise HTTPException(status_code=400, detail='Não tens uma subscrição ativa para cancelar.')
         
-        if current_user.subscription_status == 'canceled':
-            logger.info(f'Subscrição já cancelada: {current_user.email}')
-            return {
-                'success': True,
-                'message': 'Subscrição já está cancelada.',
-                'subscription_status': 'canceled'
-            }
-        
-        if current_user.subscription_status == 'cancel_at_period_end':
-            return {
-                'success': True,
-                'message': 'A subscrição já está marcada para terminar no fim do período atual.',
-                'subscription_status': 'cancel_at_period_end'
-            }
-        
         # Simulação/teste: cancelar de imediato
         if current_user.stripe_customer_id and (current_user.stripe_customer_id.startswith('sim_') or current_user.stripe_customer_id.startswith('test_')):
             logger.info(f'Subscrição de simulação - marcando como cancelada: {current_user.email}')
@@ -582,7 +825,44 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
                 'subscription_status': 'canceled'
             }
         
-        subscription = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        try:
+            subscription = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+        except stripe.error.InvalidRequestError as e:
+            if getattr(e, 'code', None) == 'resource_missing':
+                current_user.subscription_status = 'canceled'
+                db.commit()
+                return {
+                    'success': True,
+                    'message': 'Subscrição já não existe no Stripe. Estado local sincronizado.',
+                    'subscription_status': 'canceled'
+                }
+            raise
+
+        stripe_status = (subscription.get('status') or '').strip()
+        if subscription.get('cancel_at_period_end'):
+            stripe_status = 'cancel_at_period_end'
+
+        # Sincronizar estado local antes de decidir resposta
+        if stripe_status and current_user.subscription_status != stripe_status:
+            current_user.subscription_status = stripe_status
+            db.commit()
+
+        if stripe_status == 'canceled':
+            logger.info(f'Subscrição já cancelada no Stripe: {current_user.email}')
+            return {
+                'success': True,
+                'message': 'Subscrição já está cancelada.',
+                'subscription_status': 'canceled'
+            }
+
+        if stripe_status == 'cancel_at_period_end':
+            return {
+                'success': True,
+                'message': 'A subscrição já está marcada para terminar no fim do período atual.',
+                'subscription_status': 'cancel_at_period_end',
+                'current_period_end': subscription.get('current_period_end')
+            }
+
         within_7_days = _subscription_within_refund_window(subscription)
         
         if within_7_days:

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc, case, or_
-from typing import List, Optional
+from typing import List, Optional, Dict, Set
 from uuid import UUID
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from ..core.dependencies import get_db, conf
 from ..models import database as models
 from .. import schemas
@@ -26,6 +28,12 @@ logger = logging.getLogger(__name__)
 stripe.api_key = settings.STRIPE_API_KEY
 
 router = APIRouter(prefix='/admin', tags=['admin'])
+
+# Cache em memória para evitar chamadas repetidas ao Stripe em cada refresh do admin.
+# Estrutura: {customer_id: {"value": bool, "ts": epoch_seconds}}
+_customer_card_cache: Dict[str, Dict[str, float]] = {}
+_CUSTOMER_CARD_CACHE_TTL_SECONDS = 15 * 60
+_CUSTOMER_CARD_CACHE_MAX_ENTRIES = 5000
 
 async def check_admin(current_user: models.User = Depends(get_current_user)):
     if not current_user.is_admin:
@@ -51,6 +59,130 @@ def _invoice_net_paid(inv) -> int:
             return amount_paid
     amount_refunded = getattr(charge, 'amount_refunded', 0) or 0
     return max(0, amount_paid - amount_refunded)
+
+
+def _customer_has_saved_card(customer_id: str) -> bool:
+    """True se o customer tem cartão guardado no Stripe (default PM ou pelo menos 1 card)."""
+    if not customer_id or not settings.STRIPE_API_KEY:
+        return False
+
+    try:
+        customer = stripe.Customer.retrieve(
+            customer_id,
+            expand=['invoice_settings.default_payment_method'],
+        )
+
+        default_pm = None
+        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
+        if isinstance(invoice_settings, dict):
+            default_pm = invoice_settings.get('default_payment_method')
+        elif invoice_settings is not None:
+            default_pm = getattr(invoice_settings, 'default_payment_method', None)
+
+        if default_pm:
+            return True
+
+        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
+        return bool(getattr(cards, 'data', None))
+    except stripe.error.InvalidRequestError:
+        return False
+    except Exception as e:
+        logger.warning(f'Erro ao validar payment method do customer {customer_id}: {e}')
+        return False
+
+
+def _get_cached_customer_card_status(customer_id: str) -> Optional[bool]:
+    if not customer_id:
+        return None
+    entry = _customer_card_cache.get(customer_id)
+    if not entry:
+        return None
+    ts = float(entry.get('ts', 0))
+    if (time.time() - ts) > _CUSTOMER_CARD_CACHE_TTL_SECONDS:
+        _customer_card_cache.pop(customer_id, None)
+        return None
+    return bool(entry.get('value', False))
+
+
+def _set_cached_customer_card_status(customer_id: str, value: bool) -> None:
+    if not customer_id:
+        return
+    # Limpeza simples para evitar crescimento infinito.
+    if len(_customer_card_cache) >= _CUSTOMER_CARD_CACHE_MAX_ENTRIES:
+        now = time.time()
+        expired_keys = [
+            key for key, entry in _customer_card_cache.items()
+            if (now - float(entry.get('ts', 0))) > _CUSTOMER_CARD_CACHE_TTL_SECONDS
+        ]
+        for key in expired_keys[:2000]:
+            _customer_card_cache.pop(key, None)
+        if len(_customer_card_cache) >= _CUSTOMER_CARD_CACHE_MAX_ENTRIES:
+            _customer_card_cache.pop(next(iter(_customer_card_cache)), None)
+    _customer_card_cache[customer_id] = {'value': bool(value), 'ts': time.time()}
+
+
+def _invoice_commission_is_settled(invoice_id: str, affiliate_id, stripe_invoice_cache: Dict[str, bool]) -> bool:
+    """
+    Considera uma invoice liquidada para comissões quando:
+    - já existe registo de transferência manual por invoice, ou
+    - Stripe indica split automático (charge.transfer ou application_fee_amount > 0).
+    """
+    if not invoice_id:
+        return False
+    cached = stripe_invoice_cache.get(invoice_id)
+    if cached is not None:
+        return cached
+    if not settings.STRIPE_API_KEY:
+        stripe_invoice_cache[invoice_id] = False
+        return False
+    try:
+        invoice = stripe.Invoice.retrieve(invoice_id, expand=['charge'])
+        charge = invoice.get('charge') if isinstance(invoice, dict) else getattr(invoice, 'charge', None)
+        if isinstance(charge, dict):
+            settled = bool(charge.get('transfer')) or (charge.get('application_fee_amount') or 0) > 0
+        else:
+            settled = bool(getattr(charge, 'transfer', None)) or (getattr(charge, 'application_fee_amount', 0) or 0) > 0
+        stripe_invoice_cache[invoice_id] = bool(settled)
+        return bool(settled)
+    except Exception as e:
+        logger.warning(f'Erro ao validar settlement da invoice {invoice_id} (afiliado {affiliate_id}): {e}')
+        stripe_invoice_cache[invoice_id] = False
+        return False
+
+
+def _get_pending_commission_cents_for_month(
+    db: Session,
+    affiliate_id,
+    month_date: date,
+    monthly_commission_cents: int,
+    stripe_invoice_cache: Dict[str, bool],
+) -> int:
+    """
+    Calcula comissão pendente no mês com granularidade por invoice.
+    Evita pagar em duplicado meses parcialmente liquidados.
+    """
+    invoice_rows = (
+        db.query(models.AffiliateCommissionInvoice)
+        .filter(
+            models.AffiliateCommissionInvoice.affiliate_id == affiliate_id,
+            models.AffiliateCommissionInvoice.month == month_date,
+        )
+        .all()
+    )
+    if not invoice_rows:
+        return max(0, int(monthly_commission_cents or 0))
+
+    pending = 0
+    for row in invoice_rows:
+        manual_done = db.query(models.AffiliateInvoiceManualTransfer).filter(
+            models.AffiliateInvoiceManualTransfer.invoice_id == row.invoice_id
+        ).first()
+        if manual_done:
+            continue
+        if _invoice_commission_is_settled(row.invoice_id, affiliate_id, stripe_invoice_cache):
+            continue
+        pending += int(row.commission_cents or 0)
+    return max(0, pending)
 
 
 @router.get('/finance/stats')
@@ -431,12 +563,51 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
     )
 
     users_with_metrics: List[schemas.AdminUserResponse] = []
+    customer_ids: Set[str] = set()
+    for user, _, _ in rows:
+        customer_id = (user.stripe_customer_id or '').strip() if user.stripe_customer_id else ''
+        if customer_id:
+            customer_ids.add(customer_id)
+
+    # Resolve apenas customers sem cache/expirados.
+    resolved_cards: Dict[str, bool] = {}
+    missing_customer_ids: List[str] = []
+    for customer_id in customer_ids:
+        cached_value = _get_cached_customer_card_status(customer_id)
+        if cached_value is None:
+            missing_customer_ids.append(customer_id)
+        else:
+            resolved_cards[customer_id] = cached_value
+
+    if missing_customer_ids:
+        max_workers = min(8, len(missing_customer_ids))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(_customer_has_saved_card, customer_id): customer_id
+                for customer_id in missing_customer_ids
+            }
+            for future in as_completed(futures):
+                customer_id = futures[future]
+                try:
+                    has_card = bool(future.result())
+                except Exception as e:
+                    logger.warning(f'Erro ao resolver customer {customer_id}: {e}')
+                    has_card = False
+                resolved_cards[customer_id] = has_card
+                _set_cached_customer_card_status(customer_id, has_card)
+
     for user, bot_tx_count, copilot_count in rows:
         base = schemas.AdminUserResponse.from_orm(user).dict()
         base['bot_transactions_count'] = int(bot_tx_count or 0)
         base['copilot_messages_count'] = int(copilot_count or 0)
         base['had_trial'] = bool(user.had_trial)
-        base['has_payment_method'] = bool(user.stripe_customer_id)
+        customer_id = (user.stripe_customer_id or '').strip() if user.stripe_customer_id else ''
+        base['has_stripe_customer'] = bool(customer_id)
+
+        if not customer_id:
+            base['has_payment_method'] = False
+        else:
+            base['has_payment_method'] = bool(resolved_cards.get(customer_id, False))
         users_with_metrics.append(schemas.AdminUserResponse(**base))
 
     return users_with_metrics
@@ -1516,7 +1687,7 @@ async def send_monthly_affiliate_emails(
     # Buscar email do admin
     admin_email = settings.ADMIN_EMAIL or admin.email
     
-    # Buscar todas as comissões do mês
+    # Buscar todas as comissões do mês (pagas e não pagas) e calcular pendente real por invoice.
     commissions = db.query(models.AffiliateCommission).filter(
         models.AffiliateCommission.month == month_date
     ).all()
@@ -1527,7 +1698,17 @@ async def send_monthly_affiliate_emails(
     # Preparar dados para email do admin
     admin_data = []
     total_payout = 0
+    stripe_invoice_cache: Dict[str, bool] = {}
     for comm in commissions:
+        pending_cents = _get_pending_commission_cents_for_month(
+            db=db,
+            affiliate_id=comm.affiliate_id,
+            month_date=month_date,
+            monthly_commission_cents=int(comm.commission_amount_cents or 0),
+            stripe_invoice_cache=stripe_invoice_cache,
+        )
+        if pending_cents <= 0:
+            continue
         affiliate = db.query(models.User).filter(models.User.id == comm.affiliate_id).first()
         if affiliate:
             admin_data.append({
@@ -1535,10 +1716,13 @@ async def send_monthly_affiliate_emails(
                 'full_name': affiliate.full_name or 'N/A',
                 'code': affiliate.affiliate_code,
                 'revenue_cents': comm.total_revenue_cents,
-                'commission_cents': comm.commission_amount_cents,
+                'commission_cents': pending_cents,
                 'conversions': comm.conversions_count
             })
-            total_payout += comm.commission_amount_cents
+            total_payout += pending_cents
+
+    if not admin_data:
+        return {'message': f'Nenhuma comissão pendente para {month}'}
     
     # Enviar email para admin
     fm = FastMail(conf)
@@ -1593,6 +1777,15 @@ async def send_monthly_affiliate_emails(
     # Enviar emails para cada afiliado
     sent_count = 0
     for comm in commissions:
+        pending_cents = _get_pending_commission_cents_for_month(
+            db=db,
+            affiliate_id=comm.affiliate_id,
+            month_date=month_date,
+            monthly_commission_cents=int(comm.commission_amount_cents or 0),
+            stripe_invoice_cache=stripe_invoice_cache,
+        )
+        if pending_cents <= 0:
+            continue
         affiliate = db.query(models.User).filter(models.User.id == comm.affiliate_id).first()
         if not affiliate:
             continue
@@ -1626,7 +1819,7 @@ async def send_monthly_affiliate_emails(
                 <ul>
                     <li><strong>Total de conversões:</strong> {comm.conversions_count}</li>
                     <li><strong>Receita gerada:</strong> €{comm.total_revenue_cents / 100:.2f}</li>
-                    <li><strong>Comissão a receber:</strong> €{comm.commission_amount_cents / 100:.2f}</li>
+                    <li><strong>Comissão pendente a receber:</strong> €{pending_cents / 100:.2f}</li>
                 </ul>
                 <h3 style="color: #ffffff;">Utilizadores que subscreveram:</h3>
                 <ul>

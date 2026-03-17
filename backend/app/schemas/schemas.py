@@ -320,6 +320,7 @@ class AdminUserResponse(BaseModel):
     pro_granted_until: Optional[datetime] = None
     had_refund: bool = False
     had_trial: bool = False
+    has_stripe_customer: bool = False
     has_payment_method: bool = False
     created_at: datetime
     is_active: bool
