@@ -20,6 +20,7 @@ from ..core.email_translations import get_email_translation
 import logging
 import requests
 import secrets
+import re
 
 import json
 
@@ -59,6 +60,21 @@ def _invoice_net_paid(inv) -> int:
             return amount_paid
     amount_refunded = getattr(charge, 'amount_refunded', 0) or 0
     return max(0, amount_paid - amount_refunded)
+
+
+def _audit_severity(action: str, details: Optional[str]) -> str:
+    text_action = (action or '').lower()
+    text_details = details or ''
+    m = re.search(r'->\s*(\d{3})', text_details)
+    if m:
+        status_code = int(m.group(1))
+        if status_code >= 500:
+            return 'critical'
+        if status_code >= 400:
+            return 'warning'
+    if any(k in text_action for k in ('delete', 'revoke', 'refund', 'error', 'failed', 'deny', 'blocked')):
+        return 'warning'
+    return 'info'
 
 
 def _customer_has_saved_card(customer_id: str) -> bool:
@@ -191,6 +207,23 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
         from datetime import datetime, timedelta
         from collections import defaultdict
 
+        if not settings.STRIPE_API_KEY:
+            now = datetime.now(timezone.utc)
+            monthly_data = []
+            for i in range(11, -1, -1):
+                month_date = now - timedelta(days=30 * i)
+                monthly_data.append({
+                    'month': month_date.strftime('%b %Y'),
+                    'revenue_cents': 0
+                })
+            return {
+                'total_mrr_cents': 0,
+                'total_revenue_cents': 0,
+                'active_subscriptions': 0,
+                'pending_invoices_count': 0,
+                'monthly_revenue': monthly_data
+            }
+
         subscriptions = stripe.Subscription.list(limit=100, status='all')
         # Expandir charge para obter amount_refunded sem N+1 requests
         invoices = stripe.Invoice.list(limit=100, expand=['data.charge'])
@@ -213,7 +246,7 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
 
         # Faturamento mensal dos últimos 12 meses (receita líquida, sem reembolsos)
         monthly_revenue = defaultdict(int)
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         for inv in invoices.data:
             if inv.status == 'paid' and inv.created:
@@ -221,7 +254,7 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
                 if net <= 0:
                     continue
                 if isinstance(inv.created, (int, float)):
-                    inv_date = datetime.fromtimestamp(inv.created)
+                    inv_date = datetime.fromtimestamp(inv.created, tz=timezone.utc)
                 else:
                     inv_date = inv.created
                 month_key = inv_date.strftime('%Y-%m')
@@ -245,7 +278,8 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
             'monthly_revenue': monthly_data
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Stripe error: {str(e)}')
+        logger.error(f'Erro em /admin/finance/stats: {str(e)}', exc_info=True)
+        raise HTTPException(status_code=500, detail='Erro ao obter estatísticas financeiras.')
 
 @router.get('/stats', response_model=schemas.AdminStats)
 async def get_admin_stats(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
@@ -467,6 +501,10 @@ async def get_audit_logs(
     page: int = 1, 
     limit: int = 20, 
     action: str = None, 
+    q: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     db: Session = Depends(get_db), 
     admin: models.User = Depends(check_admin)
 ):
@@ -476,6 +514,33 @@ async def get_audit_logs(
     
     if action and action != 'all':
         query = query.filter(models.AuditLog.action.contains(action))
+    if q:
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                models.AuditLog.action.ilike(term),
+                models.AuditLog.details.ilike(term),
+                models.AuditLog.ip_address.ilike(term),
+            )
+        )
+    if user_id:
+        try:
+            uid = UUID(user_id)
+            query = query.filter(models.AuditLog.user_id == uid)
+        except Exception:
+            raise HTTPException(status_code=400, detail='user_id inválido')
+    if date_from:
+        try:
+            from_dt = datetime.fromisoformat(date_from)
+            query = query.filter(models.AuditLog.created_at >= from_dt)
+        except Exception:
+            raise HTTPException(status_code=400, detail='date_from inválido (ISO esperado)')
+    if date_to:
+        try:
+            to_dt = datetime.fromisoformat(date_to)
+            query = query.filter(models.AuditLog.created_at <= to_dt)
+        except Exception:
+            raise HTTPException(status_code=400, detail='date_to inválido (ISO esperado)')
         
     total = query.count()
     logs = query.order_by(models.AuditLog.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
@@ -491,12 +556,63 @@ async def get_audit_logs(
                 "action": log.action,
                 "details": log.details,
                 "ip_address": log.ip_address,
+                "severity": _audit_severity(log.action, log.details),
                 "created_at": log.created_at,
             }
         )
 
     return {
         "logs": logs_payload,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+
+@router.get('/users/{user_id}/logs')
+async def get_user_logs(
+    user_id: UUID,
+    page: int = 1,
+    limit: int = 20,
+    action: Optional[str] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(check_admin),
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='Utilizador não encontrado')
+
+    limit = min(max(limit, 1), 100)
+    page = max(page, 1)
+    query = db.query(models.AuditLog).filter(models.AuditLog.user_id == user_id)
+    if action and action != 'all':
+        query = query.filter(models.AuditLog.action.contains(action))
+    if q:
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                models.AuditLog.action.ilike(term),
+                models.AuditLog.details.ilike(term),
+                models.AuditLog.ip_address.ilike(term),
+            )
+        )
+
+    total = query.count()
+    logs = query.order_by(models.AuditLog.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    return {
+        "logs": [
+            {
+                "id": str(log.id),
+                "user_id": str(log.user_id) if log.user_id else None,
+                "action": log.action,
+                "details": log.details,
+                "ip_address": log.ip_address,
+                "severity": _audit_severity(log.action, log.details),
+                "created_at": log.created_at,
+            }
+            for log in logs
+        ],
         "total": total,
         "page": page,
         "pages": (total + limit - 1) // limit
@@ -628,7 +744,7 @@ async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: m
     )
 
 @router.post('/users/{user_id}/toggle-admin')
-async def toggle_admin_status(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+async def toggle_admin_status(user_id: UUID, request: Request, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
     if user_id == admin.id:
         raise HTTPException(status_code=400, detail='Não podes alterar o teu próprio estado de admin.')
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -637,6 +753,13 @@ async def toggle_admin_status(user_id: UUID, db: Session = Depends(get_db), admi
     
     user.is_admin = not user.is_admin
     db.commit()
+    await log_action(
+        db,
+        action='admin_toggle_admin',
+        user_id=admin.id,
+        details=f'Admin status alterado para {user.email}: {user.is_admin}',
+        request=request,
+    )
     return {'message': f"Admin status for {user.email} updated to {user.is_admin}"}
 
 
@@ -1119,9 +1242,11 @@ async def get_affiliates_stats(
             'total_paid_earnings_cents': int(total_paid_earnings or 0),
             'total_revenue_cents': int(total_revenue_cents or 0)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f'Erro ao buscar stats de afiliados: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=500, detail=f'Erro ao buscar estatísticas: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao buscar estatísticas de afiliados.')
 
 @router.get('/affiliates/revenue-timeline')
 async def get_affiliates_revenue_timeline(
@@ -1202,9 +1327,11 @@ async def get_affiliates_revenue_timeline(
                     })
         
         return {'timeline': timeline}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f'Erro ao buscar timeline de receita: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=500, detail=f'Erro ao buscar timeline: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao buscar timeline de afiliados.')
 
 @router.get('/affiliates/revenue-by-affiliate')
 async def get_revenue_by_affiliate(
@@ -1296,7 +1423,7 @@ async def get_revenue_by_affiliate(
         return {'affiliates': affiliates_data}
     except Exception as e:
         logger.error(f'Erro ao buscar receita por afiliado: {str(e)}', exc_info=True)
-        raise HTTPException(status_code=500, detail=f'Erro ao buscar receita: {str(e)}')
+        raise HTTPException(status_code=500, detail='Erro ao buscar receita por afiliado.')
 
 @router.get('/affiliates/{user_id}', response_model=schemas.AdminAffiliateDetail)
 async def get_affiliate_detail(
@@ -1577,7 +1704,7 @@ async def calculate_monthly_commissions(
     
     # Se não especificado, usar mês anterior
     if not month:
-        last_month = datetime.now().replace(day=1) - timedelta(days=1)
+        last_month = datetime.now(timezone.utc).replace(day=1) - timedelta(days=1)
         month = last_month.strftime('%Y-%m')
     
     month_date = datetime.strptime(month, '%Y-%m').date().replace(day=1)
@@ -1679,7 +1806,7 @@ async def send_monthly_affiliate_emails(
     from ..core.email_translations import get_email_translation
     
     if not month:
-        last_month = datetime.now().replace(day=1) - timedelta(days=1)
+        last_month = datetime.now(timezone.utc).replace(day=1) - timedelta(days=1)
         month = last_month.strftime('%Y-%m')
     
     month_date = datetime.strptime(month, '%Y-%m').date().replace(day=1)
@@ -1874,28 +2001,73 @@ async def admin_list_support_conversations(
     if status_filter in ('open', 'closed'):
         q = q.filter(models.SupportConversation.status == status_filter)
 
-    convos = q.all()
+    unread_subq = (
+        db.query(
+            models.SupportMessage.conversation_id.label('cid'),
+            func.count(models.SupportMessage.id).label('unread_count'),
+        )
+        .filter(
+            models.SupportMessage.sender_type == 'user',
+            models.SupportMessage.is_read == False,
+        )
+        .group_by(models.SupportMessage.conversation_id)
+        .subquery()
+    )
+
+    last_msg_time_subq = (
+        db.query(
+            models.SupportMessage.conversation_id.label('cid'),
+            func.max(models.SupportMessage.created_at).label('last_created_at'),
+        )
+        .group_by(models.SupportMessage.conversation_id)
+        .subquery()
+    )
+
+    last_msg_subq = (
+        db.query(
+            models.SupportMessage.conversation_id.label('cid'),
+            models.SupportMessage.content.label('last_content'),
+        )
+        .join(
+            last_msg_time_subq,
+            and_(
+                models.SupportMessage.conversation_id == last_msg_time_subq.c.cid,
+                models.SupportMessage.created_at == last_msg_time_subq.c.last_created_at,
+            ),
+        )
+        .subquery()
+    )
+
+    rows = (
+        db.query(
+            models.SupportConversation,
+            func.coalesce(unread_subq.c.unread_count, 0).label('unread_count'),
+            last_msg_subq.c.last_content.label('last_content'),
+        )
+        .outerjoin(unread_subq, unread_subq.c.cid == models.SupportConversation.id)
+        .outerjoin(last_msg_subq, last_msg_subq.c.cid == models.SupportConversation.id)
+        .filter(models.SupportConversation.status == status_filter if status_filter in ('open', 'closed') else True)
+        .order_by(models.SupportConversation.updated_at.desc())
+        .all()
+    )
+
+    user_ids = set()
+    for c, _, _ in rows:
+        if c.user_id:
+            user_ids.add(c.user_id)
+        if c.assigned_to:
+            user_ids.add(c.assigned_to)
+    users_map = {
+        u.id: u
+        for u in db.query(models.User).filter(models.User.id.in_(list(user_ids))).all()
+    } if user_ids else {}
+
     results = []
-    for c in convos:
-        user = db.query(models.User).filter(models.User.id == c.user_id).first()
-        unread = (
-            db.query(func.count(models.SupportMessage.id))
-            .filter(
-                models.SupportMessage.conversation_id == c.id,
-                models.SupportMessage.sender_type == 'user',
-                models.SupportMessage.is_read == False,
-            )
-            .scalar()
-        )
-        last_msg = (
-            db.query(models.SupportMessage.content)
-            .filter(models.SupportMessage.conversation_id == c.id)
-            .order_by(models.SupportMessage.created_at.desc())
-            .first()
-        )
+    for c, unread_count, last_content in rows:
+        user = users_map.get(c.user_id)
         assignee = None
         if c.assigned_to:
-            a = db.query(models.User).filter(models.User.id == c.assigned_to).first()
+            a = users_map.get(c.assigned_to)
             assignee = {'id': str(a.id), 'name': a.full_name or a.email, 'email': a.email} if a else None
         results.append({
             'id': str(c.id),
@@ -1903,8 +2075,8 @@ async def admin_list_support_conversations(
             'status': c.status,
             'created_at': c.created_at.isoformat(),
             'updated_at': c.updated_at.isoformat(),
-            'unread_count': unread or 0,
-            'last_message': last_msg[0][:100] if last_msg else None,
+            'unread_count': int(unread_count or 0),
+            'last_message': (last_content or '')[:100] if last_content else None,
             'user_email': user.email if user else 'unknown',
             'user_name': (user.full_name or '') if user else '',
             'assigned_to': assignee,
@@ -1927,19 +2099,19 @@ async def admin_get_conversation_messages(
     if not convo:
         raise HTTPException(status_code=404, detail='Conversa não encontrada')
 
-    msgs = (
-        db.query(models.SupportMessage)
-        .filter(models.SupportMessage.conversation_id == cid)
-        .order_by(models.SupportMessage.created_at.asc())
-        .all()
-    )
-
     db.query(models.SupportMessage).filter(
         models.SupportMessage.conversation_id == cid,
         models.SupportMessage.sender_type == 'user',
         models.SupportMessage.is_read == False,
     ).update({'is_read': True})
     db.commit()
+
+    msgs = (
+        db.query(models.SupportMessage)
+        .filter(models.SupportMessage.conversation_id == cid)
+        .order_by(models.SupportMessage.created_at.asc())
+        .all()
+    )
 
     user = db.query(models.User).filter(models.User.id == convo.user_id).first()
     assignee_info = None
@@ -1973,7 +2145,8 @@ async def admin_get_conversation_messages(
 @router.post('/support/conversations/{conversation_id}/reply')
 async def admin_reply_to_conversation(
     conversation_id: str,
-    body: schemas.schemas.SupportAdminReply,
+    body: schemas.SupportAdminReply,
+    request: Request,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2008,12 +2181,20 @@ async def admin_reply_to_conversation(
     db.add(msg)
     db.commit()
     db.refresh(msg)
+    await log_action(
+        db,
+        action='admin_support_reply',
+        user_id=admin.id,
+        details=f'Resposta enviada na conversa {conversation_id}',
+        request=request,
+    )
     return {'message_id': str(msg.id), 'assigned_to': str(admin.id)}
 
 
 @router.post('/support/conversations/{conversation_id}/assign')
 async def admin_assign_conversation(
     conversation_id: str,
+    request: Request,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2028,12 +2209,20 @@ async def admin_assign_conversation(
 
     convo.assigned_to = admin.id
     db.commit()
+    await log_action(
+        db,
+        action='admin_support_assign',
+        user_id=admin.id,
+        details=f'Conversa {conversation_id} atribuída ao admin',
+        request=request,
+    )
     return {'ok': True, 'assigned_to': str(admin.id)}
 
 
 @router.patch('/support/conversations/{conversation_id}/close')
 async def admin_close_conversation(
     conversation_id: str,
+    request: Request,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2048,12 +2237,20 @@ async def admin_close_conversation(
 
     convo.status = 'closed'
     db.commit()
+    await log_action(
+        db,
+        action='admin_support_close',
+        user_id=admin.id,
+        details=f'Conversa {conversation_id} fechada',
+        request=request,
+    )
     return {'ok': True}
 
 
 @router.delete('/support/conversations/{conversation_id}')
 async def admin_delete_conversation(
     conversation_id: str,
+    request: Request,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2068,6 +2265,13 @@ async def admin_delete_conversation(
 
     db.delete(convo)
     db.commit()
+    await log_action(
+        db,
+        action='admin_support_delete',
+        user_id=admin.id,
+        details=f'Conversa {conversation_id} eliminada',
+        request=request,
+    )
     return {'ok': True}
 
 
@@ -2156,6 +2360,7 @@ async def admin_get_auto_reply(
 @router.post('/support/auto-reply')
 async def admin_set_auto_reply(
     body: dict,
+    request: Request,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2166,6 +2371,13 @@ async def admin_set_auto_reply(
     else:
         db.add(models.AppSetting(key='support_auto_reply', value='1' if enabled else '0'))
     db.commit()
+    await log_action(
+        db,
+        action='admin_support_auto_reply_toggle',
+        user_id=admin.id,
+        details=f'Auto-reply suporte: {"ativado" if enabled else "desativado"}',
+        request=request,
+    )
     return {'enabled': enabled}
 
 
@@ -2190,7 +2402,15 @@ async def admin_total_unread(
 async def admin_set_typing(
     conversation_id: str,
     admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
 ):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
     from .support import _typing_status
     import time
     _typing_status.setdefault(conversation_id, {})['admin'] = time.time()
@@ -2201,7 +2421,15 @@ async def admin_set_typing(
 async def admin_get_typing(
     conversation_id: str,
     admin: models.User = Depends(check_admin),
+    db: Session = Depends(get_db),
 ):
+    try:
+        cid = UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='ID inválido')
+    convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == cid).first()
+    if not convo:
+        raise HTTPException(status_code=404, detail='Conversa não encontrada')
     from .support import _typing_status, TYPING_TTL
     import time
     status = _typing_status.get(conversation_id, {})

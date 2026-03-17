@@ -11,6 +11,9 @@ from .core.dependencies import engine, get_db, SessionLocal
 from .core import security
 from .core.limiter import limiter, attach_limiter
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from jose import jwt, JWTError
+from uuid import UUID
 import logging
 import os
 import asyncio
@@ -51,6 +54,73 @@ DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
 
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 attach_limiter(app)
+
+_AUDIT_EXCLUDE_PATH_PREFIXES = (
+    '/health',
+    '/api/settings/public',
+    '/docs',
+    '/redoc',
+    '/openapi.json',
+    '/webhooks/',
+)
+_AUDIT_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
+
+
+def _resolve_user_id_from_request(request: Request, db: Session) -> UUID | None:
+    """Resolve user_id a partir do bearer token (best effort)."""
+    auth_header = request.headers.get('authorization') or ''
+    if not auth_header.lower().startswith('bearer '):
+        return None
+    token = auth_header.split(' ', 1)[1].strip()
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get('type', 'access') != 'access':
+            return None
+        email = (payload.get('sub') or '').strip().lower()
+        if not email:
+            return None
+        user = db.query(User).filter(func.lower(User.email) == email).first()
+        return user.id if user else None
+    except JWTError:
+        return None
+    except Exception:
+        return None
+
+
+@app.middleware("http")
+async def audit_requests_middleware(request: Request, call_next):
+    """
+    Regista automaticamente ações de mutação para aumentar cobertura de auditoria.
+    Mantém endpoints de saúde/webhooks fora para reduzir ruído.
+    """
+    response = await call_next(request)
+    path = request.url.path or ''
+    method = (request.method or '').upper()
+    if method not in _AUDIT_METHODS:
+        return response
+    if any(path.startswith(prefix) for prefix in _AUDIT_EXCLUDE_PATH_PREFIXES):
+        return response
+
+    try:
+        from .models.database import AuditLog  # import local para evitar ciclos no arranque
+        db = SessionLocal()
+        try:
+            user_id = _resolve_user_id_from_request(request, db)
+            details = f'{method} {path} -> {response.status_code}'
+            db.add(AuditLog(
+                user_id=user_id,
+                action=f'http_{method.lower()}',
+                details=details,
+                ip_address=request.client.host if request.client else None,
+            ))
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f'Falha ao gravar audit middleware ({method} {path}): {e}')
+    return response
 
 # Configuração de CORS - em produção sem variáveis usa https://app.finlybot.com como base
 environment = os.getenv('ENVIRONMENT', 'development')

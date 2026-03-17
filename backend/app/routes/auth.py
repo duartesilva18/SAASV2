@@ -147,9 +147,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     # Blindagem defensiva para estados legados inconsistentes:
     # se estiver "trialing" sem validação de trial, bloquear acesso Pro.
     if user.subscription_status == 'trialing' and not bool(getattr(user, 'had_trial', False)):
-        user.subscription_status = 'incomplete'
-        db.commit()
-        logger.warning(f'⚠️ Estado trial inconsistente corrigido para incomplete: {email}')
+        logger.warning(f'⚠️ Estado trial inconsistente detetado (trialing sem had_trial): {email}')
     logger.info(f'✅ Utilizador autenticado: {email}')
     return user
 
@@ -1331,7 +1329,8 @@ async def request_password_reset(request: Request, data: schemas.PasswordResetRe
         await fm.send_message(message)
     except Exception as e:
         logger.error(f'ERRO CRÍTICO EMAIL para {email_norm}: {str(e)}')
-        raise HTTPException(status_code=503, detail='Não foi possível enviar o código de recuperação de momento. Tenta novamente.')
+        # Resposta neutra para não permitir enumeração de utilizadores em falhas de envio.
+        return {'message': 'Se existir uma conta associada a este email, foi enviado um código de recuperação.'}
     
     return {'message': 'Se existir uma conta associada a este email, foi enviado um código de recuperação.'}
 

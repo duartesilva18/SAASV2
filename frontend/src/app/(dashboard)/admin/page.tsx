@@ -33,6 +33,15 @@ export default function AdminDashboardPage() {
   const [showGrantModal, setShowGrantModal] = useState(false);
   const [grantMonths, setGrantMonths] = useState<number>(3);
   const [grantingPro, setGrantingPro] = useState(false);
+  // User logs modal
+  const [showUserLogsModal, setShowUserLogsModal] = useState(false);
+  const [selectedUserForLogs, setSelectedUserForLogs] = useState<{ id: string; email: string; name?: string } | null>(null);
+  const [selectedUserLogs, setSelectedUserLogs] = useState<any[]>([]);
+  const [loadingUserLogs, setLoadingUserLogs] = useState(false);
+  const [userLogsPage, setUserLogsPage] = useState(1);
+  const [userLogsTotalPages, setUserLogsTotalPages] = useState(1);
+  const [userLogsFilter, setUserLogsFilter] = useState('all');
+  const [userLogsSearch, setUserLogsSearch] = useState('');
   // Audit Logs States
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditPage, setAuditPage] = useState(1);
@@ -145,6 +154,39 @@ export default function AdminDashboardPage() {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.revokeProError, type: 'error' });
     }
   };
+
+  const fetchUserLogs = async (userId: string, page: number, action: string, search: string) => {
+    setLoadingUserLogs(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', '20');
+      params.set('action', action || 'all');
+      if (search.trim()) params.set('q', search.trim());
+      const res = await api.get(`/admin/users/${userId}/logs?${params.toString()}`);
+      setSelectedUserLogs(res.data?.logs || []);
+      setUserLogsTotalPages(res.data?.pages || 1);
+    } catch (err) {
+      setSelectedUserLogs([]);
+      setToast({ isVisible: true, message: 'Erro ao carregar logs do utilizador.', type: 'error' });
+    } finally {
+      setLoadingUserLogs(false);
+    }
+  };
+
+  const openUserLogs = async (u: { id: string; email: string; full_name?: string }) => {
+    setSelectedUserForLogs({ id: u.id, email: u.email, name: u.full_name });
+    setShowUserLogsModal(true);
+    setUserLogsPage(1);
+    setUserLogsFilter('all');
+    setUserLogsSearch('');
+    await fetchUserLogs(u.id, 1, 'all', '');
+  };
+
+  useEffect(() => {
+    if (!showUserLogsModal || !selectedUserForLogs) return;
+    fetchUserLogs(selectedUserForLogs.id, userLogsPage, userLogsFilter, userLogsSearch);
+  }, [userLogsPage, userLogsFilter]);
 
   const isProGranted = (u: { pro_granted_until?: string | null }) => {
     if (!u.pro_granted_until) return false;
@@ -386,6 +428,13 @@ export default function AdminDashboardPage() {
                         <Shield size={14} className="sm:w-4 sm:h-4" />
                       </button>
                       <button 
+                        onClick={() => openUserLogs(u)}
+                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
+                        title="Ver logs do utilizador"
+                      >
+                        <Activity size={14} className="sm:w-4 sm:h-4" />
+                      </button>
+                      <button 
                         onClick={() => handleDeleteClick(u.id)}
                         className="p-2 sm:p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
                         title={t.dashboard.admin.dashboard.deleteUser}
@@ -449,8 +498,8 @@ export default function AdminDashboardPage() {
               >
                 <div className="flex items-center gap-5">
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover/log:scale-110 ${
-                    log.action.includes('delete') ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 
-                    log.action.includes('login') ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
+                    log.severity === 'critical' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                    log.severity === 'warning' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
                     'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                   }`}>
                     <Activity size={16} />
@@ -459,6 +508,13 @@ export default function AdminDashboardPage() {
                     <p className="text-xs font-black text-white uppercase tracking-tight group-hover/log:text-blue-400 transition-colors">{log.action}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-[10px] text-slate-500 font-medium italic">{log.details}</p>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold border ${
+                        log.severity === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                        log.severity === 'warning' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                        'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                      }`}>
+                        {String(log.severity || 'info').toUpperCase()}
+                      </span>
                       {log.user && (
                         <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded-md font-bold border border-blue-500/10">
                           por {log.user.full_name || log.user.email}
@@ -571,7 +627,7 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setShowGrantModal(false); setUserToGrantPro(null); }}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm"
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm cursor-pointer"
                 >
                   {t.dashboard.admin.dashboard.cancel}
                 </button>
@@ -579,12 +635,125 @@ export default function AdminDashboardPage() {
                   type="button"
                   onClick={handleGrantPro}
                   disabled={grantingPro}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 font-bold text-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
                   {grantingPro ? <Loader2 size={16} className="animate-spin" /> : null}
                   {t.dashboard.admin.dashboard.grantPro}
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* User logs modal */}
+      <AnimatePresence>
+        {showUserLogsModal && selectedUserForLogs && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowUserLogsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-3xl shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-black text-white">Logs do utilizador</h3>
+                  <p className="text-xs text-slate-400">{selectedUserForLogs.name || selectedUserForLogs.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUserLogsModal(false)}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+                <input
+                  type="text"
+                  value={userLogsSearch}
+                  onChange={(e) => setUserLogsSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && selectedUserForLogs) {
+                      setUserLogsPage(1);
+                      fetchUserLogs(selectedUserForLogs.id, 1, userLogsFilter, (e.target as HTMLInputElement).value);
+                    }
+                  }}
+                  placeholder="Pesquisar ação, detalhe, IP..."
+                  className="md:col-span-2 bg-slate-950/50 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white"
+                />
+                <select
+                  value={userLogsFilter}
+                  onChange={(e) => { setUserLogsFilter(e.target.value); setUserLogsPage(1); }}
+                  className="bg-slate-950/50 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white cursor-pointer"
+                >
+                  <option value="all">Todas ações</option>
+                  <option value="login">Login</option>
+                  <option value="register">Registo</option>
+                  <option value="stripe">Stripe</option>
+                  <option value="support">Suporte</option>
+                  <option value="admin">Admin</option>
+                  <option value="password">Password</option>
+                </select>
+              </div>
+
+              <div className="overflow-y-auto space-y-2 pr-1">
+                {loadingUserLogs ? (
+                  <div className="py-10 flex items-center justify-center">
+                    <Loader2 size={20} className="animate-spin text-blue-400" />
+                  </div>
+                ) : selectedUserLogs.length > 0 ? (
+                  selectedUserLogs.map((log: any) => (
+                    <div key={log.id} className="p-3 rounded-xl bg-slate-950/70 border border-white/5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-black text-white uppercase tracking-wide">{log.action}</p>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold border ${
+                          log.severity === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                          log.severity === 'warning' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                          'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                        }`}>
+                          {String(log.severity || 'info').toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">{log.details || 'Sem detalhes'}</p>
+                      <p className="text-[10px] text-slate-600 mt-1">{new Date(log.created_at).toLocaleString()}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 py-8 text-center">Sem logs para este utilizador.</p>
+                )}
+              </div>
+
+              {userLogsTotalPages > 1 && (
+                <div className="flex items-center justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    disabled={userLogsPage === 1 || loadingUserLogs}
+                    onClick={() => setUserLogsPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-40 cursor-pointer"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-xs text-slate-500">Página {userLogsPage} / {userLogsTotalPages}</span>
+                  <button
+                    type="button"
+                    disabled={userLogsPage === userLogsTotalPages || loadingUserLogs}
+                    onClick={() => setUserLogsPage((p) => Math.min(userLogsTotalPages, p + 1))}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-40 cursor-pointer"
+                  >
+                    Seguinte
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

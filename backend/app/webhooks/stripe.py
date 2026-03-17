@@ -30,8 +30,8 @@ def _get_price_id_for_commission(invoice: dict) -> str | None:
             orig = meta.get('original_price_id', '').strip()
             if orig:
                 return orig
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f'Falha ao obter original_price_id da subscrição {sub_id}: {e}')
     lines = (invoice.get('lines') or {}).get('data') or []
     if lines:
         price_obj = lines[0].get('price')
@@ -50,8 +50,8 @@ def _get_base_amount_for_commission(invoice: dict) -> int:
             base_str = (meta.get('base_amount_cents') or '').strip()
             if base_str and base_str.isdigit():
                 return int(base_str)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f'Falha ao obter base_amount_cents da subscrição {sub_id}: {e}')
     return invoice.get('amount_paid') or 0
 
 
@@ -164,7 +164,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.error(f'Erro ao processar evento Stripe {event_type}: {str(e)}', exc_info=True)
         db.rollback()
         # Devolver 500 para que o Stripe faça retry (em vez de engolir o erro)
-        raise HTTPException(status_code=500, detail=f'Webhook handler error: {event_type}')
+        raise HTTPException(status_code=500, detail='Webhook handler error')
 
     return {'status': 'success'}
 
@@ -226,14 +226,14 @@ def handle_checkout_completed(session: dict, db: Session):
         if not user.stripe_customer_id:
             user.stripe_customer_id = customer_id
         
-        # Marcar conversão de afiliado se aplicável (após atualizar subscription_status)
-        if user.referrer_id:
+        # Marcar conversão de afiliado apenas se o estado final for elegível.
+        if user.referrer_id and user.subscription_status in ('active', 'trialing'):
             referral = db.query(models.AffiliateReferral).filter(
                 models.AffiliateReferral.referred_user_id == user.id
             ).first()
             if referral and not referral.has_subscribed:
                 referral.has_subscribed = True
-                referral.subscription_date = datetime.now()
+                referral.subscription_date = datetime.now(timezone.utc)
                 logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (checkout.completed)')
             elif referral:
                 logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
@@ -269,14 +269,14 @@ def handle_subscription_created(subscription: dict, db: Session):
                 user.subscription_status = 'incomplete'
                 logger.warning(f'Trial bloqueado em subscription.created para {user.email}: sem cartão')
         
-        # Marcar conversão de afiliado se aplicável
-        if user.referrer_id:
+        # Marcar conversão de afiliado apenas se o estado final for elegível.
+        if user.referrer_id and user.subscription_status in ('active', 'trialing'):
             referral = db.query(models.AffiliateReferral).filter(
                 models.AffiliateReferral.referred_user_id == user.id
             ).first()
             if referral and not referral.has_subscribed:
                 referral.has_subscribed = True
-                referral.subscription_date = datetime.now()
+                referral.subscription_date = datetime.now(timezone.utc)
                 logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (subscription.created)')
             elif referral:
                 logger.info(f'ℹ️ Referência já estava marcada como subscrita para {user.email}')
@@ -328,7 +328,7 @@ def handle_subscription_deleted(subscription: dict, db: Session):
         ).first()
         if referral:
             referral.has_subscribed = False
-            referral.subscription_canceled_at = datetime.now()
+            referral.subscription_canceled_at = datetime.now(timezone.utc)
             logger.info(f'Afiliado: referência {user.email} marcada como cancelada (referrer_id={referral.referrer_id})')
             # Não ajustar comissão aqui. Cancelamento sem reembolso não remove comissão já ganha.
             # Ajustes financeiros devem acontecer apenas no fluxo de refund (charge.refunded).
@@ -389,7 +389,7 @@ def handle_charge_refunded(charge: dict, db: Session):
 
     # Atualizar referência
     referral.has_subscribed = False
-    referral.subscription_canceled_at = datetime.now()
+    referral.subscription_canceled_at = datetime.now(timezone.utc)
 
     # Mês da comissão: a partir da invoice ou da data do charge
     commission_month = date.today().replace(day=1)
@@ -504,7 +504,7 @@ def handle_invoice_payment_failed(invoice: dict, db: Session):
             try:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 current_period_end = subscription.current_period_end  # Timestamp do fim do período atual
-                current_time = datetime.now().timestamp()
+                current_time = datetime.now(timezone.utc).timestamp()
                 
                 # Só atualizar o status se:
                 # 1. A fatura é para o período atual (period_end <= current_period_end) OU
@@ -640,10 +640,9 @@ def handle_invoice_paid(invoice: dict, db: Session):
                                         logger.info(f'Invoice {invoice_id} tem application_fee_amount={app_fee}; não criar Transfer manual')
                                 except Exception as e:
                                     logger.error(f'Erro ao criar Transfer manual para 1ª invoice: {e}', exc_info=True)
-                                    db.rollback()
                     if referral and not referral.has_subscribed:
                         referral.has_subscribed = True
-                        referral.subscription_date = datetime.now()
+                        referral.subscription_date = datetime.now(timezone.utc)
                         logger.info(f'✅ Conversão de afiliado marcada: {referral.referrer_id} -> {user.email} (invoice.paid)')
 
                     # Criar ou atualizar AffiliateCommission para pagamentos de subscrição (invoice.paid)

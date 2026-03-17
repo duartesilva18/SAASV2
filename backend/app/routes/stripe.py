@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
+from ..core.audit import log_action
 from ..models import database as models
 from .auth import get_current_user
 import logging
@@ -158,7 +159,7 @@ def _find_or_create_fee_price(
     return created.get('id') if isinstance(created, dict) else created.id
 
 @router.post('/create-checkout-session')
-async def create_checkout_session(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def create_checkout_session(price_id: str, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
         _validate_allowed_price_id(price_id)
         logger.info(f'[Checkout] Início: user_id={current_user.id} email={current_user.email} referrer_id={current_user.referrer_id} price_id={price_id}')
@@ -387,6 +388,13 @@ async def create_checkout_session(price_id: str, db: Session = Depends(get_db), 
         
         checkout_session = stripe.checkout.Session.create(**session_params)
         logger.info(f'[Checkout] Session criada: session_id={checkout_session.id} url_ok={bool(checkout_session.url)} divisão_afiliado={bool(transfer_data)}')
+        await log_action(
+            db,
+            action='stripe_checkout_session_created',
+            user_id=current_user.id,
+            details=f'Checkout criado para price_id={price_id} session_id={checkout_session.id}',
+            request=request,
+        )
         return {'url': checkout_session.url}
     except Exception as e:
         logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
@@ -425,7 +433,7 @@ def _get_connect_params_for_subscription(user: models.User, price_id: str, db: S
 
 
 @router.post('/change-plan')
-async def change_plan(price_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def change_plan(price_id: str, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Altera o plano da subscrição ativa do utilizador para o novo price_id (upgrade/downgrade com proration)."""
     try:
         _validate_allowed_price_id(price_id)
@@ -568,6 +576,13 @@ async def change_plan(price_id: str, db: Session = Depends(get_db), current_user
         current_user.subscription_status = sub_after_status or current_user.subscription_status
         db.commit()
         logger.info(f'Plano alterado para price_id={price_id} para user {current_user.email}')
+        await log_action(
+            db,
+            action='stripe_change_plan',
+            user_id=current_user.id,
+            details=f'Plano alterado para price_id={price_id}',
+            request=request,
+        )
         return {'success': True, 'message': 'Plano alterado.', 'subscription_status': current_user.subscription_status}
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao alterar plano: {str(e)}', exc_info=True)
@@ -677,6 +692,7 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                 from datetime import datetime, timezone as _tz
                 db = SessionLocal()
                 persist_ok = True
+                effective_subscription_status = subscription_status
                 try:
                     user = db.query(models.User).filter(models.User.id == current_user.id).first()
                     if user:
@@ -691,10 +707,12 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                                 user.had_trial = True
                             else:
                                 user.subscription_status = 'incomplete'
+                                effective_subscription_status = 'incomplete'
                                 logger.warning(f'Trial bloqueado em verify-session para {user.email}: sem cartão guardado')
                         
                         # Marcar conversão de afiliado se aplicável (garantir que está marcado)
-                        if user.referrer_id and subscription_status in ['active', 'trialing']:
+                        effective_status = user.subscription_status
+                        if user.referrer_id and effective_status in ['active', 'trialing']:
                             referral = db.query(models.AffiliateReferral).filter(
                                 models.AffiliateReferral.referred_user_id == user.id
                             ).first()
@@ -723,8 +741,8 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                 
                 return {
                     'success': True,
-                    'subscription_status': subscription_status,
-                    'is_active': subscription_status in ['active', 'trialing']
+                    'subscription_status': effective_subscription_status,
+                    'is_active': effective_subscription_status in ['active', 'trialing']
                 }
         
         return {
@@ -734,6 +752,8 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
     except stripe.error.StripeError as e:
         logger.error(f'Erro Stripe ao verificar sessão: {str(e)}')
         raise HTTPException(status_code=400, detail='Erro ao verificar sessão. Tenta novamente.')
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f'Erro inesperado ao verificar sessão: {str(e)}')
         raise HTTPException(status_code=500, detail='Erro ao verificar sessão')
@@ -805,7 +825,7 @@ def _subscription_within_refund_window(subscription) -> bool:
 
 
 @router.post('/cancel-subscription')
-async def cancel_subscription(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def cancel_subscription(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Cancela a subscrição: se passaram menos de 7 dias desde o início do período, cancela de imediato; senão, cancela só no fim do período (sem cobrança no próximo mês)."""
     try:
         logger.info(f'Tentativa de cancelar subscrição para {current_user.email}, subscription_id: {current_user.stripe_subscription_id}')
@@ -819,6 +839,7 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
             logger.info(f'Subscrição de simulação - marcando como cancelada: {current_user.email}')
             current_user.subscription_status = 'canceled'
             db.commit()
+            await log_action(db, action='stripe_cancel_subscription', user_id=current_user.id, details='Subscrição cancelada (simulação)', request=request)
             return {
                 'success': True,
                 'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
@@ -875,6 +896,7 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
                     logger.warning(f'Subscrição não encontrada no Stripe, atualizando apenas na BD: {current_user.email}')
                     current_user.subscription_status = 'canceled'
                     db.commit()
+                    await log_action(db, action='stripe_cancel_subscription', user_id=current_user.id, details='Subscrição cancelada (resource_missing no Stripe)', request=request)
                     return {
                         'success': True,
                         'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
@@ -883,6 +905,7 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
                 raise
             current_user.subscription_status = 'canceled'
             db.commit()
+            await log_action(db, action='stripe_cancel_subscription', user_id=current_user.id, details='Subscrição cancelada imediatamente', request=request)
             return {
                 'success': True,
                 'message': 'Subscrição cancelada com sucesso. O teu acesso Pro terminou.',
@@ -896,6 +919,7 @@ async def cancel_subscription(db: Session = Depends(get_db), current_user: model
         )
         current_user.subscription_status = 'cancel_at_period_end'
         db.commit()
+        await log_action(db, action='stripe_cancel_at_period_end', user_id=current_user.id, details='Subscrição marcada para terminar no fim do período', request=request)
         period_end_ts = subscription.get('current_period_end')
         logger.info(f'Subscrição marcada para terminar no fim do período: {current_user.email}')
         return {
