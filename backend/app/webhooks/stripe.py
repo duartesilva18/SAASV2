@@ -494,37 +494,63 @@ def handle_invoice_payment_failed(invoice: dict, db: Session):
     customer_id = invoice.get('customer')
     subscription_id = invoice.get('subscription')
     invoice_period_end = invoice.get('period_end')  # Timestamp do fim do período da fatura
+    payment_intent_id = invoice.get('payment_intent')
     
     logger.warning(f'Pagamento falhou - Invoice: {invoice.get("id")}, Customer: {customer_id}, Subscription: {subscription_id}')
-    
-    # Se a fatura está associada a uma subscrição, verificar se é para o período atual
+
+    user = None
     if subscription_id:
         user = db.query(models.User).filter(models.User.stripe_subscription_id == subscription_id).first()
-        if user:
-            try:
-                subscription = stripe.Subscription.retrieve(subscription_id)
-                current_period_end = subscription.current_period_end  # Timestamp do fim do período atual
-                current_time = datetime.now(timezone.utc).timestamp()
-                
-                # Só atualizar o status se:
-                # 1. A fatura é para o período atual (period_end <= current_period_end) OU
-                # 2. O período atual já terminou (current_time >= current_period_end) E a subscrição está realmente 'past_due' ou 'unpaid'
-                is_current_period_invoice = invoice_period_end and invoice_period_end <= current_period_end
-                period_has_ended = current_time >= current_period_end
-                
-                if subscription.status in ['past_due', 'unpaid']:
-                    # Só atualizar se for fatura do período atual ou se o período já terminou
-                    if is_current_period_invoice or period_has_ended:
-                        user.subscription_status = subscription.status
-                        db.commit()
-                        logger.warning(f'Status da subscrição atualizado para {subscription.status} devido a pagamento falhado: {user.email}')
-                    else:
-                        logger.info(f'Pagamento falhou para fatura futura (próximo ciclo). Mantendo acesso até {datetime.fromtimestamp(current_period_end, tz=timezone.utc)}: {user.email}')
-                elif subscription.status == 'active':
-                    # Se ainda está ativo, não fazer nada (pode ser tentativa de pagamento futuro)
-                    logger.info(f'Subscrição ainda ativa após falha de pagamento. Pode ser fatura futura: {user.email}')
-            except Exception as e:
-                logger.error(f'Erro ao buscar subscrição após pagamento falhado: {str(e)}')
+    if not user and customer_id:
+        user = db.query(models.User).filter(models.User.stripe_customer_id == customer_id).first()
+    if not user:
+        return
+
+    # Tentar obter códigos detalhados de recusa para UX mais clara no frontend.
+    decline_code = None
+    failure_message = None
+    try:
+        if payment_intent_id and settings.STRIPE_API_KEY:
+            pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+            last_error = pi.get('last_payment_error') if isinstance(pi, dict) else getattr(pi, 'last_payment_error', None)
+            if isinstance(last_error, dict):
+                decline_code = (last_error.get('decline_code') or last_error.get('code') or '').strip() or None
+                failure_message = (last_error.get('message') or '').strip() or None
+    except Exception as e:
+        logger.warning(f'Não foi possível obter last_payment_error do PI {payment_intent_id}: {e}')
+
+    fallback_code = (invoice.get('status') or 'payment_failed')
+    user.last_payment_failure_code = decline_code or str(fallback_code)
+    user.last_payment_failure_message = failure_message or 'Pagamento recusado pelo banco. Atualiza o cartão no portal de faturação.'
+    user.last_payment_failed_at = datetime.now(timezone.utc)
+
+    # Se a fatura está associada a uma subscrição, verificar se é para o período atual
+    if subscription_id:
+        try:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            current_period_end = subscription.current_period_end  # Timestamp do fim do período atual
+            current_time = datetime.now(timezone.utc).timestamp()
+
+            # Só atualizar o status se:
+            # 1. A fatura é para o período atual (period_end <= current_period_end) OU
+            # 2. O período atual já terminou (current_time >= current_period_end) E a subscrição está realmente 'past_due' ou 'unpaid'
+            is_current_period_invoice = invoice_period_end and invoice_period_end <= current_period_end
+            period_has_ended = current_time >= current_period_end
+
+            if subscription.status in ['past_due', 'unpaid']:
+                # Só atualizar se for fatura do período atual ou se o período já terminou
+                if is_current_period_invoice or period_has_ended:
+                    user.subscription_status = subscription.status
+                    logger.warning(f'Status da subscrição atualizado para {subscription.status} devido a pagamento falhado: {user.email}')
+                else:
+                    logger.info(f'Pagamento falhou para fatura futura (próximo ciclo). Mantendo acesso até {datetime.fromtimestamp(current_period_end, tz=timezone.utc)}: {user.email}')
+            elif subscription.status == 'active':
+                # Se ainda está ativo, não fazer nada (pode ser tentativa de pagamento futuro)
+                logger.info(f'Subscrição ainda ativa após falha de pagamento. Pode ser fatura futura: {user.email}')
+        except Exception as e:
+            logger.error(f'Erro ao buscar subscrição após pagamento falhado: {str(e)}')
+
+    db.commit()
 
 def handle_invoice_paid(invoice: dict, db: Session):
     """Processa invoice.paid - quando uma fatura é paga com sucesso"""
@@ -562,6 +588,10 @@ def handle_invoice_paid(invoice: dict, db: Session):
     if subscription_id:
         user = db.query(models.User).filter(models.User.stripe_subscription_id == subscription_id).first()
         if user:
+            # Limpar última falha de pagamento após cobrança bem-sucedida.
+            user.last_payment_failure_code = None
+            user.last_payment_failure_message = None
+            user.last_payment_failed_at = None
             # Se o status estava 'past_due' ou 'unpaid', atualizar para 'active'
             if user.subscription_status in ['past_due', 'unpaid']:
                 try:

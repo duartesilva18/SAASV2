@@ -29,6 +29,10 @@ class User(Base):
     subscription_status = Column(String(50), nullable=False, default='none')
     stripe_customer_id = Column(String(255), unique=True, nullable=True)
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
+    # Última falha de cobrança Stripe (ex.: card_velocity_exceeded) para feedback ao utilizador
+    last_payment_failure_code = Column(String(100), nullable=True)
+    last_payment_failure_message = Column(String(500), nullable=True)
+    last_payment_failed_at = Column(DateTime(timezone=True), nullable=True)
     telegram_auto_confirm = Column(Boolean, nullable=False, default=False)
     telegram_default_category_id = Column(UUID(as_uuid=True), ForeignKey('categories.id', ondelete='SET NULL'), nullable=True)
     # Pro concedido por admin até uma data (acesso Pro temporário sem subscrição Stripe)

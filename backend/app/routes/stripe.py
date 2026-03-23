@@ -386,7 +386,13 @@ async def create_checkout_session(price_id: str, request: Request, db: Session =
             'subscription_data': subscription_data
         }
         
-        checkout_session = stripe.checkout.Session.create(**session_params)
+        # Idempotência para evitar que cliques/retries duplicados criem múltiplas sessões rapidamente
+        # (reduz risco de `card_velocity_exceeded` por tentativas repetidas).
+        idempotency_key = f"checkout_session:{current_user.id}:{price_id}:{int(datetime.now(timezone.utc).timestamp() // 60)}"
+        checkout_session = stripe.checkout.Session.create(
+            **session_params,
+            idempotency_key=idempotency_key,
+        )
         logger.info(f'[Checkout] Session criada: session_id={checkout_session.id} url_ok={bool(checkout_session.url)} divisão_afiliado={bool(transfer_data)}')
         await log_action(
             db,

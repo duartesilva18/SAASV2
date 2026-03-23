@@ -8,7 +8,7 @@ import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PLAN_SLUG_BY_PRICE_ID, STRIPE_PRICE_IDS } from '@/lib/stripePrices';
 
 export default function PlansPage() {
@@ -21,6 +21,7 @@ export default function PlansPage() {
   const [changePlanModal, setChangePlanModal] = useState<{ isOpen: boolean; priceId: string | null }>({ isOpen: false, priceId: null });
   const [changePlanLoading, setChangePlanLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutInFlightRef = useRef(false);
   const [endTrialModal, setEndTrialModal] = useState(false);
   const [endTrialLoading, setEndTrialLoading] = useState(false);
 
@@ -173,6 +174,7 @@ export default function PlansPage() {
   );
 
   const handlePlanSelect = async (planPriceId: string) => {
+    if (checkoutInFlightRef.current) return;
     if (isCurrentPlan(planPriceId)) return;
 
     if (!user) {
@@ -186,6 +188,7 @@ export default function PlansPage() {
       return;
     }
 
+    checkoutInFlightRef.current = true;
     setCheckoutLoading(true);
     try {
       const res = await api.post('/stripe/create-checkout-session', null, {
@@ -193,11 +196,13 @@ export default function PlansPage() {
       });
       window.location.href = res.data.url;
     } catch (err: any) {
-      setCheckoutLoading(false);
       console.error('Erro Stripe:', err);
       const msg = err?.response?.data?.detail;
       const detail = typeof msg === 'string' ? msg : (Array.isArray(msg) ? msg.map((x: any) => x?.msg ?? JSON.stringify(x)).join(', ') : 'Erro. Tenta novamente ou abre o portal de faturação nas Definições.');
       setToast({ isVisible: true, message: detail, type: 'error' });
+    } finally {
+      checkoutInFlightRef.current = false;
+      setCheckoutLoading(false);
     }
   };
 
@@ -416,7 +421,7 @@ export default function PlansPage() {
                       handlePlanSelect(plan.priceId);
                     }
                   }}
-                  disabled={isCurrentPlan(plan.priceId) && !isTrialing}
+                  disabled={(isCurrentPlan(plan.priceId) && !isTrialing) || checkoutLoading}
                   className={`mt-auto w-full block text-center px-4 3xl:px-6 py-3.5 3xl:py-4 rounded-xl 3xl:rounded-2xl text-sm 3xl:text-base font-black uppercase tracking-[0.15em] 3xl:tracking-[0.2em] transition-all cursor-pointer ${
                     isCurrentPlan(plan.priceId)
                       ? isTrialing

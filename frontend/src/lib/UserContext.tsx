@@ -20,6 +20,9 @@ interface User {
   is_onboarded: boolean;
   marketing_opt_in: boolean;
   subscription_status?: string;
+  last_payment_failure_code?: string;
+  last_payment_failure_message?: string;
+  last_payment_failed_at?: string;
   terms_accepted?: boolean;
   terms_accepted_at?: string;
   onboarding_spotlight_seen?: boolean;

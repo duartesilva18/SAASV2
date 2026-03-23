@@ -21,6 +21,13 @@ import LoadingScreen from '@/components/LoadingScreen';
 import AnimatedNumber from '@/components/AnimatedNumber';
 import { hasProAccess } from '@/lib/utils';
 
+const declineMessageByCode: Record<string, string> = {
+  card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
+  insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
+  do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
+  generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+};
+
 export default function DashboardPage() {
   const { t, formatCurrency } = useTranslation();
   const { refreshUser } = useUser();
@@ -555,6 +562,22 @@ export default function DashboardPage() {
           : t.dashboard.page.insightNoMonthlyBudget
       ];
 
+  const paymentFailureCode = ((userData?.last_payment_failure_code as string | undefined) || '').toLowerCase();
+  const paymentFailureMessage =
+    (paymentFailureCode && declineMessageByCode[paymentFailureCode])
+    || (userData?.last_payment_failure_message as string | undefined)
+    || '';
+
+  const handleUpdateCard = async () => {
+    try {
+      const res = await api.post('/stripe/portal');
+      window.location.href = res.data.url;
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Não foi possível abrir o portal de faturação.';
+      setToast({ show: true, message: msg, type: 'error' });
+    }
+  };
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -602,6 +625,32 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
+
+      {paymentFailureCode && (
+        <section className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1">
+                Falha na cobrança automática
+              </p>
+              <p className="text-sm text-slate-200 font-medium">
+                {paymentFailureMessage || 'A cobrança automática falhou. Atualiza o cartão para manter o plano ativo.'}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Código: <span className="font-semibold">{paymentFailureCode}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleUpdateCard}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-[11px] uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+            >
+              Atualizar cartão
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Filtros (esquerda) | Nova transação (direita) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">

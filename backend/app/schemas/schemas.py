@@ -25,6 +25,9 @@ class UserResponse(UserBase):
     marketing_opt_in: bool
     subscription_status: Optional[str] = 'none'
     pro_granted_until: Optional[datetime] = None  # Pro concedido por admin até esta data
+    last_payment_failure_code: Optional[str] = None
+    last_payment_failure_message: Optional[str] = None
+    last_payment_failed_at: Optional[datetime] = None
     terms_accepted: bool = False
     terms_accepted_at: Optional[datetime] = None
     onboarding_spotlight_seen: bool = False

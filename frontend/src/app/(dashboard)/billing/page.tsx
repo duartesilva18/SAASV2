@@ -31,6 +31,19 @@ interface SubscriptionData {
   plan_name?: string;
 }
 
+interface PaymentFailureInfo {
+  code?: string;
+  message?: string;
+  failedAt?: string;
+}
+
+const declineMessageByCode: Record<string, string> = {
+  card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
+  insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
+  do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
+  generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+};
+
 export default function BillingPage() {
   const { t, formatCurrency } = useTranslation();
   const b = t.dashboard.billing;
@@ -41,6 +54,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [paymentFailure, setPaymentFailure] = useState<PaymentFailureInfo | null>(null);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' | 'info' }>({
     isOpen: false,
@@ -60,6 +74,14 @@ export default function BillingPage() {
         setInvoices(invRes.data);
         const userStatus = userRes.data.subscription_status;
         const customerId = userRes.data.stripe_customer_id || '';
+        const failureCode = (userRes.data?.last_payment_failure_code || '').toLowerCase();
+        const fallbackMessage = userRes.data?.last_payment_failure_message || '';
+        const mappedMessage = declineMessageByCode[failureCode] || fallbackMessage;
+        setPaymentFailure(failureCode ? {
+          code: failureCode,
+          message: mappedMessage,
+          failedAt: userRes.data?.last_payment_failed_at,
+        } : null);
         
         setIsSimulated(customerId.startsWith('sim_') || customerId.startsWith('test_'));
         // Usar valores diretos das traduções para evitar dependências
@@ -163,6 +185,34 @@ export default function BillingPage() {
           </button>
         </div>
       </section>
+
+      {/* Aviso de falha na cobrança automática (trial/renovação) */}
+      {paymentFailure && (
+        <section className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1">
+                Falha na cobrança automática
+              </p>
+              <p className="text-sm text-slate-200 font-medium">
+                {paymentFailure.message || 'A cobrança automática falhou. Atualiza o cartão para evitar interrupção do plano.'}
+              </p>
+              {paymentFailure.code && (
+                <p className="text-[11px] text-slate-500 mt-2">
+                  Código do banco: <span className="font-semibold">{paymentFailure.code}</span>
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handlePortal}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+            >
+              Atualizar cartão
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Subscription Card */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
