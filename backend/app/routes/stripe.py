@@ -46,6 +46,65 @@ def _validate_allowed_price_id(price_id: str) -> None:
         raise HTTPException(status_code=400, detail='Plano inválido.')
 
 
+def _is_missing_stripe_customer_error(e: Exception) -> bool:
+    """True quando o Stripe indica que o customer id não existe (apagado, outra conta, test vs live)."""
+    if not isinstance(e, stripe.error.InvalidRequestError):
+        return False
+    code = getattr(e, 'code', None)
+    param = getattr(e, 'param', None)
+    if code == 'resource_missing' and param == 'customer':
+        return True
+    return 'No such customer' in (str(e) or '')
+
+
+def _ensure_stripe_customer(
+    db: Session,
+    user: models.User,
+    *,
+    create_if_missing: bool = True,
+) -> str | None:
+    """
+    Garante um Stripe Customer id válido na conta atual da API.
+    Se o id na BD não existir no Stripe, limpa e cria um novo.
+    create_if_missing=False: não cria cliente novo quando está em falta (ex.: portal só para quem já teve checkout).
+    """
+    cid = (user.stripe_customer_id or '').strip()
+    if cid.startswith('sim_') or cid.startswith('test_'):
+        return cid
+    if not cid:
+        if not create_if_missing:
+            return None
+        customer = stripe.Customer.create(
+            email=user.email,
+            metadata={'user_id': str(user.id)},
+        )
+        new_id = customer.id
+        user.stripe_customer_id = new_id
+        db.commit()
+        logger.info(f'[Stripe] Cliente criado: {new_id} user_id={user.id}')
+        return new_id
+    try:
+        stripe.Customer.retrieve(cid)
+        return cid
+    except stripe.error.InvalidRequestError as e:
+        if not _is_missing_stripe_customer_error(e):
+            raise
+        logger.warning(
+            f'[Stripe] Customer inválido ou inexistente no Stripe ({cid}); a recriar. user_id={user.id}'
+        )
+        user.stripe_customer_id = None
+        db.commit()
+        customer = stripe.Customer.create(
+            email=user.email,
+            metadata={'user_id': str(user.id)},
+        )
+        new_id = customer.id
+        user.stripe_customer_id = new_id
+        db.commit()
+        logger.info(f'[Stripe] Cliente recriado: {new_id} user_id={user.id}')
+        return new_id
+
+
 def _customer_has_saved_card(customer_id: str) -> bool:
     if not customer_id or not settings.STRIPE_API_KEY:
         return False
@@ -163,18 +222,10 @@ async def create_checkout_session(price_id: str, request: Request, db: Session =
     try:
         _validate_allowed_price_id(price_id)
         logger.info(f'[Checkout] Início: user_id={current_user.id} email={current_user.email} referrer_id={current_user.referrer_id} price_id={price_id}')
-        customer_id = current_user.stripe_customer_id
-        
+        customer_id = _ensure_stripe_customer(db, current_user, create_if_missing=True)
         if not customer_id:
-            customer = stripe.Customer.create(
-                email=current_user.email,
-                metadata={'user_id': str(current_user.id)}
-            )
-            customer_id = customer.id
-            current_user.stripe_customer_id = customer_id
-            db.commit()
-            logger.info(f'[Checkout] Cliente Stripe criado: {customer_id}')
-        
+            raise HTTPException(status_code=500, detail='Não foi possível preparar o cliente de pagamento.')
+
         # Buscar preço para calcular total
         price = stripe.Price.retrieve(price_id)
         total_amount_cents = getattr(price, 'unit_amount', None) or 0  # Valor total em cêntimos (evitar None)
@@ -641,9 +692,16 @@ async def customer_portal(db: Session = Depends(get_db), current_user: models.Us
                 status_code=500,
                 detail='Stripe não está configurado no servidor.'
             )
-            
+
+        customer_id = _ensure_stripe_customer(db, current_user, create_if_missing=False)
+        if not customer_id:
+            raise HTTPException(
+                status_code=400,
+                detail='Não tens um cliente Stripe associado. Subscreve primeiro um plano.',
+            )
+
         portal_session = stripe.billing_portal.Session.create(
-            customer=current_user.stripe_customer_id,
+            customer=customer_id,
             return_url=f"{settings.FRONTEND_URL}/settings"
         )
         return {'url': portal_session.url}
