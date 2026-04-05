@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Wallet, Calendar, Tag, ChevronDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
 import Toast from '@/components/Toast';
 
 export interface TransactionAddModalCategory {
@@ -36,7 +37,7 @@ export default function TransactionAddModal({
     amount: '',
     description: '',
     category_id: '',
-    transaction_date: new Date().toISOString().split('T')[0],
+    transaction_date: getLocalDateISO(),
   });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
     message: '',
@@ -62,10 +63,7 @@ export default function TransactionAddModal({
         setToast({ message: t.dashboard.transactions.validation.noCategory, type: 'error', visible: true });
         return;
       }
-      const selectedDate = new Date(formData.transaction_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDate > today) {
+      if (isLocalDateAfterToday(formData.transaction_date)) {
         setToast({ message: t.dashboard.transactions.validation.invalidDate, type: 'error', visible: true });
         return;
       }
@@ -114,7 +112,7 @@ export default function TransactionAddModal({
         is_installment: false,
       });
       setToast({ message: t.dashboard.transactions.success, type: 'success', visible: true });
-      setFormData({ transaction_type: '', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+      setFormData({ transaction_type: '', amount: '', description: '', category_id: '', transaction_date: getLocalDateISO() });
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -244,7 +242,7 @@ export default function TransactionAddModal({
                       <input
                         required
                         type="date"
-                        max={new Date().toISOString().split('T')[0]}
+                        max={getLocalDateISO()}
                         value={formData.transaction_date}
                         onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
                         className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-3 pl-11 pr-3 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[48px] [color-scheme:dark]"

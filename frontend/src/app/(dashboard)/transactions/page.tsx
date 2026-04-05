@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
+import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
 import { 
   Plus, Search, ArrowUpRight, ArrowDownRight, 
   Calendar, Tag, History, Check, X, Wallet, 
@@ -81,7 +82,7 @@ function TransactionsPageContent() {
     amount: '',
     description: '',
     category_id: '',
-    transaction_date: new Date().toISOString().split('T')[0]
+    transaction_date: getLocalDateISO()
   });
 
   const refetchData = useMemo(() => () => {
@@ -137,7 +138,7 @@ function TransactionsPageContent() {
     if (searchParams.get('add') === '1') {
       setShowAddModal(true);
       setEditingTransaction(null);
-      setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+      setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: getLocalDateISO() });
       window.history.replaceState({}, '', '/transactions');
       return;
     }
@@ -259,11 +260,7 @@ function TransactionsPageContent() {
         return;
       }
 
-      const selectedDate = new Date(formData.transaction_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (selectedDate > today) {
+      if (isLocalDateAfterToday(formData.transaction_date)) {
         setToastInfo({ message: t.dashboard.transactions.validation.invalidDate, type: 'error', isVisible: true });
         return;
       }
@@ -379,7 +376,7 @@ function TransactionsPageContent() {
         amount: '',
         description: '',
         category_id: '',
-        transaction_date: new Date().toISOString().split('T')[0]
+        transaction_date: getLocalDateISO()
       });
       // Atualizar dados imediatamente após criar/editar
       refetchData();
@@ -523,7 +520,7 @@ function TransactionsPageContent() {
           <button
             onClick={() => {
               setEditingTransaction(null);
-              setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: new Date().toISOString().split('T')[0] });
+              setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: getLocalDateISO() });
               setShowAddModal(true);
             }}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
@@ -984,7 +981,7 @@ function TransactionsPageContent() {
                         <input
                           required
                           type="date"
-                          max={new Date().toISOString().split('T')[0]}
+                          max={getLocalDateISO()}
                           value={formData.transaction_date}
                           onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
                           className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"

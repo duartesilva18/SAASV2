@@ -6,6 +6,7 @@ import { Zap, X, Sparkles, Plus, Calendar, Tag, ArrowDownCircle, ArrowUpCircle }
 import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import api from '@/lib/api';
+import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
 import Toast from '@/components/Toast';
 
 export default function QuickAddTransaction() {
@@ -18,7 +19,7 @@ export default function QuickAddTransaction() {
     amount: '',
     description: '',
     category_id: '',
-    transaction_date: new Date().toISOString().split('T')[0],
+    transaction_date: getLocalDateISO(),
     type: 'expense'
   });
   const [showToast, setShowToast] = useState(false);
@@ -68,11 +69,8 @@ export default function QuickAddTransaction() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedDate = new Date(formData.transaction_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate > today) {
+    // Não usar new Date('YYYY-MM-DD'): em UTC+1 o instante é 01:00 local, > meia-noite local de "hoje" → falso "futuro" às 12h.
+    if (isLocalDateAfterToday(formData.transaction_date)) {
       setToastMsg(t.dashboard.transactions.invalidDateMessage || "Invalid date");
       setToastType('error');
       setShowToast(true);
@@ -95,7 +93,7 @@ export default function QuickAddTransaction() {
         amount: '',
         description: '',
         category_id: categories[0]?.id || '',
-        transaction_date: new Date().toISOString().split('T')[0],
+        transaction_date: getLocalDateISO(),
         type: 'expense'
       });
       window.dispatchEvent(new Event('transaction-added'));
@@ -211,7 +209,7 @@ export default function QuickAddTransaction() {
                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                         <input
                           type="date"
-                          max={new Date().toISOString().split('T')[0]}
+                          max={getLocalDateISO()}
                           value={formData.transaction_date}
                           onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
                           className="w-full bg-slate-950/50 border border-slate-700 focus:border-blue-500 rounded-2xl pl-12 pr-4 py-4 text-[10px] font-bold text-white focus:outline-none appearance-none cursor-pointer"
