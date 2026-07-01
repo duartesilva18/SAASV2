@@ -35,8 +35,9 @@ export default function PlansPage() {
     && (!user.subscription_status || user.subscription_status === 'none')
   );
 
-  // Determinar se é elegível para trial (nunca teve subscrição -- status 'none' ou vazio)
-  const isTrialEligible = needsSubscription;
+  // Modelo "paga já para usar": já não há trial de 7 dias. Mantido como false para desligar
+  // todo o texto/CTA de trial nesta página sem remover os ramos (revertível).
+  const isTrialEligible = false;
 
   // Determinar se está em período de trial
   const isTrialing = user?.subscription_status === 'trialing';
@@ -269,7 +270,7 @@ export default function PlansPage() {
         )}
       </AnimatePresence>
 
-      {/* Banner de trial obrigatório */}
+      {/* Banner: precisa de subscrever para usar (pagamento imediato) */}
       {needsSubscription && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -282,10 +283,10 @@ export default function PlansPage() {
             </div>
             <div>
               <h3 className="text-white font-black text-base sm:text-lg mb-1">
-                Experimenta 7 dias grátis
+                Escolhe o teu plano
               </h3>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                Escolhe o teu plano para começar. Os primeiros 7 dias são por nossa conta — só precisas de associar o cartão. Se não gostares, cancela antes do 8.º dia e não pagas nada.
+                Ativa o teu plano para desbloquear todas as funcionalidades. Pagamento imediato e seguro — cancela quando quiseres, sem compromissos.
               </p>
             </div>
           </div>
@@ -299,17 +300,8 @@ export default function PlansPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-xl sm:text-2xl md:text-3xl 3xl:text-5xl 3xl:lg:text-6xl font-black tracking-tighter mb-3 3xl:mb-6 uppercase leading-tight"
         >
-          {isTrialEligible ? (
-            <>
-              Começa com{' '}
-              <span className="text-blue-500 italic block 3xl:md:inline">7 dias grátis</span>
-            </>
-          ) : (
-            <>
-              Quanto vale ter{' '}
-              <span className="text-blue-500 italic block 3xl:md:inline">controlo total do teu dinheiro?</span>
-            </>
-          )}
+          Escolhe o{' '}
+          <span className="text-blue-500 italic block 3xl:md:inline">teu plano</span>
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -317,10 +309,7 @@ export default function PlansPage() {
           transition={{ delay: 0.1 }}
           className="text-sm sm:text-base 3xl:text-base 3xl:md:text-lg 3xl:lg:text-2xl text-slate-400 mb-3 3xl:mb-6 3xl:md:mb-8 max-w-2xl mx-auto"
         >
-          {isTrialEligible
-            ? 'Escolhe o teu plano. Só és cobrado ao 8.º dia.'
-            : 'A maioria das pessoas não sabe para onde o dinheiro vai.'
-          }
+          Começa hoje. Pagamento seguro — cancela quando quiseres.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -328,10 +317,7 @@ export default function PlansPage() {
           transition={{ delay: 0.15 }}
           className="text-sm sm:text-base 3xl:text-base 3xl:md:text-lg 3xl:lg:text-2xl text-white font-semibold mb-5 3xl:mb-8 3xl:md:mb-10 max-w-2xl mx-auto"
         >
-          {isTrialEligible
-            ? 'Acesso total a todas as funcionalidades durante o trial.'
-            : 'Quem usa a FinLy sabe. E alguns ainda ganham com isso.'
-          }
+          Acesso total a todas as funcionalidades, desde o primeiro dia.
         </motion.p>
       </section>
 

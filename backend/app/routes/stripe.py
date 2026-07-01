@@ -363,18 +363,11 @@ async def create_checkout_session(price_id: str, request: Request, db: Session =
         subscription_data['metadata']['original_price_id'] = price_id
         subscription_data['metadata']['base_amount_cents'] = str(total_amount_cents)
         
-        # Trial de 7 dias para novos utilizadores que nunca tiveram subscrição nem trial
-        is_first_subscription = (
-            not current_user.stripe_subscription_id
-            and current_user.subscription_status in (None, 'none', '')
-            and not current_user.had_trial
-        )
-        if is_first_subscription:
-            subscription_data['trial_period_days'] = 7
-            logger.info(f'[Checkout] Trial de 7 dias ativado para {current_user.email} (primeira subscrição)')
-        else:
-            logger.info(f'[Checkout] Sem trial: user {current_user.email} (had_trial={current_user.had_trial}, sub_id={current_user.stripe_subscription_id}, status={current_user.subscription_status})')
-        
+        # Modelo "paga já para usar": SEM trial. O Stripe cobra imediatamente ao concluir o
+        # checkout e a subscrição fica 'active' logo (has_effective_pro cobre 'active').
+        # (O código de 'trialing' permanece dormente no resto da app para os trials já existentes.)
+        logger.info(f'[Checkout] Sem trial (pagamento imediato): user {current_user.email} price_id={price_id}')
+
         # Total cobrado ao cliente: com taxa Stripe (duas linhas) ou só o preço base (uma linha)
         total_charged_cents = _charge_amount_with_stripe_fee(total_amount_cents) if total_amount_cents >= 1 else total_amount_cents
         

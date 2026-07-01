@@ -305,9 +305,12 @@ def start_scheduler():
         scheduler.add_job(_job_affiliate_first_invoices_pending, "cron", hour=9, minute=0)
         scheduler.add_job(_job_recurring_transactions, "cron", hour=2, minute=0)
         scheduler.add_job(_job_reconcile_subscriptions, "cron", hour=3, minute=30)
-        scheduler.add_job(_job_trial_ending_emails, "cron", hour=10, minute=0)
+        # Modelo pay-first: já não há trials novos, por isso o aviso de "fim de trial" está
+        # desligado. A função _job_trial_ending_emails fica no código (dormente) para o caso
+        # de reverter. Os poucos trials existentes terminam naturalmente (Stripe cobra ao 8º dia).
+        # scheduler.add_job(_job_trial_ending_emails, "cron", hour=10, minute=0)
         scheduler.start()
-        logger.info("Jobs diários agendados: first-invoices-pending (9:00 UTC), recurring-transactions (2:00 UTC), reconcile-subscriptions (3:30 UTC), trial-ending-emails (10:00 UTC)")
+        logger.info("Jobs diários agendados: first-invoices-pending (9:00 UTC), recurring-transactions (2:00 UTC), reconcile-subscriptions (3:30 UTC)")
     except Exception as e:
         logger.warning(f"Não foi possível iniciar scheduler: {e}")
 
