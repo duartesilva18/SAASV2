@@ -189,6 +189,16 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Captura do código de afiliado (?ref=) em QUALQUER página e persistência
+              // para o registo (sobrevive à navegação landing -> registo, e a nova sessão).
+              try {
+                var _refParam = (new URLSearchParams(window.location.search).get('ref') || '').trim();
+                if (_refParam) {
+                  localStorage.setItem('finly_ref', _refParam);
+                  localStorage.setItem('finly_ref_at', String(Date.now()));
+                }
+              } catch (e) {}
+
               // Handler para ChunkLoadError - recarrega automaticamente
               window.addEventListener('error', (event) => {
                 if (event.message && event.message.includes('ChunkLoadError')) {

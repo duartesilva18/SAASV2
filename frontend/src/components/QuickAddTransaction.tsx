@@ -108,9 +108,10 @@ export default function QuickAddTransaction() {
 
   return (
     <>
-      <div 
+      <div
         ref={containerRef}
-        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9998] flex flex-col items-center"
+        className="fixed left-1/2 -translate-x-1/2 z-[9998] flex flex-col items-center"
+        style={{ bottom: 'max(2.5rem, calc(env(safe-area-inset-bottom) + 1rem))' }}
       >
         <AnimatePresence mode="wait">
           {!isOpen ? (
@@ -188,6 +189,7 @@ export default function QuickAddTransaction() {
                         required
                         type="number"
                         step="0.01"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -212,7 +214,7 @@ export default function QuickAddTransaction() {
                           max={getLocalDateISO()}
                           value={formData.transaction_date}
                           onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-slate-700 focus:border-blue-500 rounded-2xl pl-12 pr-4 py-4 text-[10px] font-bold text-white focus:outline-none appearance-none cursor-pointer"
+                          className="w-full bg-slate-950/50 border border-slate-700 focus:border-blue-500 rounded-2xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none appearance-none cursor-pointer [color-scheme:dark]"
                         />
                       </div>
                       <div className="relative">
@@ -220,7 +222,7 @@ export default function QuickAddTransaction() {
                         <select
                           value={formData.category_id}
                           onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                          className="w-full bg-slate-950/50 border border-slate-700 rounded-2xl pl-12 pr-4 py-4 text-[10px] font-bold text-white focus:outline-none focus:border-blue-500 appearance-none cursor-pointer"
+                          className="w-full bg-slate-950/50 border border-slate-700 rounded-2xl pl-12 pr-4 py-4 text-xs font-bold text-white focus:outline-none focus:border-blue-500 appearance-none cursor-pointer [color-scheme:dark]"
                         >
                           {categories.filter((c) => c.type === formData.type).map((cat) => (
                             <option key={cat.id} value={cat.id}>

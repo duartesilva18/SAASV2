@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func as sa_func, and_
 from ..core.config import settings
 from ..core.dependencies import conf, get_db
+from ..core.limiter import limiter
 from ..models import database as models
 from ..schemas.schemas import SupportMessageSend, SupportMessageOut, SupportConversationOut
 from .auth import get_current_user
@@ -22,12 +23,28 @@ ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads', 'support')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-ADMIN_EMAIL = 'duarte.nuno.silva18@gmail.com'
+# Email do admin configurável (settings.SUPPORT_EMAIL / MAIL_FROM); fallback para o histórico.
+def _admin_support_email() -> str:
+    return (getattr(settings, 'SUPPORT_EMAIL', '') or getattr(settings, 'MAIL_FROM', '') or 'duarte.nuno.silva18@gmail.com').strip()
 
 # In-memory typing status: { conversation_id: { 'user': timestamp, 'admin': timestamp } }
 import time
 _typing_status: dict[str, dict[str, float]] = {}
 TYPING_TTL = 4  # seconds
+
+# Throttle de notificações por email (por conversa) para não floodar admin/utilizador.
+_last_admin_notify: dict[str, float] = {}
+_last_user_notify: dict[str, float] = {}
+NOTIFY_THROTTLE_SECONDS = 5 * 60  # no máximo 1 email por conversa a cada 5 min (por direção)
+
+
+def _purge_typing_status():
+    """Remove entradas de typing expiradas (evita crescimento ilimitado do dict)."""
+    now = time.time()
+    for cid in list(_typing_status.keys()):
+        entry = _typing_status.get(cid) or {}
+        if all((now - ts) >= TYPING_TTL for ts in entry.values()):
+            _typing_status.pop(cid, None)
 
 
 def _is_auto_reply_enabled(db: Session) -> bool:
@@ -143,13 +160,76 @@ async def _notify_admin_new_message(user_email: str, preview: str):
         """
         msg = MessageSchema(
             subject='[Finly] Nova mensagem de suporte',
-            recipients=[ADMIN_EMAIL],
+            recipients=[_admin_support_email()],
             body=body,
             subtype=MessageType.html,
         )
         await fm.send_message(msg)
     except Exception as e:
         logger.warning(f'Falha ao enviar notificação admin: {e}')
+
+
+def _notify_user_admin_reply_sync(user_email: str, preview: str, language: str = 'pt'):
+    """Sync wrapper (background task): avisa o utilizador que o suporte respondeu."""
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_notify_user_admin_reply(user_email, preview, language))
+        loop.close()
+    except Exception as e:
+        logger.warning(f'Falha ao enviar notificação ao utilizador (bg): {e}')
+
+
+async def _notify_user_admin_reply(user_email: str, preview: str, language: str = 'pt'):
+    try:
+        from ..core.email_translations import get_email_translation
+        is_en = (language or 'pt').lower().startswith('en')
+        tr = get_email_translation('en' if is_en else 'pt', 'support_reply')
+        fm = FastMail(conf)
+        cta_url = f"{settings.FRONTEND_URL or 'http://localhost:3000'}/dashboard"
+        body = f"""
+        <div style="background:#0f172a;padding:32px 0;font-family:Arial,Helvetica,sans-serif;">
+          <div style="max-width:520px;margin:0 auto;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:28px 32px;">
+            <h2 style="color:#fff;font-size:18px;margin:0 0 12px;">{tr.get('title','')}</h2>
+            <p style="color:#cbd5e1;font-size:14px;line-height:1.6;margin:0 0 14px;">{tr.get('message','')}</p>
+            <div style="background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:14px;margin:0 0 18px;">
+              <p style="color:#cbd5e1;font-size:14px;margin:0;white-space:pre-wrap;">{html_module.escape(preview[:300])}</p>
+            </div>
+            <a href="{cta_url}" style="display:inline-block;background:#10b981;color:#04210f;font-weight:bold;text-decoration:none;padding:11px 22px;border-radius:10px;font-size:14px;">{tr.get('button','')}</a>
+          </div>
+        </div>
+        """
+        msg = MessageSchema(
+            subject=tr.get('subject', 'Finly'),
+            recipients=[user_email],
+            body=body,
+            subtype=MessageType.html,
+        )
+        await fm.send_message(msg)
+    except Exception as e:
+        logger.warning(f'Falha ao enviar notificação ao utilizador: {e}')
+
+
+def notify_user_of_admin_reply(background_tasks, db: Session, conversation_id, content: str):
+    """Agenda email ao utilizador quando o admin responde (com throttle por conversa).
+
+    Reutilizável pelo endpoint de resposta do admin (admin.py). Não falha o pedido se algo correr mal.
+    """
+    try:
+        now = time.time()
+        cid_str = str(conversation_id)
+        if (now - _last_user_notify.get(cid_str, 0)) < NOTIFY_THROTTLE_SECONDS:
+            return  # já avisámos há pouco; o badge in-app cobre o resto
+        convo = db.query(models.SupportConversation).filter(models.SupportConversation.id == conversation_id).first()
+        if not convo:
+            return
+        user = db.query(models.User).filter(models.User.id == convo.user_id).first()
+        if not user or not user.email:
+            return
+        _last_user_notify[cid_str] = now
+        background_tasks.add_task(_notify_user_admin_reply_sync, user.email, content, (user.language or 'pt'))
+    except Exception as e:
+        logger.warning(f'Falha ao agendar notificação ao utilizador: {e}')
 
 
 # ── Image upload ──
@@ -253,6 +333,8 @@ def _serialize_message(m: models.SupportMessage) -> dict:
         'content': m.content,
         'image_url': img,
         'is_read': m.is_read,
+        # Resposta automática de IA = mensagem de admin sem sender_id humano.
+        'is_auto': bool(m.sender_type == 'admin' and m.sender_id is None),
         'created_at': m.created_at.isoformat() if hasattr(m.created_at, 'isoformat') else str(m.created_at),
     }
 
@@ -318,6 +400,7 @@ async def list_my_conversations(
 
 
 @router.post('/conversations')
+@limiter.limit('20/minute')
 async def create_conversation(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -389,6 +472,11 @@ async def create_conversation(
         # Follow-up: auto-reply runs in background so response is instant
         if _is_auto_reply_enabled(db):
             background_tasks.add_task(_generate_auto_reply_background, active.id, current_user.email)
+        # Notificar o admin também em follow-ups (não só na 1ª mensagem), com throttle por conversa.
+        _now = time.time()
+        if (_now - _last_admin_notify.get(str(active.id), 0)) >= NOTIFY_THROTTLE_SECONDS:
+            _last_admin_notify[str(active.id)] = _now
+            background_tasks.add_task(_notify_admin_new_message_sync, current_user.email, content)
         return {"conversation_id": str(active.id), "message_id": str(msg.id)}
 
     # New conversation: email admin once + auto-reply if enabled
@@ -411,6 +499,7 @@ async def create_conversation(
     db.refresh(msg)
     if _is_auto_reply_enabled(db):
         background_tasks.add_task(_generate_auto_reply_background, convo.id, current_user.email)
+    _last_admin_notify[str(convo.id)] = time.time()
     background_tasks.add_task(_notify_admin_new_message_sync, current_user.email, content)
     return {"conversation_id": str(convo.id), "message_id": str(msg.id)}
 
@@ -478,6 +567,7 @@ async def set_typing(
     conversation_id: str,
     current_user: models.User = Depends(get_current_user),
 ):
+    _purge_typing_status()
     _typing_status.setdefault(conversation_id, {})['user'] = time.time()
     return {"ok": True}
 

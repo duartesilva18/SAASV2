@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
+import { useSubmit } from '@/lib/useSubmit';
 import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
 import { 
   Plus, Search, ArrowUpRight, ArrowDownRight, 
@@ -19,7 +20,7 @@ import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { TransactionSkeleton } from '@/components/LoadingSkeleton';
 import PageLoading from '@/components/PageLoading';
-import { useTransactions, useCategories, useDebouncedValue } from '@/lib/hooks';
+import { useTransactions, useCategories, useDebouncedValue, useLifetimeTotals } from '@/lib/hooks';
 import dynamic from 'next/dynamic';
 import { ChartSkeleton } from '@/components/LoadingSkeleton';
 
@@ -52,6 +53,7 @@ function TransactionsPageContent() {
   const searchParams = useSearchParams();
   const { transactions: transactionsFromHook, isLoading: transactionsLoading, mutate: mutateTransactions } = useTransactions();
   const { categories: categoriesFromHook, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories();
+  const { totals: lifetimeTotals, mutate: mutateLifetimeTotals } = useLifetimeTotals();
   const transactions = (transactionsFromHook as Transaction[] | undefined) ?? [];
   const categories = (categoriesFromHook as Category[] | undefined) ?? [];
   const loading = transactionsLoading || categoriesLoading;
@@ -88,7 +90,8 @@ function TransactionsPageContent() {
   const refetchData = useMemo(() => () => {
     mutateTransactions();
     mutateCategories();
-  }, [mutateTransactions, mutateCategories]);
+    mutateLifetimeTotals();
+  }, [mutateTransactions, mutateCategories, mutateLifetimeTotals]);
 
   // Guardar acesso: apenas utilizadores Pro podem usar /transactions
   useEffect(() => {
@@ -194,9 +197,16 @@ function TransactionsPageContent() {
   }, [debouncedSearchTerm, activeTab, selectedCategory]);
 
   const stats = useMemo(() => {
-    // Backend garante sinais corretos: income > 0, expense < 0
-    // Se não houver categoria, usar sinal do amount_cents
-    // Calcular com TODAS as transações (não apenas filtradas)
+    // Fonte de verdade: totais lifetime somados em SQL no backend (não dependem da
+    // lista paginada). Só caímos no cálculo local enquanto o endpoint não respondeu.
+    if (lifetimeTotals) {
+      return {
+        income: lifetimeTotals.income,
+        expenses: lifetimeTotals.expenses,
+        balance: lifetimeTotals.balance,
+      };
+    }
+    // Fallback (carregamento): cálculo sobre as transações já carregadas.
     const income = transactions
       .filter(t => {
         const cat = categories.find(c => c.id === t.category_id);
@@ -223,7 +233,7 @@ function TransactionsPageContent() {
       .reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0) / 100; // Usar valor absoluto
     
     return { income, expenses, balance: income - expenses };
-  }, [transactions, categories]);
+  }, [transactions, categories, lifetimeTotals]);
 
   const categoriesByType = useMemo(() => {
     if (formData.transaction_type === 'income') {
@@ -235,8 +245,7 @@ function TransactionsPageContent() {
     return [];
   }, [formData.transaction_type, categories]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitTransactionForm = async () => {
     try {
       // Normalizar valor para suportar vírgula e ponto
       const normalizedAmount = formData.amount.replace(',', '.');
@@ -413,6 +422,9 @@ function TransactionsPageContent() {
       setToastInfo({ message: errorMessage, type: 'error', isVisible: true });
     }
   };
+
+  const { submitting, run: runTxSubmit } = useSubmit(submitTransactionForm);
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); runTxSubmit(); };
 
   const handleDelete = async () => {
     if (!transactionToDelete) return;
@@ -883,7 +895,7 @@ function TransactionsPageContent() {
       {/* Add/Edit Modal — estilo alinhado ao login/dashboard */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden sm:overflow-y-auto">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -895,9 +907,10 @@ function TransactionsPageContent() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
-              className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl"
+              className="relative w-full max-w-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
+              style={{ paddingTop: 'max(0.25rem, env(safe-area-inset-top))' }}
             >
-              <div className="p-5 sm:p-6">
+              <div className="p-5 sm:p-6 overflow-y-auto overflow-x-hidden overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom))]">
                 <div className="flex justify-between items-center mb-5 sm:mb-6">
                   <h2 className="text-lg sm:text-xl font-black text-white tracking-tight truncate">
                     {editingTransaction ? t.dashboard.transactions.editRecord : t.dashboard.transactions.newRecord}
@@ -1083,7 +1096,8 @@ function TransactionsPageContent() {
 
                   <button
                     type="submit"
-                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer"
+                    disabled={submitting}
+                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {editingTransaction ? t.dashboard.transactions.saveChanges : t.dashboard.transactions.registerTransaction}
                   </button>

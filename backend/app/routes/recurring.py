@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..core.dependencies import get_db
 from ..core.audit import log_action
+from ..core.limiter import limiter
 from ..models import database as models
 from .. import schemas
 from .auth import get_current_user
@@ -23,6 +24,7 @@ async def get_recurring_transactions(db: Session = Depends(get_db), current_user
     ).all()
 
 @router.post('/', response_model=schemas.RecurringTransactionResponse)
+@limiter.limit('60/minute')
 async def create_recurring_transaction(request: Request, recurring_in: schemas.RecurringTransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
@@ -42,6 +44,7 @@ async def create_recurring_transaction(request: Request, recurring_in: schemas.R
     return db_recurring
 
 @router.patch('/{recurring_id}', response_model=schemas.RecurringTransactionResponse)
+@limiter.limit('60/minute')
 async def update_recurring_transaction(request: Request, recurring_id: UUID, recurring_in: schemas.RecurringTransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")

@@ -37,15 +37,27 @@ interface PaymentFailureInfo {
   failedAt?: string;
 }
 
-const declineMessageByCode: Record<string, string> = {
-  card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
-  insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
-  do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
-  generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+const DECLINE_MESSAGES: Record<'pt' | 'en', Record<string, string>> = {
+  pt: {
+    card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
+    insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
+    do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
+    generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+  },
+  en: {
+    card_velocity_exceeded: 'Your bank declined due to too many attempts in a short period. Wait a few minutes and try again, or use another card.',
+    insufficient_funds: 'Payment declined due to insufficient funds. Update your payment method or use another card.',
+    do_not_honor: 'Payment declined by your bank. Contact your bank or use another card.',
+    generic_decline: 'Payment declined by your bank. Update your payment method to keep your plan active.',
+  },
 };
+function declineMessage(code: string, isEn: boolean): string | undefined {
+  return DECLINE_MESSAGES[isEn ? 'en' : 'pt'][code];
+}
 
 export default function BillingPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, language, formatCurrency } = useTranslation();
+  const isEn = (language || 'pt').toLowerCase().startsWith('en');
   const b = t.dashboard.billing;
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -76,7 +88,7 @@ export default function BillingPage() {
         const customerId = userRes.data.stripe_customer_id || '';
         const failureCode = (userRes.data?.last_payment_failure_code || '').toLowerCase();
         const fallbackMessage = userRes.data?.last_payment_failure_message || '';
-        const mappedMessage = declineMessageByCode[failureCode] || fallbackMessage;
+        const mappedMessage = declineMessage(failureCode, isEn) || fallbackMessage;
         setPaymentFailure(failureCode ? {
           code: failureCode,
           message: mappedMessage,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
+import { useSubmit } from '@/lib/useSubmit';
 import { useTranslation } from '@/lib/LanguageContext';
 import { 
   Tag, Plus, Trash2, Edit2, Check, X, Lock,
@@ -171,8 +172,7 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitCategory = async () => {
     try {
       // Mapear Natureza para Type e VaultType
       const type = formData.nature === 'income' ? 'income' : 'expense';
@@ -209,6 +209,9 @@ export default function CategoriesPage() {
       setShowToast(true);
     }
   };
+
+  const { submitting, run: runSubmit } = useSubmit(submitCategory);
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); runSubmit(); };
 
   const handleDelete = async () => {
     if (!categoryToDelete) return;
@@ -841,7 +844,8 @@ export default function CategoriesPage() {
 
                   <button
                     type="submit"
-                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    disabled={submitting}
+                    className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {editingCategory ? t.dashboard.categories.saveChanges : t.dashboard.categories.createNew}
                     <ArrowRight size={18} />

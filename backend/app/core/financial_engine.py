@@ -4,7 +4,18 @@ Financial Engine - Fonte única de verdade para cálculos financeiros
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 from datetime import date, datetime
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 from ..models import database as models
+
+
+@dataclass
+class LifetimeTotals:
+    """Totais acumulados (toda a história do workspace), calculados em SQL."""
+    income: float
+    expenses: float
+    vault_emergency: float
+    vault_investment: float
 
 
 @dataclass
@@ -29,14 +40,58 @@ class FinancialSnapshot:
 
 class FinancialEngine:
     """Motor financeiro único - fonte de verdade"""
-    
+
+    @staticmethod
+    def calculate_lifetime_totals(db: Session, workspace_id) -> LifetimeTotals:
+        """
+        Calcula totais acumulados de TODA a história do workspace via agregação SQL
+        (SUM ... GROUP BY), em vez de iterar transações em Python sobre uma página.
+        Usado para available_cash / net_worth / cofres / saldo acumulado, que devem
+        refletir tudo e não apenas as transações carregadas/o mês filtrado.
+        """
+        rows = (
+            db.query(
+                models.Category.type,
+                models.Category.vault_type,
+                func.coalesce(func.sum(models.Transaction.amount_cents), 0),
+            )
+            .outerjoin(models.Category, models.Transaction.category_id == models.Category.id)
+            .filter(
+                models.Transaction.workspace_id == workspace_id,
+                func.abs(models.Transaction.amount_cents) != 1,  # excluir seed (1 cêntimo)
+            )
+            .group_by(models.Category.type, models.Category.vault_type)
+            .all()
+        )
+
+        income = expenses = vault_emergency = vault_investment = 0.0
+        for cat_type, vault_type, total_cents in rows:
+            amount = (total_cents or 0) / 100
+            if vault_type and vault_type != 'none':
+                if vault_type == 'emergency':
+                    vault_emergency += amount
+                elif vault_type == 'investment':
+                    vault_investment += amount
+            elif cat_type == 'income':
+                income += amount  # já positivo
+            else:
+                # despesa (negativa) ou transação sem categoria -> tratar como despesa
+                expenses += abs(amount)
+        return LifetimeTotals(
+            income=income,
+            expenses=expenses,
+            vault_emergency=vault_emergency,
+            vault_investment=vault_investment,
+        )
+
     @staticmethod
     def calculate_snapshot(
         transactions: List[models.Transaction],
         categories: List[models.Category],
         workspace: Optional[models.Workspace] = None,
         period_start: Optional[date] = None,
-        period_end: Optional[date] = None
+        period_end: Optional[date] = None,
+        lifetime: Optional[LifetimeTotals] = None,
     ) -> FinancialSnapshot:
         """
         Calcula snapshot financeiro completo.
@@ -98,17 +153,31 @@ class FinancialEngine:
                     expenses += abs(amount)  # Converter negativo para positivo
                     cumulative_balance += amount  # amount já é negativo
         
+        # income/expenses acima refletem APENAS o período/transações carregadas (correto
+        # para os totais do mês mostrado). Já os campos de riqueza (cofres, cash, net worth,
+        # saldo acumulado) devem refletir TODA a história — se `lifetime` (agregado SQL) for
+        # fornecido, usamo-lo; senão caímos no comportamento antigo (somatório do período).
+        if lifetime is not None:
+            life_income = lifetime.income
+            life_expenses = lifetime.expenses
+            vault_emergency = lifetime.vault_emergency
+            vault_investment = lifetime.vault_investment
+            cumulative_balance = life_income - life_expenses
+        else:
+            life_income = income
+            life_expenses = expenses
+
         vault_total = vault_emergency + vault_investment
-        
-        # Calcular cash disponível
+
+        # Calcular cash disponível (sobre os totais acumulados)
         opening_balance = (workspace.opening_balance_cents / 100) if workspace and workspace.opening_balance_cents else 0.0
-        available_cash = max(0.0, opening_balance + income - expenses)
-        
+        available_cash = max(0.0, opening_balance + life_income - life_expenses)
+
         # Calcular net worth
         net_worth = vault_total + available_cash
-        
-        # Calcular saving rate (com clamping)
-        MIN_INCOME_THRESHOLD = 100.0  # 1€ mínimo
+
+        # Calcular saving rate do PERÍODO (com clamping). Mínimo 100€ de receita.
+        MIN_INCOME_THRESHOLD = 100.0  # 100€ mínimo de receita para calcular taxa de poupança
         saving_rate = 0.0
         if income >= MIN_INCOME_THRESHOLD:
             calculated = ((income - expenses) / income) * 100

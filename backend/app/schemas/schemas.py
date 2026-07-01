@@ -1,7 +1,12 @@
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from uuid import UUID
+
+# Teto de valor (em cêntimos) para evitar overflow/abuso: 100 milhões de unidades monetárias.
+_AMOUNT_MIN_CENTS = -100_000_000_00
+_AMOUNT_MAX_CENTS = 100_000_000_00
+_HEX_COLOR_PATTERN = r'^#[0-9A-Fa-f]{6}$'
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -25,6 +30,7 @@ class UserResponse(UserBase):
     marketing_opt_in: bool
     subscription_status: Optional[str] = 'none'
     pro_granted_until: Optional[datetime] = None  # Pro concedido por admin até esta data
+    trial_ends_at: Optional[datetime] = None  # Fim do trial (para UI "faltam X dias")
     last_payment_failure_code: Optional[str] = None
     last_payment_failure_message: Optional[str] = None
     last_payment_failed_at: Optional[datetime] = None
@@ -119,12 +125,12 @@ class SocialLoginRequest(BaseModel):
     referral_code: Optional[str] = None  # Código de afiliado (opcional)
 
 class CategoryBase(BaseModel):
-    name: str
-    type: str
-    vault_type: str = 'none'
-    monthly_limit_cents: int = 0
-    color_hex: str = '#3B82F6'
-    icon: str = 'Tag'
+    name: str = Field(..., min_length=1, max_length=100)
+    type: Literal['income', 'expense']
+    vault_type: Literal['none', 'emergency', 'investment'] = 'none'
+    monthly_limit_cents: int = Field(0, ge=0, le=_AMOUNT_MAX_CENTS)
+    color_hex: str = Field('#3B82F6', pattern=_HEX_COLOR_PATTERN)
+    icon: str = Field('Tag', max_length=50)
     is_default: bool = False
 
 class CategoryUpdate(BaseModel):
@@ -155,8 +161,8 @@ class CategoryResponse(CategoryBase):
         from_attributes = True
 
 class TransactionBase(BaseModel):
-    amount_cents: int
-    description: Optional[str] = None
+    amount_cents: int = Field(..., ne=0, ge=_AMOUNT_MIN_CENTS, le=_AMOUNT_MAX_CENTS)
+    description: Optional[str] = Field(None, max_length=255)
     category_id: Optional[UUID] = None
     transaction_date: date
     is_installment: bool = False
@@ -165,8 +171,8 @@ class TransactionCreate(TransactionBase):
     pass
 
 class TransactionUpdate(BaseModel):
-    amount_cents: Optional[int] = None
-    description: Optional[str] = None
+    amount_cents: Optional[int] = Field(None, ne=0, ge=_AMOUNT_MIN_CENTS, le=_AMOUNT_MAX_CENTS)
+    description: Optional[str] = Field(None, max_length=255)
     category_id: Optional[UUID] = None
     transaction_date: Optional[date] = None
 
@@ -196,8 +202,8 @@ class ZenInsightsResponse(BaseModel):
     predictions: Optional[dict] = None  # Previsões da IA
 
 class RecurringTransactionBase(BaseModel):
-    description: str
-    amount_cents: int = Field(..., ne=0)
+    description: str = Field(..., min_length=1, max_length=255)
+    amount_cents: int = Field(..., ne=0, ge=_AMOUNT_MIN_CENTS, le=_AMOUNT_MAX_CENTS)
     day_of_month: int = Field(..., ge=1, le=31)
     category_id: Optional[UUID] = None
     is_active: bool = True
@@ -276,6 +282,22 @@ class DashboardSnapshotResponse(BaseModel):
     version: str = "1.0"
     snapshot: FinancialSnapshotResponse
     collections: DashboardCollectionsResponse
+    currency: str
+
+
+class LifetimeTotalsResponse(BaseModel):
+    """
+    Totais acumulados (toda a história do workspace), somados em SQL.
+    Permite ao frontend mostrar saldos corretos sem depender de listas paginadas.
+    """
+    income: float          # rendimento acumulado (todas as receitas)
+    expenses: float        # despesas acumuladas (positivo)
+    balance: float         # income - expenses
+    vault_emergency: float # saldo atual do cofre de emergência
+    vault_investment: float # saldo atual do cofre de investimento
+    vault_total: float     # vault_emergency + vault_investment
+    available_cash: float  # opening_balance + income - expenses (>= 0)
+    net_worth: float       # vault_total + available_cash
     currency: str
 
 class AuditLogResponse(BaseModel):
@@ -362,13 +384,13 @@ class BroadcastRequest(BaseModel):
 
 # Metas de Poupança
 class SavingsGoalBase(BaseModel):
-    name: str
-    goal_type: str = 'expense'
-    target_amount_cents: int = Field(..., gt=0)
-    current_amount_cents: int = Field(0, ge=0)
+    name: str = Field(..., min_length=1, max_length=100)
+    goal_type: Literal['expense', 'income'] = 'expense'
+    target_amount_cents: int = Field(..., gt=0, le=_AMOUNT_MAX_CENTS)
+    current_amount_cents: int = Field(0, ge=0, le=_AMOUNT_MAX_CENTS)
     target_date: date
-    icon: str = 'Target'
-    color_hex: str = '#3B82F6'
+    icon: str = Field('Target', max_length=50)
+    color_hex: str = Field('#3B82F6', pattern=_HEX_COLOR_PATTERN)
 
 class SavingsGoalCreate(SavingsGoalBase):
     pass

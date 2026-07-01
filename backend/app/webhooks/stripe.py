@@ -8,6 +8,7 @@ from datetime import datetime, date, timezone
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
+from ..core.stripe_utils import customer_has_saved_card as _customer_has_saved_card
 from ..models import database as models
 from .stripe_connect_handlers import (
     handle_payment_intent_succeeded,
@@ -55,27 +56,15 @@ def _get_base_amount_for_commission(invoice: dict) -> int:
     return invoice.get('amount_paid') or 0
 
 
-def _customer_has_saved_card(customer_id: str) -> bool:
-    """Valida no Stripe se o customer tem método de pagamento de cartão guardado."""
-    if not customer_id or not settings.STRIPE_API_KEY:
-        return False
+def _trial_end_dt(subscription):
+    """Extrai o fim do trial (datetime UTC) de uma subscrição Stripe (dict ou objeto)."""
+    te = subscription.get('trial_end') if isinstance(subscription, dict) else getattr(subscription, 'trial_end', None)
+    if not te:
+        return None
     try:
-        customer = stripe.Customer.retrieve(
-            customer_id,
-            expand=['invoice_settings.default_payment_method'],
-        )
-        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
-        default_pm = None
-        if isinstance(invoice_settings, dict):
-            default_pm = invoice_settings.get('default_payment_method')
-        elif invoice_settings is not None:
-            default_pm = getattr(invoice_settings, 'default_payment_method', None)
-        if default_pm:
-            return True
-        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
-        return bool(getattr(cards, 'data', None))
+        return datetime.fromtimestamp(int(te), tz=timezone.utc)
     except Exception:
-        return False
+        return None
 
 
 def _can_mark_monthly_commission_paid(db: Session, affiliate_id, month_value: date) -> bool:
@@ -211,8 +200,9 @@ def handle_checkout_completed(session: dict, db: Session):
                 # Trial só conta quando há cartão guardado válido no customer Stripe.
                 if subscription.status == 'trialing':
                     customer_for_trial = customer_id or user.stripe_customer_id
-                    if _customer_has_saved_card(customer_for_trial):
+                    if _customer_has_saved_card(customer_for_trial, subscription):
                         user.had_trial = True
+                        user.trial_ends_at = _trial_end_dt(subscription)
                         logger.info(f'Trial marcado para {user.email} (had_trial=True, cartão válido)')
                     else:
                         user.subscription_status = 'incomplete'
@@ -262,8 +252,9 @@ def handle_subscription_created(subscription: dict, db: Session):
         user.subscription_status = status
         if status == 'trialing':
             customer_for_trial = customer_id or user.stripe_customer_id
-            if _customer_has_saved_card(customer_for_trial):
+            if _customer_has_saved_card(customer_for_trial, subscription):
                 user.had_trial = True
+                user.trial_ends_at = _trial_end_dt(subscription)
                 logger.info(f'Trial marcado para {user.email} (subscription.created, cartão válido)')
             else:
                 user.subscription_status = 'incomplete'
@@ -303,8 +294,9 @@ def handle_subscription_updated(subscription: dict, db: Session):
             user.subscription_status = status
         if status == 'trialing':
             customer_for_trial = subscription.get('customer') or user.stripe_customer_id
-            if _customer_has_saved_card(customer_for_trial):
+            if _customer_has_saved_card(customer_for_trial, subscription):
                 user.had_trial = True
+                user.trial_ends_at = _trial_end_dt(subscription)
             else:
                 user.subscription_status = 'incomplete'
                 logger.warning(f'Trial bloqueado em subscription.updated para {user.email}: sem cartão')
@@ -399,8 +391,8 @@ def handle_charge_refunded(charge: dict, db: Session):
             period_start = inv.get('period_start')
             if period_start is not None:
                 commission_month = datetime.fromtimestamp(period_start, tz=timezone.utc).date().replace(day=1)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f'[refund] Não foi possível obter period_start da invoice {invoice_id}: {e}')
 
     # Obter percentagem de comissão e valor base (afiliado não ganhou sobre taxa Stripe)
     commission_pct = 25.0
@@ -412,8 +404,8 @@ def handle_charge_refunded(charge: dict, db: Session):
             if price_id:
                 commission_pct = get_commission_percentage_for_price_id(price_id, db)
             base_amount_for_invoice = _get_base_amount_for_commission(inv)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f'[refund] Falha ao calcular base/percentagem da invoice {invoice_id}; a usar defaults: {e}')
 
     # Refund parcial múltiplo: amount_refunded é acumulado no charge; só revertemos o delta por charge
     base_refunded_total_now = min(amount_refunded, base_amount_for_invoice)
@@ -592,13 +584,18 @@ def handle_invoice_paid(invoice: dict, db: Session):
             user.last_payment_failure_code = None
             user.last_payment_failure_message = None
             user.last_payment_failed_at = None
-            # Se o status estava 'past_due' ou 'unpaid', atualizar para 'active'
-            if user.subscription_status in ['past_due', 'unpaid']:
+            # Consolidar o status para 'active' quando há um pagamento REAL (esta invoice
+            # não é de trial — já passámos o _is_trial_invoice acima):
+            # - 'past_due'/'unpaid' -> reativação após falha resolvida;
+            # - 'trialing' -> fim do trial com 1º pagamento bem-sucedido. Antes esta
+            #   transição dependia só do webhook customer.subscription.updated; agora o
+            #   invoice.paid também a garante (caso esse evento atrase ou se perca).
+            if user.subscription_status in ['past_due', 'unpaid', 'trialing']:
                 try:
                     subscription = stripe.Subscription.retrieve(subscription_id)
                     if subscription.status == 'active':
                         user.subscription_status = 'active'
-                        logger.info(f'Subscrição reativada após pagamento: {user.email}')
+                        logger.info(f'Subscrição consolidada como ativa após pagamento: {user.email}')
                 except Exception as e:
                     logger.error(f'Erro ao verificar subscrição após pagamento: {str(e)}')
             
@@ -758,4 +755,75 @@ def handle_invoice_paid(invoice: dict, db: Session):
                             logger.error(f'Erro ao criar/atualizar comissão em invoice.paid: {str(e)}', exc_info=True)
 
             db.commit()
+
+
+# Estados "em trânsito" que dependem de webhooks para evoluir. Se um webhook se perder
+# (apesar dos retries do Stripe), estes utilizadores podem ficar dessincronizados.
+_RECONCILE_STATES = ('trialing', 'past_due', 'unpaid', 'incomplete', 'cancel_at_period_end')
+
+
+def reconcile_subscriptions(db: Session, limit: int = 300) -> dict:
+    """
+    Rede de segurança para webhooks perdidos: sincroniza o subscription_status local
+    com o Stripe para utilizadores em estados transitórios (trial, past_due, etc.).
+
+    Não toca em admins, Pro concedido manualmente, nem em valores/comissões — apenas
+    alinha o estado da subscrição com a fonte de verdade (Stripe). Cada utilizador é
+    processado de forma isolada para que uma falha não afete os restantes.
+    """
+    if not settings.STRIPE_API_KEY:
+        logger.info('[reconcile] STRIPE_API_KEY ausente; reconciliação ignorada.')
+        return {'checked': 0, 'updated': 0}
+
+    users = (
+        db.query(models.User)
+        .filter(
+            models.User.stripe_subscription_id.isnot(None),
+            models.User.subscription_status.in_(_RECONCILE_STATES),
+        )
+        .limit(limit)
+        .all()
+    )
+
+    checked = 0
+    updated = 0
+    for user in users:
+        checked += 1
+        try:
+            subscription = stripe.Subscription.retrieve(user.stripe_subscription_id)
+        except Exception as e:
+            logger.warning(f'[reconcile] Falha ao obter subscrição {user.stripe_subscription_id} de {user.email}: {e}')
+            continue
+        try:
+            status = getattr(subscription, 'status', None)
+            cancel_at_period_end = bool(getattr(subscription, 'cancel_at_period_end', False))
+            if not status:
+                continue
+
+            # Mapeamento igual ao dos webhooks (mantém consistência).
+            new_status = 'cancel_at_period_end' if (cancel_at_period_end and status == 'active') else status
+
+            # Trial só conta como Pro com cartão válido (subscrição ou customer).
+            if status == 'trialing':
+                customer_for_trial = getattr(subscription, 'customer', None) or user.stripe_customer_id
+                if _customer_has_saved_card(customer_for_trial, subscription):
+                    user.had_trial = True  # idempotente; persistido no commit abaixo
+                    user.trial_ends_at = _trial_end_dt(subscription)
+                else:
+                    new_status = 'incomplete'
+
+            if user.subscription_status != new_status:
+                logger.info(f'[reconcile] {user.email}: {user.subscription_status} -> {new_status} (Stripe={status})')
+                user.subscription_status = new_status
+                updated += 1
+                db.commit()
+            else:
+                # Pode ter havido só a marcação de had_trial.
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.warning(f'[reconcile] Erro ao reconciliar {user.email}: {e}')
+
+    logger.info(f'[reconcile] Concluído: {checked} verificados, {updated} atualizados.')
+    return {'checked': checked, 'updated': updated}
 

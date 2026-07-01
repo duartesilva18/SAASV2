@@ -35,6 +35,7 @@ interface Message {
   content: string;
   image_url?: string | null;
   is_read: boolean;
+  is_auto?: boolean;
   created_at: string;
 }
 
@@ -374,6 +375,9 @@ export default function AdminSupportPage() {
                         ? 'bg-blue-600 text-white rounded-br-md'
                         : 'bg-slate-800/60 text-slate-200 border border-slate-700/40 rounded-bl-md'
                     }`}>
+                      {msg.sender_type === 'admin' && msg.is_auto && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-cyan-200/90 mb-1">✨ Resposta automática (IA)</span>
+                      )}
                       {msg.image_url && (
                         <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${msg.image_url}`} target="_blank" rel="noopener noreferrer">
                           <img

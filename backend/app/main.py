@@ -45,6 +45,35 @@ if sys.platform == 'win32':
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
 
+# Índices/alterações a tabelas JÁ EXISTENTES não são aplicados pelo create_all (só cria
+# tabelas em falta). Como em produção o schema é gerido por create_all e não pelo Alembic
+# (o start.sh que corria 'alembic upgrade head' não é usado pelo startCommand do Render),
+# garantimos aqui, de forma idempotente, os índices que adicionámos depois da tabela existir.
+def _ensure_runtime_indexes():
+    from sqlalchemy import text
+    statements = [
+        # Padrão de acesso mais comum: filtrar por workspace + filtrar/ordenar por data.
+        "CREATE INDEX IF NOT EXISTS ix_transactions_workspace_date "
+        "ON transactions (workspace_id, transaction_date)",
+        # Coluna para deduplicar o email de aviso "trial acaba amanhã" (create_all não
+        # adiciona colunas a tabelas existentes; em produção não corre Alembic).
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ending_email_sent "
+        "BOOLEAN NOT NULL DEFAULT FALSE",
+        # Fim do trial (do Stripe) para a UI mostrar "faltam X dias".
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at "
+        "TIMESTAMPTZ NULL",
+    ]
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
+
+try:
+    _ensure_runtime_indexes()
+    logger.info("Índices de runtime garantidos (ix_transactions_workspace_date).")
+except Exception as e:
+    # Não bloquear o arranque por causa de um índice; só registar.
+    logger.warning(f"Não foi possível garantir índices de runtime: {e}")
+
 # Admin criado ao arrancar (se CREATE_DEFAULT_ADMIN=true e não existir)
 # No Render: define DEFAULT_ADMIN_EMAIL e DEFAULT_ADMIN_PASSWORD e altera a password após 1º login.
 # Para não criar admin automaticamente: CREATE_DEFAULT_ADMIN=false
@@ -55,72 +84,11 @@ DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin')
 app = FastAPI(title='Finly - Gestão Financeira Pessoal API')
 attach_limiter(app)
 
-_AUDIT_EXCLUDE_PATH_PREFIXES = (
-    '/health',
-    '/api/settings/public',
-    '/docs',
-    '/redoc',
-    '/openapi.json',
-    '/webhooks/',
-)
-_AUDIT_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
-
-
-def _resolve_user_id_from_request(request: Request, db: Session) -> UUID | None:
-    """Resolve user_id a partir do bearer token (best effort)."""
-    auth_header = request.headers.get('authorization') or ''
-    if not auth_header.lower().startswith('bearer '):
-        return None
-    token = auth_header.split(' ', 1)[1].strip()
-    if not token:
-        return None
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        if payload.get('type', 'access') != 'access':
-            return None
-        email = (payload.get('sub') or '').strip().lower()
-        if not email:
-            return None
-        user = db.query(User).filter(func.lower(User.email) == email).first()
-        return user.id if user else None
-    except JWTError:
-        return None
-    except Exception:
-        return None
-
-
-@app.middleware("http")
-async def audit_requests_middleware(request: Request, call_next):
-    """
-    Regista automaticamente ações de mutação para aumentar cobertura de auditoria.
-    Mantém endpoints de saúde/webhooks fora para reduzir ruído.
-    """
-    response = await call_next(request)
-    path = request.url.path or ''
-    method = (request.method or '').upper()
-    if method not in _AUDIT_METHODS:
-        return response
-    if any(path.startswith(prefix) for prefix in _AUDIT_EXCLUDE_PATH_PREFIXES):
-        return response
-
-    try:
-        from .models.database import AuditLog  # import local para evitar ciclos no arranque
-        db = SessionLocal()
-        try:
-            user_id = _resolve_user_id_from_request(request, db)
-            details = f'{method} {path} -> {response.status_code}'
-            db.add(AuditLog(
-                user_id=user_id,
-                action=f'http_{method.lower()}',
-                details=details,
-                ip_address=request.client.host if request.client else None,
-            ))
-            db.commit()
-        finally:
-            db.close()
-    except Exception as e:
-        logger.warning(f'Falha ao gravar audit middleware ({method} {path}): {e}')
-    return response
+# NOTA: O registo de auditoria de mutações é feito pelos handlers das rotas via
+# `core.audit.log_action`, que grava detalhes ricos (ação semântica, payload relevante).
+# Foi removido o middleware genérico que duplicava cada mutação com um INSERT+commit
+# adicional (e uma sessão de BD + decode de JWT por request), para reduzir carga de
+# escrita e latência sem perder cobertura.
 
 # Configuração de CORS - em produção sem variáveis usa https://app.finlybot.com como base
 environment = os.getenv('ENVIRONMENT', 'development')
@@ -137,19 +105,28 @@ if environment == 'production' and ('*' in allowed_origins or not allowed_origin
 # Log das origens CORS configuradas
 logger.info(f"🌐 CORS configurado com {len(allowed_origins)} origens: {allowed_origins}")
 
+# Lista explícita de headers: com allow_credentials=True o wildcard '*' é ignorado por
+# vários browsers, por isso enumeramos os headers realmente usados pela aplicação.
+_CORS_ALLOW_HEADERS = ['Authorization', 'Content-Type', 'Accept', 'Accept-Language', 'Origin', 'X-Requested-With']
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allow_headers=['*'],
-    expose_headers=['*']
+    allow_headers=_CORS_ALLOW_HEADERS,
+    expose_headers=['Content-Disposition']
 )
 
 # Handler para erros de validação (422) - DEPOIS do CORS
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.error(f"Erro de validação em {request.url.path}: {exc.errors()}")
+    # Não registar o corpo/valores submetidos (podem conter passwords/PII). Só os campos com erro.
+    safe_errors = [
+        {"loc": e.get("loc"), "type": e.get("type"), "msg": e.get("msg")}
+        for e in exc.errors()
+    ]
+    logger.warning(f"Erro de validação em {request.url.path}: {safe_errors}")
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 # Handler global para erros não tratados (garantir que CORS funciona mesmo com erros)
@@ -173,7 +150,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Accept-Language, Origin, X-Requested-With"
     
     return response
 
@@ -208,6 +185,13 @@ def create_default_admin():
     """Cria utilizador admin se não existir, ao arrancar o servidor (quando CREATE_DEFAULT_ADMIN=true)."""
     if not CREATE_DEFAULT_ADMIN:
         logger.info("CREATE_DEFAULT_ADMIN está desativado; não será criado admin por defeito.")
+        return
+    # Recusar criar admin com password fraca/padrão (evita admin@admin.pt / "admin" em produção).
+    if not DEFAULT_ADMIN_PASSWORD or DEFAULT_ADMIN_PASSWORD.strip().lower() == 'admin' or len(DEFAULT_ADMIN_PASSWORD) < 12:
+        logger.error(
+            "CREATE_DEFAULT_ADMIN=true mas DEFAULT_ADMIN_PASSWORD é fraca/padrão. "
+            "Define uma password forte (>=12 caracteres) em DEFAULT_ADMIN_PASSWORD. Admin não criado."
+        )
         return
     db = SessionLocal()
     try:
@@ -280,6 +264,38 @@ def _job_recurring_transactions():
         db.close()
 
 
+def _job_trial_ending_emails():
+    """Job diário: envia o aviso "o teu trial acaba amanhã" aos trials que terminam em breve."""
+    import asyncio
+    from .core.trial_emails import send_trial_ending_emails
+    db = SessionLocal()
+    try:
+        result = asyncio.run(send_trial_ending_emails(db))
+        logger.info("[Job diário] Avisos de fim de trial: %s", result)
+    except Exception as e:
+        logger.exception(f"Erro no job trial-ending-emails: {e}")
+    finally:
+        db.close()
+
+
+def _job_reconcile_subscriptions():
+    """Job diário: rede de segurança para webhooks perdidos do Stripe.
+
+    Sincroniza o estado das subscrições em trânsito (trial, past_due, etc.) com o Stripe,
+    garantindo, por exemplo, que a transição trial->ativo (ou ->past_due) acontece mesmo
+    que o webhook correspondente se tenha perdido.
+    """
+    from .webhooks.stripe import reconcile_subscriptions
+    db = SessionLocal()
+    try:
+        result = reconcile_subscriptions(db)
+        logger.info("[Job diário] Reconciliação de subscrições: %s", result)
+    except Exception as e:
+        logger.exception(f"Erro no job reconcile-subscriptions: {e}")
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def start_scheduler():
     """Agenda jobs diários: 1ª invoices pendentes (9:00 UTC), recorrentes (2:00 UTC)."""
@@ -288,17 +304,32 @@ def start_scheduler():
         scheduler = BackgroundScheduler()
         scheduler.add_job(_job_affiliate_first_invoices_pending, "cron", hour=9, minute=0)
         scheduler.add_job(_job_recurring_transactions, "cron", hour=2, minute=0)
+        scheduler.add_job(_job_reconcile_subscriptions, "cron", hour=3, minute=30)
+        scheduler.add_job(_job_trial_ending_emails, "cron", hour=10, minute=0)
         scheduler.start()
-        logger.info("Jobs diários agendados: first-invoices-pending (9:00 UTC), recurring-transactions (2:00 UTC)")
+        logger.info("Jobs diários agendados: first-invoices-pending (9:00 UTC), recurring-transactions (2:00 UTC), reconcile-subscriptions (3:30 UTC), trial-ending-emails (10:00 UTC)")
     except Exception as e:
         logger.warning(f"Não foi possível iniciar scheduler: {e}")
 
 
-# Novo endpoint público para as definições básicas do sistema
+# Novo endpoint público para as definições básicas do sistema.
+# Cache em memória: o valor é quase estático e este endpoint é chamado em todas as
+# páginas públicas. TTL curto chega para refletir mudanças do admin sem ir à BD a cada hit.
+import time as _time
+_public_settings_cache: dict = {"value": None, "ts": 0.0}
+_PUBLIC_SETTINGS_TTL_SECONDS = 300  # 5 min
+
+
 @app.get('/api/settings/public')
 async def get_public_settings(db: Session = Depends(get_db)):
+    now = _time.time()
+    if _public_settings_cache["value"] is not None and (now - _public_settings_cache["ts"]) < _PUBLIC_SETTINGS_TTL_SECONDS:
+        return _public_settings_cache["value"]
     phone = db.query(SystemSetting).filter(SystemSetting.key == 'support_phone').first()
-    return {"support_phone": phone.value if phone else "351925989577"}
+    value = {"support_phone": phone.value if phone else "351925989577"}
+    _public_settings_cache["value"] = value
+    _public_settings_cache["ts"] = now
+    return value
 
 @app.options('/{full_path:path}')
 async def options_handler(request: Request, full_path: str):
@@ -309,7 +340,7 @@ async def options_handler(request: Request, full_path: str):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, Accept-Language, Origin, X-Requested-With"
         response.headers["Access-Control-Max-Age"] = "3600"
         return response
     return Response(status_code=200)

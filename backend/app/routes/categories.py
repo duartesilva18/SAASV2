@@ -4,6 +4,7 @@ from sqlalchemy import func
 from typing import List
 from ..core.dependencies import get_db
 from ..core.audit import log_action
+from ..core.limiter import limiter
 from ..models import database as models
 from .. import schemas
 from .auth import get_current_user
@@ -87,46 +88,48 @@ async def get_category_stats(request: Request, db: Session = Depends(get_db), cu
     
     today = date.today()
     start_of_month = date(today.year, today.month, 1)
-    
-    transactions = db.query(models.Transaction).join(models.Category).filter(
+
+    # Agregação em SQL (SUM + COUNT por categoria), evitando carregar todas as linhas
+    # e o N+1 que ocorria ao aceder t.category.* por transação.
+    rows = db.query(
+        models.Category.id,
+        models.Category.name,
+        models.Category.color_hex,
+        models.Category.icon,
+        func.coalesce(func.sum(models.Transaction.amount_cents), 0).label('total_cents'),
+        func.count(models.Transaction.id).label('cnt'),
+    ).join(
+        models.Transaction, models.Transaction.category_id == models.Category.id
+    ).filter(
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= start_of_month,
         models.Category.type == 'expense',
-        func.abs(models.Transaction.amount_cents) != 1  # Filtrar transações de seed (1 cêntimo)
+        func.abs(models.Transaction.amount_cents) != 1,  # Filtrar seed (1 cêntimo)
+    ).group_by(
+        models.Category.id, models.Category.name, models.Category.color_hex, models.Category.icon
     ).all()
-    
-    # Despesas têm amount_cents negativo; total_monthly_cents será negativo
-    total_monthly_cents = sum(t.amount_cents for t in transactions)
-    
-    stats = {}
-    for t in transactions:
-        cat_id = str(t.category_id)
-        if cat_id not in stats:
-            stats[cat_id] = {
-                'category_id': t.category_id,
-                'name': t.category.name,
-                'total_spent_cents': 0,
-                'count': 0,
-                'color': t.category.color_hex,
-                'icon': t.category.icon
-            }
-        stats[cat_id]['total_spent_cents'] += t.amount_cents
-        stats[cat_id]['count'] += 1
-    
-    result = []
-    total_abs = abs(total_monthly_cents)
-    for cat_id, data in stats.items():
-        percentage = (abs(data['total_spent_cents']) / total_abs * 100) if total_abs > 0 else 0
-        result.append(schemas.CategoryStats(
-            **data,
-            percentage=round(percentage, 1)
-        ))
-    
+
+    total_abs = sum(abs(r.total_cents) for r in rows)
+
+    result = [
+        schemas.CategoryStats(
+            category_id=r.id,
+            name=r.name,
+            total_spent_cents=r.total_cents,
+            count=r.cnt,
+            color=r.color_hex,
+            icon=r.icon,
+            percentage=round((abs(r.total_cents) / total_abs * 100) if total_abs > 0 else 0, 1),
+        )
+        for r in rows
+    ]
+
     # Ordenar por maior gasto primeiro (total_spent_cents mais negativo = mais gasto)
     result.sort(key=lambda x: x.total_spent_cents)
     return result
 
 @router.post('/', response_model=schemas.CategoryResponse)
+@limiter.limit('60/minute')
 async def create_category(request: Request, category_in: schemas.CategoryBase, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
@@ -165,6 +168,7 @@ async def create_category(request: Request, category_in: schemas.CategoryBase, d
         raise HTTPException(status_code=400, detail=f'Erro ao criar categoria: {error_msg}')
 
 @router.patch('/{category_id}', response_model=schemas.CategoryResponse)
+@limiter.limit('60/minute')
 async def update_category(request: Request, category_id: UUID, category_in: schemas.CategoryUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")

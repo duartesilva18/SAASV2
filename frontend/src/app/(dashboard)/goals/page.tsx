@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
+import { useSubmit } from '@/lib/useSubmit';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageLoading from '@/components/PageLoading';
@@ -173,18 +174,7 @@ export default function GoalsPage() {
     : null;
 
   /* ── Handlers ───────────────────────────────────────────────── */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { name?: string; amount?: string; type?: string; date?: string } = {};
-    if (!formData.name.trim()) newErrors.name = t.dashboard.goals.validation.required;
-    if (!formData.target_amount_cents || formData.target_amount_cents <= 0) newErrors.amount = t.dashboard.goals.validation.amountPositive;
-    if (!formData.goal_type) newErrors.type = t.dashboard.goals.validation.required;
-    if (!formData.target_date) newErrors.date = t.dashboard.goals.validation.required;
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    setErrors({});
+  const submitGoal = async () => {
     try {
       const payload = {
         name: formData.name,
@@ -208,6 +198,22 @@ export default function GoalsPage() {
     } catch (err) {
       setToast({ show: true, message: t.dashboard.goals.saveError, type: 'error' });
     }
+  };
+
+  const { submitting, run: runGoalSubmit } = useSubmit(submitGoal);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: { name?: string; amount?: string; type?: string; date?: string } = {};
+    if (!formData.name.trim()) newErrors.name = t.dashboard.goals.validation.required;
+    if (!formData.target_amount_cents || formData.target_amount_cents <= 0) newErrors.amount = t.dashboard.goals.validation.amountPositive;
+    if (!formData.goal_type) newErrors.type = t.dashboard.goals.validation.required;
+    if (!formData.target_date) newErrors.date = t.dashboard.goals.validation.required;
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+    runGoalSubmit();
   };
 
   const handleDelete = async () => {
@@ -797,7 +803,8 @@ export default function GoalsPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={submitting}
+                  className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {editingGoal ? t.dashboard.goals.saveChanges : t.dashboard.goals.activateGoal} <Check size={18} />
                 </button>

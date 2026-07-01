@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import date
 from ..core.dependencies import get_db
+from ..core.limiter import limiter
 from ..models import database as models
 from .. import schemas
 from .auth import get_current_user
@@ -19,7 +20,8 @@ async def get_goals(db: Session = Depends(get_db), current_user: models.User = D
     return db.query(models.SavingsGoal).filter(models.SavingsGoal.workspace_id == workspace.id).all()
 
 @router.post('/', response_model=schemas.SavingsGoalResponse)
-async def create_goal(goal: schemas.SavingsGoalCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+@limiter.limit('60/minute')
+async def create_goal(request: Request, goal: schemas.SavingsGoalCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
@@ -33,7 +35,8 @@ async def create_goal(goal: schemas.SavingsGoalCreate, db: Session = Depends(get
     return db_goal
 
 @router.patch('/{goal_id}', response_model=schemas.SavingsGoalResponse)
-async def update_goal(goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+@limiter.limit('60/minute')
+async def update_goal(request: Request, goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
@@ -70,7 +73,9 @@ async def delete_goal(goal_id: UUID, db: Session = Depends(get_db), current_user
 
 
 @router.post('/{goal_id}/deposit', response_model=schemas.SavingsGoalResponse)
+@limiter.limit('60/minute')
 async def deposit_into_goal(
+    request: Request,
     goal_id: UUID,
     body: schemas.SavingsGoalDeposit,
     db: Session = Depends(get_db),

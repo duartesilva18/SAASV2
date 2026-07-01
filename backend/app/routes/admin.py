@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, desc, case, or_
 from typing import List, Optional, Dict, Set
@@ -35,6 +35,10 @@ router = APIRouter(prefix='/admin', tags=['admin'])
 _customer_card_cache: Dict[str, Dict[str, float]] = {}
 _CUSTOMER_CARD_CACHE_TTL_SECONDS = 15 * 60
 _CUSTOMER_CARD_CACHE_MAX_ENTRIES = 5000
+
+# Cache do resultado de /finance/stats (chamadas Stripe caras) — TTL 5 min.
+_finance_stats_cache: Dict[str, float] = {"value": None, "ts": 0.0}
+_FINANCE_STATS_TTL_SECONDS = 5 * 60
 
 async def check_admin(current_user: models.User = Depends(get_current_user)):
     if not current_user.is_admin:
@@ -77,34 +81,7 @@ def _audit_severity(action: str, details: Optional[str]) -> str:
     return 'info'
 
 
-def _customer_has_saved_card(customer_id: str) -> bool:
-    """True se o customer tem cartão guardado no Stripe (default PM ou pelo menos 1 card)."""
-    if not customer_id or not settings.STRIPE_API_KEY:
-        return False
-
-    try:
-        customer = stripe.Customer.retrieve(
-            customer_id,
-            expand=['invoice_settings.default_payment_method'],
-        )
-
-        default_pm = None
-        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
-        if isinstance(invoice_settings, dict):
-            default_pm = invoice_settings.get('default_payment_method')
-        elif invoice_settings is not None:
-            default_pm = getattr(invoice_settings, 'default_payment_method', None)
-
-        if default_pm:
-            return True
-
-        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
-        return bool(getattr(cards, 'data', None))
-    except stripe.error.InvalidRequestError:
-        return False
-    except Exception as e:
-        logger.warning(f'Erro ao validar payment method do customer {customer_id}: {e}')
-        return False
+from ..core.stripe_utils import customer_has_saved_card as _customer_has_saved_card
 
 
 def _get_cached_customer_card_status(customer_id: str) -> Optional[bool]:
@@ -224,6 +201,10 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
                 'monthly_revenue': monthly_data
             }
 
+        # Servir do cache se ainda fresco (evita 2+ chamadas Stripe por cada carregamento).
+        if _finance_stats_cache["value"] is not None and (time.time() - _finance_stats_cache["ts"]) < _FINANCE_STATS_TTL_SECONDS:
+            return _finance_stats_cache["value"]
+
         subscriptions = stripe.Subscription.list(limit=100, status='all')
         # Expandir charge para obter amount_refunded sem N+1 requests
         invoices = stripe.Invoice.list(limit=100, expand=['data.charge'])
@@ -270,13 +251,16 @@ async def get_admin_finance_stats(db: Session = Depends(get_db), admin: models.U
                 'revenue_cents': monthly_revenue.get(month_key, 0)
             })
 
-        return {
+        result = {
             'total_mrr_cents': total_mrr,
             'total_revenue_cents': total_revenue,
             'active_subscriptions': len(unique_customers),
             'pending_invoices_count': len(pending_invoices),
             'monthly_revenue': monthly_data
         }
+        _finance_stats_cache["value"] = result
+        _finance_stats_cache["ts"] = time.time()
+        return result
     except Exception as e:
         logger.error(f'Erro em /admin/finance/stats: {str(e)}', exc_info=True)
         raise HTTPException(status_code=500, detail='Erro ao obter estatísticas financeiras.')
@@ -728,6 +712,19 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
 
     return users_with_metrics
 
+
+@router.post('/reconcile-subscriptions')
+async def admin_reconcile_subscriptions(db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    """
+    Força a reconciliação dos estados de subscrição com o Stripe (rede de segurança para
+    webhooks perdidos). Corre normalmente como job diário; este endpoint permite acioná-lo
+    a pedido. Sincroniza apenas estados em trânsito (trial, past_due, etc.).
+    """
+    from ..webhooks.stripe import reconcile_subscriptions
+    result = reconcile_subscriptions(db)
+    return {"message": "Reconciliação concluída", **result}
+
+
 @router.get('/users/{user_id}', response_model=schemas.AdminUserDetail)
 async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -886,6 +883,12 @@ async def update_system_setting(data: dict, db: Session = Depends(get_db), admin
             setting = models.SystemSetting(key=key, value=str_value)
             db.add(setting)
     db.commit()
+    # Invalidar o cache em memória de /api/settings/public (reflete a mudança de imediato).
+    try:
+        from .. import main as _main
+        _main._public_settings_cache["value"] = None
+    except Exception:
+        pass
     return {"message": "Definições atualizadas"}
 
 def _get_commission_setting(db: Session, key: str, default: float, description: str) -> models.SystemSetting:
@@ -968,83 +971,104 @@ async def update_commission_percentage(
     pro = float(pro_s.value) if pro_s and pro_s.value else 25.0
     return {"message": "Comissões atualizadas.", "plus": plus, "pro": pro}
 
+def _render_broadcast_html(subject: str, message: str, footer: str) -> str:
+    import html as html_module
+    safe_subject = html_module.escape(subject)
+    safe_message = html_module.escape(message).replace('\n', '<br>')
+    safe_footer = html_module.escape(footer)
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: sans-serif; background-color: #020617; color: #94a3b8; padding: 40px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 24px; padding: 40px; border: 1px solid #1e293b;">
+            <h2 style="color: #ffffff; margin-top: 0;">{safe_subject}</h2>
+            <p style="line-height: 1.6; font-size: 16px;">{safe_message}</p>
+            <hr style="border: 0; border-top: 1px solid #1e293b; margin: 30px 0;">
+            <p style="font-size: 12px; color: #475569;">{safe_footer}</p>
+        </div>
+    </body>
+    </html>
+    """
+
+
+async def _run_marketing_broadcast(subject: str, message: str, admin_id, recipients: list):
+    """
+    Envia o broadcast em background (não bloqueia o pedido). `recipients` é uma lista de
+    tuplos (email, lang) já deduplicada. Conta sucessos/falhas e regista o resultado no AuditLog.
+    """
+    fm = FastMail(conf)
+    sent = 0
+    failed = 0
+    failed_emails: list = []
+    for email, lang in recipients:
+        try:
+            user_lang = lang if lang in ('pt', 'en') else 'pt'
+            t = get_email_translation(user_lang)
+            footer = t.get('marketing_footer', 'Recebeu este email porque aceitou as comunicações de marketing do Finly.')
+            html = _render_broadcast_html(subject, message, footer)
+            await fm.send_message(MessageSchema(
+                subject=subject, recipients=[email], body=html, subtype=MessageType.html
+            ))
+            sent += 1
+        except Exception as e:
+            failed += 1
+            if len(failed_emails) < 50:
+                failed_emails.append(email)
+            logger.error(f"ERROR: Falha ao enviar broadcast para {email}: {e}")
+
+    # Registar o resultado no AuditLog (sessão própria; corre fora do request).
+    _db = SessionLocal()
+    try:
+        log_details = json.dumps({
+            "subject": subject,
+            "message": message,
+            "total": len(recipients),
+            "sent": sent,
+            "failed": failed,
+            "failed_sample": failed_emails,
+        }, ensure_ascii=False)
+        _db.add(models.AuditLog(user_id=admin_id, action='marketing_broadcast', details=log_details))
+        _db.commit()
+    except Exception as e:
+        _db.rollback()
+        logger.warning(f"Falha ao registar resultado do broadcast: {e}")
+    finally:
+        _db.close()
+    logger.info(f"Broadcast concluído: {sent} enviados, {failed} falhados (de {len(recipients)}).")
+
+
 @router.post('/marketing/broadcast')
 async def send_marketing_broadcast(
     request: Request,
     broadcast: schemas.BroadcastRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin: models.User = Depends(check_admin)
 ):
-    # Find all users who opted in for marketing
-    users = db.query(models.User).filter(models.User.marketing_opt_in == True).all()
-    
-    if not users:
+    # Destinatários (opt-in) deduplicados por email.
+    rows = db.query(models.User.email, models.User.language).filter(
+        models.User.marketing_opt_in == True,
+        models.User.email.isnot(None),
+    ).all()
+    seen = set()
+    recipients = []
+    for email, lang in rows:
+        key = (email or '').strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        recipients.append((email, (lang or 'pt')))
+
+    if not recipients:
         return {"message": "Nenhum utilizador com marketing opt-in encontrado.", "count": 0}
 
-    sent_count = 0
-    
-    fm = FastMail(conf)
-    
-    for user in users:
-        try:
-            logger.info(f"A preparar envio de broadcast para: {user.email}")
-            # Get user language preference from user model or default to 'pt'
-            user_lang = getattr(user, 'language', 'pt') or 'pt'
-            # Validate language (only 'pt' or 'en' supported)
-            if user_lang not in ['pt', 'en']:
-                user_lang = 'pt'
-            t = get_email_translation(user_lang)
-            marketing_footer = t.get('marketing_footer', 'Recebeu este email porque aceitou as comunicações de marketing do Finly.')
-            
-            import html as html_module
-            safe_subject = html_module.escape(broadcast.subject)
-            # Converter newlines em <br> na mensagem, mas escapar o resto
-            safe_message = html_module.escape(broadcast.message).replace('\n', '<br>')
-            safe_footer = html_module.escape(marketing_footer)
-            html = f"""
-            <!DOCTYPE html>
-            <html>
-            <body style="font-family: sans-serif; background-color: #020617; color: #94a3b8; padding: 40px;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: #0f172a; border-radius: 24px; padding: 40px; border: 1px solid #1e293b;">
-                    <h2 style="color: #ffffff; margin-top: 0;">{safe_subject}</h2>
-                    <p style="line-height: 1.6; font-size: 16px;">{safe_message}</p>
-                    <hr style="border: 0; border-top: 1px solid #1e293b; margin: 30px 0;">
-                    <p style="font-size: 12px; color: #475569;">{safe_footer}</p>
-                </div>
-            </body>
-            </html>
-            """
-            message = MessageSchema(
-                subject=broadcast.subject,
-                recipients=[user.email],
-                body=html,
-                subtype=MessageType.html
-            )
-            await fm.send_message(message)
-            logger.info(f"SUCCESS: Email de broadcast enviado para: {user.email}")
-            sent_count += 1
-        except Exception as e:
-            logger.error(f"ERROR: Falha ao enviar broadcast para {user.email}: {str(e)}")
-
-    # Guardar os detalhes completos no Log de Auditoria
-    log_details = json.dumps({
-        "subject": broadcast.subject,
-        "message": broadcast.message,
-        "sent_count": sent_count
-    }, ensure_ascii=False)
-
-    await log_action(
-        db, 
-        action='marketing_broadcast', 
-        user_id=admin.id, 
-        details=log_details, 
-        request=request
-    )
+    # Envio em background -> resposta imediata (evita timeout com muitos destinatários).
+    background_tasks.add_task(_run_marketing_broadcast, broadcast.subject, broadcast.message, admin.id, recipients)
 
     return {
-        "message": "Broadcast de email concluído com sucesso",
-        "total_users": len(users),
-        "sent": sent_count
+        "message": "Broadcast iniciado. O envio decorre em segundo plano; o resultado fica no log de auditoria.",
+        "total_users": len(recipients),
+        "queued": True,
     }
 
 # ==================== ROTAS DE AFILIADOS ====================
@@ -1060,26 +1084,34 @@ def generate_affiliate_code() -> str:
 async def get_all_users_for_promotion(
     db: Session = Depends(get_db),
     admin: models.User = Depends(check_admin),
-    search: Optional[str] = Query(None, description="Pesquisar por email ou nome")
+    search: Optional[str] = Query(None, description="Pesquisar por email ou nome"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
-    """Retorna todos os utilizadores que ainda não são afiliados (para promover)"""
+    """Utilizadores que ainda não são afiliados (para promover). Paginado."""
     query = db.query(models.User).filter(models.User.is_affiliate == False)
-    
+
     if search:
         search_term = f"%{search}%"
         query = query.filter(
             (models.User.email.ilike(search_term)) |
             (models.User.full_name.ilike(search_term))
         )
-    
-    users = query.order_by(models.User.created_at.desc()).limit(50).all()
-    
-    return [{
-        'user_id': str(u.id),
-        'email': u.email,
-        'full_name': u.full_name,
-        'created_at': u.created_at.isoformat() if u.created_at else None
-    } for u in users]
+
+    total = query.count()
+    users = query.order_by(models.User.created_at.desc()).offset(offset).limit(limit).all()
+
+    return {
+        'total': total,
+        'limit': limit,
+        'offset': offset,
+        'users': [{
+            'user_id': str(u.id),
+            'email': u.email,
+            'full_name': u.full_name,
+            'created_at': u.created_at.isoformat() if u.created_at else None
+        } for u in users],
+    }
 
 @router.get('/affiliates', response_model=List[schemas.AdminAffiliateResponse])
 async def get_all_affiliates(
@@ -1088,24 +1120,33 @@ async def get_all_affiliates(
 ):
     """Lista todos os afiliados"""
     affiliates = db.query(models.User).filter(models.User.is_affiliate == True).all()
-    
+    aff_ids = [a.id for a in affiliates]
+
+    # Eliminado o N+1 (eram 3 queries por afiliado): agregamos referrals/conversões e
+    # ganhos numa só query cada, agrupadas por afiliado, e mapeamos em memória.
+    referrals_map: Dict[UUID, tuple] = {}
+    earnings_map: Dict[UUID, int] = {}
+    if aff_ids:
+        for referrer_id, total_ref, total_conv in db.query(
+            models.AffiliateReferral.referrer_id,
+            func.count(models.AffiliateReferral.id),
+            func.coalesce(func.sum(case((models.AffiliateReferral.has_subscribed == True, 1), else_=0)), 0),
+        ).filter(
+            models.AffiliateReferral.referrer_id.in_(aff_ids)
+        ).group_by(models.AffiliateReferral.referrer_id).all():
+            referrals_map[referrer_id] = (int(total_ref or 0), int(total_conv or 0))
+
+        for affiliate_id, total_earn in db.query(
+            models.AffiliateCommission.affiliate_id,
+            func.coalesce(func.sum(models.AffiliateCommission.commission_amount_cents), 0),
+        ).filter(
+            models.AffiliateCommission.affiliate_id.in_(aff_ids)
+        ).group_by(models.AffiliateCommission.affiliate_id).all():
+            earnings_map[affiliate_id] = int(total_earn or 0)
+
     result = []
     for aff in affiliates:
-        total_referrals = db.query(func.count(models.AffiliateReferral.id)).filter(
-            models.AffiliateReferral.referrer_id == aff.id
-        ).scalar() or 0
-        
-        total_conversions = db.query(func.count(models.AffiliateReferral.id)).filter(
-            and_(
-                models.AffiliateReferral.referrer_id == aff.id,
-                models.AffiliateReferral.has_subscribed == True
-            )
-        ).scalar() or 0
-        
-        total_earnings = db.query(func.sum(models.AffiliateCommission.commission_amount_cents)).filter(
-            models.AffiliateCommission.affiliate_id == aff.id
-        ).scalar() or 0
-        
+        total_referrals, total_conversions = referrals_map.get(aff.id, (0, 0))
         result.append(schemas.AdminAffiliateResponse(
             user_id=aff.id,
             email=aff.email,
@@ -1114,10 +1155,10 @@ async def get_all_affiliates(
             is_affiliate=aff.is_affiliate,
             total_referrals=total_referrals,
             total_conversions=total_conversions,
-            total_earnings_cents=int(total_earnings),
+            total_earnings_cents=earnings_map.get(aff.id, 0),
             created_at=aff.created_at
         ))
-    
+
     return result
 
 @router.get('/affiliates/top', response_model=List[schemas.AdminAffiliateResponse])
@@ -1139,29 +1180,35 @@ async def get_top_affiliates(
             models.AffiliateReferral.has_subscribed == True
         )
     ).group_by(models.User.id).order_by(desc('conversions')).limit(limit).all()
-    
+
+    # Agregar referrals e ganhos em 2 queries (em vez de 2 por afiliado).
+    top_ids = [aff.id for aff, _ in affiliates]
+    referrals_map: Dict[UUID, int] = {}
+    earnings_map: Dict[UUID, int] = {}
+    if top_ids:
+        for rid, cnt in db.query(
+            models.AffiliateReferral.referrer_id, func.count(models.AffiliateReferral.id)
+        ).filter(models.AffiliateReferral.referrer_id.in_(top_ids)).group_by(models.AffiliateReferral.referrer_id).all():
+            referrals_map[rid] = int(cnt or 0)
+        for aid, total in db.query(
+            models.AffiliateCommission.affiliate_id, func.coalesce(func.sum(models.AffiliateCommission.commission_amount_cents), 0)
+        ).filter(models.AffiliateCommission.affiliate_id.in_(top_ids)).group_by(models.AffiliateCommission.affiliate_id).all():
+            earnings_map[aid] = int(total or 0)
+
     result = []
     for aff, conversions in affiliates:
-        total_referrals = db.query(func.count(models.AffiliateReferral.id)).filter(
-            models.AffiliateReferral.referrer_id == aff.id
-        ).scalar() or 0
-        
-        total_earnings = db.query(func.sum(models.AffiliateCommission.commission_amount_cents)).filter(
-            models.AffiliateCommission.affiliate_id == aff.id
-        ).scalar() or 0
-        
         result.append(schemas.AdminAffiliateResponse(
             user_id=aff.id,
             email=aff.email,
             full_name=aff.full_name,
             affiliate_code=aff.affiliate_code,
             is_affiliate=aff.is_affiliate,
-            total_referrals=total_referrals,
+            total_referrals=referrals_map.get(aff.id, 0),
             total_conversions=conversions,
-            total_earnings_cents=int(total_earnings),
+            total_earnings_cents=earnings_map.get(aff.id, 0),
             created_at=aff.created_at
         ))
-    
+
     return result
 
 @router.get('/affiliates/stats')
@@ -2134,6 +2181,7 @@ async def admin_get_conversation_messages(
                 'content': m.content,
                 'image_url': m.image_url,
                 'is_read': m.is_read,
+                'is_auto': bool(m.sender_type == 'admin' and m.sender_id is None),
                 'created_at': m.created_at.isoformat(),
                 'sender_name': None,
             }
@@ -2147,6 +2195,7 @@ async def admin_reply_to_conversation(
     conversation_id: str,
     body: schemas.SupportAdminReply,
     request: Request,
+    background_tasks: BackgroundTasks,
     admin: models.User = Depends(check_admin),
     db: Session = Depends(get_db),
 ):
@@ -2181,6 +2230,12 @@ async def admin_reply_to_conversation(
     db.add(msg)
     db.commit()
     db.refresh(msg)
+    # Notificar o utilizador (email, com throttle) de que o suporte respondeu.
+    try:
+        from .support import notify_user_of_admin_reply
+        notify_user_of_admin_reply(background_tasks, db, cid, body.content)
+    except Exception as e:
+        logger.warning(f'Falha ao agendar notificação de resposta ao utilizador: {e}')
     await log_action(
         db,
         action='admin_support_reply',

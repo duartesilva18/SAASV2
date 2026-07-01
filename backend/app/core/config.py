@@ -1,4 +1,5 @@
 import os
+import warnings
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -57,7 +58,6 @@ class Settings(BaseSettings):
             )
         # Apenas em desenvolvimento: usar chave padrão
         _secret_key = 'secret_key_super_secreta_para_desenvolvimento'
-        import warnings
         warnings.warn("⚠️  Usando SECRET_KEY padrão de desenvolvimento. NÃO USE EM PRODUÇÃO!")
     elif _secret_key == 'secret_key_super_secreta_para_desenvolvimento' and _environment == 'production':
         raise ValueError(

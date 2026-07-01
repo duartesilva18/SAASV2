@@ -156,7 +156,8 @@ export default function AdminAffiliatesPage() {
       const res = await api.get('/admin/affiliates/users', {
         params: { search: searchUserTerm || undefined }
       });
-      setUsersToPromote(res.data);
+      // Resposta passou a ser paginada: { total, limit, offset, users }. Mantém compat. com lista.
+      setUsersToPromote(Array.isArray(res.data) ? res.data : (res.data?.users ?? []));
     } catch (err: any) {
       setToast({
         isVisible: true,

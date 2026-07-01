@@ -265,7 +265,8 @@ export default function SettingsPage() {
       setToast({ isVisible: true, message: detail ? `${msg} ${detail}` : msg, type: 'success' });
       // Invalidar cache para Transações, Categorias, Recorrentes e Metas aparecerem atualizados
       await Promise.all([
-        swrMutate('/transactions/'),
+        swrMutate((key) => typeof key === 'string' && key.startsWith('/transactions/')),
+        swrMutate('/dashboard/totals'),
         swrMutate('/categories/'),
         swrMutate('/recurring/'),
         swrMutate('/goals/'),

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel, Field
 
-from ..core.dependencies import get_db
+from ..core.dependencies import get_db, SessionLocal
 from ..core.config import settings
 from ..core.financial_engine import FinancialEngine
 from ..core.limiter import limiter
@@ -49,7 +49,15 @@ def _build_financial_context(db: Session, user: models.User, workspace: models.W
     ).all()
     cat_map = {c.id: c for c in categories}
 
-    all_txs = db.query(models.Transaction).filter(
+    from sqlalchemy.orm import load_only
+    all_txs = db.query(models.Transaction).options(
+        load_only(
+            models.Transaction.amount_cents,
+            models.Transaction.transaction_date,
+            models.Transaction.category_id,
+            models.Transaction.description,
+        )
+    ).filter(
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= six_months_ago.date(),
         func.abs(models.Transaction.amount_cents) != 1,
@@ -58,9 +66,12 @@ def _build_financial_context(db: Session, user: models.User, workspace: models.W
     this_month_txs = [t for t in all_txs if t.transaction_date >= this_month_start.date()]
     last_month_txs = [t for t in all_txs if last_month_start.date() <= t.transaction_date < this_month_start.date()]
 
+    # Cash/cofres/net worth devem refletir toda a história (agregação SQL), não só o mês.
+    lifetime = FinancialEngine.calculate_lifetime_totals(db, workspace.id)
     snapshot_this = FinancialEngine.calculate_snapshot(this_month_txs, categories, workspace,
                                                        period_start=this_month_start.date(),
-                                                       period_end=now.date())
+                                                       period_end=now.date(),
+                                                       lifetime=lifetime)
     snapshot_last = FinancialEngine.calculate_snapshot(last_month_txs, categories, workspace,
                                                        period_start=last_month_start.date(),
                                                        period_end=(this_month_start - timedelta(days=1)).date())
@@ -238,6 +249,44 @@ DADOS FINANCEIROS:
 {financial_context}"""
 
 
+# Cache em memória do contexto financeiro por workspace (evita reconstruir ~3000 transações
+# a cada mensagem da mesma conversa). TTL curto -> staleness máximo de ~90s.
+import time as _time
+_context_cache: dict = {}
+_CONTEXT_TTL_SECONDS = 90
+
+
+def _build_financial_context_cached(db: Session, user: models.User, workspace: models.Workspace) -> str:
+    key = str(workspace.id)
+    now = _time.time()
+    hit = _context_cache.get(key)
+    if hit and (now - hit[0]) < _CONTEXT_TTL_SECONDS:
+        return hit[1]
+    ctx = _build_financial_context(db, user, workspace)
+    _context_cache[key] = (now, ctx)
+    return ctx
+
+
+def _append_copilot_message(db: Session, user_id, role: str, content: str):
+    """Acrescenta UMA mensagem à conversa mais recente do utilizador (cria se não existir).
+    Append-only — fonte de verdade do histórico, sem o padrão destrutivo de delete+reinsert."""
+    if not content:
+        return
+    convo = (
+        db.query(models.CopilotConversation)
+        .filter(models.CopilotConversation.user_id == user_id)
+        .order_by(models.CopilotConversation.updated_at.desc())
+        .first()
+    )
+    if not convo:
+        convo = models.CopilotConversation(user_id=user_id)
+        db.add(convo)
+        db.flush()
+    db.add(models.CopilotMessage(conversation_id=convo.id, role=role, content=content))
+    convo.updated_at = func.now()
+    db.commit()
+
+
 @router.post('/chat')
 @limiter.limit('30/hour')
 async def assistant_chat(
@@ -262,7 +311,7 @@ async def assistant_chat(
     user_lang = (getattr(current_user, 'language', None) or 'pt').lower()
     lang = header_lang or user_lang
 
-    financial_context = _build_financial_context(db, current_user, workspace)
+    financial_context = _build_financial_context_cached(db, current_user, workspace)
     system_prompt = _get_system_prompt(current_user, financial_context, lang)
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -270,10 +319,19 @@ async def assistant_chat(
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": body.message})
 
+    # Persistir a mensagem do utilizador imediatamente (fonte de verdade no servidor).
+    user_id = current_user.id
+    try:
+        _append_copilot_message(db, user_id, 'user', body.message)
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Falha ao persistir mensagem do utilizador: {e}")
+
     from openai import OpenAI
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def generate():
+        full_text = []
         try:
             stream = client.chat.completions.create(
                 model="gpt-4o",
@@ -285,6 +343,7 @@ async def assistant_chat(
             for chunk in stream:
                 delta = chunk.choices[0].delta if chunk.choices else None
                 if delta and delta.content:
+                    full_text.append(delta.content)
                     data = json.dumps({"type": "token", "content": delta.content}, ensure_ascii=False)
                     yield f"data: {data}\n\n"
 
@@ -293,6 +352,19 @@ async def assistant_chat(
             logger.error(f"OpenAI streaming error: {e}")
             error_data = json.dumps({"type": "error", "content": str(e)}, ensure_ascii=False)
             yield f"data: {error_data}\n\n"
+        finally:
+            # Gravar a resposta do assistente no fim do stream (sessão própria: a sessão do
+            # request pode já estar a ser fechada quando o streaming termina).
+            answer = ''.join(full_text).strip()
+            if answer:
+                _db = SessionLocal()
+                try:
+                    _append_copilot_message(_db, user_id, 'assistant', answer)
+                except Exception as e:
+                    _db.rollback()
+                    logger.warning(f"Falha ao persistir resposta do assistente: {e}")
+                finally:
+                    _db.close()
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
@@ -427,6 +499,10 @@ async def save_copilot_messages(
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail='Pro subscription required')
 
+    # NOTA: o /chat já persiste mensagens no servidor (fonte de verdade). Este endpoint
+    # mantém-se por compatibilidade mas é AGORA NÃO-DESTRUTIVO: em vez de apagar e reinserir
+    # (que causava race conditions e perda de mensagens), apenas acrescenta as mensagens do
+    # cliente que ainda não estão guardadas (extensão por contagem).
     convo = (
         db.query(models.CopilotConversation)
         .filter(models.CopilotConversation.user_id == current_user.id)
@@ -438,19 +514,25 @@ async def save_copilot_messages(
         db.add(convo)
         db.flush()
 
-    db.query(models.CopilotMessage).filter(
-        models.CopilotMessage.conversation_id == convo.id
-    ).delete()
+    stored_count = (
+        db.query(func.count(models.CopilotMessage.id))
+        .filter(models.CopilotMessage.conversation_id == convo.id)
+        .scalar()
+    ) or 0
 
-    for msg in body.messages[-100:]:
+    incoming = body.messages[-100:]
+    # Só acrescentar o que excede o que já está guardado (evita duplicar o que o /chat gravou).
+    new_msgs = incoming[stored_count:] if len(incoming) > stored_count else []
+    for msg in new_msgs:
         db.add(models.CopilotMessage(
             conversation_id=convo.id,
             role=msg.role,
             content=msg.content,
         ))
 
-    convo.updated_at = func.now()
-    db.commit()
+    if new_msgs:
+        convo.updated_at = func.now()
+        db.commit()
     return {'ok': True, 'conversation_id': str(convo.id)}
 
 

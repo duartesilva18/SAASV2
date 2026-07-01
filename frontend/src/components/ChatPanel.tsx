@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, X, Send, Loader2, User, Trash2, Lock, BarChart3,
-  BotMessageSquare, Headphones, ChevronRight, ImagePlus, Check, CheckCheck,
+  BotMessageSquare, Headphones, ChevronRight, ImagePlus, Check, CheckCheck, Copy, Sparkles,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -37,6 +37,7 @@ interface SupportMsg {
   content: string;
   image_url?: string | null;
   is_read: boolean;
+  is_auto?: boolean;
   created_at: string;
 }
 
@@ -151,7 +152,8 @@ function MarkdownText({ text }: { text: string }) {
 // ── Main Component ──
 
 export default function ChatPanel() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const isEn = (language || 'pt').toLowerCase().startsWith('en');
   const { user } = useUser();
   const isPro = user ? hasProAccess(user) : false;
 
@@ -197,6 +199,8 @@ export default function ChatPanel() {
   const [aiMessages, setAiMessages] = useState<ChatMsg[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [aiStreaming, setAiStreaming] = useState(false);
+  // Texto da última mensagem que falhou (para o botão "tentar novamente").
+  const [aiRetryText, setAiRetryText] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const aiEndRef = useRef<HTMLDivElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
@@ -226,10 +230,11 @@ export default function ChatPanel() {
     api.get('/assistant/suggestions').then(r => setSuggestions(r.data?.suggestions || [])).catch(() => {});
   }, [isPro]);
 
-  const sendAIMessage = useCallback(async (text: string) => {
+  const sendAIMessage = useCallback(async (text: string, baseOverride?: ChatMsg[]) => {
     if (!text.trim() || aiStreaming) return;
+    setAiRetryText(null);
     const userMsg: ChatMsg = { role: 'user', content: text.trim() };
-    const newMessages = [...aiMessages, userMsg];
+    const newMessages = [...(baseOverride ?? aiMessages), userMsg];
     setAiMessages(newMessages);
     setAiInput('');
     setAiStreaming(true);
@@ -274,18 +279,32 @@ export default function ChatPanel() {
       }
     } catch (err: any) {
       if (err.name === 'AbortError') return;
+      const errMsg = isEn ? '⚠️ Something went wrong. Please try again.' : '⚠️ Ocorreu um erro. Tenta novamente.';
       setAiMessages(prev => {
         const u = [...prev];
-        if (u[u.length - 1]?.role === 'assistant' && !u[u.length - 1].content) u[u.length - 1] = { role: 'assistant', content: '⚠️ Ocorreu um erro. Tenta novamente.' };
+        if (u[u.length - 1]?.role === 'assistant' && !u[u.length - 1].content) u[u.length - 1] = { role: 'assistant', content: errMsg };
         return u;
       });
+      setAiRetryText(text.trim());  // permite re-enviar sem reescrever
     } finally { setAiStreaming(false); aiAbortRef.current = null; }
-  }, [aiMessages, aiStreaming]);
+  }, [aiMessages, aiStreaming, isEn]);
+
+  const retryLastAIMessage = useCallback(() => {
+    if (!aiRetryText || aiStreaming) return;
+    // Remover o par falhado (mensagem do utilizador + bolha de erro) e reenviar.
+    let base = aiMessages;
+    if (base.length && base[base.length - 1].role === 'assistant') base = base.slice(0, -1);
+    if (base.length && base[base.length - 1].role === 'user') base = base.slice(0, -1);
+    const text = aiRetryText;
+    setAiRetryText(null);
+    sendAIMessage(text, base);
+  }, [aiRetryText, aiStreaming, aiMessages, sendAIMessage]);
 
   const clearAIChat = () => {
     if (aiStreaming) aiAbortRef.current?.abort();
     setAiMessages([]);
     setAiStreaming(false);
+    setAiRetryText(null);
     api.delete('/assistant/messages').catch(() => {});
   };
 
@@ -550,6 +569,9 @@ export default function ChatPanel() {
                     t={at}
                     isPro={isPro}
                     onShowPaywall={() => setShowPaywall(true)}
+                    retryText={aiRetryText}
+                    onRetry={retryLastAIMessage}
+                    isEn={isEn}
                   />
                 ) : (
                   <SupportTab
@@ -564,6 +586,7 @@ export default function ChatPanel() {
                     conversationId={supportConvoId}
                     otherTyping={otherTyping}
                     onTyping={sendTypingPing}
+                    isEn={isEn}
                   />
                 )}
               </div>
@@ -581,6 +604,7 @@ export default function ChatPanel() {
 
 function AITab({
   messages, input, setInput, isStreaming, suggestions, sendMessage, endRef, t, isPro, onShowPaywall,
+  retryText, onRetry, isEn,
 }: {
   messages: ChatMsg[];
   input: string;
@@ -592,6 +616,9 @@ function AITab({
   t: any;
   isPro: boolean;
   onShowPaywall: () => void;
+  retryText?: string | null;
+  onRetry?: () => void;
+  isEn?: boolean;
 }) {
   if (!isPro) {
     return (
@@ -650,6 +677,16 @@ function AITab({
             </div>
           </div>
         )}
+        {retryText && !isStreaming && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => onRetry?.()}
+              className="px-3 py-1.5 bg-blue-500/15 border border-blue-500/30 rounded-lg text-[11px] text-blue-300 hover:bg-blue-500/25 transition-all cursor-pointer"
+            >
+              ↻ {isEn ? 'Try again' : 'Tentar novamente'}
+            </button>
+          </div>
+        )}
         <div ref={endRef} />
       </div>
       <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="shrink-0 p-3 border-t border-slate-800/40">
@@ -706,6 +743,15 @@ const AIBubble = memo(function AIBubble({ msg, isLast, isStreaming }: { msg: Cha
             ? isUser ? <p key={i} className="text-[12px] leading-relaxed">{part}</p> : <MarkdownText key={i} text={part} />
             : <InlineChart key={i} chart={part} />
         )}
+        {!isUser && displayContent && !(isStreaming && isLast) && (
+          <button
+            onClick={() => { try { navigator.clipboard?.writeText(displayContent); } catch {} }}
+            title="Copiar"
+            className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            <Copy size={11} /> Copiar
+          </button>
+        )}
       </div>
       {isUser && (
         <div className="shrink-0 w-6 h-6 rounded-full bg-slate-700/80 flex items-center justify-center mt-0.5 border border-slate-600/40">
@@ -719,7 +765,7 @@ const AIBubble = memo(function AIBubble({ msg, isLast, isStreaming }: { msg: Cha
 // ── Support Tab ──
 
 function SupportTab({
-  messages, input, setInput, sending, loading, sendMessage, endRef, t, conversationId, otherTyping, onTyping,
+  messages, input, setInput, sending, loading, sendMessage, endRef, t, conversationId, otherTyping, onTyping, isEn,
 }: {
   messages: SupportMsg[];
   input: string;
@@ -732,6 +778,7 @@ function SupportTab({
   conversationId: string | null;
   otherTyping?: boolean;
   onTyping?: () => void;
+  isEn?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
@@ -772,6 +819,11 @@ function SupportTab({
                   ? 'bg-blue-600 text-white rounded-br-md'
                   : 'bg-slate-800/60 text-slate-200 border border-slate-700/40 rounded-bl-md'
               }`}>
+                {msg.sender_type === 'admin' && msg.is_auto && (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-cyan-300/80 mb-1">
+                    <Sparkles size={10} /> {isEn ? 'Auto reply' : 'Resposta automática'}
+                  </span>
+                )}
                 {msg.image_url && (
                   <a href={`${apiBase}${msg.image_url}`} target="_blank" rel="noopener noreferrer">
                     <img

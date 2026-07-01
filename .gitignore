@@ -26,6 +26,12 @@ build/
 .cursor/
 .idea/
 
+# Backups e dados sensíveis (NÃO versionar — podem conter credenciais/PII)
+Backups/
+dados/
+*.sql
+*.dump
+
 # OS
 .DS_Store
 Thumbs.db

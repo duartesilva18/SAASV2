@@ -46,7 +46,9 @@ export function useCategories() {
 }
 
 export function useTransactions() {
-  const { data, error, isLoading, mutate } = useSWR('/transactions/', fetcher, {
+  // limit=500 (máximo do backend): o default de 100 fazia os totais de
+  // receitas/despesas/saldo da página de transações serem calculados sobre dados parciais.
+  const { data, error, isLoading, mutate } = useSWR('/transactions/?limit=500', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 10000,
   });
@@ -56,6 +58,35 @@ export function useTransactions() {
 
   return {
     transactions,
+    isLoading,
+    isError: error,
+    mutate,
+  };
+}
+
+/**
+ * Totais acumulados (lifetime) somados em SQL no backend.
+ * Fonte de verdade para saldos de cofre e resumos de receitas/despesas — não depende
+ * de listas paginadas de transações.
+ */
+export function useLifetimeTotals() {
+  const { data, error, isLoading, mutate } = useSWR('/dashboard/totals', fetcher, {
+    revalidateOnFocus: true,
+    dedupingInterval: 10000,
+  });
+
+  return {
+    totals: data as {
+      income: number;
+      expenses: number;
+      balance: number;
+      vault_emergency: number;
+      vault_investment: number;
+      vault_total: number;
+      available_cash: number;
+      net_worth: number;
+      currency: string;
+    } | undefined,
     isLoading,
     isError: error,
     mutate,

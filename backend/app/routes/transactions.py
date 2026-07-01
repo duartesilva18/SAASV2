@@ -5,9 +5,10 @@ from sqlalchemy import func, or_
 from typing import List
 from ..core.dependencies import get_db
 from ..core.audit import log_action
+from ..core.limiter import limiter
 from ..models import database as models
 from .. import schemas
-from .auth import get_current_user
+from .auth import get_current_user, get_current_workspace
 from uuid import UUID
 from datetime import date
 import calendar
@@ -25,7 +26,14 @@ def _effective_day_for_month(year: int, month: int, day_of_month: int) -> int:
 
 
 def process_automatic_recurring(db: Session, workspace_id: UUID):
-    """Cria transações automáticas para regras recorrentes do mês atual (se já passou o dia)."""
+    """
+    Cria transações automáticas para regras recorrentes do mês atual (se já passou o dia).
+
+    NOTA: deixou de ser chamada nos endpoints de leitura (era um N+1 — uma query de
+    existência por regra — e tinha race condition em chamadas concorrentes). Agora corre
+    apenas no job diário (_job_recurring_transactions em main.py), que é serializado.
+    A verificação de existência é feita com UMA query por workspace, em memória.
+    """
     try:
         today = date.today()
         start_of_month = date(today.year, today.month, 1)
@@ -34,6 +42,22 @@ def process_automatic_recurring(db: Session, workspace_id: UUID):
             models.RecurringTransaction.workspace_id == workspace_id,
             models.RecurringTransaction.is_active == True
         ).all()
+        if not rules:
+            return
+
+        # Uma única query: transações já existentes este mês (evita N+1).
+        existing_rows = db.query(
+            models.Transaction.description,
+            models.Transaction.amount_cents,
+        ).filter(
+            models.Transaction.workspace_id == workspace_id,
+            models.Transaction.transaction_date >= start_of_month,
+        ).all()
+        # Chave de existência: (descrição sem prefixo "(R) ", amount_cents)
+        existing_keys = set()
+        for desc, amount in existing_rows:
+            base = desc[4:] if desc and desc.startswith('(R) ') else desc
+            existing_keys.add((base, amount))
 
         created = 0
         for rule in rules:
@@ -43,28 +67,19 @@ def process_automatic_recurring(db: Session, workspace_id: UUID):
             if today < target_date:
                 continue
 
-            existing = db.query(models.Transaction).filter(
-                models.Transaction.workspace_id == workspace_id,
-                or_(
-                    models.Transaction.description == rule.description,
-                    models.Transaction.description == f"(R) {rule.description}"
-                ),
-                models.Transaction.amount_cents == rule.amount_cents,
-                models.Transaction.transaction_date >= start_of_month
-            ).first()
-
-            if existing:
+            if (rule.description, rule.amount_cents) in existing_keys:
                 continue
 
-            new_t = models.Transaction(
+            db.add(models.Transaction(
                 workspace_id=workspace_id,
                 category_id=rule.category_id,
                 amount_cents=rule.amount_cents,
                 description=f"(R) {rule.description}",
                 transaction_date=target_date,
                 is_installment=False
-            )
-            db.add(new_t)
+            ))
+            # Marcar para não duplicar entre regras iguais no mesmo lote
+            existing_keys.add((rule.description, rule.amount_cents))
             created += 1
 
         if created > 0:
@@ -75,23 +90,20 @@ def process_automatic_recurring(db: Session, workspace_id: UUID):
         logging.getLogger(__name__).warning("Erro ao processar recorrentes automáticas", exc_info=True)
 
 @router.get('/', response_model=List[schemas.TransactionResponse])
-async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def get_transactions(
+    request: Request,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    workspace: models.Workspace = Depends(get_current_workspace),
+):
     limit = min(max(limit, 1), 500)  # Cap entre 1 e 500
-    import logging
-    logger = logging.getLogger("transactions")
-    
-    # Usar workspace cacheado se disponível; senão o primeiro por created_at (igual ao import)
-    workspace = getattr(request.state, 'workspace', None)
-    if not workspace:
-        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
-        if not workspace:
-            raise HTTPException(status_code=404, detail='Workspace not found')
-        request.state.workspace = workspace
-    
-    process_automatic_recurring(db, workspace.id)
-    
-    # Filtrar transações de seed (1 cêntimo) diretamente na query SQL - muito mais rápido
-    # Usar eager loading para evitar N+1 queries
+
+    # NOTA: recorrentes automáticas já não são processadas aqui (caminho de leitura);
+    # ficam a cargo do job diário. Removido também o COUNT(*) total que só servia para log.
+
+    # Filtrar transações de seed (1 cêntimo) na query SQL; eager loading evita N+1.
     from sqlalchemy.orm import joinedload
     transactions = db.query(models.Transaction).options(
         joinedload(models.Transaction.category)
@@ -99,20 +111,11 @@ async def get_transactions(request: Request, skip: int = 0, limit: int = 100, db
         models.Transaction.workspace_id == workspace.id,
         func.abs(models.Transaction.amount_cents) != 1
     ).order_by(models.Transaction.created_at.desc()).offset(skip).limit(limit).all()
-    
-    # Contar total para logging (sem paginação)
-    total_count = db.query(models.Transaction).filter(
-        models.Transaction.workspace_id == workspace.id,
-        func.abs(models.Transaction.amount_cents) != 1
-    ).count()
-    
-    logger.info(f"GET /transactions/ - workspace_id: {workspace.id}, user_id: {current_user.id}, total: {total_count}, returned: {len(transactions)}")
-    if transactions:
-        logger.info(f"Primeira transacao: id={transactions[0].id}, description={transactions[0].description}, amount_cents={transactions[0].amount_cents}, created_at={transactions[0].created_at}")
-    
+
     return transactions
 
 @router.post('/', response_model=schemas.TransactionResponse)
+@limiter.limit('60/minute')
 async def create_transaction(request: Request, transaction_in: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
@@ -253,6 +256,7 @@ async def bulk_delete_transactions(request: Request, body: BulkDeleteRequest, db
 
 
 @router.patch('/{transaction_id}', response_model=schemas.TransactionResponse)
+@limiter.limit('60/minute')
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")

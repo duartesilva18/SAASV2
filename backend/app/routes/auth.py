@@ -115,12 +115,8 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
         headers={'WWW-Authenticate': 'Bearer'}
     )
     try:
-        auth_header = request.headers.get("authorization")
-        logger.info(
-            f'🔐 Auth header received: {bool(auth_header)} '
-            f'(token_len={len(token) if token else 0}) '
-            f'from {request.client.host if request.client else "unknown"}'
-        )
+        # Nota: não registar email/IP/token em cada request (ruído + PII/GDPR).
+        # Logs de DEBUG ficam disponíveis se o nível for baixado intencionalmente.
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get('sub')
         if email is None:
@@ -138,18 +134,43 @@ async def get_current_user(request: Request, db: Session = Depends(get_db), toke
     email_normalized = normalize_email(email or "")
     user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
     if user is None:
-        logger.warning(f'❌ Token válido mas utilizador não encontrado: {email}')
+        logger.warning('❌ Token válido mas utilizador não encontrado')
         raise credentials_exception
     # Block deactivated users
     if not getattr(user, 'is_active', True):
-        logger.warning(f'❌ Conta desativada: {email}')
+        logger.warning(f'❌ Conta desativada: user_id={user.id}')
         raise HTTPException(status_code=403, detail='Account deactivated')
     # Blindagem defensiva para estados legados inconsistentes:
     # se estiver "trialing" sem validação de trial, bloquear acesso Pro.
     if user.subscription_status == 'trialing' and not bool(getattr(user, 'had_trial', False)):
-        logger.warning(f'⚠️ Estado trial inconsistente detetado (trialing sem had_trial): {email}')
-    logger.info(f'✅ Utilizador autenticado: {email}')
+        logger.warning(f'⚠️ Estado trial inconsistente detetado (trialing sem had_trial): user_id={user.id}')
     return user
+
+
+def get_current_workspace(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: 'models.User' = Depends(get_current_user),
+) -> 'models.Workspace':
+    """
+    Dependency única para obter o workspace do utilizador autenticado.
+    Centraliza a regra (workspace mais antigo por created_at) e cacheia em request.state
+    para o resto do request. Substitui as ~15 cópias espalhadas pelas rotas.
+    """
+    cached = getattr(request.state, 'workspace', None)
+    if cached is not None:
+        return cached
+    workspace = (
+        db.query(models.Workspace)
+        .filter(models.Workspace.owner_id == current_user.id)
+        .order_by(models.Workspace.created_at)
+        .first()
+    )
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace not found')
+    request.state.workspace = workspace
+    return workspace
+
 
 def _purge_expired_registration_verifications(db: Session):
     """Remove códigos de verificação de registo expirados."""

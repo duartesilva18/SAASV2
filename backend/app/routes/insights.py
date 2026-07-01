@@ -9,8 +9,7 @@ from collections import defaultdict
 from ..core.dependencies import get_db
 from ..models import database as models
 from .. import schemas
-from .auth import get_current_user
-from .transactions import process_automatic_recurring
+from .auth import get_current_user, get_current_workspace
 
 router = APIRouter(prefix='/insights', tags=['insights'])
 
@@ -30,25 +29,21 @@ async def get_zen_insights(
     workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
-    
-    process_automatic_recurring(db, workspace.id)
-    
+
+    # Recorrentes automáticas tratadas pelo job diário (removidas do caminho de leitura).
     thirty_days_ago = datetime.now() - timedelta(days=30)
     
-    # Filtrar transações de seed (1 cêntimo) diretamente na query SQL - muito mais rápido
-    transactions = db.query(models.Transaction).filter(
-        models.Transaction.workspace_id == workspace.id,
-        models.Transaction.transaction_date >= thirty_days_ago.date(),
-        func.abs(models.Transaction.amount_cents) != 1
-    ).all()
-    
+    from sqlalchemy.orm import load_only
+
     categories = db.query(models.Category).filter(
         models.Category.workspace_id == workspace.id
     ).all()
-    
+
     cat_map = {cat.id: cat for cat in categories}
-    
+
     def calculate_totals(txs):
+        """Agrega income/expenses/vault/expenses_por_categoria a partir de linhas já carregadas.
+        Usado apenas para o mês atual (cujas linhas são precisas para deteção de anomalias)."""
         income = 0
         expenses = 0
         vault = 0
@@ -60,13 +55,8 @@ async def get_zen_insights(
                 if cat.type == 'income':
                     income += amount
                 elif cat.vault_type != 'none':
-                    # IMPORTANTE: amount_cents positivo = depósito (aumenta), negativo = resgate (diminui)
-                    if t.amount_cents > 0:
-                        # Depósito: adicionar valor
-                        vault += t.amount_cents / 100
-                    else:
-                        # Resgate: subtrair valor absoluto
-                        vault -= abs(t.amount_cents / 100)
+                    # amount_cents positivo = depósito (aumenta), negativo = resgate (diminui)
+                    vault += t.amount_cents / 100
                 else:
                     expenses += amount
                     exp_by_cat[cat.name] = exp_by_cat.get(cat.name, 0) + amount
@@ -74,28 +64,68 @@ async def get_zen_insights(
                 expenses += amount
         return income, expenses, vault, exp_by_cat
 
-    total_income, total_expenses, total_vault, expenses_by_cat = calculate_totals(transactions)
-    
+    def aggregate_range_sql(start, end=None):
+        """Agrega income/expenses/vault/expenses_por_categoria via SQL (SUM ... GROUP BY),
+        sem carregar as linhas para memória. Para janelas em que só precisamos de totais."""
+        q = (
+            db.query(
+                models.Category.type,
+                models.Category.vault_type,
+                models.Category.name,
+                func.coalesce(func.sum(models.Transaction.amount_cents), 0),
+            )
+            .outerjoin(models.Category, models.Transaction.category_id == models.Category.id)
+            .filter(
+                models.Transaction.workspace_id == workspace.id,
+                models.Transaction.transaction_date >= start,
+                func.abs(models.Transaction.amount_cents) != 1,
+            )
+        )
+        if end is not None:
+            q = q.filter(models.Transaction.transaction_date < end)
+        income = expenses = vault = 0.0
+        exp_by_cat = {}
+        for cat_type, vault_type, cat_name, total_cents in q.group_by(
+            models.Category.type, models.Category.vault_type, models.Category.name
+        ).all():
+            signed = (total_cents or 0) / 100
+            if vault_type and vault_type != 'none':
+                vault += signed
+            elif cat_type == 'income':
+                income += abs(signed)
+            else:
+                expenses += abs(signed)
+                if cat_name:
+                    exp_by_cat[cat_name] = exp_by_cat.get(cat_name, 0) + abs(signed)
+        return income, expenses, vault, exp_by_cat
+
     now = datetime.now()
     this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
-    
-    # Filtrar transações de seed (1 cêntimo) diretamente na query SQL - muito mais rápido
-    this_month_transactions = db.query(models.Transaction).filter(
+
+    # Janela de 30 dias: só precisamos de expenses_por_categoria -> agregação SQL (sem carregar linhas).
+    _, _, _, expenses_by_cat = aggregate_range_sql(thirty_days_ago.date())
+
+    # Mês atual: precisamos das LINHAS (deteção de picos, gastos fantasma, dias com registo),
+    # mas só de algumas colunas -> load_only evita trazer todas as colunas.
+    this_month_transactions = db.query(models.Transaction).options(
+        load_only(
+            models.Transaction.amount_cents,
+            models.Transaction.transaction_date,
+            models.Transaction.category_id,
+            models.Transaction.description,
+        )
+    ).filter(
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= this_month_start.date(),
         func.abs(models.Transaction.amount_cents) != 1
     ).all()
-    
-    last_month_transactions = db.query(models.Transaction).filter(
-        models.Transaction.workspace_id == workspace.id,
-        models.Transaction.transaction_date >= last_month_start.date(),
-        models.Transaction.transaction_date < this_month_start.date(),
-        func.abs(models.Transaction.amount_cents) != 1
-    ).all()
-    
+
+    # Mês anterior: só precisamos de totais -> agregação SQL (sem carregar linhas).
     this_income, this_expenses, this_vault, this_expenses_by_cat = calculate_totals(this_month_transactions)
-    last_income, last_expenses, last_vault, last_expenses_by_cat = calculate_totals(last_month_transactions)
+    last_income, last_expenses, last_vault, last_expenses_by_cat = aggregate_range_sql(
+        last_month_start.date(), this_month_start.date()
+    )
     
     insights = []
     health_score = 50 # Base neutra (era 65)
@@ -354,7 +384,13 @@ async def get_zen_insights(
     
     # Obter histórico mais longo para análises preditivas (últimos 12 meses para melhor precisão)
     twelve_months_ago = now - timedelta(days=365)
-    historical_transactions = db.query(models.Transaction).filter(
+    historical_transactions = db.query(models.Transaction).options(
+        load_only(
+            models.Transaction.amount_cents,
+            models.Transaction.transaction_date,
+            models.Transaction.category_id,
+        )
+    ).filter(
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= twelve_months_ago.date(),
         func.abs(models.Transaction.amount_cents) != 1
@@ -913,18 +949,10 @@ async def get_zen_insights(
 async def get_analytics_composite(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
+    workspace: models.Workspace = Depends(get_current_workspace),
 ):
-    # Usar workspace cacheado se disponível
-    workspace = getattr(request.state, 'workspace', None)
-    if not workspace:
-        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
-        if not workspace:
-            raise HTTPException(status_code=404, detail='Workspace not found')
-        request.state.workspace = workspace
-    
-    process_automatic_recurring(db, workspace.id)
-    
+    # Recorrentes automáticas tratadas pelo job diário (removidas do caminho de leitura).
     zen_insights = await get_zen_insights(request, db, current_user)
     
     # Filtrar transações de seed (1 cêntimo) diretamente na query SQL - muito mais rápido

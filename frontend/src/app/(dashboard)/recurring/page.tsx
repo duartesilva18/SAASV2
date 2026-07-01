@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 // Force HMR update - recharts removed
 import api from '@/lib/api';
+import { useSubmit } from '@/lib/useSubmit';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
@@ -146,10 +147,7 @@ export default function RecurringPage() {
     setShowAddModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    
+  const submitRecurring = async () => {
     try {
       const baseAmount = Math.round(parseFloat(formData.amount) * 100);
       const selectedCat = allCategories.find(c => c.id === formData.category_id);
@@ -203,6 +201,13 @@ export default function RecurringPage() {
       const errorMessage = err.response?.data?.detail || t.dashboard.recurring.saveError;
       setToastInfo({ message: errorMessage, type: "error", isVisible: true });
     }
+  };
+
+  const { submitting, run: runRecurringSubmit } = useSubmit(submitRecurring);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    runRecurringSubmit();
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -737,7 +742,7 @@ export default function RecurringPage() {
                   )}
                 </div>
 
-                <button type="submit" className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer">{t.dashboard.recurring.saveButton}</button>
+                <button type="submit" disabled={submitting} className="w-full py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">{t.dashboard.recurring.saveButton}</button>
                 {editingId && (
                   <button
                     type="button"

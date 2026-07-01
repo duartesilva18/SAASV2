@@ -105,7 +105,8 @@ export default function DashboardLayout({
     setSupportHidden(false);
     window.dispatchEvent(new CustomEvent('support-restore'));
   }, []);
-  const { t, setCurrency, setLanguage } = useTranslation();
+  const { t, language, setCurrency, setLanguage } = useTranslation();
+  const isEn = (language || 'pt').toLowerCase().startsWith('en');
   const { user, loading, refreshUser } = useUser();
   const router = useRouter();
 
@@ -425,17 +426,54 @@ export default function DashboardLayout({
           <div className="sticky top-0 z-30 px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-center">
             <AlertTriangle size={20} className="text-amber-400 shrink-0" />
             <p className="text-sm font-medium text-amber-200">
-              O teu último pagamento falhou. Atualiza o método de pagamento para manter o acesso.
+              {isEn
+                ? 'Your last payment failed. Update your payment method to keep access.'
+                : 'O teu último pagamento falhou. Atualiza o método de pagamento para manter o acesso.'}
             </p>
             <Link
               href="/settings"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-semibold text-sm transition-colors"
             >
               <CreditCard size={16} />
-              Ir para Definições
+              {isEn ? 'Go to Settings' : 'Ir para Definições'}
             </Link>
           </div>
         )}
+
+        {/* Aviso informativo durante o período de teste gratuito */}
+        {user?.subscription_status === 'trialing' && (() => {
+          // Dias restantes a partir de trial_ends_at (se disponível).
+          const endRaw = (user as { trial_ends_at?: string } | null)?.trial_ends_at;
+          let daysLeft: number | null = null;
+          if (endRaw) {
+            const ms = new Date(endRaw).getTime() - Date.now();
+            daysLeft = ms > 0 ? Math.ceil(ms / 86400000) : 0;
+          }
+          const countdown = daysLeft === null
+            ? (isEn ? 'You’re on your free trial.' : 'Estás em período de teste gratuito.')
+            : daysLeft <= 0
+              ? (isEn ? 'Your free trial ends today.' : 'O teu teste gratuito termina hoje.')
+              : daysLeft === 1
+                ? (isEn ? 'Your free trial ends tomorrow.' : 'O teu teste gratuito termina amanhã.')
+                : (isEn ? `${daysLeft} days left in your free trial.` : `Faltam ${daysLeft} dias no teu teste gratuito.`);
+          return (
+            <div className="sticky top-0 z-30 px-4 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-center">
+              <CreditCard size={18} className="text-emerald-400 shrink-0" />
+              <p className="text-sm font-medium text-emerald-200">
+                {countdown}{' '}
+                {isEn
+                  ? 'It converts to a paid plan automatically — cancel before then and you won’t be charged.'
+                  : 'No fim passa automaticamente a plano pago — cancela antes disso e não és cobrado.'}
+              </p>
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30 font-semibold text-sm transition-colors"
+              >
+                {isEn ? 'Manage' : 'Gerir'}
+              </Link>
+            </div>
+          );
+        })()}
 
         <main ref={mainRef} className="flex-1 relative z-10 overflow-y-auto overflow-x-hidden">
           {(reduceMotion || isMobileViewport) ? (

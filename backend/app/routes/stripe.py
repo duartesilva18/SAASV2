@@ -5,7 +5,9 @@ from datetime import datetime, timezone, timedelta
 from ..core.config import settings
 from ..core.dependencies import get_db
 from ..core.affiliate_commission import get_commission_percentage_for_price_id
+from ..core.stripe_utils import customer_has_saved_card as _customer_has_saved_card
 from ..core.audit import log_action
+from ..core.limiter import limiter
 from ..models import database as models
 from .auth import get_current_user
 import logging
@@ -105,28 +107,6 @@ def _ensure_stripe_customer(
         return new_id
 
 
-def _customer_has_saved_card(customer_id: str) -> bool:
-    if not customer_id or not settings.STRIPE_API_KEY:
-        return False
-    try:
-        customer = stripe.Customer.retrieve(
-            customer_id,
-            expand=['invoice_settings.default_payment_method'],
-        )
-        invoice_settings = customer.get('invoice_settings') if isinstance(customer, dict) else getattr(customer, 'invoice_settings', None)
-        default_pm = None
-        if isinstance(invoice_settings, dict):
-            default_pm = invoice_settings.get('default_payment_method')
-        elif invoice_settings is not None:
-            default_pm = getattr(invoice_settings, 'default_payment_method', None)
-        if default_pm:
-            return True
-        cards = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
-        return bool(getattr(cards, 'data', None))
-    except Exception:
-        return False
-
-
 def _to_dict(obj):
     return obj if isinstance(obj, dict) else (obj.to_dict_recursive() if hasattr(obj, 'to_dict_recursive') else {})
 
@@ -217,10 +197,47 @@ def _find_or_create_fee_price(
     )
     return created.get('id') if isinstance(created, dict) else created.id
 
+def _has_live_subscription(user: models.User) -> bool:
+    """
+    True se o utilizador já tem uma subscrição VIVA no Stripe (a cobrar ou a caminho).
+    Usado para impedir a criação de uma SEGUNDA subscrição (duplo débito).
+    Consulta o Stripe (fonte de verdade); em caso de dúvida (erro), NÃO bloqueia.
+    """
+    sub_id = (user.stripe_subscription_id or '').strip()
+    if not sub_id:
+        return False
+    # Simulação/teste: confiar no estado local.
+    cid = (user.stripe_customer_id or '')
+    if cid.startswith('sim_') or cid.startswith('test_'):
+        return user.subscription_status in ('active', 'trialing', 'cancel_at_period_end', 'past_due')
+    if not settings.STRIPE_API_KEY:
+        return user.subscription_status in ('active', 'trialing', 'cancel_at_period_end', 'past_due')
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+        status = (sub.get('status') or '').strip()
+        # Estados "vivos" que continuam (ou vão continuar) a faturar.
+        return status in ('active', 'trialing', 'past_due', 'unpaid')
+    except stripe.error.InvalidRequestError as e:
+        if getattr(e, 'code', None) == 'resource_missing':
+            return False  # subscrição já não existe -> pode subscrever de novo
+        return False
+    except Exception:
+        return False
+
+
 @router.post('/create-checkout-session')
+@limiter.limit('10/minute')
 async def create_checkout_session(price_id: str, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     try:
         _validate_allowed_price_id(price_id)
+        # PROTEÇÃO CRÍTICA: impedir 2ª subscrição (duplo débito). Se já tem uma subscrição viva,
+        # o caminho correto é /change-plan ou o portal de faturação — não um novo checkout.
+        if _has_live_subscription(current_user):
+            logger.warning(f'[Checkout] Bloqueado: {current_user.email} já tem subscrição viva ({current_user.stripe_subscription_id}). Usar change-plan/portal.')
+            raise HTTPException(
+                status_code=400,
+                detail='Já tens uma subscrição ativa. Para mudar de plano usa "Alterar plano"; para gerir o pagamento usa o portal de faturação.',
+            )
         logger.info(f'[Checkout] Início: user_id={current_user.id} email={current_user.email} referrer_id={current_user.referrer_id} price_id={price_id}')
         customer_id = _ensure_stripe_customer(db, current_user, create_if_missing=True)
         if not customer_id:
@@ -453,6 +470,9 @@ async def create_checkout_session(price_id: str, request: Request, db: Session =
             request=request,
         )
         return {'url': checkout_session.url}
+    except HTTPException:
+        # Preservar erros de negócio (ex.: já tem subscrição) sem os mascarar com o genérico.
+        raise
     except Exception as e:
         logger.error(f'Erro Stripe Checkout: {str(e)}', exc_info=True)
         raise HTTPException(status_code=400, detail='Erro ao criar sessão de pagamento. Tenta novamente.')
@@ -767,8 +787,11 @@ async def verify_checkout_session(session_id: str, current_user: models.User = D
                             user.stripe_customer_id = session_customer
                         customer_for_trial = session_customer or user.stripe_customer_id
                         if subscription_status == 'trialing':
-                            if _customer_has_saved_card(customer_for_trial):
+                            if _customer_has_saved_card(customer_for_trial, subscription):
                                 user.had_trial = True
+                                _te = getattr(subscription, 'trial_end', None)
+                                if _te:
+                                    user.trial_ends_at = datetime.fromtimestamp(int(_te), tz=_tz.utc)
                             else:
                                 user.subscription_status = 'incomplete'
                                 effective_subscription_status = 'incomplete'

@@ -21,15 +21,27 @@ import LoadingScreen from '@/components/LoadingScreen';
 import AnimatedNumber from '@/components/AnimatedNumber';
 import { hasProAccess } from '@/lib/utils';
 
-const declineMessageByCode: Record<string, string> = {
-  card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
-  insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
-  do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
-  generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+const DECLINE_MESSAGES: Record<'pt' | 'en', Record<string, string>> = {
+  pt: {
+    card_velocity_exceeded: 'O banco recusou por demasiadas tentativas num curto período. Aguarda alguns minutos e tenta novamente, ou usa outro cartão.',
+    insufficient_funds: 'Pagamento recusado por saldo insuficiente. Atualiza o método de pagamento ou usa outro cartão.',
+    do_not_honor: 'Pagamento recusado pelo banco. Contacta o teu banco ou usa outro cartão.',
+    generic_decline: 'Pagamento recusado pelo banco. Atualiza o método de pagamento para manter o plano ativo.',
+  },
+  en: {
+    card_velocity_exceeded: 'Your bank declined due to too many attempts in a short period. Wait a few minutes and try again, or use another card.',
+    insufficient_funds: 'Payment declined due to insufficient funds. Update your payment method or use another card.',
+    do_not_honor: 'Payment declined by your bank. Contact your bank or use another card.',
+    generic_decline: 'Payment declined by your bank. Update your payment method to keep your plan active.',
+  },
 };
+function declineMessage(code: string, isEn: boolean): string | undefined {
+  return DECLINE_MESSAGES[isEn ? 'en' : 'pt'][code];
+}
 
 export default function DashboardPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, language, formatCurrency } = useTranslation();
+  const isEn = (language || 'pt').toLowerCase().startsWith('en');
   const { refreshUser } = useUser();
   const searchParams = useSearchParams();
   const [isPro, setIsPro] = useState(false);
@@ -431,7 +443,13 @@ export default function DashboardPage() {
     });
     // Acumular por ordem de mês
     const vaultMonthlySorted = Object.values(vaultMonthlyMap).sort((a, b) => monthOrder(a.name) - monthOrder(b.name)).slice(-6);
-    let cumE = 0, cumI = 0;
+    // BUGFIX: o saldo acumulado tem de incluir o que já existia ANTES da janela de 6 meses.
+    // Ancoramos ao total atual (snapshot.vault_*, que é lifetime) e subtraímos os movimentos
+    // da janela para obter o saldo de abertura; assim o último ponto = total real do cofre.
+    const windowEmergency = vaultMonthlySorted.reduce((s, m) => s + m.emergency, 0);
+    const windowInvestment = vaultMonthlySorted.reduce((s, m) => s + m.investment, 0);
+    let cumE = (snapshot?.vault_emergency ?? 0) - windowEmergency;
+    let cumI = (snapshot?.vault_investment ?? 0) - windowInvestment;
     const vaultByMonth = vaultMonthlySorted.map((m) => {
       cumE += m.emergency;
       cumI += m.investment;
@@ -564,7 +582,7 @@ export default function DashboardPage() {
 
   const paymentFailureCode = ((userData?.last_payment_failure_code as string | undefined) || '').toLowerCase();
   const paymentFailureMessage =
-    (paymentFailureCode && declineMessageByCode[paymentFailureCode])
+    (paymentFailureCode && declineMessage(paymentFailureCode, isEn))
     || (userData?.last_payment_failure_message as string | undefined)
     || '';
 

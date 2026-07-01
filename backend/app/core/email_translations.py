@@ -27,6 +27,22 @@ EMAIL_TRANSLATIONS = {
             'security_notice': 'Este código é válido por 15 minutos. Se não pediste o registo, ignora este email.',
             'footer': 'Finly Portugal © 2026 <br> Bem-vindo à Finly'
         },
+        'trial_ending': {
+            'subject': 'Finly - O teu período grátis termina amanhã',
+            'title': 'O teu trial termina amanhã',
+            'message': 'O teu período de 7 dias grátis do Finly Pro termina amanhã. A partir daí, a tua subscrição passa automaticamente a paga, usando o cartão que registaste — não precisas de fazer nada para continuares com acesso total.',
+            'cta_continue': 'Não queres fazer nada? Ótimo — o acesso Pro continua sem interrupção.',
+            'cta_manage': 'Se quiseres rever ou cancelar antes da cobrança, podes fazê-lo a qualquer momento:',
+            'button': 'Gerir subscrição',
+            'security_notice': 'Se cancelares antes do fim do trial, não és cobrado.',
+            'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
+        },
+        'support_reply': {
+            'subject': 'Finly - O suporte respondeu à tua mensagem',
+            'title': 'Tens uma resposta do suporte',
+            'message': 'A equipa de suporte da Finly respondeu à tua mensagem. Abre a app para veres a resposta e continuares a conversa:',
+            'button': 'Ver resposta',
+        },
         'marketing_footer': 'Recebeu este email porque aceitou as comunicações de marketing do Finly.'
     },
     'en': {
@@ -53,6 +69,22 @@ EMAIL_TRANSLATIONS = {
             'code_label': 'Verification Code',
             'security_notice': 'This code is valid for 15 minutes. If you did not request registration, ignore this email.',
             'footer': 'Finly Portugal © 2026 <br> Welcome to Finly'
+        },
+        'trial_ending': {
+            'subject': 'Finly - Your free trial ends tomorrow',
+            'title': 'Your trial ends tomorrow',
+            'message': 'Your 7-day Finly Pro free trial ends tomorrow. After that, your subscription automatically converts to paid using the card you saved — you don\'t need to do anything to keep full access.',
+            'cta_continue': 'Want to do nothing? Great — your Pro access continues without interruption.',
+            'cta_manage': 'If you\'d like to review or cancel before being charged, you can do so anytime:',
+            'button': 'Manage subscription',
+            'security_notice': 'If you cancel before the trial ends, you won\'t be charged.',
+            'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
+        },
+        'support_reply': {
+            'subject': 'Finly - Support replied to your message',
+            'title': 'You have a reply from support',
+            'message': 'The Finly support team replied to your message. Open the app to read the reply and continue the conversation:',
+            'button': 'View reply',
         },
         'marketing_footer': 'You received this email because you accepted marketing communications from Finly.'
     }

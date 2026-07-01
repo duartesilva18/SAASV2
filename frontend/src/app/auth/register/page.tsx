@@ -48,7 +48,16 @@ function RegisterPageContent() {
   const [referralCode, setReferralCode] = useState(() => {
     if (typeof window === 'undefined') return '';
     const p = new URLSearchParams(window.location.search);
-    return (p.get('ref') || '').trim();
+    const fromUrl = (p.get('ref') || '').trim();
+    if (fromUrl) return fromUrl;
+    // Fallback: código capturado noutra página (landing, etc.) e persistido em localStorage.
+    try {
+      const stored = (localStorage.getItem('finly_ref') || '').trim();
+      const at = parseInt(localStorage.getItem('finly_ref_at') || '0', 10);
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      if (stored && at && (Date.now() - at) < THIRTY_DAYS) return stored;
+    } catch {}
+    return '';
   });
   const [referralCodeValid, setReferralCodeValid] = useState<'idle' | 'valid' | 'invalid' | 'checking'>('idle');
   const [error, setError] = useState('');
@@ -109,6 +118,7 @@ function RegisterPageContent() {
       const storage = localStorage;
       storage.setItem('token', response.data.access_token);
       if (response.data.refresh_token) storage.setItem('refresh_token', response.data.refresh_token);
+      try { localStorage.removeItem('finly_ref'); localStorage.removeItem('finly_ref_at'); } catch {}
       await refreshUser();
       setTimeout(() => router.push('/dashboard'), 500);
     } catch (err: any) {
@@ -147,6 +157,9 @@ function RegisterPageContent() {
         referral_code: (referralCode || '').trim() || undefined
       });
       setSuccess(true);
+      // Código já foi entregue ao backend (guardado na verificação de registo); limpar para
+      // não se aplicar por engano a outro registo no mesmo browser.
+      try { localStorage.removeItem('finly_ref'); localStorage.removeItem('finly_ref_at'); } catch {}
       const emailFromResponse = response.data?.email || email;
       const devCode = response.data?.dev_code;
       const query = new URLSearchParams({ email: emailFromResponse });

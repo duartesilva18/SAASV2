@@ -6,6 +6,7 @@ import { X, Activity, Wallet, Calendar, Tag, ChevronDown, ArrowUpCircle, ArrowDo
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
 import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
+import { useSubmit } from '@/lib/useSubmit';
 import Toast from '@/components/Toast';
 
 export interface TransactionAddModalCategory {
@@ -45,8 +46,7 @@ export default function TransactionAddModal({
     visible: false,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitTransaction = async () => {
     try {
       const normalizedAmount = formData.amount.replace(',', '.');
       const parsedAmount = parseFloat(normalizedAmount);
@@ -120,6 +120,10 @@ export default function TransactionAddModal({
       setToast({ message: typeof msg === 'string' ? msg : t.dashboard.transactions.registerError, type: 'error', visible: true });
     }
   };
+
+  // Guarda anti-duplo-submit: o botão fica bloqueado enquanto o pedido está em curso.
+  const { submitting, run } = useSubmit(submitTransaction);
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); run(); };
 
   // Bloquear scroll do body no mobile quando o modal está aberto
   useEffect(() => {
@@ -296,7 +300,8 @@ export default function TransactionAddModal({
                 </div>
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer touch-manipulation min-h-[48px]"
+                  disabled={submitting}
+                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer touch-manipulation min-h-[48px] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {t.dashboard.transactions.registerTransaction}
                 </button>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text, BigInteger
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Date, CheckConstraint, UniqueConstraint, Numeric, Text, BigInteger, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -39,6 +39,8 @@ class User(Base):
     pro_granted_until = Column(DateTime(timezone=True), nullable=True)
     had_refund = Column(Boolean, nullable=False, default=False)  # True se alguma vez teve reembolso (Stripe)
     had_trial = Column(Boolean, nullable=False, default=False)  # True se já usou trial grátis (impede trial repetido)
+    trial_ending_email_sent = Column(Boolean, nullable=False, default=False)  # True se já enviámos o aviso "trial acaba amanhã"
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)  # Fim do período de trial (do Stripe), para UI "faltam X dias"
     # Campos de afiliado
     is_affiliate = Column(Boolean, nullable=False, default=False)
     affiliate_code = Column(String(20), unique=True, nullable=True, index=True)
@@ -164,6 +166,9 @@ class Transaction(Base):
     
     __table_args__ = (
         CheckConstraint('amount_cents <> 0'),
+        # Índice composto para o padrão de acesso mais comum: filtrar por workspace
+        # e ordenar/filtrar por data. Substitui o uso de apenas um dos índices simples.
+        Index('ix_transactions_workspace_date', 'workspace_id', 'transaction_date'),
     )
 
 class SystemSetting(Base):

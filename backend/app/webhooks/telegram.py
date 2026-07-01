@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from sqlalchemy import func, case
 import requests
 import json
@@ -122,6 +122,7 @@ def _check_budget_alerts(workspace_id, category_id, db, t) -> Optional[str]:
         models.Transaction.amount_cents < 0,
         models.Transaction.transaction_date >= first_day,
         models.Transaction.transaction_date <= today,
+        func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
     ).scalar() or 0
     spent = int(spent_cents) / 100
     limit_val = cat.monthly_limit_cents / 100
@@ -144,14 +145,19 @@ def _check_budget_alerts(workspace_id, category_id, db, t) -> Optional[str]:
 def _check_streak(workspace_id, db, t) -> Optional[str]:
     """Verifica se o user tem uma streak de dias seguidos a registar transações."""
     today = date.today()
+    # Antes: até 365 queries (uma por dia). Agora: 1 query com as datas distintas dos
+    # últimos 365 dias, e o loop é feito em memória sobre um set.
+    cutoff = today - timedelta(days=365)
+    rows = db.query(models.Transaction.transaction_date).filter(
+        models.Transaction.workspace_id == workspace_id,
+        models.Transaction.transaction_date >= cutoff,
+        models.Transaction.transaction_date <= today,
+    ).distinct().all()
+    days_with_tx = {r[0] for r in rows}
     streak = 0
     for i in range(365):
         check_date = today - timedelta(days=i)
-        has_tx = db.query(models.Transaction.id).filter(
-            models.Transaction.workspace_id == workspace_id,
-            models.Transaction.transaction_date == check_date,
-        ).first()
-        if has_tx:
+        if check_date in days_with_tx:
             streak += 1
         else:
             break
@@ -244,6 +250,7 @@ def _generate_insight(workspace_id, category_id, db, t) -> Optional[str]:
         models.Transaction.category_id == category_id,
         models.Transaction.amount_cents < 0,
         models.Transaction.transaction_date >= first_day,
+        func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
     ).scalar() or 0
     # Previous month
     if first_day.month == 1:
@@ -259,6 +266,7 @@ def _generate_insight(workspace_id, category_id, db, t) -> Optional[str]:
         models.Transaction.amount_cents < 0,
         models.Transaction.transaction_date >= prev_first,
         models.Transaction.transaction_date <= prev_last,
+        func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
     ).scalar() or 0
     if prev == 0:
         return None
@@ -439,6 +447,7 @@ def _build_financial_context(user: models.User, workspace: models.Workspace, db:
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= first_day,
         models.Transaction.transaction_date <= today,
+        func.abs(models.Transaction.amount_cents) != 1,  # excluir seed (consistente com o resto da app)
     ).first()
     expenses_cents = abs(int(q[0] or 0))
     income_cents = int(q[1] or 0)
@@ -455,6 +464,7 @@ def _build_financial_context(user: models.User, workspace: models.Workspace, db:
         models.Transaction.workspace_id == workspace.id,
         models.Transaction.transaction_date >= first_day,
         models.Transaction.amount_cents < 0,
+        func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
     ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).limit(5).all()
 
     top_str = ", ".join(f"{name} {int(total)/100:.0f}€" for name, total in top_cats) if top_cats else "sem dados"
@@ -505,17 +515,37 @@ def _query_financial_data(query_type: str, workspace: models.Workspace, db: Sess
                 end = today
         else:
             end = today
-        txs = db.query(models.Transaction).filter(
+        # BUGFIX + perf: o total e a contagem são calculados em SQL sobre TODAS as transações
+        # do período (antes somava só as 20 carregadas -> total errado se houvesse mais).
+        # As linhas para listar são uma query separada, limitada a 10, com load_only.
+        total_cents, tx_count = db.query(
+            func.coalesce(func.sum(func.abs(models.Transaction.amount_cents)), 0),
+            func.count(models.Transaction.id),
+        ).filter(
             models.Transaction.workspace_id == workspace.id,
             models.Transaction.category_id == cat.id,
             models.Transaction.transaction_date >= start,
             models.Transaction.transaction_date <= end,
-        ).order_by(models.Transaction.amount_cents).limit(20).all()
-        total = sum(abs(t.amount_cents) for t in txs)
-        lines = [f"- {t.description}: {abs(t.amount_cents)/100:.2f}€ ({t.transaction_date.strftime('%d/%m')})" for t in txs[:10]]
+            func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
+        ).one()
+        total = int(total_cents or 0)
+        top_txs = db.query(models.Transaction).options(
+            load_only(
+                models.Transaction.description,
+                models.Transaction.amount_cents,
+                models.Transaction.transaction_date,
+            )
+        ).filter(
+            models.Transaction.workspace_id == workspace.id,
+            models.Transaction.category_id == cat.id,
+            models.Transaction.transaction_date >= start,
+            models.Transaction.transaction_date <= end,
+            func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
+        ).order_by(models.Transaction.amount_cents).limit(10).all()
+        lines = [f"- {t.description}: {abs(t.amount_cents)/100:.2f}€ ({t.transaction_date.strftime('%d/%m')})" for t in top_txs]
         return (
             f"Categoria: {cat.name}\nPeriodo: {start.strftime('%d/%m/%Y')} a {end.strftime('%d/%m/%Y')}\n"
-            f"Total: {total/100:.2f}€ ({len(txs)} transacoes)\n"
+            f"Total: {total/100:.2f}€ ({tx_count} transacoes)\n"
             f"Transacoes:\n" + "\n".join(lines)
         )
 
@@ -564,18 +594,18 @@ def _query_financial_data(query_type: str, workspace: models.Workspace, db: Sess
                 start = first_day
         else:
             start = first_day
-        txs = db.query(models.Transaction).join(
+        # Trazer o nome da categoria na mesma query (já há join) evita um N+1 (1 query por tx).
+        txs = db.query(models.Transaction, models.Category.name).join(
             models.Category, models.Transaction.category_id == models.Category.id
         ).filter(
             models.Transaction.workspace_id == workspace.id,
             models.Transaction.transaction_date >= start,
             models.Transaction.amount_cents < 0,
+            func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
         ).order_by(models.Transaction.amount_cents).limit(limit).all()
         lines = []
-        for i, t in enumerate(txs, 1):
-            cat = db.query(models.Category).filter(models.Category.id == t.category_id).first()
-            cat_name = cat.name if cat else "?"
-            lines.append(f"{i}. {t.description} — {abs(t.amount_cents)/100:.2f}€ ({cat_name}, {t.transaction_date.strftime('%d/%m')})")
+        for i, (t, cat_name) in enumerate(txs, 1):
+            lines.append(f"{i}. {t.description} — {abs(t.amount_cents)/100:.2f}€ ({cat_name or '?'}, {t.transaction_date.strftime('%d/%m')})")
         return f"Top {len(txs)} maiores despesas desde {start.strftime('%d/%m/%Y')}:\n" + "\n".join(lines)
 
     elif query_type == "por_categoria":
@@ -590,6 +620,7 @@ def _query_financial_data(query_type: str, workspace: models.Workspace, db: Sess
             models.Transaction.workspace_id == workspace.id,
             models.Transaction.transaction_date >= start,
             models.Transaction.amount_cents < 0,
+            func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
         ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).all()
         lines = [f"- {name}: {int(total)/100:.2f}€ ({cnt} tx)" for name, total, cnt in cats]
         return f"Despesas por categoria ({today.strftime('%B %Y')}):\n" + "\n".join(lines) if lines else "Sem despesas este mes."
@@ -975,23 +1006,35 @@ def get_category_by_keyword(description: str, workspace_id, tipo: str, db: Sessi
     if not description or not hasattr(models, 'CategoryKeyword'):
         return None
     try:
+        # Recolher as palavras normalizadas (preservando a ordem) e fazer UMA query com IN,
+        # em vez de 2 queries por palavra (era N+1 sobre o nº de palavras da descrição).
+        words = []
         for word in description.split():
             if len(word) < 2:
                 continue
             w_norm = normalize_text(word)
-            if len(w_norm) < 2:
-                continue
-            kw = db.query(models.CategoryKeyword).filter(
-                models.CategoryKeyword.workspace_id == workspace_id,
-                models.CategoryKeyword.keyword == w_norm,
-            ).first()
-            if kw:
-                cat = db.query(models.Category).filter(
-                    models.Category.id == kw.category_id,
-                    models.Category.type == tipo,
-                ).first()
-                if cat:
-                    return cat.id
+            if len(w_norm) >= 2 and w_norm not in words:
+                words.append(w_norm)
+        if not words:
+            return None
+
+        rows = db.query(
+            models.CategoryKeyword.keyword, models.Category.id
+        ).join(
+            models.Category, models.Category.id == models.CategoryKeyword.category_id
+        ).filter(
+            models.CategoryKeyword.workspace_id == workspace_id,
+            models.CategoryKeyword.keyword.in_(words),
+            models.Category.type == tipo,
+        ).all()
+        if not rows:
+            return None
+
+        kw_to_cat = {kw: cat_id for kw, cat_id in rows}
+        # Primeira palavra (na ordem da descrição) com match ganha — mantém o comportamento anterior.
+        for w in words:
+            if w in kw_to_cat:
+                return kw_to_cat[w]
     except Exception as e:
         logger.warning("[Telegram] get_category_by_keyword falhou: %s", e)
     return None
@@ -1058,16 +1101,27 @@ def find_similar_transaction(text: str, workspace_id: uuid.UUID, db: Session, ti
         return None
 
     cutoff_date = date.today() - timedelta(days=180)
-    transactions = db.query(models.Transaction).filter(
+    # Só usamos 4 colunas -> load_only evita trazer a linha toda; o filtro de sinal e de
+    # seed (1 cêntimo) é feito em SQL, reduzindo as linhas transferidas (antes vinham todas
+    # e eram filtradas em Python).
+    q = db.query(models.Transaction).options(
+        load_only(
+            models.Transaction.description,
+            models.Transaction.amount_cents,
+            models.Transaction.category_id,
+            models.Transaction.transaction_date,
+        )
+    ).filter(
         models.Transaction.workspace_id == workspace_id,
         models.Transaction.transaction_date >= cutoff_date,
         models.Transaction.category_id.isnot(None),
-    ).order_by(models.Transaction.transaction_date.desc()).limit(500).all()
-
+        func.abs(models.Transaction.amount_cents) != 1,
+    )
     if tipo == "expense":
-        transactions = [t for t in transactions if t.amount_cents < 0 and abs(t.amount_cents) != 1]
+        q = q.filter(models.Transaction.amount_cents < 0)
     else:
-        transactions = [t for t in transactions if t.amount_cents > 0 and abs(t.amount_cents) != 1]
+        q = q.filter(models.Transaction.amount_cents > 0)
+    transactions = q.order_by(models.Transaction.transaction_date.desc()).limit(500).all()
 
     best_match = None
     best_score = 0
@@ -3412,8 +3466,11 @@ async def telegram_webhook(
                         origin_line=origin_line,
                         date_line=_date_line(transaction_date_for_msg, t),
                     ))
+                    # Excluir seed (1 cêntimo): senão a dica de "primeira transação" nunca
+                    # disparava, porque os seeds criados no arranque do workspace já contam.
                     total_tx = db.query(models.Transaction).filter(
-                        models.Transaction.workspace_id == transaction.workspace_id
+                        models.Transaction.workspace_id == transaction.workspace_id,
+                        func.abs(models.Transaction.amount_cents) != 1,
                     ).count()
                     if total_tx == 1:
                         send_telegram_msg(chat_id, t('tip_multi'))
@@ -3669,6 +3726,7 @@ async def telegram_webhook(
                 models.Transaction.workspace_id == workspace.id,
                 models.Transaction.transaction_date >= week_start,
                 models.Transaction.transaction_date <= today,
+                func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
             ).first()
             expenses_cents = int(q[0] or 0)
             income_cents = int(q[1] or 0)
@@ -3688,6 +3746,7 @@ async def telegram_webhook(
                 models.Transaction.transaction_date >= week_start,
                 models.Transaction.transaction_date <= today,
                 models.Transaction.amount_cents < 0,
+                func.abs(models.Transaction.amount_cents) != 1,  # excluir seed
             ).group_by(models.Category.name).order_by(func.sum(func.abs(models.Transaction.amount_cents)).desc()).first()
             top_category = top_cat[0] if top_cat and len(top_cat) >= 2 else "-"
             top_amount = f"{(top_cat[1] or 0) / 100:.2f}" if top_cat and len(top_cat) >= 2 else "0.00"
@@ -3875,20 +3934,21 @@ async def telegram_webhook(
             else:
                 send_telegram_msg(chat_id, t_exp('export_usage'))
                 return {'status': 'ok'}
-            transactions = db.query(models.Transaction).join(
+            # Trazer o nome da categoria no join evita um N+1 (uma query por linha exportada).
+            transactions = db.query(models.Transaction, models.Category.name).join(
                 models.Category, models.Transaction.category_id == models.Category.id
             ).filter(
                 models.Transaction.workspace_id == workspace_exp.id,
                 models.Transaction.transaction_date >= start_date,
                 models.Transaction.transaction_date <= today,
+                func.abs(models.Transaction.amount_cents) != 1,  # não exportar seed
             ).order_by(models.Transaction.transaction_date.desc()).all()
             if not transactions:
                 send_telegram_msg(chat_id, t_exp('export_no_data'))
                 return {'status': 'ok'}
             csv_lines = ["Data,Descrição,Valor,Categoria,Tipo" if lang_exp == 'pt' else "Date,Description,Amount,Category,Type"]
-            for tx in transactions:
-                cat = db.query(models.Category).filter(models.Category.id == tx.category_id).first()
-                cat_name = cat.name if cat else "-"
+            for tx, cat_name in transactions:
+                cat_name = cat_name or "-"
                 tx_type = "Despesa" if tx.amount_cents < 0 else "Receita"
                 if lang_exp == 'en':
                     tx_type = "Expense" if tx.amount_cents < 0 else "Income"
@@ -4004,6 +4064,7 @@ async def telegram_webhook(
             five_min_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
             last_tx = db.query(models.Transaction).filter(
                 models.Transaction.workspace_id == workspace_undo.id,
+                func.abs(models.Transaction.amount_cents) != 1,  # nunca desfazer um seed
             ).order_by(models.Transaction.created_at.desc()).first()
             if not last_tx:
                 send_telegram_msg(chat_id, t_undo('undo_no_recent'))

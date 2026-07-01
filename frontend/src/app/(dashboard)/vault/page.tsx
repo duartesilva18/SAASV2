@@ -27,6 +27,8 @@ export default function VaultPage() {
   const { user, isPro, loading: userLoading } = useUser();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
+  // Totais lifetime (SQL) — saldos de cofre autoritativos, independentes da lista paginada.
+  const [vaultTotals, setVaultTotals] = useState<{ vault_emergency: number; vault_investment: number } | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [vaultModal, setVaultModal] = useState<{ open: boolean; category: any; action: 'add' | 'withdraw' } | null>(null);
   const [vaultAmount, setVaultAmount] = useState('');
@@ -74,12 +76,18 @@ export default function VaultPage() {
 
   const fetchData = async () => {
     try {
-      const [transRes, catRes] = await Promise.all([
-        api.get('/transactions/'),
-        api.get('/categories/')
+      const [transRes, catRes, totalsRes] = await Promise.all([
+        // limit=500 para o histórico/gráficos; os SALDOS vêm de /dashboard/totals (SQL lifetime).
+        api.get('/transactions/?limit=500'),
+        api.get('/categories/'),
+        api.get('/dashboard/totals'),
       ]);
       setTransactions(transRes.data.filter((t: any) => Math.abs(t.amount_cents) !== 1));
       setCategories(catRes.data);
+      setVaultTotals({
+        vault_emergency: totalsRes.data?.vault_emergency ?? 0,
+        vault_investment: totalsRes.data?.vault_investment ?? 0,
+      });
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -96,13 +104,22 @@ export default function VaultPage() {
       const finalAmount = vaultModal.action === 'add' ? Math.abs(amount_cents) : -Math.abs(amount_cents);
 
       if (vaultModal.action === 'withdraw') {
-        const vaultTransactions = transactions.filter((t: any) => {
-          const cat = categories.find((c: any) => c.id === t.category_id);
-          return cat && cat.id === category.id;
-        });
-        const currentBalance = vaultTransactions.reduce((balance: number, t: any) => {
-          return t.amount_cents > 0 ? balance + t.amount_cents : balance - Math.abs(t.amount_cents);
-        }, 0);
+        // Saldo autoritativo (lifetime, SQL) para a categoria de cofre em causa; só usamos
+        // a soma das linhas como fallback enquanto os totais não chegaram.
+        let currentBalance: number;
+        if (vaultTotals && category.vault_type === 'emergency') {
+          currentBalance = Math.round(vaultTotals.vault_emergency * 100);
+        } else if (vaultTotals && category.vault_type === 'investment') {
+          currentBalance = Math.round(vaultTotals.vault_investment * 100);
+        } else {
+          const vaultTransactions = transactions.filter((t: any) => {
+            const cat = categories.find((c: any) => c.id === t.category_id);
+            return cat && cat.id === category.id;
+          });
+          currentBalance = vaultTransactions.reduce((balance: number, t: any) => {
+            return t.amount_cents > 0 ? balance + t.amount_cents : balance - Math.abs(t.amount_cents);
+          }, 0);
+        }
         if (amount_cents > currentBalance || currentBalance - amount_cents < 0) {
           setAlertModal({
             isOpen: true,
@@ -227,12 +244,18 @@ export default function VaultPage() {
       else investmentMonthly[month].withdrawals += Math.abs(t.amount_cents / 100);
     });
 
+    // SALDOS autoritativos: totais lifetime (SQL) quando disponíveis; senão, soma das linhas
+    // carregadas (fallback durante o load). Evita saldos parciais com >500 transações.
+    const finalEmergencyTotal = vaultTotals ? vaultTotals.vault_emergency : emergencyTotal;
+    const finalInvestmentTotal = vaultTotals ? vaultTotals.vault_investment : investmentTotal;
+
     // Dynamic max for progress rings
-    const combinedTotal = emergencyTotal + investmentTotal;
+    const combinedTotal = finalEmergencyTotal + finalInvestmentTotal;
     const dynamicMax = Math.max(combinedTotal * 1.5, 5000);
 
     return {
-      emergencyCategory, investmentCategory, emergencyTotal, investmentTotal,
+      emergencyCategory, investmentCategory,
+      emergencyTotal: finalEmergencyTotal, investmentTotal: finalInvestmentTotal,
       emergencyTransactions: emergencyTransactions.sort((a: any, b: any) => new Date(b.transaction_date || b.created_at).getTime() - new Date(a.transaction_date || a.created_at).getTime()),
       investmentTransactions: investmentTransactions.sort((a: any, b: any) => new Date(b.transaction_date || b.created_at).getTime() - new Date(a.transaction_date || a.created_at).getTime()),
       emergencyEvolution: groupByPeriod(emergencyEvolution.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()), selectedPeriod),
@@ -241,7 +264,7 @@ export default function VaultPage() {
       investmentMonthly: Object.values(investmentMonthly),
       dynamicMax,
     };
-  }, [transactions, categories, selectedPeriod]);
+  }, [transactions, categories, selectedPeriod, vaultTotals]);
 
   if (loading || userLoading || !user || !isPro) return <PageLoading />;
 
