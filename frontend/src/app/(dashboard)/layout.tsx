@@ -527,7 +527,7 @@ function MobileHeaderWithNotifications({
   onOpenSupport?: () => void;
   onRestoreSupport?: () => void;
 }) {
-  const { setShowNotifications, showNotifications } = useNotifications();
+  const { setShowNotifications, showNotifications, notifications, hasCritical } = useNotifications();
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
   const supportHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -662,6 +662,17 @@ function MobileHeaderWithNotifications({
               aria-label="Notificações"
             >
               <Bell size={20} />
+              {notifications.length > 0 && (
+                <span
+                  className={`absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border-2 border-slate-800 ${
+                    hasCritical ? 'bg-red-500 animate-pulse' : 'bg-blue-500'
+                  }`}
+                >
+                  <span className="text-[8px] font-black text-white leading-none tabular-nums">
+                    {notifications.length > 9 ? '9+' : notifications.length}
+                  </span>
+                </span>
+              )}
             </button>
             <LanguageSelector />
             <button

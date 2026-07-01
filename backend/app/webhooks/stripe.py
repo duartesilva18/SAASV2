@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 import stripe
 import uuid
@@ -83,7 +83,7 @@ def _can_mark_monthly_commission_paid(db: Session, affiliate_id, month_value: da
     return invoice_count <= 1
 
 @router.post('/stripe')
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+async def stripe_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
     secret = (settings.STRIPE_WEBHOOK_SECRET or '').strip()
@@ -130,7 +130,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             handle_subscription_deleted(subscription, db)
         elif event_type == 'invoice.payment_failed':
             invoice = event['data']['object']
-            handle_invoice_payment_failed(invoice, db)
+            handle_invoice_payment_failed(invoice, db, background_tasks)
         elif event_type == 'invoice.paid':
             invoice = event['data']['object']
             handle_invoice_paid(invoice, db)
@@ -481,7 +481,7 @@ def _is_trial_invoice(invoice: dict) -> bool:
     return amount_paid == 0 and amount_due == 0 and billing_reason == 'subscription_create'
 
 
-def handle_invoice_payment_failed(invoice: dict, db: Session):
+def handle_invoice_payment_failed(invoice: dict, db: Session, background_tasks: BackgroundTasks = None):
     """Processa invoice.payment_failed - quando um pagamento falha"""
     customer_id = invoice.get('customer')
     subscription_id = invoice.get('subscription')
@@ -532,8 +532,19 @@ def handle_invoice_payment_failed(invoice: dict, db: Session):
             if subscription.status in ['past_due', 'unpaid']:
                 # Só atualizar se for fatura do período atual ou se o período já terminou
                 if is_current_period_invoice or period_has_ended:
+                    was_already_failing = user.subscription_status in ('past_due', 'unpaid')
                     user.subscription_status = subscription.status
                     logger.warning(f'Status da subscrição atualizado para {subscription.status} devido a pagamento falhado: {user.email}')
+                    # Avisar o utilizador por email só na 1ª falha (não a cada retry do Stripe,
+                    # que tenta várias vezes ao longo de ~2-4 semanas gerando vários eventos).
+                    if not was_already_failing and background_tasks is not None:
+                        from ..core.payment_emails import send_payment_failed_email_sync
+                        background_tasks.add_task(
+                            send_payment_failed_email_sync,
+                            user.email,
+                            user.last_payment_failure_message or '',
+                            user.language or 'pt',
+                        )
                 else:
                     logger.info(f'Pagamento falhou para fatura futura (próximo ciclo). Mantendo acesso até {datetime.fromtimestamp(current_period_end, tz=timezone.utc)}: {user.email}')
             elif subscription.status == 'active':

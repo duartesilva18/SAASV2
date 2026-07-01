@@ -43,6 +43,15 @@ EMAIL_TRANSLATIONS = {
             'message': 'A equipa de suporte da Finly respondeu à tua mensagem. Abre a app para veres a resposta e continuares a conversa:',
             'button': 'Ver resposta',
         },
+        'payment_failed': {
+            'subject': 'Finly - O teu pagamento falhou',
+            'title': 'Não foi possível cobrar a tua subscrição',
+            'message': 'Tentámos cobrar a tua subscrição Finly e o banco recusou o pagamento. O teu acesso Pro mantém-se por agora, mas será suspenso se o pagamento não for resolvido.',
+            'reason_label': 'Motivo:',
+            'cta_manage': 'Atualiza o método de pagamento no portal de faturação para manteres o acesso sem interrupções:',
+            'button': 'Atualizar pagamento',
+            'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
+        },
         'marketing_footer': 'Recebeu este email porque aceitou as comunicações de marketing do Finly.'
     },
     'en': {
@@ -85,6 +94,15 @@ EMAIL_TRANSLATIONS = {
             'title': 'You have a reply from support',
             'message': 'The Finly support team replied to your message. Open the app to read the reply and continue the conversation:',
             'button': 'View reply',
+        },
+        'payment_failed': {
+            'subject': 'Finly - Your payment failed',
+            'title': 'We couldn\'t charge your subscription',
+            'message': 'We tried to charge your Finly subscription and your bank declined the payment. Your Pro access remains active for now, but will be suspended if this isn\'t resolved.',
+            'reason_label': 'Reason:',
+            'cta_manage': 'Update your payment method in the billing portal to keep uninterrupted access:',
+            'button': 'Update payment',
+            'footer': 'Finly Portugal © 2026 <br> High-End Financial Management'
         },
         'marketing_footer': 'You received this email because you accepted marketing communications from Finly.'
     }

@@ -71,6 +71,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       new Intl.NumberFormat('pt-PT', { style: 'currency', currency: user?.currency || 'EUR' }).format(val);
 
     const fetchNotifications = async () => {
+      // Não sondar com a aba em background: evita 4 pedidos (um deles pesado, /insights/)
+      // a cada 60s numa aba minimizada/esquecida.
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const [insightsRes, recurringRes, invoicesRes, goalsRes] = await Promise.all([
           api.get('/insights/'),
@@ -166,18 +169,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         });
 
         const dismissedIds = getDismissedIds();
+        // NOTA: já não injetamos uma notificação sintética "tudo em harmonia" quando não há
+        // nada — o painel tem o seu próprio estado vazio (nothingToReport), e injetar aqui
+        // inflava o badge do sino para "1" mesmo sem nada de real para reportar.
         const filtered = newNotifications.filter((n: any) => !dismissedIds.includes(n.id));
-
-        if (filtered.length === 0 && !dismissedIds.includes('welcome')) {
-          filtered.push({
-            id: 'welcome',
-            title: s?.systemOperational || 'Sistema operacional',
-            message: s?.zenHarmony || 'Tudo em harmonia.',
-            type: 'success',
-            icon: 'sparkles',
-            date: s?.now || 'Agora',
-          });
-        }
 
         setNotifications(filtered);
         setHasCritical(filtered.some((n: any) => n.type === 'danger'));
