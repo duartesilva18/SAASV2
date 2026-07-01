@@ -88,7 +88,9 @@ async def get_zen_insights(
         for cat_type, vault_type, cat_name, total_cents in q.group_by(
             models.Category.type, models.Category.vault_type, models.Category.name
         ).all():
-            signed = (total_cents or 0) / 100
+            # SUM(bigint) pode devolver decimal.Decimal (psycopg2); converter para int evita
+            # "unsupported operand type(s) for +=: float e Decimal".
+            signed = int(total_cents or 0) / 100
             if vault_type and vault_type != 'none':
                 vault += signed
             elif cat_type == 'income':

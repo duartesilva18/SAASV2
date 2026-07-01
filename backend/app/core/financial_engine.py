@@ -66,7 +66,9 @@ class FinancialEngine:
 
         income = expenses = vault_emergency = vault_investment = 0.0
         for cat_type, vault_type, total_cents in rows:
-            amount = (total_cents or 0) / 100
+            # SUM(bigint) no Postgres pode devolver decimal.Decimal (via psycopg2); converter
+            # para int antes de dividir evita "unsupported operand type(s) for +=: float e Decimal".
+            amount = int(total_cents or 0) / 100
             if vault_type and vault_type != 'none':
                 if vault_type == 'emergency':
                     vault_emergency += amount

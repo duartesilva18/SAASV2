@@ -1454,6 +1454,7 @@ export const fr = {
           cannotBeNegative: "Impossible de laisser le coffre avec un solde négatif.",
           depositIn: "Dépôt dans",
           withdrawalFrom: "Retrait de",
+          evolutionSectionTitle: "Évolution",
           evolutionEmergency: "Évolution Coffre Urgence",
           evolutionInvestments: "Évolution Coffre Investissements",
           monthlyActivity: "Activité mensuelle",

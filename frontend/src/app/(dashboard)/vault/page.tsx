@@ -6,23 +6,26 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer
 } from 'recharts';
-import { 
+import {
   Landmark, Plus, Minus, TrendingUp, TrendingDown,
-  ShieldCheck, Target, ArrowUpRight, ArrowDownRight, X, Calendar
+  ShieldCheck, Target, ArrowUpRight, ArrowDownRight, Calendar
 } from 'lucide-react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import AlertModal from '@/components/AlertModal';
 import PageLoading from '@/components/PageLoading';
 import Toast from '@/components/Toast';
 import AnimatedNumber from '@/components/AnimatedNumber';
+import Modal from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/lib/UserContext';
 
 const QUICK_AMOUNTS = [25, 50, 100, 250];
 
 export default function VaultPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, language, formatCurrency } = useTranslation();
+  // Locale para formatação de datas, alinhado com o idioma escolhido (antes fixo em pt-PT).
+  const dateLocale = language === 'en' ? 'en-US' : language === 'fr' ? 'fr-FR' : 'pt-PT';
   const router = useRouter();
   const { user, isPro, loading: userLoading } = useUser();
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,6 @@ export default function VaultPage() {
   });
   const [selectedPeriod, setSelectedPeriod] = useState<'7D' | '30D' | '12M' | 'Tudo'>('Tudo');
   const [isMobile, setIsMobile] = useState(false);
-  const reduceMotion = useReducedMotion();
 
   // Guardar acesso: apenas utilizadores Pro podem usar /vault
   useEffect(() => {
@@ -232,13 +234,13 @@ export default function VaultPage() {
 
     const emergencyMonthly: any = {}, investmentMonthly: any = {};
     emergencyTransactions.forEach((t: any) => {
-      const month = new Date(t.transaction_date).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+      const month = new Date(t.transaction_date).toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' });
       if (!emergencyMonthly[month]) emergencyMonthly[month] = { month, deposits: 0, withdrawals: 0 };
       if (t.amount_cents > 0) emergencyMonthly[month].deposits += t.amount_cents / 100;
       else emergencyMonthly[month].withdrawals += Math.abs(t.amount_cents / 100);
     });
     investmentTransactions.forEach((t: any) => {
-      const month = new Date(t.transaction_date).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+      const month = new Date(t.transaction_date).toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' });
       if (!investmentMonthly[month]) investmentMonthly[month] = { month, deposits: 0, withdrawals: 0 };
       if (t.amount_cents > 0) investmentMonthly[month].deposits += t.amount_cents / 100;
       else investmentMonthly[month].withdrawals += Math.abs(t.amount_cents / 100);
@@ -278,7 +280,7 @@ export default function VaultPage() {
     return (
       <div style={{ background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', border: '1px solid rgba(51,65,85,0.6)', borderRadius: 12, padding: '8px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
         <p style={{ fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
-          {new Date(data.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+          {new Date(data.date).toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
         <p style={{ fontSize: 14, fontWeight: 900, color: val >= 0 ? '#34d399' : '#f87171' }}>{formatCurrency(val)}</p>
       </div>
@@ -288,8 +290,8 @@ export default function VaultPage() {
   const xTickFormatter = (value: string) => {
     const d = new Date(value);
     return selectedPeriod === '12M'
-      ? d.toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' })
-      : d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+      ? d.toLocaleDateString(dateLocale, { month: 'short', year: '2-digit' })
+      : d.toLocaleDateString(dateLocale, { day: '2-digit', month: 'short' });
   };
 
   const yTickFormatter = (value: number) => {
@@ -315,7 +317,7 @@ export default function VaultPage() {
           <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">{t.dashboard.vault.subtitle}</p>
         </div>
         <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider text-slate-600 bg-slate-800/60 px-2 py-0.5 rounded-md shrink-0 mt-2">
-          {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {new Date().toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
         </span>
       </div>
 
@@ -410,16 +412,6 @@ export default function VaultPage() {
             )}
           </div>
 
-          <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-4 sm:mb-5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (vaultData.emergencyTotal / vaultData.dynamicMax) * 100)}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400"
-              style={{ boxShadow: '0 0 10px rgba(59,130,246,0.35)' }}
-            />
-          </div>
-
           {vaultData.emergencyCategory && (
             <div className="grid grid-cols-2 gap-2">
               <motion.button
@@ -476,16 +468,6 @@ export default function VaultPage() {
             )}
           </div>
 
-          <div className="h-3 w-full bg-slate-800/60 rounded-full overflow-hidden border border-slate-700/40 mb-4 sm:mb-5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (vaultData.investmentTotal / vaultData.dynamicMax) * 100)}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400"
-              style={{ boxShadow: '0 0 10px rgba(16,185,129,0.35)' }}
-            />
-          </div>
-
           {vaultData.investmentCategory && (
             <div className="grid grid-cols-2 gap-2">
               <motion.button
@@ -518,7 +500,7 @@ export default function VaultPage() {
             <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
               <Calendar size={13} className="text-blue-400" />
             </div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Evolução</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">{t.dashboard.vault.evolutionSectionTitle}</h2>
           </div>
           <div className="flex items-center gap-1.5">
             {[
@@ -658,7 +640,7 @@ export default function VaultPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center py-8">
-                <p className="text-[11px] text-slate-500 italic">Sem atividade mensal ainda</p>
+                <p className="text-[11px] text-slate-500 italic">{t.dashboard.vault.noMonthlyActivity}</p>
               </div>
             )}
           </motion.div>
@@ -698,7 +680,7 @@ export default function VaultPage() {
                       <div className="min-w-0">
                         <p className="text-[11px] sm:text-xs font-bold text-white truncate">{tx.description || t.dashboard.vault.noDescription}</p>
                         <span className="text-[8px] sm:text-[9px] font-bold text-slate-500 bg-slate-800/40 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                          {new Date(tx.transaction_date || tx.created_at).toLocaleDateString('pt-PT')}
+                          {new Date(tx.transaction_date || tx.created_at).toLocaleDateString(dateLocale)}
                         </span>
                       </div>
                     </div>
@@ -721,140 +703,67 @@ export default function VaultPage() {
       </section>
 
       {/* ═══ Vault Transaction Modal ═══ */}
-      {(reduceMotion || isMobile) ? (
-        vaultModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <div role="presentation" onClick={() => !vaultLoading && setVaultModal(null)} className="absolute inset-0 bg-black/70" />
-            <div role="dialog" aria-modal onClick={(e) => e.stopPropagation()}
-              className="relative bg-slate-900/95 border border-slate-700/60 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    vaultModal.action === 'add'
-                      ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {vaultModal.action === 'add' ? <Plus size={20} /> : <Minus size={20} />}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider truncate">{vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}</h3>
-                    <p className="text-xs text-slate-400 truncate">{vaultModal.category.name}</p>
-                  </div>
-                </div>
-                <button onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer shrink-0 -m-2" disabled={vaultLoading}>
-                  <X size={18} />
-                </button>
-              </div>
-              {/* Quick amounts */}
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {QUICK_AMOUNTS.map((amt) => (
-                  <button key={amt} type="button" onClick={() => setVaultAmount(String(amt))} disabled={vaultLoading}
-                    className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      vaultAmount === String(amt)
-                        ? (vaultModal.action === 'add'
-                            ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                            : 'bg-red-600 text-white shadow-lg shadow-red-600/20')
-                        : 'bg-slate-800/60 text-slate-400 border border-slate-700/60 hover:bg-slate-700/60 hover:text-white'
-                    }`}>
-                    {amt}&euro;
-                  </button>
-                ))}
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.vault.value}</label>
-                  <input type="number" step="0.01" min="0.01" value={vaultAmount} onChange={(e) => setVaultAmount(e.target.value)} placeholder="0.00"
-                    className="w-full px-4 py-2.5 sm:py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
-                    disabled={vaultLoading} autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !vaultLoading && vaultAmount && parseFloat(vaultAmount) > 0) handleVaultTransaction(); }} />
-                </div>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }} disabled={vaultLoading}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50">
-                    {t.dashboard.vault.cancel}
-                  </button>
-                  <button type="button" onClick={handleVaultTransaction} disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
-                    className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
-                      vaultModal.action === 'add'
-                        ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        : 'bg-red-600 hover:bg-red-500 text-white'
-                    }`}>
-                    {vaultLoading ? t.dashboard.vault.processing : vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
-                  </button>
-                </div>
-              </div>
+      {vaultModal && (
+        <Modal
+          isOpen={!!vaultModal}
+          onClose={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }}
+          size="sm"
+          closeOnBackdrop={!vaultLoading}
+          title={
+            <span className="flex items-center gap-3 min-w-0">
+              <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                vaultModal.action === 'add'
+                  ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/20 text-red-400'
+              }`}>
+                {vaultModal.action === 'add' ? <Plus size={20} /> : <Minus size={20} />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-white uppercase tracking-wider truncate">{vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}</span>
+                <span className="block text-xs text-slate-400 font-normal normal-case tracking-normal truncate">{vaultModal.category.name}</span>
+              </span>
+            </span>
+          }
+        >
+          {/* Quick amounts */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {QUICK_AMOUNTS.map((amt) => (
+              <button key={amt} type="button" onClick={() => setVaultAmount(String(amt))} disabled={vaultLoading}
+                className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  vaultAmount === String(amt)
+                    ? (vaultModal.action === 'add'
+                        ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                        : 'bg-red-600 text-white shadow-lg shadow-red-600/20')
+                    : 'bg-slate-800/60 text-slate-400 border border-slate-700/60 hover:bg-slate-700/60 hover:text-white'
+                }`}>
+                {amt}&euro;
+              </button>
+            ))}
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.vault.value}</label>
+              <input type="number" step="0.01" min="0.01" inputMode="decimal" value={vaultAmount} onChange={(e) => setVaultAmount(e.target.value)} placeholder="0.00"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
+                disabled={vaultLoading} autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter' && !vaultLoading && vaultAmount && parseFloat(vaultAmount) > 0) handleVaultTransaction(); }} />
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }} disabled={vaultLoading}
+                className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50">
+                {t.dashboard.vault.cancel}
+              </button>
+              <button type="button" onClick={handleVaultTransaction} disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
+                className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
+                  vaultModal.action === 'add'
+                    ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-red-600 hover:bg-red-500 text-white'
+                }`}>
+                {vaultLoading ? t.dashboard.vault.processing : vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
+              </button>
             </div>
           </div>
-        )
-      ) : (
-      <AnimatePresence>
-        {vaultModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-              onClick={() => !vaultLoading && setVaultModal(null)} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()} className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 w-full max-w-sm shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    vaultModal.action === 'add'
-                      ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {vaultModal.action === 'add' ? <Plus size={20} /> : <Minus size={20} />}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider truncate">{vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}</h3>
-                    <p className="text-xs text-slate-400 truncate">{vaultModal.category.name}</p>
-                  </div>
-                </div>
-                <button onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors cursor-pointer shrink-0 -m-2" disabled={vaultLoading}>
-                  <X size={18} />
-                </button>
-              </div>
-              {/* Quick amounts */}
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {QUICK_AMOUNTS.map((amt) => (
-                  <button key={amt} type="button" onClick={() => setVaultAmount(String(amt))} disabled={vaultLoading}
-                    className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                      vaultAmount === String(amt)
-                        ? (vaultModal.action === 'add'
-                            ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                            : 'bg-red-600 text-white shadow-lg shadow-red-600/20')
-                        : 'bg-slate-800/60 text-slate-400 border border-slate-700/60 hover:bg-slate-700/60 hover:text-white'
-                    }`}>
-                    {amt}&euro;
-                  </button>
-                ))}
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t.dashboard.vault.value}</label>
-                  <input type="number" step="0.01" min="0.01" value={vaultAmount} onChange={(e) => setVaultAmount(e.target.value)} placeholder="0.00"
-                    className="w-full px-4 py-2.5 sm:py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-slate-500"
-                    disabled={vaultLoading} autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !vaultLoading && vaultAmount && parseFloat(vaultAmount) > 0) handleVaultTransaction(); }} />
-                </div>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => { if (!vaultLoading) { setVaultModal(null); setVaultAmount(''); } }} disabled={vaultLoading}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm uppercase tracking-wider hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50">
-                    {t.dashboard.vault.cancel}
-                  </button>
-                  <button type="button" onClick={handleVaultTransaction} disabled={vaultLoading || !vaultAmount || parseFloat(vaultAmount) <= 0}
-                    className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50 ${
-                      vaultModal.action === 'add'
-                        ? vaultModal.category.vault_type === 'emergency' ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        : 'bg-red-600 hover:bg-red-500 text-white'
-                    }`}>
-                    {vaultLoading ? t.dashboard.vault.processing : vaultModal.action === 'add' ? t.dashboard.vault.add : t.dashboard.vault.withdraw}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </Modal>
       )}
 
       <AlertModal isOpen={alertModal.isOpen} onClose={() => setAlertModal({ ...alertModal, isOpen: false })} title={alertModal.title} message={alertModal.message} type={alertModal.type} />

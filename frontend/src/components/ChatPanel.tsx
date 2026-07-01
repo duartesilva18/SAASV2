@@ -14,9 +14,7 @@ import { useTranslation } from '@/lib/LanguageContext';
 import { useUser } from '@/lib/UserContext';
 import { hasProAccess } from '@/lib/utils';
 import api from '@/lib/api';
-import dynamic from 'next/dynamic';
-
-const PricingModal = dynamic(() => import('@/components/PricingModal'), { ssr: false });
+import { useRouter } from 'next/navigation';
 
 // ── Types ──
 
@@ -156,10 +154,10 @@ export default function ChatPanel() {
   const isEn = (language || 'pt').toLowerCase().startsWith('en');
   const { user } = useUser();
   const isPro = user ? hasProAccess(user) : false;
+  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'ai' | 'support'>('ai');
-  const [showPaywall, setShowPaywall] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
 
@@ -431,7 +429,7 @@ export default function ChatPanel() {
         >
           <button
             data-onboarding-target="dock-copilot"
-            onClick={() => { if (!isPro) { setShowPaywall(true); return; } setActiveTab('ai'); setIsOpen(!isOpen || activeTab !== 'ai'); }}
+            onClick={() => { if (!isPro) { router.push('/plans'); return; } setActiveTab('ai'); setIsOpen(!isOpen || activeTab !== 'ai'); }}
             className="cursor-pointer"
             style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: isOpen && activeTab === 'ai' ? 'rgba(139,92,246,0.25)' : 'transparent', color: isOpen && activeTab === 'ai' ? '#c4b5fd' : '#cbd5e1', position: 'relative' }}
             title={at?.title || 'Copiloto IA'}
@@ -527,7 +525,7 @@ export default function ChatPanel() {
               {/* Tab switcher */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-800/40 shrink-0">
                 <button
-                  onClick={() => { if (!isPro) { setShowPaywall(true); return; } setActiveTab('ai'); }}
+                  onClick={() => { if (!isPro) { setIsOpen(false); router.push('/plans'); return; } setActiveTab('ai'); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                     activeTab === 'ai' ? 'bg-violet-500/15 text-violet-400 border border-violet-500/25' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-transparent'
                   }`}
@@ -568,7 +566,7 @@ export default function ChatPanel() {
                     endRef={aiEndRef}
                     t={at}
                     isPro={isPro}
-                    onShowPaywall={() => setShowPaywall(true)}
+                    onShowPaywall={() => { setIsOpen(false); router.push('/plans'); }}
                     retryText={aiRetryText}
                     onRetry={retryLastAIMessage}
                     isEn={isEn}
@@ -595,7 +593,6 @@ export default function ChatPanel() {
         )}
       </AnimatePresence>
 
-      {showPaywall && <PricingModal isVisible={showPaywall} onClose={() => setShowPaywall(false)} />}
     </>
   );
 }

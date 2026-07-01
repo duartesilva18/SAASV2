@@ -1549,6 +1549,7 @@ export const pt = {
           cannotBeNegative: "Não é possível deixar o cofre com saldo negativo.",
           depositIn: "Depósito em",
           withdrawalFrom: "Resgate de",
+          evolutionSectionTitle: "Evolução",
           evolutionEmergency: "Evolução Cofre Emergência",
           evolutionInvestments: "Evolução Cofre Investimentos",
           monthlyActivity: "Atividade Mensal",

@@ -1454,6 +1454,7 @@ export const en = {
           cannotBeNegative: "Cannot leave the vault with a negative balance.",
           depositIn: "Deposit in",
           withdrawalFrom: "Withdrawal from",
+          evolutionSectionTitle: "Evolution",
           evolutionEmergency: "Vault Emergency Evolution",
           evolutionInvestments: "Vault Investments Evolution",
           monthlyActivity: "Monthly Activity",
