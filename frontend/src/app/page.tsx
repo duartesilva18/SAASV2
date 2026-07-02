@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, ArrowRight, ShieldCheck, Zap, Trophy, MessageSquare,
-  BarChart3, Globe, Star, CheckCircle2, Phone, Crown, Check, Send
+  BarChart3, Globe, Star, CheckCircle2, Phone, Crown, Check, Send, ChevronDown
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
@@ -15,24 +15,108 @@ import api from '@/lib/api';
 import { STRIPE_PRICE_IDS } from '@/lib/stripePrices';
 
 function AnimatedTelegram() {
-  return <span className="inline-block mx-1 font-black text-blue-400">Telegram</span>;
+  return (
+    <span
+      className="inline-block mx-1 font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-sky-300 to-blue-400"
+      style={{ backgroundSize: '200% auto', animation: 'finly-shimmer 2.8s linear infinite' }}
+    >
+      Telegram
+    </span>
+  );
+}
+
+// Contador animado: conta de 0 até ao valor quando entra no viewport (ex.: "180€", "3s", "99.9%")
+function StatValue({ value }: { value: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const m = value.match(/^([\d.,]+)(.*)$/);
+    if (!m) return;
+    const target = parseFloat(m[1].replace(',', '.'));
+    const suffix = m[2];
+    const decimals = (m[1].split(/[.,]/)[1] || '').length;
+    let raf = 0;
+    const obs = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      obs.disconnect();
+      let startTs = 0;
+      const step = (ts: number) => {
+        if (!startTs) startTs = ts;
+        const p = Math.min(1, (ts - startTs) / 1400);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const v = target * eased;
+        el.textContent = (decimals ? v.toFixed(decimals) : String(Math.round(v))) + suffix;
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => { cancelAnimationFrame(raf); obs.disconnect(); };
+  }, [value]);
+  return <span ref={ref}>{value}</span>;
+}
+
+// Indicador "a escrever..." do bot (3 pontos a saltar)
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1 py-0.5" aria-label="A escrever…">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-slate-400"
+          style={{ animation: 'finly-typing-bounce 1.1s ease-in-out infinite', animationDelay: `${i * 0.18}s` }}
+        />
+      ))}
+    </span>
+  );
 }
 
 const fadeUp = { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 } };
 const stagger = (i: number) => ({ transition: { delay: i * 0.08 } });
+
+// Parse do simulador: deteta valor, categoria (por hífen ou palavra-chave) e receita/despesa
+const SIM_CATEGORY_KEYWORDS: [RegExp, string][] = [
+  [/uber|gasolina|combust|taxi|bolt|comboio|metro|autocarro/i, 'Transporte'],
+  [/biscoito|iogurte|almoç|jantar|café|cafe|pequeno|lanche|pingo|continente|lidl|mercado|sushi|pizza|restaurante|comida/i, 'Alimentação'],
+  [/netflix|spotify|hbo|disney|subscri|prime/i, 'Subscrições'],
+  [/renda|luz|água|agua|gás|gas|internet|condomínio|condominio/i, 'Casa'],
+  [/farmácia|farmacia|médico|medico|consulta|ginásio|ginasio/i, 'Saúde'],
+  [/salário|salario|ordenado|recebi|freelance|venda|prémio|premio/i, 'Receita'],
+];
+
+function parseSimText(text: string): { desc: string; amountLabel: string; category: string; isIncome: boolean } {
+  const amountMatch = text.match(/-?\d+(?:[.\s]\d{3})*(?:[.,]\d+)?/);
+  const rawAmount = (amountMatch?.[0] || '0').replace(/\s/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.');
+  const amount = Math.abs(parseFloat(rawAmount) || 0);
+  // Categoria explícita: "Descrição - Categoria 10€"
+  const hyphen = text.match(/^(.+?)\s*-\s*([A-Za-zÀ-ÿ ]+?)\s*-?\d/);
+  let category = hyphen?.[2]?.trim() || '';
+  const isIncome = /salário|salario|ordenado|recebi|freelance|venda|prémio|premio|\+/i.test(text);
+  if (!category) {
+    for (const [re, cat] of SIM_CATEGORY_KEYWORDS) { if (re.test(text)) { category = cat; break; } }
+  }
+  if (!category) category = isIncome ? 'Receita' : 'Despesas gerais';
+  const desc = (hyphen?.[1] || text.replace(/-?\d+(?:[.\s]\d{3})*(?:[.,]\d+)?\s*€?.*/, '')).trim().replace(/\s*-\s*$/, '') || 'Item';
+  const amountLabel = `${isIncome ? '+' : ''}€${amount.toFixed(2).replace('.', ',')}`;
+  return { desc: desc.charAt(0).toUpperCase() + desc.slice(1), amountLabel, category, isIncome };
+}
 
 export default function LandingPage() {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
   const { user } = useUser();
   const router = useRouter();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  // Simulador de ganhos de afiliado: nº de pessoas indicadas → comissão mensal (~2€/pessoa no plano mensal)
+  const [affiliateCount, setAffiliateCount] = useState(10);
+  const affiliateMonthly = affiliateCount * 2;
   const scrollProgressRef = useRef<HTMLDivElement>(null);
 
-  // Simulador Telegram: resultado da primeira mensagem (Confirmar/Cancelar) e mensagens dinâmicas
-  const defaultSimMessages: { user: string; bot: string; outcome?: 'confirmed' | 'cancelled' }[] = [
-    { user: 'Biscoitos 10€', bot: 'Nova transação\n📝 Biscoitos\n💰 €10.00\n🏷️ Alimentação\n\nConfirmar?' },
-    { user: 'Uber - Transporte 15€', bot: 'Nova transação\n📝 Uber\n💰 €15.00\n🏷️ Transporte\n\nConfirmar?' },
-    { user: 'Salário 1500€', bot: 'Nova transação\n📝 Salário\n💰 €1.500,00\n🏷️ Receita\n\nConfirmar?' },
+  // Simulador Telegram: conversa dinâmica com demo automática (auto-play até o utilizador interagir)
+  type SimMessage = { user: string; bot: string; typing?: boolean; outcome?: 'confirmed' | 'cancelled' };
+  const defaultSimMessages: SimMessage[] = [
+    { user: 'Biscoitos 10€', bot: 'Nova transação\n📝 Biscoitos\n💰 €10,00\n🏷️ Alimentação\n\nConfirmar?', outcome: 'confirmed' },
   ];
   const [simMessages, setSimMessages] = useState(defaultSimMessages);
   const [simInput, setSimInput] = useState('');
@@ -41,13 +125,83 @@ export default function LandingPage() {
   const simAddedLabel = (t.dashboard?.guide as any)?.added ?? '✓ Adicionada!';
   const simCancelledLabel = (t.dashboard?.guide as any)?.cancelled ?? 'Cancelada.';
   const simChatScrollRef = useRef<HTMLDivElement>(null);
+  const simCardRef = useRef<HTMLDivElement>(null);
+  // Quando o utilizador mexe no simulador, a demo automática para (para não lutar com ele)
+  const simUserInteractedRef = useRef(false);
 
-  // Scroll do simulador para baixo quando chega nova mensagem do bot
+  // Enviar mensagem no simulador: mostra "a escrever…" do bot e responde com parse de categoria
+  const sendSimMessage = (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    const p = parseSimText(text);
+    setSimMessages(prev => [...prev, { user: text, bot: '', typing: true }]);
+    setSimInput('');
+    window.setTimeout(() => {
+      setSimMessages(prev => prev.map((m, i) =>
+        i === prev.length - 1 && m.typing
+          ? { ...m, typing: false, bot: `Nova transação\n📝 ${p.desc}\n💰 ${p.amountLabel}\n🏷️ ${p.category}\n\nConfirmar?` }
+          : m
+      ));
+    }, 850);
+  };
+
+  // Demo automática: quando o simulador entra no ecrã, escreve exemplos sozinho (letra a letra),
+  // envia, o bot responde e confirma — em loop até o utilizador tocar no simulador.
   useEffect(() => {
-    if (simChatScrollRef.current && simMessages.length > 3) {
+    const el = simCardRef.current;
+    if (!el) return;
+    let cancelled = false;
+    let started = false;
+    const script = ['Café 1,20€', 'Uber 15€', 'Recebi 250€ freelance', 'Netflix - Subscrições 12,99€', 'Jantar sushi 32€', 'Gasolina 40€'];
+    const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+    const stopped = () => cancelled || simUserInteractedRef.current;
+    const run = async () => {
+      started = true;
+      await sleep(900);
+      let k = 0;
+      while (!stopped() && k < script.length) {
+        const text = script[k]; k++;
+        for (let i = 1; i <= text.length; i++) {
+          if (stopped()) return;
+          setSimInput(text.slice(0, i));
+          await sleep(34 + Math.random() * 40);
+        }
+        await sleep(380);
+        if (stopped()) return;
+        sendSimMessage(text);
+        await sleep(1900);
+        if (stopped()) return;
+        // Auto-confirmar a última pendente (como um utilizador real faria)
+        setSimMessages(prev => {
+          const lastPending = [...prev].reverse().find(m => !m.outcome && !m.typing && m.bot);
+          if (!lastPending) return prev;
+          const idx = prev.lastIndexOf(lastPending);
+          return prev.map((m, i) => i === idx ? { ...m, outcome: 'confirmed' as const } : m);
+        });
+        await sleep(2100);
+      }
+    };
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !started) run();
+    }, { threshold: 0.35 });
+    obs.observe(el);
+    return () => { cancelled = true; obs.disconnect(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const markSimInteraction = () => {
+    if (!simUserInteractedRef.current) {
+      simUserInteractedRef.current = true;
+      setSimInput('');
+    }
+  };
+
+  // Scroll do simulador para baixo quando chega nova mensagem/resposta
+  useEffect(() => {
+    if (simChatScrollRef.current && simMessages.length > 1) {
       simChatScrollRef.current.scrollTo({ top: simChatScrollRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [simMessages.length]);
+  }, [simMessages]);
 
   // Barra de progresso de scroll -- manipulação direta do DOM (sem re-render)
   useEffect(() => {
@@ -271,7 +425,7 @@ export default function LandingPage() {
 
                 {/* Simulador de chat — interativo; em mobile altura limitada e centrado */}
                 <div className="w-full max-w-[min(100%,20rem)] sm:max-w-[22rem] lg:max-w-[380px] shrink-0 mx-auto">
-                  <div className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden aspect-[9/16] max-h-[60vh] sm:max-h-[65vh] md:aspect-auto md:max-h-none md:h-[440px] lg:h-[480px] flex flex-col">
+                  <div ref={simCardRef} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden aspect-[9/16] max-h-[60vh] sm:max-h-[65vh] md:aspect-auto md:max-h-none md:h-[440px] lg:h-[480px] flex flex-col">
                     <div className="bg-slate-800 border-b border-white/5 p-2.5 sm:p-3 3xl:p-4 flex items-center gap-1.5 sm:gap-3">
                       <div className="w-8 h-8 sm:w-9 sm:h-9 3xl:w-10 3xl:h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shrink-0">
                         <Send size={16} className="sm:w-4 sm:h-4 3xl:w-5 3xl:h-5" />
@@ -288,29 +442,29 @@ export default function LandingPage() {
                           : msg.outcome === 'cancelled'
                             ? msg.bot.replace(/\n\n[^\n]+$/, '\n\n' + simCancelledLabel)
                             : msg.bot;
-                        const showButtons = !msg.outcome;
+                        const showButtons = !msg.outcome && !msg.typing;
                         return (
                           <div key={idx} className="space-y-2 sm:space-y-3 3xl:space-y-4">
-                            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="flex justify-end">
+                            <motion.div initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 26 }} className="flex justify-end">
                               <div className="bg-blue-600 text-white p-2 sm:p-2.5 3xl:p-3 rounded-lg sm:rounded-xl 3xl:rounded-2xl rounded-tr-none max-w-[85%] text-[11px] sm:text-xs 3xl:text-sm shadow-md">
                                 {msg.user}
                               </div>
                             </motion.div>
-                            <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 + 0.08 }} className="flex justify-start">
+                            <motion.div initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 26, delay: 0.06 }} className="flex justify-start">
                               <div className="bg-slate-800 text-white p-2 sm:p-2.5 3xl:p-3 rounded-lg sm:rounded-xl 3xl:rounded-2xl rounded-tl-none max-w-[85%] text-[11px] sm:text-xs 3xl:text-sm shadow-md border border-white/5 whitespace-pre-line">
-                                {botDisplay}
+                                {msg.typing ? <TypingDots /> : botDisplay}
                                 {showButtons && (
                                   <div className="mt-1.5 sm:mt-2 3xl:mt-3 flex gap-1.5 3xl:gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => setSimMessages(prev => prev.map((m, i) => i === idx ? { ...m, outcome: 'confirmed' as const } : m))}
+                                      onClick={() => { markSimInteraction(); setSimMessages(prev => prev.map((m, i) => i === idx ? { ...m, outcome: 'confirmed' as const } : m)); }}
                                       className="flex-1 min-h-[38px] 3xl:min-h-[44px] bg-emerald-600/90 hover:bg-emerald-500/90 text-white px-2.5 py-2 sm:py-1.5 rounded-lg text-[9px] sm:text-[10px] 3xl:text-xs font-bold text-center cursor-pointer transition-colors active:scale-[0.98]"
                                     >
                                       {simConfirmLabel}
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setSimMessages(prev => prev.map((m, i) => i === idx ? { ...m, outcome: 'cancelled' as const } : m))}
+                                      onClick={() => { markSimInteraction(); setSimMessages(prev => prev.map((m, i) => i === idx ? { ...m, outcome: 'cancelled' as const } : m)); }}
                                       className="flex-1 min-h-[38px] 3xl:min-h-[44px] bg-red-600/80 hover:bg-red-500/80 text-white px-2.5 py-2 sm:py-1.5 rounded-lg text-[9px] sm:text-[10px] 3xl:text-xs font-bold text-center cursor-pointer transition-colors active:scale-[0.98]"
                                     >
                                       {simCancelLabel}
@@ -329,17 +483,13 @@ export default function LandingPage() {
                       <input
                         type="text"
                         value={simInput}
-                        onChange={(e) => setSimInput(e.target.value)}
+                        onFocus={markSimInteraction}
+                        onChange={(e) => { markSimInteraction(); setSimInput(e.target.value); }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            const text = simInput.trim() || 'Biscoitos 10€';
-                            if (text) {
-                              const desc = text.split(/[\s-]/)[0] || 'Item';
-                              const amount = text.match(/\d+(?:[.,]\d+)?/)?.[0]?.replace(',', '.') || '0';
-                              setSimMessages(prev => [...prev, { user: text, bot: `Nova transação\n📝 ${desc}\n💰 €${amount}\n🏷️ —\n\nConfirmar?` }]);
-                              setSimInput('');
-                            }
+                            markSimInteraction();
+                            sendSimMessage(simInput.trim() || 'Biscoitos 10€');
                           }
                         }}
                         placeholder={(t.dashboard?.guide as any)?.writeExample ?? 'Escreve "Biscoitos 10€" ou "Iogurte - Alimentação 5€"...'}
@@ -348,11 +498,8 @@ export default function LandingPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const text = simInput.trim() || 'Biscoitos 10€';
-                          const desc = text.split(/[\s-]/)[0] || 'Item';
-                          const amount = text.match(/\d+(?:[.,]\d+)?/)?.[0]?.replace(',', '.') || '0';
-                          setSimMessages(prev => [...prev, { user: text, bot: `Nova transação\n📝 ${desc}\n💰 €${amount}\n🏷️ —\n\nConfirmar?` }]);
-                          setSimInput('');
+                          markSimInteraction();
+                          sendSimMessage(simInput.trim() || 'Biscoitos 10€');
                         }}
                         className="min-w-[40px] min-h-[40px] w-10 h-10 sm:min-w-0 sm:min-h-0 bg-blue-500 hover:bg-blue-400 rounded-full flex items-center justify-center text-white shrink-0 cursor-pointer transition-colors active:scale-95"
                         aria-label="Enviar"
@@ -461,52 +608,71 @@ export default function LandingPage() {
               })}
             </div>
 
-            {/* Bloco Afiliados — card premium com destaque */}
-            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-10 sm:mt-16 max-w-4xl mx-auto">
-              <div className="relative rounded-2xl sm:rounded-3xl border border-amber-500/30 bg-gradient-to-b from-slate-900/90 to-slate-900/70 backdrop-blur-md p-6 sm:p-8 lg:p-10 text-center overflow-hidden shadow-xl shadow-amber-900/10">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none" />
-                <span className="relative inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-amber-400 text-xs sm:text-sm font-bold uppercase tracking-widest mb-4 sm:mb-5">
-                  <Trophy size={14} className="shrink-0" />
-                  {t.pricingSection.affiliate.badge}
-                </span>
-                <h3 className="relative text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white mb-3 sm:mb-4 tracking-tight leading-tight">
-                  {t.pricingSection.affiliate.title}
-                </h3>
-                <p className="relative text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
-                  {t.pricingSection.affiliate.description}
+            {/* Bloco Afiliados — secção aberta (sem caixa), com glow âmbar e exemplo com barra lateral */}
+            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative mt-14 sm:mt-20 max-w-4xl mx-auto text-center">
+              <div className="absolute -inset-x-20 -inset-y-10 bg-[radial-gradient(600px_circle_at_50%_30%,rgba(245,158,11,0.07),transparent_70%)] pointer-events-none" aria-hidden />
+              <span className="relative inline-flex items-center gap-2 text-amber-400 text-xs sm:text-sm font-bold uppercase tracking-[0.25em] mb-4 sm:mb-5">
+                <Trophy size={15} className="shrink-0" />
+                {t.pricingSection.affiliate.badge}
+              </span>
+              <h3 className="relative text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white mb-3 sm:mb-4 tracking-tight leading-tight">
+                {t.pricingSection.affiliate.title}
+              </h3>
+              <p className="relative text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-5 sm:mb-7 leading-relaxed">
+                {t.pricingSection.affiliate.description}
+              </p>
+              <ul className="relative flex flex-wrap justify-center gap-x-5 sm:gap-x-7 gap-y-2 mb-6 sm:mb-8 text-slate-200 text-sm sm:text-base">
+                {t.pricingSection.affiliate.benefits.map((b: string, i: number) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <Check size={16} className="text-emerald-400 shrink-0" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+              {/* Simulador interativo de ganhos: arrasta o slider e vê a comissão mensal ao vivo */}
+              <div className="relative max-w-xl mx-auto">
+                <p className="text-amber-400 font-bold text-xs uppercase tracking-widest mb-4 sm:mb-5">
+                  {t.pricingSection.affiliate.example.title}
                 </p>
-                <ul className="relative flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-3 mb-6 sm:mb-8 text-slate-200 text-sm sm:text-base">
-                  {t.pricingSection.affiliate.benefits.map((b: string, i: number) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check size={16} className="text-emerald-400 shrink-0" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="relative rounded-xl sm:rounded-2xl bg-slate-950/80 border border-slate-700/60 p-4 sm:p-6 text-left">
-                  <p className="text-amber-400 font-bold text-xs sm:text-sm uppercase tracking-widest mb-2 sm:mb-3">
-                    {t.pricingSection.affiliate.example.title}
-                  </p>
-                  <p className="text-slate-100 text-sm sm:text-base font-semibold mb-1 leading-snug">
-                    {t.pricingSection.affiliate.example.line1}
-                  </p>
-                  <p className="text-slate-100 text-sm sm:text-base font-semibold mb-2 sm:mb-3 leading-snug">
-                    {t.pricingSection.affiliate.example.line2}
-                  </p>
-                  <p className="text-slate-500 text-xs sm:text-sm">{t.pricingSection.affiliate.example.footer}</p>
+                <div className="flex items-end justify-center gap-2 sm:gap-3 mb-1">
+                  <span className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 leading-none">
+                    ~{affiliateMonthly}€
+                  </span>
+                  <span className="text-slate-400 text-sm sm:text-base font-semibold pb-1">/ mês</span>
                 </div>
+                <p className="text-slate-300 text-sm sm:text-base font-semibold mb-5 sm:mb-6 tabular-nums">
+                  {affiliateCount} {affiliateCount === 1 ? 'pessoa' : 'pessoas'} no plano mensal
+                </p>
+                <input
+                  type="range"
+                  min={1}
+                  max={100}
+                  value={affiliateCount}
+                  onChange={(e) => setAffiliateCount(Number(e.target.value))}
+                  aria-label="Número de pessoas indicadas"
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer finly-affiliate-slider"
+                  style={{
+                    background: `linear-gradient(to right, rgb(245 158 11 / 0.9) 0%, rgb(245 158 11 / 0.9) ${affiliateCount}%, rgb(51 65 85 / 0.6) ${affiliateCount}%, rgb(51 65 85 / 0.6) 100%)`,
+                  }}
+                />
+                <div className="flex justify-between text-[10px] sm:text-xs text-slate-600 font-bold uppercase tracking-wider mt-2 mb-4 tabular-nums">
+                  <span>1</span>
+                  <span>50</span>
+                  <span>100 pessoas</span>
+                </div>
+                <p className="text-slate-500 text-xs sm:text-sm">{t.pricingSection.affiliate.example.footer}</p>
               </div>
             </motion.div>
 
-            {/* Garantias — pills com ícone */}
-            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-10 sm:mt-14 pt-8 sm:pt-12 border-t border-slate-700/60">
-              <p className="text-center text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-widest mb-6 sm:mb-8">
+            {/* Garantias — linha simples com checks, sem pills */}
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-slate-700/40">
+              <p className="text-center text-slate-500 text-xs sm:text-sm font-bold uppercase tracking-widest mb-5 sm:mb-6">
                 {t.pricingSection.guarantee.title}
               </p>
-              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+              <div className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-8 gap-y-2.5">
                 {t.pricingSection.guarantee.items.map((item: string, i: number) => (
-                  <span key={i} className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-800/50 px-4 py-2 text-slate-300 text-xs sm:text-sm leading-snug">
-                    <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
+                  <span key={i} className="inline-flex items-center gap-2 text-slate-300 text-xs sm:text-sm leading-snug">
+                    <ShieldCheck size={15} className="text-emerald-400 shrink-0" />
                     {item}
                   </span>
                 ))}
@@ -518,7 +684,7 @@ export default function LandingPage() {
         {/* Stats — números em destaque com fundo suave */}
         <section id="stats" className="py-12 sm:py-20 border-y border-slate-700/60" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 sm:divide-x divide-slate-700/40 text-center gap-8 sm:gap-0">
               {[
                 { value: '180€', label: t.stats.saved },
                 { value: '3s', label: t.stats.time },
@@ -530,10 +696,10 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.4 }}
-                  className="rounded-2xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm py-6 sm:py-8 px-4 sm:px-6"
+                  className="px-4 sm:px-6"
                 >
-                  <p className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400">
-                    {stat.value}
+                  <p className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-blue-400 tabular-nums">
+                    <StatValue value={stat.value} />
                   </p>
                   <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-500">{stat.label}</p>
                 </motion.div>
@@ -550,8 +716,11 @@ export default function LandingPage() {
               <span className="text-blue-400 italic"> {t.steps.titleAccent}</span>
             </motion.h2>
 
-            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              <div className="hidden md:block absolute top-[100px] left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+            {/* Timeline: círculos numerados ligados por linha — sem caixas */}
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
+              <div className="hidden md:block absolute top-7 left-[18%] right-[18%] h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" aria-hidden />
+              {/* Linha vertical no mobile */}
+              <div className="md:hidden absolute top-4 bottom-4 left-7 w-px bg-gradient-to-b from-blue-500/50 via-blue-500/30 to-transparent" aria-hidden />
 
               {t.steps.items.map((step: { t: string; d: string }, i: number) => (
                 <motion.div
@@ -559,20 +728,19 @@ export default function LandingPage() {
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.4 }}
-                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  className="relative rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-5 sm:p-6 hover:border-blue-500/40 transition-all duration-300 group overflow-hidden"
+                  transition={{ delay: i * 0.12, duration: 0.4 }}
+                  className="relative flex md:flex-col items-start md:items-center gap-4 md:gap-0 md:text-center group"
                 >
-                  <div className="relative flex items-center gap-4 mb-4">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 border border-blue-500/40 text-blue-300 font-black text-lg group-hover:border-blue-400/50 transition-colors">
-                      {i + 1}
-                    </span>
-                    <div className="w-12 h-12 rounded-xl bg-slate-700/80 flex items-center justify-center text-blue-400 border border-slate-600/80 group-hover:border-blue-500/40 shrink-0">
-                      {i === 0 ? <Phone size={24} /> : i === 1 ? <MessageSquare size={24} /> : <Zap size={24} />}
+                  <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 border-2 border-blue-500/50 text-blue-300 font-black text-xl shadow-[0_0_20px_rgba(59,130,246,0.25)] group-hover:border-blue-400 group-hover:shadow-[0_0_28px_rgba(59,130,246,0.45)] group-hover:scale-110 transition-all duration-300 md:mb-5">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 pt-1 md:pt-0">
+                    <div className="flex md:justify-center items-center gap-2 mb-2 text-blue-400">
+                      {i === 0 ? <Phone size={18} /> : i === 1 ? <MessageSquare size={18} /> : <Zap size={18} />}
+                      <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">{step.t}</h3>
                     </div>
+                    <p className="text-slate-300 text-sm sm:text-base leading-relaxed md:max-w-xs md:mx-auto">{step.d}</p>
                   </div>
-                  <h3 className="relative text-lg sm:text-xl font-black text-white mb-2 uppercase tracking-tight">{step.t}</h3>
-                  <p className="relative text-slate-300 text-sm sm:text-base leading-relaxed">{step.d}</p>
                 </motion.div>
               ))}
             </div>
@@ -596,7 +764,8 @@ export default function LandingPage() {
               </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Lista aberta icon+texto — sem caixas; hover só realça o ícone */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8 sm:gap-y-10 max-w-5xl mx-auto">
               {t.resources.items.map((item: { t: string; d: string }, i: number) => (
                 <motion.div
                   key={i}
@@ -604,17 +773,14 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.06, duration: 0.35 }}
-                  whileHover={{ y: -4 }}
-                  className="group relative rounded-2xl p-5 sm:p-6 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 hover:border-blue-500/40 transition-all duration-300 overflow-hidden"
+                  className="group relative flex items-start gap-4"
                 >
-                  <div className="relative flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-indigo-500/30 border border-blue-500/40 flex items-center justify-center text-blue-300 shrink-0 group-hover:border-blue-400/50 group-hover:shadow-lg group-hover:shadow-blue-500/15 transition-all">
-                      {i === 0 ? <Phone size={22} /> : i === 1 ? <BarChart3 size={22} /> : i === 2 ? <Globe size={22} /> : i === 3 ? <ShieldCheck size={22} /> : i === 4 ? <Trophy size={22} /> : <Star size={22} />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-base sm:text-lg font-black uppercase tracking-tight text-white mb-1.5 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
-                      <p className="text-slate-300 text-sm leading-relaxed">{item.d}</p>
-                    </div>
+                  <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0 group-hover:bg-blue-500/20 group-hover:text-blue-300 group-hover:scale-110 transition-all duration-300">
+                    {i === 0 ? <Phone size={20} /> : i === 1 ? <BarChart3 size={20} /> : i === 2 ? <Globe size={20} /> : i === 3 ? <ShieldCheck size={20} /> : i === 4 ? <Trophy size={20} /> : <Star size={20} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-base sm:text-lg font-black uppercase tracking-tight text-white mb-1 group-hover:text-blue-100/90 transition-colors">{item.t}</h4>
+                    <p className="text-slate-400 text-sm leading-relaxed">{item.d}</p>
                   </div>
                 </motion.div>
               ))}
@@ -635,40 +801,36 @@ export default function LandingPage() {
               </h2>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
+            {/* Citações abertas com separadores — sem caixas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-slate-700/40 gap-10 md:gap-0">
               {t.testimonials.items.map((item: { id: number; name: string; role: string; text: string; initial: string }, i: number) => (
-                <motion.div
+                <motion.figure
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.35 }}
-                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className={`group relative flex flex-col rounded-2xl p-5 sm:p-6 border transition-all duration-300 overflow-hidden ${
-                    i === 1
-                      ? 'bg-slate-900/80 backdrop-blur-md border-blue-500/50 md:-mt-1 md:mb-1 md:scale-[1.02] shadow-lg shadow-blue-900/20'
-                      : 'bg-slate-900/70 backdrop-blur-md border-slate-700/60 hover:border-blue-500/30'
-                  }`}
+                  className="relative flex flex-col px-2 md:px-8"
                 >
-                  <div className="relative flex items-center gap-3 mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-600/25 ring-2 ring-white/10 shrink-0">
+                  <span className="text-5xl font-serif text-blue-500/25 leading-none select-none mb-2" aria-hidden>&ldquo;</span>
+                  <blockquote className="text-slate-200 text-sm sm:text-base leading-relaxed flex-1 mb-5">
+                    {item.text}
+                  </blockquote>
+                  <div className="flex gap-0.5 mb-3">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={13} className="fill-amber-400 text-amber-400 shrink-0" />
+                    ))}
+                  </div>
+                  <figcaption className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-600/25 shrink-0">
                       {item.initial}
                     </div>
                     <div className="min-w-0">
                       <p className="text-white font-bold text-sm truncate">{item.name}</p>
-                      <p className="text-slate-400 text-xs truncate uppercase tracking-wider">{(item.role as string)}</p>
+                      <p className="text-slate-500 text-xs truncate uppercase tracking-wider">{(item.role as string)}</p>
                     </div>
-                  </div>
-                  <div className="flex gap-0.5 mb-3">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={14} className="fill-amber-400 text-amber-400 shrink-0" />
-                    ))}
-                  </div>
-                  <p className="relative text-slate-200 text-sm sm:text-base leading-relaxed flex-1">
-                    <span className="absolute -top-0.5 -left-0.5 text-2xl sm:text-3xl font-serif text-blue-500/20 leading-none select-none">&quot;</span>
-                    <span className="pl-4">{item.text}</span>
-                  </p>
-                </motion.div>
+                  </figcaption>
+                </motion.figure>
               ))}
             </div>
           </div>
@@ -682,23 +844,48 @@ export default function LandingPage() {
               <span className="text-blue-400 italic"> {t.faq.titleAccent}</span>
             </motion.h2>
 
-            <div className="space-y-3 sm:space-y-4">
-              {t.faq.items.map((item: { q: string; a: string }, i: number) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.05 }}
-                  className="rounded-2xl bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-5 hover:border-slate-600/80 transition-all duration-300"
-                >
-                  <h4 className="text-sm sm:text-base font-bold text-white mb-2 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
-                    <span className="min-w-0">{item.q}</span>
-                  </h4>
-                  <p className="text-slate-400 text-sm leading-relaxed pl-4">{item.a}</p>
-                </motion.div>
-              ))}
+            {/* Acordeão interativo: só a pergunta aberta mostra a resposta */}
+            <div className="divide-y divide-slate-700/40 border-y border-slate-700/40">
+              {t.faq.items.map((item: { q: string; a: string }, i: number) => {
+                const isOpen = openFaq === i;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.04 }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
+                      aria-expanded={isOpen}
+                      className="w-full flex items-center justify-between gap-3 py-4 sm:py-5 text-left cursor-pointer group"
+                    >
+                      <span className={`text-sm sm:text-base font-bold transition-colors ${isOpen ? 'text-blue-400' : 'text-white group-hover:text-blue-100'}`}>
+                        {item.q}
+                      </span>
+                      <ChevronDown
+                        size={18}
+                        className={`shrink-0 text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-400' : 'group-hover:text-slate-300'}`}
+                      />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <p className="text-slate-400 text-sm leading-relaxed pb-4 sm:pb-5 pr-8">{item.a}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>

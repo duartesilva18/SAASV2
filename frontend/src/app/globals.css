@@ -168,6 +168,47 @@ body {
   50% { opacity: 0.4; transform: scale(1.1); }
 }
 
+/* Landing page: brilho do texto "Telegram" e pontos "a escrever…" do simulador */
+@keyframes finly-shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes finly-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Slider do simulador de ganhos de afiliados (landing) */
+.finly-affiliate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: 3px solid #0f172a;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+.finly-affiliate-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.finly-affiliate-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+.finly-affiliate-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: 3px solid #0f172a;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+  cursor: grab;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
