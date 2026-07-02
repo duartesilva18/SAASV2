@@ -175,20 +175,33 @@ export default function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative overflow-visible min-h-0 -mt-3">
-      <div className={`flex items-center gap-4 px-4 pt-8 pb-5 select-none min-h-[5rem] ${isCollapsed ? 'lg:justify-center lg:px-2 lg:min-h-0 lg:pt-8' : ''}`}>
-        <img
-          src="/images/logo/logo-semfundo.png"
-          alt="Finly"
-          className={`shrink-0 m-0 p-0 select-none pointer-events-none object-contain self-center ${isCollapsed && !isMobileOpen ? 'h-20 w-20' : 'h-16 w-16'}`}
-          draggable="false"
-        />
+      <div className={`flex items-center gap-3 px-4 pt-7 pb-4 select-none min-h-[4.5rem] ${isCollapsed ? 'lg:justify-center lg:px-2 lg:min-h-0 lg:pt-7' : ''}`}>
+        <div className={`shrink-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900/60 border border-slate-700/50 shadow-lg shadow-blue-500/5 ${isCollapsed && !isMobileOpen ? 'h-12 w-12 p-1.5' : 'h-12 w-12 p-1.5'}`}>
+          <img
+            src="/images/logo/logo-semfundo.png"
+            alt="Finly"
+            className="h-full w-full m-0 p-0 select-none pointer-events-none object-contain"
+            draggable="false"
+          />
+        </div>
         {(!isCollapsed || isMobileOpen) && (
-          <span
-            className="text-white font-semibold tracking-tight text-3xl leading-none self-center whitespace-nowrap"
-            style={{ fontFamily: 'var(--font-brand), sans-serif' }}
-          >
-            Finly
-          </span>
+          <>
+            <span
+              className="text-white font-semibold tracking-tight text-[26px] leading-none self-center whitespace-nowrap"
+              style={{ fontFamily: 'var(--font-brand), sans-serif' }}
+            >
+              Finly
+            </span>
+            {/* Recolher sidebar (só desktop): liberta espaço no ecrã */}
+            <button
+              onClick={onToggle}
+              className="hidden lg:flex ml-auto items-center justify-center w-8 h-8 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800/70 border border-transparent hover:border-slate-700/60 transition-all cursor-pointer"
+              title="Recolher menu"
+              aria-label="Recolher menu"
+            >
+              <ChevronLeft size={17} />
+            </button>
+          </>
         )}
       </div>
 
@@ -201,11 +214,12 @@ export default function Sidebar({
           const isBlocked = item.isBlocked;
 
           const badge = badgeForItem(item);
+          // Só danger/warning piscam — info/success estáticos (menos ruído visual)
           const dotClasses = {
             danger: 'bg-red-500 notification-dot-blink',
             warning: 'bg-amber-500 notification-dot-blink',
-            success: 'bg-emerald-500 notification-dot-blink',
-            info: 'bg-blue-500 notification-dot-blink',
+            success: 'bg-emerald-500',
+            info: 'bg-blue-500',
           };
 
           if (isBlocked) {
@@ -287,7 +301,9 @@ export default function Sidebar({
                     className={`p-1.5 bg-slate-900/90 border border-slate-700/60 rounded-xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400 border-red-500/50' : ''}`}
                   >
                     <Bell size={16} />
-                    <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full border border-[#020617] ${hasCritical ? 'bg-red-500' : 'bg-blue-500'}`} />
+                    {notifications.length > 0 && (
+                      <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full border border-[#020617] ${hasCritical ? 'bg-red-500' : 'bg-blue-500'}`} />
+                    )}
                   </button>
                 </div>
               )}
@@ -309,7 +325,12 @@ export default function Sidebar({
                       className={`p-1.5 xl:p-2 hover:bg-slate-800/50 rounded-xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
                     >
                       <Bell size={18} className="xl:w-6 xl:h-6" />
-                      <div className={`absolute top-1.5 right-1.5 xl:top-2 xl:right-2 w-2 h-2 xl:w-2.5 xl:h-2.5 rounded-full border-2 border-[#020617] transition-colors ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
+                      {/* Badge com contagem: só aparece quando há notificações (antes havia um ponto azul permanente) */}
+                      {notifications.length > 0 && (
+                        <span className={`absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border-2 border-slate-900 ${hasCritical ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}>
+                          <span className="text-[8px] font-black text-white leading-none tabular-nums">{notifications.length > 9 ? '9+' : notifications.length}</span>
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -333,19 +354,7 @@ export default function Sidebar({
                         : t.dashboard.sidebar.planFree
                     }
                   </Link>
-                  {/* Notificações: escondido no mobile (sino fica só no header) */}
-                  <div className="hidden md:hidden shrink-0 ml-1">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowNotifications(!showNotifications);
-                      }}
-                      className={`p-2 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all relative notification-trigger cursor-pointer ${hasCritical ? 'animate-pulse text-red-400' : ''}`}
-                    >
-                      <Bell size={18} />
-                      <div className={`absolute top-1 right-1 w-2 h-2 rounded-full border-2 border-[#020617] ${hasCritical ? 'bg-red-500 shadow-[0_0_12px_#ef4444]' : 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]'}`} />
-                    </button>
-                  </div>
+                  {/* (No mobile o sino fica só no header) */}
                 </div>
               </div>
             )}
