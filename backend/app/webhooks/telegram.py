@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends, Header
+from fastapi import APIRouter, Request, HTTPException, Depends, Header, BackgroundTasks
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy import func, case
 import requests
@@ -105,6 +105,30 @@ def _match_emoji_to_category(text: str, categories, language: str = 'pt'):
                     if cn.lower() == cat_lower or cn.lower() in cat_lower:
                         return cat, emoji
     return None, None
+
+
+def _text_has_too_large_amount(text: str, max_amount: float = 999_999.99) -> bool:
+    """Deteta se o texto contém um valor monetário acima do limite (para avisar em vez de ignorar em silêncio)."""
+    try:
+        # Nota: sem \b depois de € (é caractere não-word, o \b falharia no fim da string)
+        for m in re.finditer(r'(-?\d[\d.\s]*(?:[.,]\d+)?)\s*(?:€|euros?\b|eur\b)', text or '', re.IGNORECASE):
+            valor_str = m.group(1).replace(' ', '').replace('.', '').replace(',', '.')
+            try:
+                if abs(float(valor_str)) > max_amount:
+                    return True
+            except ValueError:
+                continue
+    except Exception:
+        pass
+    return False
+
+
+def _format_amount_for_lang(amount_cents: int, language: str = 'pt') -> str:
+    """Formata um valor em cêntimos com o separador decimal do idioma (PT: vírgula, EN: ponto)."""
+    formatted = "{:.2f}".format(abs(int(amount_cents or 0)) / 100)
+    if (language or 'pt').lower().startswith('en'):
+        return formatted
+    return formatted.replace(".", ",")
 
 
 def _check_budget_alerts(workspace_id, category_id, db, t) -> Optional[str]:
@@ -414,8 +438,9 @@ def _is_obvious_transaction(text: str) -> bool:
     Nestes casos saltamos o GPT e vamos direto para parse_transaction (mais rapido).
     """
     # Padroes obvios: "15€", "15 euros", "15e", "15,50€", numeros seguidos de moeda
+    # (sem \b logo apos € — caractere nao-word — senao "15€" nunca casava e ia sempre ao GPT)
     return bool(re.search(
-        r'\d+(?:[.,]\d+)?\s*(?:€|eur(?:os?)?|e)\b',
+        r'\d+(?:[.,]\d+)?\s*(?:€|eur(?:os?)?\b|e\b)',
         text,
         re.IGNORECASE,
     ))
@@ -673,7 +698,7 @@ REGRAS:
 """
 
 
-async def ai_route_message(
+def ai_route_message(
     text: str,
     chat_id: str,
     user: models.User,
@@ -1367,11 +1392,14 @@ def parse_transaction(
     
     # Regex para encontrar valores monetários (inclui -15€)
     # Só considerar valor se estiver associado a €/eur/euros (evita apanhar números soltos de datas)
-    valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)\b'
+    # Aceita milhares separados (1.500) OU dígitos corridos (500000) — sem a alternativa
+    # \d+, "500000€" era mutilado para "500" pelo \d{1,3}
+    # (o \b não pode vir logo a seguir a € — caractere não-word — senão o padrão nunca casa)
+    valor_pattern = r'(-?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d+)?)\s*(?:€|euros?\b|eur\b|e\b)'
     valor_matches = list(re.finditer(valor_pattern, text_for_values, re.IGNORECASE))
     if not valor_matches:
         # Fallback: sem símbolo € (ex.: "15" no fim de frase)
-        valor_pattern = r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?'
+        valor_pattern = r'(-?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?'
         valor_matches = list(re.finditer(valor_pattern, text_for_values, re.IGNORECASE))
     if not valor_matches:
         return None
@@ -1464,6 +1492,7 @@ def parse_transaction(
         except ValueError:
             continue
         if abs(amount) > MAX_AMOUNT:
+            logger.warning("[Parse] Valor acima do limite ignorado: %s", amount)
             continue
         # Valor negativo explícito = despesa
         if amount < 0:
@@ -2335,6 +2364,12 @@ def _download_telegram_file(file_id: str, max_size_mb: int = 20) -> Optional[byt
         file_path = data["result"].get("file_path")
         if not file_path:
             return None
+        # Validar tamanho ANTES de descarregar (getFile devolve file_size) — evita
+        # descarregar 20MB para só depois rejeitar.
+        file_size = data["result"].get("file_size")
+        if file_size and file_size > max_size_mb * 1024 * 1024:
+            logger.warning("[Telegram] Ficheiro demasiado grande (%s bytes), download recusado", file_size)
+            return None
         download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
         resp = requests.get(download_url, timeout=30)
         resp.raise_for_status()
@@ -2397,7 +2432,7 @@ def _extract_text_from_csv(content: bytes) -> Optional[str]:
         has_num = any(re.search(r'-?\d+[.,]\d*', str(c)) for c in second)
         if has_num and not any(re.search(r'-?\d+[.,]\d*', str(c)) for c in rows[0]):
             start = 1
-    amount_pattern = re.compile(r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
+    amount_pattern = re.compile(r'(-?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
     parts = []
     for row in rows[start:]:
         if not row:
@@ -2453,7 +2488,7 @@ def _extract_text_from_xlsx(content: bytes) -> Optional[str]:
         first_vals = rows[0] or []
         if has_num and not any(v is not None and re.search(r'-?\d+[.,]\d*', str(v)) for v in first_vals):
             start = 1
-    amount_pattern = re.compile(r'(-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
+    amount_pattern = re.compile(r'(-?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d+)?)\s*(?:€|eur|euros?|e)?\s*$', re.IGNORECASE)
     parts = []
     for row in rows[start:]:
         if not row:
@@ -2514,6 +2549,11 @@ def process_photo_with_openai(file_id: str, categories: List[models.Category]) -
             logger.warning("[OpenAI Vision] getFile sem file_path: %s", data.get("result"))
             return None
         logger.info("[OpenAI Vision] file_path obtido: %s", file_path)
+        # Validar tamanho ANTES de descarregar
+        file_size = data["result"].get("file_size")
+        if file_size and file_size > 20 * 1024 * 1024:
+            logger.warning("[OpenAI Vision] Imagem demasiado grande (%s bytes), download recusado", file_size)
+            return None
         # 2. Descarregar o ficheiro
         download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
         img_resp = requests.get(download_url, timeout=15)
@@ -2704,6 +2744,11 @@ def transcribe_audio_from_telegram(message: dict) -> Optional[str]:
             return None
         file_path = data["result"].get("file_path")
         if not file_path:
+            return None
+        # Validar tamanho ANTES de descarregar
+        file_size = data["result"].get("file_size")
+        if file_size and file_size > 25 * 1024 * 1024:
+            logger.warning("[Whisper] Áudio demasiado grande (%s bytes), download recusado", file_size)
             return None
         download_url = f"https://api.telegram.org/file/bot{settings.TELEGRAM_BOT_TOKEN}/{file_path}"
         resp = requests.get(download_url, timeout=15)
@@ -2910,12 +2955,18 @@ def _build_batch_message_and_keyboard(
     pendents_batch = [p for p in pendents_batch if p.batch_id and p.batch_id.hex[:16] == batch_id_hex]
     if not pendents_batch:
         return None, None
+    # Nomes das categorias numa única query (evita N+1 por item pendente)
+    cat_ids = {p.category_id for p in pendents_batch if p.category_id}
+    cat_names = dict(
+        db.query(models.Category.id, models.Category.name)
+        .filter(models.Category.id.in_(cat_ids))
+        .all()
+    ) if cat_ids else {}
     lines = []
     total_cents = 0
     for p in pendents_batch:
         total_cents += p.amount_cents
-        cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
-        cat_name = cat.name if cat else "Outros"
+        cat_name = cat_names.get(p.category_id, "Outros")
         desc_display = _html_escape(_shorten_description_for_list(p.description))
         amount_display = "{:.2f}".format(abs(p.amount_cents) / 100).replace(".", ",")
         lines.append(t('list_pending_line').format(
@@ -3026,35 +3077,56 @@ def setup_bot_info():
 @router.post('/webhook')
 @limiter.limit('30/minute')
 async def telegram_webhook(
-    request: Request, 
-    db: Session = Depends(get_db),
+    request: Request,
+    background_tasks: BackgroundTasks,
     x_telegram_bot_api_secret_token: str | None = Header(None)
 ):
-    """Webhook Telegram com validação de segurança"""
-    logger.info("=" * 50)
-    logger.info("Webhook Telegram recebido")
-    logger.info(f"Headers: X-Telegram-Bot-Api-Secret-Token presente: {x_telegram_bot_api_secret_token is not None}")
-    
+    """Webhook Telegram: valida, dedup e agenda o processamento em background.
+
+    Responde 200 de imediato — o Telegram reenvia o update se a resposta demorar,
+    e as chamadas à IA (router/Vision/Whisper) podem levar vários segundos.
+    O trabalho pesado corre em _process_update via BackgroundTasks."""
+    # Validação do secret token (compare_digest evita timing attacks)
+    if settings.TELEGRAM_WEBHOOK_SECRET:
+        if not x_telegram_bot_api_secret_token or not hmac.compare_digest(
+            x_telegram_bot_api_secret_token, settings.TELEGRAM_WEBHOOK_SECRET
+        ):
+            logger.warning("Tentativa de acesso ao webhook Telegram com secret token inválido")
+            raise HTTPException(status_code=403, detail="Invalid secret token")
+    else:
+        logger.warning("TELEGRAM_WEBHOOK_SECRET não configurado - validação desativada")
+
     try:
-        # Validação do secret token
-        if settings.TELEGRAM_WEBHOOK_SECRET:
-            logger.info(f"Validando secret token... (configurado: {bool(settings.TELEGRAM_WEBHOOK_SECRET)})")
-            if not x_telegram_bot_api_secret_token or x_telegram_bot_api_secret_token != settings.TELEGRAM_WEBHOOK_SECRET:
-                logger.warning(f"Tentativa de acesso ao webhook sem token válido. Recebido: {x_telegram_bot_api_secret_token is not None}, Esperado: {settings.TELEGRAM_WEBHOOK_SECRET[:10]}...")
-                raise HTTPException(status_code=403, detail="Invalid secret token")
-            logger.info("Secret token valido [OK]")
-        else:
-            logger.warning("TELEGRAM_WEBHOOK_SECRET não configurado - validação desativada")
-        
         data = await request.json()
-        logger.info(f"Payload recebido: {json.dumps(data, indent=2, ensure_ascii=False)[:500]}...")  # Primeiros 500 chars
-        
-        # Idempotência: ignorar update já processado (reenvios do Telegram)
-        update_id = data.get('update_id')
-        if _is_duplicate_update(update_id):
-            logger.info("Update %s já processado (idempotência), ignorar", update_id)
-            return {'status': 'duplicate'}
-        
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    logger.info("Webhook Telegram recebido: %s...", json.dumps(data, ensure_ascii=False)[:300])
+
+    # Idempotência ANTES de agendar: ignorar update já processado (reenvios do Telegram)
+    update_id = data.get('update_id')
+    if _is_duplicate_update(update_id):
+        logger.info("Update %s já processado (idempotência), ignorar", update_id)
+        return {'status': 'duplicate'}
+
+    background_tasks.add_task(_process_update, data)
+    return {'status': 'accepted'}
+
+
+def _process_update(data: dict):
+    """Processa um update do Telegram em background, já depois do 200 ao webhook.
+
+    Abre a sua própria sessão de BD (não há Depends aqui) e nunca deixa
+    exceções escapar — apenas log + mensagem genérica ao utilizador."""
+    db = SessionLocal()
+    try:
+        # Feedback imediato: "a escrever…" enquanto o processamento decorre
+        try:
+            _msg_chat_id = (data.get('message') or {}).get('chat', {}).get('id')
+            if _msg_chat_id:
+                _send_typing_action(_msg_chat_id)
+        except Exception:
+            pass
+
         # Processar callback_query (botões inline)
         if 'callback_query' in data:
             logger.info("Processando callback_query (botão inline)")
@@ -3798,12 +3870,18 @@ async def telegram_webhook(
             if not pendents:
                 send_telegram_msg(chat_id, t_pend('pendentes_empty'))
                 return {'status': 'ok'}
+            # Nomes das categorias numa única query (evita N+1 por item pendente)
+            cat_ids = {p.category_id for p in pendents if p.category_id}
+            cat_names = dict(
+                db.query(models.Category.id, models.Category.name)
+                .filter(models.Category.id.in_(cat_ids))
+                .all()
+            ) if cat_ids else {}
             lines = []
             for p in pendents:
-                cat = db.query(models.Category).filter(models.Category.id == p.category_id).first()
-                cat_name = cat.name if cat else "Outros"
+                cat_name = cat_names.get(p.category_id, "Outros")
                 desc_display = _html_escape(_shorten_description_for_list(p.description))
-                amount_display = "{:.2f}".format(abs(p.amount_cents) / 100).replace(".", ",")
+                amount_display = _format_amount_for_lang(p.amount_cents, lang)
                 lines.append(t_pend('list_pending_line').format(description=desc_display, amount=amount_display, category=cat_name))
             send_telegram_msg(chat_id, t_pend('pendentes_list').format(count=len(pendents), lines="".join(lines)))
             return {'status': 'ok'}
@@ -4299,13 +4377,19 @@ async def telegram_webhook(
             logger.info(f"Processando texto: '{text}'")
             default_cat_id = getattr(user, 'telegram_default_category_id', None)
 
-            # Emoji detection: se o texto contém emoji mapeado, usar como categoria
-            if not default_cat_id:
+            # Emoji detection: se o texto contém emoji mapeado, usar como categoria.
+            # Só vale a pena carregar as categorias se o texto tiver mesmo um emoji mapeado.
+            if not default_cat_id and any(emoji in text for emoji in EMOJI_CATEGORY_MAP):
                 all_cats = db.query(models.Category).filter(models.Category.workspace_id == workspace.id).all()
                 emoji_cat, emoji_found = _match_emoji_to_category(text, all_cats, user.language or 'pt')
                 if emoji_cat:
                     default_cat_id = emoji_cat.id
                     logger.info("[Emoji] Emoji %s -> categoria %s", emoji_found, emoji_cat.name)
+
+            # Valor acima do limite: avisar já — o parser mutilaria o número (ex.: 2000000€ -> 200€)
+            if _text_has_too_large_amount(text):
+                send_telegram_msg(chat_id, t('amount_too_large'))
+                return {'status': 'amount_too_large'}
 
             # FAST-PATH: mensagens com valor monetario obvio -> parse_transaction direto (sem GPT)
             if _is_obvious_transaction(text):
@@ -4339,7 +4423,7 @@ async def telegram_webhook(
                 # Guardar mensagem do user na memória de conversa
                 _add_to_memory(str(chat_id), "user", text)
 
-                result = await ai_route_message(text, str(chat_id), user, workspace, db, t)
+                result = ai_route_message(text, str(chat_id), user, workspace, db, t)
                 intent = result.get("intent", "fallback")
                 logger.info("[AI Router] intent=%s para texto='%s'", intent, text[:60])
 
@@ -4638,12 +4722,11 @@ async def telegram_webhook(
         return {'status': 'success'}
         
     except Exception as e:
-        logger.error(f"Erro Telegram: {str(e)}", exc_info=True)
-        import traceback
-        logger.error(f"Traceback completo: {traceback.format_exc()}")
+        logger.exception(f"Erro Telegram (background): {str(e)}")
         try:
+            db.rollback()
             chat_id = (data.get('message') or {}).get('chat', {}).get('id') or (data.get('callback_query') or {}).get('message', {}).get('chat', {}).get('id') if data else None
-            if chat_id and db:
+            if chat_id:
                 user_temp = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
                 lang = (user_temp.language if user_temp and user_temp.language else None) or 'pt'
                 t_err = get_telegram_t(lang)
@@ -4651,3 +4734,5 @@ async def telegram_webhook(
         except Exception:
             pass
         return {'status': 'error'}
+    finally:
+        db.close()
