@@ -255,6 +255,22 @@ export default function VaultPage() {
     const combinedTotal = finalEmergencyTotal + finalInvestmentTotal;
     const dynamicMax = Math.max(combinedTotal * 1.5, 5000);
 
+    // Quantos meses de despesas o fundo de emergência cobre (média dos últimos 90 dias,
+    // só despesas de consumo — dá contexto real ao número do cofre)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    let expenses90d = 0;
+    transactions.forEach((t: any) => {
+      const cat = categories.find((c: any) => c.id === t.category_id);
+      if (cat && cat.vault_type !== 'none') return;
+      if (cat?.type === 'income') return;
+      if (t.amount_cents < 0 && new Date(t.transaction_date) >= ninetyDaysAgo) {
+        expenses90d += Math.abs(t.amount_cents) / 100;
+      }
+    });
+    const avgMonthlyExpenses = expenses90d / 3;
+    const emergencyMonthsCovered = avgMonthlyExpenses > 0 ? finalEmergencyTotal / avgMonthlyExpenses : null;
+
     return {
       emergencyCategory, investmentCategory,
       emergencyTotal: finalEmergencyTotal, investmentTotal: finalInvestmentTotal,
@@ -265,6 +281,7 @@ export default function VaultPage() {
       emergencyMonthly: Object.values(emergencyMonthly),
       investmentMonthly: Object.values(investmentMonthly),
       dynamicMax,
+      emergencyMonthsCovered,
     };
   }, [transactions, categories, selectedPeriod, vaultTotals]);
 
@@ -336,6 +353,12 @@ export default function VaultPage() {
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Total Reservas</p>
               <AnimatedNumber value={grandTotal} formatFn={formatCurrency} className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tabular-nums block truncate" />
+              {vaultData.emergencyMonthsCovered !== null && vaultData.emergencyTotal > 0 && (
+                <p className="text-[10px] font-semibold text-slate-500 mt-1">
+                  <ShieldCheck size={10} className="inline -mt-0.5 mr-1 text-blue-400" />
+                  O fundo de emergência cobre <span className="text-blue-400 font-bold tabular-nums">~{vaultData.emergencyMonthsCovered.toFixed(1)} {vaultData.emergencyMonthsCovered >= 1.95 ? 'meses' : 'mês'}</span> de despesas
+                </p>
+              )}
             </div>
           </div>
 
@@ -351,8 +374,10 @@ export default function VaultPage() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{t.dashboard.vault.emergencyFund}</span>
+                {grandTotal > 0 && <span className="text-[9px] font-black text-blue-400 tabular-nums">{Math.round((vaultData.emergencyTotal / grandTotal) * 100)}%</span>}
               </div>
               <div className="flex items-center gap-1.5">
+                {grandTotal > 0 && <span className="text-[9px] font-black text-emerald-400 tabular-nums">{Math.round((vaultData.investmentTotal / grandTotal) * 100)}%</span>}
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{t.dashboard.vault.zenInvestments || t.dashboard.vault.investments}</span>
               </div>
@@ -512,7 +537,7 @@ export default function VaultPage() {
               <button
                 key={period.key}
                 onClick={() => setSelectedPeriod(period.key as any)}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                className={`px-3 py-1 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border touch-manipulation ${
                   selectedPeriod === period.key
                     ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
                     : 'bg-transparent text-slate-500 border-slate-700/60 hover:border-slate-600 hover:text-slate-300'
@@ -679,7 +704,7 @@ export default function VaultPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[11px] sm:text-xs font-bold text-white truncate">{tx.description || t.dashboard.vault.noDescription}</p>
-                        <span className="text-[8px] sm:text-[9px] font-bold text-slate-500 bg-slate-800/40 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 bg-slate-800/40 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                           {new Date(tx.transaction_date || tx.created_at).toLocaleDateString(dateLocale)}
                         </span>
                       </div>

@@ -744,7 +744,7 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.income}</p>
             <AnimatedNumber value={stats.income} formatFn={formatCurrency} className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums truncate block" title={formatCurrency(stats.income)} />
           </motion.div>
 
@@ -763,7 +763,7 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.expenses}</p>
             <AnimatedNumber value={stats.expenses} formatFn={formatCurrency} className="text-lg sm:text-xl font-black text-red-400 tabular-nums truncate block" title={formatCurrency(stats.expenses)} />
           </motion.div>
 
@@ -782,7 +782,7 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.page.balance}</p>
             <AnimatedNumber value={stats.balance} formatFn={formatCurrency} className={`text-lg sm:text-xl font-black tabular-nums truncate block ${stats.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} title={formatCurrency(stats.balance)} />
           </motion.div>
         </div>
@@ -855,7 +855,7 @@ export default function DashboardPage() {
             initial={isMobile ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={isMobile ? { duration: 0 } : { delay: 0.05 }}
-            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[420px] lg:min-h-0"
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col lg:col-span-1 lg:row-span-2 min-h-[300px] sm:min-h-[420px] lg:min-h-0"
           >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">

@@ -38,7 +38,8 @@ const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
 const QUICK_AMOUNTS = [10, 25, 50, 100];
 
 export default function GoalsPage() {
-  const { t, formatCurrency } = useTranslation();
+  const { t, language, formatCurrency } = useTranslation();
+  const dateLocale = language === 'en' ? 'en-US' : language === 'fr' ? 'fr-FR' : 'pt-PT';
   const router = useRouter();
   const { user, isPro, loading: userLoading } = useUser();
   const [goals, setGoals] = useState<any[]>([]);
@@ -460,8 +461,8 @@ export default function GoalsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                         <h3 className="text-xs sm:text-sm font-bold text-white truncate">{goal.name}</h3>
-                        {canComplete && <span className="px-1.5 py-0.5 rounded-md text-[7px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">{t.dashboard.goals.goalCompleted ?? 'Concluida'}</span>}
-                        {isUrgent && <span className="px-1.5 py-0.5 rounded-md text-[7px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0 animate-pulse">{daysLeft}d</span>}
+                        {canComplete && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 shrink-0">{t.dashboard.goals.goalCompleted ?? 'Concluida'}</span>}
+                        {isUrgent && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0 animate-pulse">{daysLeft}d</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                         <span className={goal.goal_type === 'income' ? 'text-emerald-500' : 'text-blue-500'}>
@@ -472,9 +473,10 @@ export default function GoalsPage() {
                         <span className={daysLeft <= 0 ? 'text-red-400' : ''}>{daysLeft > 0 ? `${daysLeft}d` : t.dashboard.goals.dateReached}</span>
                       </div>
                     </div>
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button type="button" onClick={() => openEdit(goal)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-600 hover:text-white transition-colors"><Edit2 size={12} /></button>
-                      <button type="button" onClick={() => handleDeleteClick(goal.id)} className="p-1.5 hover:bg-red-500/15 rounded-lg text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
+                    {/* Sempre visíveis em touch (hover não existe no telemóvel); no desktop aparecem ao pairar */}
+                    <div className="flex gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity shrink-0">
+                      <button type="button" onClick={() => openEdit(goal)} className="p-2 lg:p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white transition-colors touch-manipulation" aria-label="Editar meta"><Edit2 size={13} /></button>
+                      <button type="button" onClick={() => handleDeleteClick(goal.id)} className="p-2 lg:p-1.5 hover:bg-red-500/15 rounded-lg text-slate-500 hover:text-red-400 transition-colors touch-manipulation" aria-label="Eliminar meta"><Trash2 size={13} /></button>
                     </div>
                   </div>
 
@@ -601,7 +603,7 @@ export default function GoalsPage() {
                       <div className="min-w-0">
                         <p className={`text-[10px] sm:text-xs font-bold truncate ${done ? 'text-slate-500 line-through' : 'text-white'}`}>{g.name}</p>
                         <p className="text-[8px] sm:text-[9px] font-bold text-slate-600 uppercase tracking-wider">
-                          {new Date(g.target_date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                          {new Date(g.target_date).toLocaleDateString(dateLocale, { day: '2-digit', month: 'short' })}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -896,7 +898,35 @@ export default function GoalsPage() {
               className="relative bg-slate-900/95 backdrop-blur-md border border-slate-700/60 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl"
             >
               <h3 className="text-lg font-black text-white mb-1">{t.dashboard.goals?.addMoney ?? 'Adicionar à meta'}</h3>
-              <p className="text-slate-400 text-sm mb-4">{goalForDeposit.name}</p>
+              <p className="text-slate-400 text-sm mb-3">{goalForDeposit.name}</p>
+
+              {/* Contexto do progresso: quanto tem, quanto falta */}
+              {(() => {
+                const cur = (goalForDeposit.current_amount_cents || 0) / 100;
+                const tgt = goalForDeposit.target_amount_cents / 100;
+                const remaining = Math.max(0, tgt - cur);
+                const pct = tgt > 0 ? Math.min(100, (cur / tgt) * 100) : 0;
+                return (
+                  <div className="mb-4 p-3 rounded-xl bg-slate-950/60 border border-slate-700/50">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-bold text-white tabular-nums">{formatCurrency(cur)}</span>
+                      <span className="text-slate-500 tabular-nums">/ {formatCurrency(tgt)}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-800/80 rounded-full overflow-hidden mb-1.5">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: goalForDeposit.color_hex || '#3b82f6' }} />
+                    </div>
+                    {remaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setDepositAmount(remaining.toFixed(2))}
+                        className="text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                      >
+                        {(t.dashboard.goals as any)?.completeRemaining ?? 'Completar'} ({formatCurrency(remaining)})
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Quick amount buttons */}
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">{t.dashboard.goals.quickAmounts ?? 'Valor rapido'}</p>
@@ -906,7 +936,7 @@ export default function GoalsPage() {
                     key={amt}
                     type="button"
                     onClick={() => setDepositAmount(String(amt))}
-                    className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`py-2 min-h-[40px] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${
                       depositAmount === String(amt)
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                         : 'bg-slate-800/60 text-slate-400 border border-slate-700/60 hover:bg-slate-700/60 hover:text-white'

@@ -353,13 +353,18 @@ export default function AnalyticsPage() {
       let expenses = 0;
       txs.forEach((t: any) => {
         const cat = rawData.categories.find((c: any) => c.id === t.category_id);
-        const amount = t.amount_cents / 100;
+        const amount = Math.abs(t.amount_cents / 100);
         if (cat && cat.vault_type !== 'none') return;
-        // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
-        if (t.amount_cents > 0) {
+        // Classificar pelo TIPO de categoria (como o backend e o dashboard) — pelo sinal
+        // a mesma transação podia contar como receita aqui e despesa no dashboard.
+        if (cat?.type === 'income') {
           income += amount;
-        } else if (t.amount_cents < 0) {
-          expenses += -amount; // Converte negativo para positivo
+        } else if (cat) {
+          expenses += amount;
+        } else if (t.amount_cents > 0) {
+          income += amount;
+        } else {
+          expenses += amount;
         }
       });
       return { income, expenses };
@@ -535,12 +540,10 @@ export default function AnalyticsPage() {
       // - Depósito no vault: dinheiro sai do saldo disponível mas fica no vault (património não muda)
       // - Resgate do vault: dinheiro volta ao saldo disponível (património não muda)
       // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
-      if (cat?.vault_type === 'none') {
-        if (t.amount_cents > 0) {
-          cumulativeBalance += amount;
-        } else if (t.amount_cents < 0) {
-          cumulativeBalance += amount; // amount já é negativo
-        }
+      // Sem categoria também conta (os totais do período incluem-nas; excluir aqui
+      // fazia o gráfico de evolução divergir dos KPIs)
+      if (!cat || cat.vault_type === 'none') {
+        cumulativeBalance += amount; // com sinal: receitas somam, despesas subtraem
       }
       // Se for transação de investimento/emergência (vault) ou tipo desconhecido, não altera o cumulativeBalance
       
@@ -597,21 +600,22 @@ export default function AnalyticsPage() {
       if (!monthlyData[monthYear]) {
         monthlyData[monthYear] = { name: monthYear, income: 0, expenses: 0 };
       }
-      const amount = t.amount_cents / 100;
+      const amount = Math.abs(t.amount_cents / 100);
 
-      // Backend: amount_cents > 0 = income, amount_cents < 0 = expense
-      if (t.amount_cents > 0) {
+      // Classificar pelo TIPO de categoria (consistente com backend/dashboard);
+      // sem categoria, cair no sinal do valor.
+      const isIncome = cat ? cat.type === 'income' : t.amount_cents > 0;
+      if (isIncome) {
         monthlyData[monthYear].income += amount;
         periodIncome += amount;
-      } else if (t.amount_cents < 0) {
-        const expenseAmount = -amount;
-        monthlyData[monthYear].expenses += expenseAmount;
-        periodExpenses += expenseAmount;
+      } else {
+        monthlyData[monthYear].expenses += amount;
+        periodExpenses += amount;
         const catName = cat?.name ?? othersLabel;
-        catDistribution[catName] = (catDistribution[catName] || 0) + expenseAmount;
+        catDistribution[catName] = (catDistribution[catName] || 0) + amount;
         catExpenseCount[catName] = (catExpenseCount[catName] || 0) + 1;
-        dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + expenseAmount;
-        weeklyRhythm[dayName] += expenseAmount;
+        dayExpenses[date.getDate()] = (dayExpenses[date.getDate()] || 0) + amount;
+        weeklyRhythm[dayName] += amount;
       }
     });
 
@@ -893,7 +897,7 @@ export default function AnalyticsPage() {
             <button
               key={key}
               onClick={() => setSelectedPeriod(key as '7D' | '30D' | '90D' | '12M' | 'Tudo')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border shrink-0 ${
+              className={`px-3 sm:px-3 py-1 min-h-[44px] sm:min-h-0 rounded-lg text-[10px] sm:text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border shrink-0 touch-manipulation ${
                 selectedPeriod === key ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
@@ -924,7 +928,7 @@ export default function AnalyticsPage() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.health}</p>
             <AnimatedNumber value={processedData.healthScore ?? 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${healthBand.badge} ${healthBand.color}`}>{healthBand.label}</span>
           </motion.div>
@@ -943,7 +947,7 @@ export default function AnalyticsPage() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{t.dashboard.analytics.savingsRate}</p>
             <AnimatedNumber value={processedData.savingRate ?? 0} className="text-xl font-black text-white tabular-nums" formatFn={(v) => `${Number(v).toFixed(1)}%`} />
             <span className={`inline-block mt-1.5 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${savingRateBand.color} border-white/10`}>{savingRateBand.label}</span>
           </motion.div>
@@ -957,7 +961,7 @@ export default function AnalyticsPage() {
                 <Wallet size={16} />
               </div>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Resultado período</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Resultado período</p>
             <AnimatedNumber
               value={processedData.netResult ?? 0}
               formatFn={(v) => new Intl.NumberFormat(language === 'en' ? 'en-GB' : 'pt-PT', { style: 'currency', currency: currency || 'EUR', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(Number(v) * 10) / 10)}
@@ -1020,7 +1024,7 @@ export default function AnalyticsPage() {
 
         {/* Linha 2: 1/3 Categorias em risco | 2/3 Comparação atual anterior */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-1">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl lg:col-span-1 flex flex-col">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                 <Activity size={14} className="text-red-400" />
@@ -1073,9 +1077,10 @@ export default function AnalyticsPage() {
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center py-8 text-center">
+              <div className="flex flex-col items-center justify-center flex-1 py-8 text-center">
                 <CheckCircle2 size={24} className="text-emerald-400 mb-2" />
                 <p className="text-xs text-slate-400">{t.dashboard.analytics.noCategoryAtRisk}</p>
+                <p className="text-[10px] text-slate-600 mt-1">Define limites mensais nas categorias para receberes alertas.</p>
               </div>
             )}
             {processedData.categoriesAtRisk?.length > 0 && (
@@ -1087,7 +1092,8 @@ export default function AnalyticsPage() {
                 {t.dashboard?.analytics?.adjustLimits ?? 'Ajustar limites'}
               </Link>
             )}
-            <p className="text-[10px] sm:text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-3 sm:pt-4">{processedData.summary || t.dashboard.analytics.summaryFallback}</p>
+            {/* (O summary de saúde global vive na faixa de insight no topo — aqui era redundante
+                e contraditório quando não havia categorias em risco.) */}
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-xl lg:col-span-2">
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white mb-1">{t.dashboard.analytics.comparisonPeriodTitle}</h3>

@@ -912,15 +912,24 @@ async def get_zen_insights(
         'O teu ecossistema financeiro está em constante evolução.',
         'Your financial ecosystem is constantly evolving.'
     )
+    # "Consumir capital" só quando há défice REAL (gastos > receitas); um score baixo
+    # pode vir de outros fatores (não investir, gastos fantasma) sem haver défice.
+    is_deficit = this_expenses > this_income
     if health_score < 40:
         summary = tr(
-            '⚠️ CRÍTICO: O teu equilíbrio financeiro necessita de intervenção urgente.',
-            '⚠️ CRITICAL: Your financial balance needs urgent intervention.'
+            '⚠️ CRÍTICO: Estás a gastar mais do que ganhas. Intervenção urgente.',
+            '⚠️ CRITICAL: You are spending more than you earn. Urgent intervention needed.'
+        ) if is_deficit else tr(
+            '⚠️ CRÍTICO: Vários indicadores precisam de atenção (poupança, limites ou consistência).',
+            '⚠️ CRITICAL: Several indicators need attention (savings, limits or consistency).'
         )
     elif health_score < 60:
         summary = tr(
             '⚠️ ATENÇÃO: Estás a consumir capital. Reavalia as tuas prioridades.',
             '⚠️ ATTENTION: You are consuming capital. Reevaluate your priorities.'
+        ) if is_deficit else tr(
+            '⚖️ Há margem para otimizar: reforça o cofre e vigia os limites das categorias.',
+            '⚖️ Room to optimize: strengthen your vault and watch category limits.'
         )
     elif health_score > 90:
         summary = tr(

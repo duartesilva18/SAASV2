@@ -338,7 +338,7 @@ export default function Sidebar({
                   <Link
                     href="/plans"
                     data-onboarding-target="plans"
-                    className={`inline-block text-[5px] max-[1300px]:text-[6px] xl:text-[8px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest transition-colors hover:opacity-80 !cursor-pointer ${
+                    className={`inline-block text-[8px] xl:text-[9px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest transition-colors hover:opacity-80 !cursor-pointer ${
                       user.is_admin 
                         ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
                         : isPro 
@@ -490,7 +490,7 @@ export default function Sidebar({
             <LogOut size={11} className="xl:w-3 xl:h-3" />
           </div>
           {(!isCollapsed || isMobileOpen) && (
-            <span className="text-[6px] max-[1300px]:text-[7px] xl:text-[9px] font-black uppercase tracking-wide whitespace-nowrap shrink-0">
+            <span className="text-[9px] xl:text-[10px] font-black uppercase tracking-wide whitespace-nowrap shrink-0">
               {t.dashboard.sidebar.logout}
             </span>
           )}
