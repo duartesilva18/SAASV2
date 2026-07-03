@@ -347,6 +347,26 @@ def _shorten_description_for_list(description: str, max_len: int = 45) -> str:
 
 _GENERIC_CATEGORY_NAMES = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
 
+# Fontes de categorização com confiança suficiente para registar sem pedir confirmação
+# (o utilizador pode sempre /desfazer). IA de primeira vez e fallback pedem sempre confirmação.
+_CONFIDENT_SOURCES = {
+    'explicit', 'telegram_default', 'keyword', 'keyword_match',
+    'cache_private', 'cache_telegram', 'cache_global',
+    'merchant_registry', 'deterministic', 'history_similarity', 'token_scoring',
+}
+
+
+def _is_confident_parse(parsed: dict) -> bool:
+    """True se a categorização é confiável ao ponto de registar sem confirmação manual.
+    Vaults ficam de fora — movimentos de cofre merecem sempre confirmação."""
+    return bool(
+        parsed.get('category_id')
+        and not parsed.get('needs_review')
+        and not parsed.get('is_vault')
+        and not parsed.get('suggested_category_name')
+        and (parsed.get('inference_source') or '') in _CONFIDENT_SOURCES
+    )
+
 
 def _safe_fallback_category(categories):
     """Fallback seguro quando nada categoriza: nunca vaults, preferir a categoria genérica
@@ -388,6 +408,21 @@ _rate_limit_max_messages = 10  # Máximo 10 mensagens por minuto
 _processed_updates: Dict[int, datetime] = {}
 _processed_updates_ttl = timedelta(minutes=5)
 PENDING_STALE_HOURS = 24
+
+# Estado "à espera de novo valor" após botão ✏️ Valor: chat_id -> (pending_id_hex, timestamp)
+_awaiting_amount: Dict[str, tuple] = {}
+_awaiting_amount_ttl = timedelta(minutes=10)
+
+
+def _pop_awaiting_amount(chat_id: str) -> Optional[str]:
+    """Devolve o pending_id_hex se este chat estiver à espera de um novo valor (e limpa o estado)."""
+    entry = _awaiting_amount.pop(str(chat_id), None)
+    if not entry:
+        return None
+    pending_hex, ts = entry
+    if datetime.now() - ts > _awaiting_amount_ttl:
+        return None
+    return pending_hex
 
 
 def _is_duplicate_update(update_id: int) -> bool:
@@ -3390,6 +3425,26 @@ def _process_update(data: dict):
                     {"inline_keyboard": keyboard},
                 )
                 return {'status': 'changecat_shown'}
+            elif callback_data.startswith("editamt_"):
+                pending_id_hex = callback_data.replace("editamt_", "")
+                all_p = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                pending = next((p for p in all_p if p.id.hex[:16] == pending_id_hex), None)
+                try:
+                    requests.post(
+                        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery",
+                        json={'callback_query_id': callback_query['id']},
+                        timeout=5,
+                    )
+                except Exception:
+                    pass
+                if not pending:
+                    send_telegram_msg(chat_id, t('transaction_not_found'))
+                    return {'status': 'not_found'}
+                _awaiting_amount[str(chat_id)] = (pending_id_hex, datetime.now())
+                send_telegram_msg(chat_id, t('edit_amount_prompt'))
+                return {'status': 'awaiting_amount'}
             elif callback_data.startswith("setcat_"):
                 parts = callback_data.replace("setcat_", "").split("_", 1)
                 if len(parts) != 2:
@@ -4271,7 +4326,58 @@ def _process_update(data: dict):
         if not workspace:
             send_telegram_msg(chat_id, t('workspace_not_found'))
             return {'status': 'error'}
-        
+
+        # Estado "à espera de novo valor" (botão ✏️ Valor num pendente)
+        if str(chat_id) in _awaiting_amount and 'text' in message and not message['text'].startswith('/'):
+            awaiting_hex = _pop_awaiting_amount(str(chat_id))
+            if awaiting_hex:
+                amt_match = re.match(r'^\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur|euros)?\s*$', message['text'].strip(), flags=re.IGNORECASE)
+                if not amt_match:
+                    # Repor estado e pedir de novo — o texto não é um valor
+                    _awaiting_amount[str(chat_id)] = (awaiting_hex, datetime.now())
+                    send_telegram_msg(chat_id, t('edit_amount_invalid'))
+                    return {'status': 'awaiting_amount'}
+                new_amount = float(amt_match.group(1).replace(',', '.'))
+                all_p = db.query(models.TelegramPendingTransaction).filter(
+                    models.TelegramPendingTransaction.chat_id == str(chat_id),
+                ).all()
+                pending = next((p for p in all_p if p.id.hex[:16] == awaiting_hex), None)
+                if not pending:
+                    send_telegram_msg(chat_id, t('transaction_not_found'))
+                    return {'status': 'not_found'}
+                sign = -1 if pending.amount_cents < 0 else 1
+                pending.amount_cents = sign * int(round(new_amount * 100))
+                db.commit()
+                cat = db.query(models.Category).filter(models.Category.id == pending.category_id).first()
+                tipo_emoji = "💸" if pending.amount_cents < 0 else "💰"
+                tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
+                msg = t('transaction_pending').format(
+                    description=pending.description,
+                    emoji=tipo_emoji,
+                    amount=_format_amount_for_lang(pending.amount_cents, user.language or 'pt'),
+                    category=cat.name if cat else "—",
+                    type=tipo_texto,
+                    origin_line=_origin_line(getattr(pending, 'inference_source', None), t),
+                    date_line=_date_line(getattr(pending, 'transaction_date', None) or date.today(), t),
+                )
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": t('button_confirm'), "callback_data": f"confirm_{awaiting_hex}"},
+                            {"text": t('button_cancel'), "callback_data": f"cancel_{awaiting_hex}"},
+                        ],
+                        [
+                            {"text": t('button_change_category'), "callback_data": f"changecat_{awaiting_hex}"},
+                            {"text": t('button_edit_amount'), "callback_data": f"editamt_{awaiting_hex}"},
+                        ],
+                    ]
+                }
+                send_telegram_msg(chat_id, msg, reply_markup)
+                return {'status': 'amount_updated'}
+        elif str(chat_id) in _awaiting_amount and 'text' in message:
+            # Comando enviado a meio — cancelar o estado e seguir o fluxo normal
+            _awaiting_amount.pop(str(chat_id), None)
+
         parsed = None
         # Processar documento: imagem (Vision), PDF, CSV ou Excel
         if 'document' in message:
@@ -4561,6 +4667,32 @@ def _process_update(data: dict):
                     continue
                 seen_key.add(dedup_key)
 
+                # IA sugeriu categoria nova num batch: criar automaticamente (perguntar por item seria ruído)
+                if not trans_data.get('category_id') and trans_data.get('suggested_category_name'):
+                    sugg_name = trans_data['suggested_category_name'].strip()[:100]
+                    if sugg_name:
+                        existing_cat = db.query(models.Category).filter(
+                            models.Category.workspace_id == workspace.id,
+                            func.lower(models.Category.name) == sugg_name.lower(),
+                        ).first()
+                        if not existing_cat:
+                            existing_cat = models.Category(
+                                workspace_id=workspace.id,
+                                name=sugg_name,
+                                type=trans_data.get('type') or 'expense',
+                                vault_type='none',
+                                monthly_limit_cents=0,
+                                color_hex='#3B82F6',
+                                icon='Tag',
+                                is_default=False,
+                            )
+                            db.add(existing_cat)
+                            db.flush()
+                            logger.info("Categoria '%s' criada automaticamente (batch)", sugg_name)
+                        trans_data['category_id'] = existing_cat.id
+                if not trans_data.get('category_id'):
+                    continue  # sem categoria possível — não criar transação órfã
+
                 if user.telegram_auto_confirm:
                     transaction = models.Transaction(
                         workspace_id=workspace.id,
@@ -4670,8 +4802,11 @@ def _process_update(data: dict):
         if is_vault_category:
             amount_cents = -abs(amount_cents) if is_vault_withdrawal else abs(amount_cents)
 
-        if user.telegram_auto_confirm:
-            logger.info("Modo auto_confirm ativo - criando transacao diretamente")
+        # Auto-registar quando: modo auto_confirm OU categorização confiável (cache/keyword/
+        # histórico/correção anterior). Em ambos os casos o /desfazer está a um comando.
+        smart_auto = not user.telegram_auto_confirm and _is_confident_parse(parsed)
+        if user.telegram_auto_confirm or smart_auto:
+            logger.info("Registo direto (auto_confirm=%s, smart_auto=%s)", user.telegram_auto_confirm, smart_auto)
             transaction = models.Transaction(
                 workspace_id=workspace.id,
                 category_id=parsed['category_id'],
@@ -4690,7 +4825,7 @@ def _process_update(data: dict):
             tipo_emoji = "💸" if amount_cents < 0 else "💰"
             tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
             origin_line = _origin_line(parsed.get('inference_source'), t)
-            send_telegram_msg(chat_id, t('transaction_registered').format(
+            registered_msg = t('transaction_registered').format(
                 description=parsed['description'],
                 emoji=tipo_emoji,
                 amount=_format_amount_for_lang(amount_cents, user.language or 'pt'),
@@ -4698,7 +4833,10 @@ def _process_update(data: dict):
                 type=tipo_texto,
                 origin_line=origin_line,
                 date_line=_date_line(transaction_date, t),
-            ))
+            )
+            if smart_auto:
+                registered_msg += "\n" + t('auto_registered_hint')
+            send_telegram_msg(chat_id, registered_msg)
             # Budget alert e streak após auto-confirmação
             try:
                 alert = _check_budget_alerts(workspace.id, parsed['category_id'], db, t, user.language or 'pt')
@@ -4747,6 +4885,7 @@ def _process_update(data: dict):
                     ],
                     [
                         {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
+                        {"text": t('button_edit_amount'), "callback_data": f"editamt_{pending_id_hex}"},
                     ],
                 ]
             }
