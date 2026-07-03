@@ -428,6 +428,25 @@ export default function AffiliatePage() {
 
   const activeReferrals = (stats?.referrals ?? []).filter(r => r.payment_info?.subscription_status === 'active').length;
 
+  // Métricas extra para o afiliado
+  const avgCommissionCents = stats && stats.total_conversions > 0
+    ? stats.total_earnings_cents / stats.total_conversions : 0;
+  const bestMonth = stats && stats.monthly_commissions.length > 0
+    ? stats.monthly_commissions.reduce((a, b) => (b.commission_cents > a.commission_cents ? b : a))
+    : null;
+  const _now = new Date();
+  const newThisMonth = (stats?.referrals ?? []).filter(r => {
+    const d = new Date(r.created_at);
+    return d.getMonth() === _now.getMonth() && d.getFullYear() === _now.getFullYear();
+  }).length;
+  const lastPaidAt = (stats?.monthly_commissions ?? [])
+    .filter(m => m.is_paid && m.paid_at)
+    .map(m => m.paid_at as string)
+    .sort()
+    .slice(-1)[0] ?? null;
+  const totalRegistered = status?.total_referrals ?? 0;
+  const totalSubscribed = status?.total_conversions ?? 0;
+
   const chartTooltipStyle = {
     backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)',
     border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9',
@@ -436,11 +455,11 @@ export default function AffiliatePage() {
 
   return (
     <div className="w-full h-full px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6 overflow-y-auto">
-      {/* Header compacto, alinhado com o resto da app */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
-            {t.dashboard?.affiliate?.title ?? 'Afiliados'}
+            {t.dashboard?.affiliate?.title ?? 'Programa de Afiliados'}
           </h1>
           <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">
             {(t.dashboard?.affiliate as any)?.subtitle ?? 'Ganha comissões recorrentes por cada pessoa que trouxeres.'}
@@ -454,6 +473,12 @@ export default function AffiliatePage() {
             </span>
           )}
           <button
+            onClick={() => setShowTutorialModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer touch-manipulation"
+          >
+            <Info className="w-3.5 h-3.5" /> {t.dashboard?.affiliate?.howItWorks || "Como funciona"}
+          </button>
+          <button
             onClick={handleExportCsv}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer touch-manipulation"
             title="Exportar CSV"
@@ -463,7 +488,7 @@ export default function AffiliatePage() {
         </div>
       </div>
 
-      {/* Link de afiliado — barra única com copiar */}
+      {/* Link de afiliado */}
       {status.affiliate_link && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-amber-500/20 rounded-2xl p-2.5 pl-4">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -479,7 +504,7 @@ export default function AffiliatePage() {
         </div>
       )}
 
-      {/* KPIs — faixa única com divisórias (sem cartões clone) */}
+      {/* KPIs principais */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -499,7 +524,7 @@ export default function AffiliatePage() {
           <div className="lg:px-5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Recorrente / mês</p>
             <p className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums truncate">≈ {formatPrice(Math.round(monthlyRecurringCents))}</p>
-            <p className="text-[10px] text-slate-600 font-semibold mt-0.5">{activeReferrals} subscrição(ões) ativa(s)</p>
+            <p className="text-[10px] text-slate-600 font-semibold mt-0.5">≈ {formatPrice(Math.round(monthlyRecurringCents * 12))} / ano se se mantiverem</p>
           </div>
           <div className="lg:pl-5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Conversões</p>
@@ -511,324 +536,203 @@ export default function AffiliatePage() {
         </div>
       </motion.section>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Charts */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Receita e comissões mensais */}
-          {chartData.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                  <LineChartIcon className="w-3.5 h-3.5 text-amber-400" />
-                </div>
-                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Receita e comissões mensais</h3>
+      {/* Métricas secundárias */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-slate-900 lg:bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Média por conversão</p>
+            <p className="text-sm font-black text-white tabular-nums">{stats.total_conversions > 0 ? formatPrice(Math.round(avgCommissionCents)) : '—'}</p>
+          </div>
+          <div className="bg-slate-900 lg:bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Subscrições ativas</p>
+            <p className="text-sm font-black text-white tabular-nums">{activeReferrals}</p>
+          </div>
+          <div className="bg-slate-900 lg:bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Melhor mês</p>
+            <p className="text-sm font-black text-white tabular-nums">
+              {bestMonth ? <>{formatPrice(bestMonth.commission_cents)} <span className="text-[9px] text-slate-500 font-bold capitalize">({new Date(bestMonth.month + '-01').toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' })})</span></> : '—'}
+            </p>
+          </div>
+          <div className="bg-slate-900 lg:bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-3">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-600 mb-0.5">Novos este mês</p>
+            <p className="text-sm font-black text-white tabular-nums">
+              {newThisMonth}
+              {lastPaidAt && <span className="text-[9px] text-slate-500 font-bold"> · último pagamento {new Date(lastPaidAt).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}</span>}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Gráficos + Funil/Stripe */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-stretch">
+        {chartData.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <LineChartIcon className="w-3.5 h-3.5 text-amber-400" />
               </div>
-              <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">O que os teus referidos pagaram vs. o que ganhaste</p>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.5}/>
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorComissao" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                  <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={44} />
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={chartTooltipStyle as any}
-                    itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
-                    labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' as const }}
-                    formatter={(value: number | undefined) => value === undefined ? '' : formatPrice(value * 100)}
-                  />
-                  <Area type="monotone" dataKey="receita" name="Receita" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorReceita)" />
-                  <Area type="monotone" dataKey="comissão" name="Comissão" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorComissao)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </motion.div>
-          )}
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Receita e comissões mensais</h3>
+            </div>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-medium italic mb-3 sm:mb-4">O que os teus referidos pagaram vs. o que ganhaste</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.5}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorComissao" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={44} />
+                <Tooltip
+                  cursor={false}
+                  contentStyle={chartTooltipStyle as any}
+                  itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
+                  labelStyle={{ color: '#94a3b8', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' as const }}
+                  formatter={(value: number | undefined) => value === undefined ? '' : formatPrice(value * 100)}
+                />
+                <Area type="monotone" dataKey="receita" name="Receita" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorReceita)" />
+                <Area type="monotone" dataKey="comissão" name="Comissão" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorComissao)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </motion.div>
+        )}
 
-          {/* Linha 2: Semanal + Referências/Conversões lado a lado */}
-          {(weeklyChartData.length > 0 || referralsChartData.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {weeklyChartData.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 }}
-                  className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Comissões por semana</h3>
-                    {trend && (
-                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border ${
-                        trend === 'up' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                        trend === 'down' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                        'bg-slate-800/60 text-slate-500 border-slate-700/50'
-                      }`}>
-                        <TrendingUp className={`w-3 h-3 ${trend === 'down' ? 'rotate-180' : trend === 'stable' ? 'rotate-90' : ''}`} />
-                        {trend === 'up' ? t.dashboard.affiliate.trendUp : trend === 'down' ? t.dashboard.affiliate.trendDown : t.dashboard.affiliate.trendStable}
-                      </span>
-                    )}
-                  </div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <AreaChart data={weeklyChartData} margin={{ top: 8, right: 8, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorWeeklyComissao" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                      <XAxis dataKey="week" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={40} />
-                      <Tooltip
-                        cursor={false}
-                        contentStyle={chartTooltipStyle as any}
-                        itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
-                        formatter={(value: number | undefined) => value === undefined ? '' : formatPrice(value * 100)}
-                      />
-                      <Area type="monotone" dataKey="comissão" name="Comissão" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorWeeklyComissao)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </motion.div>
-              )}
-
-              {referralsChartData.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
-                >
-                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3 sm:mb-4">Referências vs conversões</h3>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={referralsChartData} margin={{ top: 8, right: 8, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                      <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} allowDecimals={false} axisLine={false} tickLine={false} width={28} />
-                      <Tooltip cursor={false} contentStyle={chartTooltipStyle as any} itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }} />
-                      <Line type="monotone" dataKey="referrals" name="Referências" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 3.5 }} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="conversions" name="Conversões" stroke="#10b981" strokeWidth={2.5} dot={{ fill: '#10b981', r: 3.5 }} activeDot={{ r: 5 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div className="flex items-center justify-center gap-4 mt-2">
-                    <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-blue-500" /> Referências</span>
-                    <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Conversões</span>
-                  </div>
-                </motion.div>
+        {weeklyChartData.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Comissões por semana</h3>
+              {trend && (
+                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border ${
+                  trend === 'up' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                  trend === 'down' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                  'bg-slate-800/60 text-slate-500 border-slate-700/50'
+                }`}>
+                  <TrendingUp className={`w-3 h-3 ${trend === 'down' ? 'rotate-180' : trend === 'stable' ? 'rotate-90' : ''}`} />
+                  {trend === 'up' ? t.dashboard.affiliate.trendUp : trend === 'down' ? t.dashboard.affiliate.trendDown : t.dashboard.affiliate.trendStable}
+                </span>
               )}
             </div>
-          )}
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={weeklyChartData} margin={{ top: 8, right: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorWeeklyComissao" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                <XAxis dataKey="week" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={40} />
+                <Tooltip
+                  cursor={false}
+                  contentStyle={chartTooltipStyle as any}
+                  itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }}
+                  formatter={(value: number | undefined) => value === undefined ? '' : formatPrice(value * 100)}
+                />
+                <Area type="monotone" dataKey="comissão" name="Comissão" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorWeeklyComissao)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </motion.div>
+        )}
 
-          {/* Referências — tabela compacta */}
-          {stats && stats.referrals.length > 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
-            >
-              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                    <Users className="w-3.5 h-3.5 text-blue-400" />
-                  </div>
-                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
-                    {t.dashboard?.affiliate?.referrals || "Referências"}
-                  </h3>
-                  <span className="text-[9px] font-bold text-slate-500 bg-slate-800/60 px-1.5 py-0.5 rounded-md">{stats.referrals.length}</span>
-                </div>
-                <button
-                  onClick={() => setShowTutorialModal(true)}
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                >
-                  <Info className="w-3.5 h-3.5" />
-                  {t.dashboard?.affiliate?.howItWorks || "Como funciona"}
-                </button>
-              </div>
-              <div className="overflow-x-auto custom-scrollbar -mx-4 sm:mx-0">
-                <table className="w-full text-left min-w-[560px]">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="py-2.5 px-4 sm:px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Utilizador</th>
-                      <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Registo</th>
-                      <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Estado</th>
-                      <th className="py-2.5 px-3 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard?.affiliate?.amountPaid || "Pago"}</th>
-                      <th className="py-2.5 px-3 sm:pr-1 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard?.affiliate?.commission || "Comissão"}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/70">
-                    {stats.referrals.map((ref) => (
-                      <tr key={ref.id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-4 sm:px-3 max-w-[200px]">
-                          <p className="text-xs font-bold text-white truncate">{ref.referred_user_full_name || ref.referred_user_email}</p>
-                          {ref.referred_user_full_name && <p className="text-[10px] text-slate-500 truncate">{ref.referred_user_email}</p>}
-                        </td>
-                        <td className="py-3 px-3 text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
-                          {new Date(ref.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="py-3 px-3">
-                          {ref.has_subscribed ? (
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md text-[9px] font-bold uppercase tracking-wider border border-emerald-500/20 whitespace-nowrap">
-                              {ref.payment_info?.subscription_status === 'active'
-                                ? (t.dashboard?.affiliate?.converted || "Ativo")
-                                : (ref.payment_info?.subscription_status ?? (t.dashboard?.affiliate?.converted || "Convertido"))}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-slate-800/60 text-slate-500 rounded-md text-[9px] font-bold uppercase tracking-wider border border-slate-700/50 whitespace-nowrap">
-                              {t.dashboard?.affiliate?.pending || "Pendente"}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-right text-xs font-bold text-white tabular-nums whitespace-nowrap">
-                          {ref.payment_info ? formatPrice(ref.payment_info.amount_paid_cents) : '—'}
-                        </td>
-                        <td className="py-3 px-3 sm:pr-1 text-right whitespace-nowrap">
-                          {ref.payment_info ? (
-                            <span className="text-xs font-black text-amber-400 tabular-nums">
-                              {formatPrice(ref.payment_info.commission_cents)}
-                              <span className="text-[9px] text-slate-600 font-bold ml-1">({ref.payment_info.commission_percentage}%)</span>
-                            </span>
-                          ) : <span className="text-xs text-slate-600">—</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          ) : status?.is_affiliate && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-8 shadow-xl"
-            >
-              <div className="flex flex-col items-center text-center space-y-6">
-                <div className="w-20 h-20 bg-amber-500/10 rounded-2xl flex items-center justify-center">
-                  <Share2 className="w-10 h-10 text-amber-400" />
-                </div>
-                
-                <div className="space-y-3">
-                  <h3 className="text-2xl font-black text-white">
-                    {t.dashboard?.affiliate?.howItWorksTitle || "Como Funciona o Programa de Afiliados"}
-                  </h3>
-                  <p className="text-sm text-slate-400 font-medium italic max-w-md">
-                    {t.dashboard?.affiliate?.howItWorksDescription || "Partilha o teu link único e ganha comissões quando alguém subscrever Pro através dele."}
-                  </p>
-                </div>
-
-                <div className="w-full space-y-4 max-w-lg">
-                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
-                    <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Share2 className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step1Title || "1. Partilha o Teu Link"}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        {t.dashboard?.affiliate?.step1Description || "Usa o teu link único de afiliado para partilhar a plataforma. Podes partilhá-lo em redes sociais, blog, email, etc."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
-                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Users className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step2Title || "2. Alguém se Regista"}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        {t.dashboard?.affiliate?.step2Description || "Quando alguém se regista através do teu link, fica associado à tua conta de afiliado."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
-                    <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Gift className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step3Title || "3. Recebe Comissões"}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        {t.dashboard?.affiliate?.step3Description || "Quando o utilizador referido subscrever o plano Pro, recebes uma comissão automaticamente na tua conta Stripe."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 p-4 bg-slate-800/40 rounded-xl border border-white/5">
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Target className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-black text-white mb-1.5 leading-tight">{t.dashboard?.affiliate?.step4Title || "4. Acompanha os Resultados"}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        {t.dashboard?.affiliate?.step4Description || "Vê quantas pessoas referiste, quantas converteram e quanto ganhaste em comissões."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {status.affiliate_link && (
-                  <div className="w-full max-w-lg space-y-3">
-                    <div className="bg-slate-800/60 backdrop-blur-sm border border-white/5 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">{t.dashboard?.affiliate?.yourAffiliateLink || "O Teu Link de Afiliado"}</p>
-                      <code className="text-xs text-slate-300 break-all font-mono block">{status.affiliate_link}</code>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(status.affiliate_link!)}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
-                    >
-                      {copied ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          {t.dashboard?.affiliate?.linkCopied || "Link Copiado!"}
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          {t.dashboard?.affiliate?.copyLink || "Copiar Link"}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Right Column - Side Info */}
-        <div className="space-y-6">
-          {/* Stripe Connect Status */}
+        {referralsChartData.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"
+            transition={{ delay: 0.1 }}
+            className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
           >
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-amber-400" />
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3 sm:mb-4">Referências vs conversões</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={referralsChartData} margin={{ top: 8, right: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} allowDecimals={false} axisLine={false} tickLine={false} width={28} />
+                <Tooltip cursor={false} contentStyle={chartTooltipStyle as any} itemStyle={{ color: '#f1f5f9', fontSize: 11, fontWeight: 700 }} />
+                <Line type="monotone" dataKey="referrals" name="Referências" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 3.5 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="conversions" name="Conversões" stroke="#10b981" strokeWidth={2.5} dot={{ fill: '#10b981', r: 3.5 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-blue-500" /> Referências</span>
+              <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Conversões</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Funil + Pagamentos Stripe (uma célula, sem buracos) */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="space-y-4 sm:space-y-6 flex flex-col"
+        >
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <Target className="w-3.5 h-3.5 text-blue-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Funil de conversão</h3>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Registaram-se pelo teu link', value: totalRegistered, color: 'bg-blue-500', max: Math.max(totalRegistered, 1) },
+                { label: 'Subscreveram um plano', value: totalSubscribed, color: 'bg-emerald-500', max: Math.max(totalRegistered, 1) },
+                { label: 'Subscrições ativas agora', value: activeReferrals, color: 'bg-amber-500', max: Math.max(totalRegistered, 1) },
+              ].map((step, i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-semibold text-slate-400">{step.label}</span>
+                    <span className="text-xs font-black text-white tabular-nums">{step.value}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className={`h-full rounded-full ${step.color} transition-all`} style={{ width: `${Math.max((step.value / step.max) * 100, step.value > 0 ? 6 : 0)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-600 font-medium mt-3">
+              {totalRegistered === 0
+                ? 'Partilha o teu link para começares a encher o funil.'
+                : totalSubscribed === 0
+                ? 'Já tens registos! A comissão chega quando subscreverem um plano.'
+                : 'Cada subscrição ativa rende-te comissão todos os meses.'}
+            </p>
+          </div>
+
+          <div className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white truncate">
                 {t.dashboard?.affiliate?.automaticPayments || "Pagamentos Automáticos"}
               </h3>
               {status && (
-                <span className={`shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                  status.stripe_connect_configured ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/60 text-slate-400'
+                <span className={`shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
+                  status.stripe_connect_configured ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800/60 text-slate-500 border border-slate-700/50'
                 }`}>
                   {status.stripe_connect_configured ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                   {status.stripe_connect_configured ? (t.dashboard?.affiliate?.configured || "Configurado") : (t.dashboard?.affiliate?.notConfigured || "Não configurado")}
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-slate-500 mb-4 mt-1">
               {status?.stripe_connect_configured
                 ? (t.dashboard?.affiliate?.stripeConnected || "A tua conta Stripe está conectada. Receberás comissões automaticamente.")
                 : (t.dashboard?.affiliate?.stripeNotConnected || "Conecta a tua conta Stripe para receberes comissões automaticamente.")}
@@ -854,74 +758,162 @@ export default function AffiliatePage() {
                   setStripeConnectLoading(false);
                 }
               }}
-              className={`w-full h-11 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-colors ${
+              className={`w-full min-h-[42px] rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-colors touch-manipulation ${
                 status?.stripe_connect_configured
-                  ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                  ? 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
                   : 'bg-amber-600 hover:bg-amber-500 text-black'
               }`}
             >
-              {stripeConnectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+              {stripeConnectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
               {stripeConnectLoading ? (t.dashboard?.affiliate?.loading ?? "A abrir...") : status?.stripe_connect_configured ? (t.dashboard?.affiliate?.openStripeDashboard || "Abrir Dashboard Stripe") : (t.dashboard?.affiliate?.configureStripeConnect || "Configurar Stripe Connect")}
             </button>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-              <button type="button" onClick={() => setShowWithdrawModal(true)} className="text-slate-500 hover:text-amber-400 flex items-center gap-1.5 cursor-pointer">
+            <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-3 text-[11px]">
+              <button type="button" onClick={() => setShowWithdrawModal(true)} className="text-slate-500 hover:text-amber-400 flex items-center gap-1.5 cursor-pointer transition-colors">
                 <Info className="w-3.5 h-3.5" />
                 {t.dashboard?.affiliate?.howToWithdraw ?? "Como levantar o dinheiro?"}
               </button>
               {(status?.stripe_connect_configured || status?.stripe_connect_account_id) && (
-                <button type="button" onClick={() => setShowDisconnectStripeModal(true)} className="text-red-400/90 hover:text-red-400 flex items-center gap-1.5 cursor-pointer">
+                <button type="button" onClick={() => setShowDisconnectStripeModal(true)} className="text-slate-600 hover:text-red-400 flex items-center gap-1.5 cursor-pointer transition-colors">
                   <Trash2 className="w-3.5 h-3.5" />
                   {(t.dashboard?.affiliate as Record<string, string>)?.['disconnectStripeButton'] ?? "Desligar conta Stripe"}
                 </button>
               )}
             </div>
-          </motion.div>
-
-          {/* Comissões mensais — linhas compactas */}
-          {stats && stats.monthly_commissions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                </div>
-                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
-                  {t.dashboard?.affiliate?.monthlyCommissions || "Comissões mensais"}
-                </h3>
-              </div>
-              <div className="divide-y divide-slate-800/70 max-h-[340px] overflow-y-auto custom-scrollbar">
-                {stats.monthly_commissions.map((comm, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white capitalize truncate">
-                        {new Date(comm.month + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        {comm.conversions} conv. · {formatPrice(comm.revenue_cents)} receita
-                        {comm.is_paid && comm.paid_at && (
-                          <span className="text-emerald-400/80"> · pago {new Date(comm.paid_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-black text-amber-400 tabular-nums">{formatPrice(comm.commission_cents)}</span>
-                      <span className={`w-2 h-2 rounded-full ${comm.is_paid ? 'bg-emerald-400' : 'bg-amber-400'}`} title={comm.is_paid ? (t.dashboard?.affiliate?.paid || 'Pago') : (t.dashboard?.affiliate?.pending || 'Pendente')} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-800/70">
-                <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-emerald-400" /> {t.dashboard?.affiliate?.paid || 'Pago'}</span>
-                <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500"><span className="w-2 h-2 rounded-full bg-amber-400" /> {t.dashboard?.affiliate?.pending || 'Pendente'}</span>
-              </div>
-            </motion.div>
-          )}
-        </div>
+          </div>
+        </motion.div>
       </div>
 
+      {/* Referências — tabela a toda a largura */}
+      {stats && stats.referrals.length > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
+        >
+          <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+                {t.dashboard?.affiliate?.referrals || "Referências"}
+              </h3>
+              <span className="text-[9px] font-bold text-slate-500 bg-slate-800/60 px-1.5 py-0.5 rounded-md">{stats.referrals.length}</span>
+            </div>
+          </div>
+          <div className="overflow-x-auto custom-scrollbar -mx-4 sm:mx-0">
+            <table className="w-full text-left min-w-[640px]">
+              <thead>
+                <tr className="border-b border-slate-800">
+                  <th className="py-2.5 px-4 sm:px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Utilizador</th>
+                  <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Registo</th>
+                  <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Estado</th>
+                  <th className="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Plano</th>
+                  <th className="py-2.5 px-3 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard?.affiliate?.amountPaid || "Pago"}</th>
+                  <th className="py-2.5 px-3 sm:pr-1 text-right text-[10px] font-bold uppercase tracking-wider text-slate-500">{t.dashboard?.affiliate?.commission || "Comissão"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {stats.referrals.map((ref) => (
+                  <tr key={ref.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 px-4 sm:px-3 max-w-[220px]">
+                      <p className="text-xs font-bold text-white truncate">{ref.referred_user_full_name || ref.referred_user_email}</p>
+                      {ref.referred_user_full_name && <p className="text-[10px] text-slate-500 truncate">{ref.referred_user_email}</p>}
+                    </td>
+                    <td className="py-3 px-3 text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
+                      {new Date(ref.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="py-3 px-3">
+                      {ref.has_subscribed ? (
+                        ref.payment_info?.subscription_status === 'active' ? (
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md text-[9px] font-bold uppercase tracking-wider border border-emerald-500/20 whitespace-nowrap">Ativo</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] font-bold uppercase tracking-wider border border-blue-500/20 whitespace-nowrap">
+                            {ref.payment_info?.subscription_status ?? (t.dashboard?.affiliate?.converted || "Convertido")}
+                          </span>
+                        )
+                      ) : (
+                        <span className="px-2 py-0.5 bg-slate-800/60 text-slate-500 rounded-md text-[9px] font-bold uppercase tracking-wider border border-slate-700/50 whitespace-nowrap">
+                          {t.dashboard?.affiliate?.pending || "Pendente"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-[11px] text-slate-400 whitespace-nowrap">
+                      {ref.payment_info?.plan_interval === 'year' ? 'Anual' : ref.payment_info?.plan_interval === 'month' ? 'Mensal' : '—'}
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold text-white tabular-nums whitespace-nowrap">
+                      {ref.payment_info ? formatPrice(ref.payment_info.amount_paid_cents) : '—'}
+                    </td>
+                    <td className="py-3 px-3 sm:pr-1 text-right whitespace-nowrap">
+                      {ref.payment_info ? (
+                        <span className="text-xs font-black text-amber-400 tabular-nums">
+                          {formatPrice(ref.payment_info.commission_cents)}
+                          <span className="text-[9px] text-slate-600 font-bold ml-1">({ref.payment_info.commission_percentage}%)</span>
+                        </span>
+                      ) : <span className="text-xs text-slate-600">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      ) : status?.is_affiliate && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-6 sm:p-8 shadow-2xl text-center"
+        >
+          <Users className="w-8 h-8 text-slate-700 mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-white mb-1">
+            {(t.dashboard?.affiliate as any)?.noReferralsTitle ?? 'Ainda não tens referências'}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            {(t.dashboard?.affiliate as any)?.noReferralsDesc ?? 'Copia o teu link lá em cima e partilha-o — quando alguém se registar por ele, aparece aqui.'}
+          </p>
+        </motion.div>
+      )}
+
+      {/* Comissões mensais — histórico completo */}
+      {stats && stats.monthly_commissions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Calendar className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+              {t.dashboard?.affiliate?.monthlyCommissions || "Comissões mensais"}
+            </h3>
+          </div>
+          <div className="divide-y divide-slate-800/70">
+            {stats.monthly_commissions.map((comm, idx) => (
+              <div key={idx} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white capitalize truncate">
+                    {new Date(comm.month + '-01').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {comm.conversions} conv. · {formatPrice(comm.revenue_cents)} receita
+                    {comm.is_paid && comm.paid_at && (
+                      <span className="text-emerald-400/80"> · pago {new Date(comm.paid_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-black text-amber-400 tabular-nums">{formatPrice(comm.commission_cents)}</span>
+                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border ${comm.is_paid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    {comm.is_paid ? (t.dashboard?.affiliate?.paid || 'Pago') : (t.dashboard?.affiliate?.pending || 'Pendente')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Modal Tutorial */}
       {showTutorialModal && (
