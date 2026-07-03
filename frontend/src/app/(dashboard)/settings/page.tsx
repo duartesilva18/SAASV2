@@ -328,7 +328,7 @@ export default function SettingsPage() {
       transition={{ duration: 0.5 }}
       className="text-white"
     >
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl">
         {/* Cabeçalho de perfil: avatar + nome + email, sem caixa */}
         <div className="flex items-center gap-4 mb-2">
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-lg sm:text-xl shrink-0 shadow-lg shadow-blue-600/20 select-none">
@@ -344,7 +344,7 @@ export default function SettingsPage() {
 
         <form onSubmit={handleSave}>
           {/* ── Perfil ── */}
-          <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+          <section className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-2 md:gap-14 lg:gap-20 py-7 sm:py-9 border-b border-slate-800/80">
             <div className="mb-2 md:mb-0">
               <h2 className="text-sm font-bold text-white tracking-tight">{t.dashboard.settings.personalData.title}</h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed hidden md:block">
@@ -414,7 +414,7 @@ export default function SettingsPage() {
           </section>
 
           {/* ── Preferências ── */}
-          <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+          <section className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-2 md:gap-14 lg:gap-20 py-7 sm:py-9 border-b border-slate-800/80">
             <div className="mb-2 md:mb-0">
               <h2 className="text-sm font-bold text-white tracking-tight">{t.dashboard.settings.preferences.title}</h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed hidden md:block">
@@ -496,7 +496,7 @@ export default function SettingsPage() {
         </form>
 
         {/* ── Segurança ── */}
-        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+        <section className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-2 md:gap-14 lg:gap-20 py-7 sm:py-9 border-b border-slate-800/80">
           <div className="mb-2 md:mb-0">
             <h2 className="text-sm font-bold text-white tracking-tight">
               {(t.dashboard.settings as any).accountSecurity?.title ?? 'Segurança'}
@@ -523,7 +523,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ── Os teus dados ── */}
-        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+        <section className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-2 md:gap-14 lg:gap-20 py-7 sm:py-9 border-b border-slate-800/80">
           <div className="mb-2 md:mb-0">
             <h2 className="text-sm font-bold text-white tracking-tight">
               {(t.dashboard.settings as any).exportImportTitle ?? 'Os teus dados'}
@@ -573,7 +573,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ── Zona de perigo ── */}
-        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9">
+        <section className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-2 md:gap-14 lg:gap-20 py-7 sm:py-9">
           <div className="mb-2 md:mb-0">
             <h2 className="text-sm font-bold text-red-400/90 tracking-tight">
               {t.dashboard.settings.dangerZone.title}
