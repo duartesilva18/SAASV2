@@ -791,7 +791,7 @@ export const fr = {
           keepSubscription: "Garder l'abonnement",
           processing: "Traitement...",
           confirmCancel: "Confirmer l'annulation",
-          stripeInfo: "Vos factures sont traitées par **Stripe**. Vous pouvez télécharger le reçu PDF officiel pour chaque transaction ci-dessus. Pour changer le moyen de paiement, utilisez le bouton **« Gérer sur Stripe »**."
+          stripeInfo: "Vos factures sont traitées par Stripe. Vous pouvez télécharger le reçu PDF officiel pour chaque transaction ci-dessus. Pour changer le moyen de paiement, utilisez le bouton « Gérer sur Stripe »."
       },
       analytics: {
           title: "Analytiques Pro",

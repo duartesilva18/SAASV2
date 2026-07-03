@@ -882,7 +882,8 @@ async def get_subscription_details(db: Session = Depends(get_db), current_user: 
                 'has_subscription': True,
                 'price_id': price_id,
                 'subscription_status': subscription.status,
-                'cancel_at_period_end': subscription.cancel_at_period_end
+                'cancel_at_period_end': subscription.cancel_at_period_end,
+                'current_period_end': subscription.get('current_period_end'),
             }
         except stripe.error.InvalidRequestError as e:
             logger.warning(f'Subscrição não encontrada no Stripe: {str(e)}')

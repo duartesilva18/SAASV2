@@ -451,15 +451,40 @@ async def get_affiliate_stats(
     pro_s = db.query(models.SystemSetting).filter(models.SystemSetting.key == 'affiliate_commission_percentage_pro').first()
     commission_plus = float(plus_s.value) if plus_s and plus_s.value else 20.0
     commission_pro = float(pro_s.value) if pro_s and pro_s.value else 25.0
-    commission_percentage = commission_plus  # fallback para payment_info legado
-    
+
     # Configurar Stripe
     if settings.STRIPE_API_KEY:
         stripe.api_key = settings.STRIPE_API_KEY
-    
+
+    # A percentagem depende do plano do PRÓPRIO afiliado: Pro (anual) = 25%, restantes = 20%.
+    # (Antes usava sempre 20%, mostrando estimativas erradas a afiliados Pro.)
+    commission_percentage = commission_plus
+    if current_user.is_admin:
+        commission_percentage = commission_pro
+    elif current_user.stripe_subscription_id and settings.STRIPE_API_KEY:
+        try:
+            own_sub = stripe.Subscription.retrieve(current_user.stripe_subscription_id)
+            own_meta = own_sub.get('metadata') or {}
+            own_price_id = (own_meta.get('original_price_id') or '').strip() or None
+            if not own_price_id:
+                own_items = own_sub.get('items', {})
+                own_items_data = own_items.get('data', []) if isinstance(own_items, dict) else []
+                if own_items_data:
+                    own_price_id = own_items_data[0].get('price', {}).get('id')
+            if own_price_id == settings.STRIPE_PRICE_YEARLY:
+                commission_percentage = commission_pro
+        except Exception as e:
+            logger.warning(f'Não foi possível determinar o plano do afiliado {current_user.email}: {str(e)}')
+
+    # Carregar todos os users referidos numa só query (evita N+1)
+    referred_ids = [ref.referred_user_id for ref in referrals if ref.referred_user_id]
+    referred_users_map = {
+        u.id: u for u in db.query(models.User).filter(models.User.id.in_(referred_ids)).all()
+    } if referred_ids else {}
+
     referrals_data = []
     for ref in referrals:
-        referred_user = db.query(models.User).filter(models.User.id == ref.referred_user_id).first()
+        referred_user = referred_users_map.get(ref.referred_user_id)
         
         payment_info = None
         if ref.has_subscribed and referred_user:
@@ -661,8 +686,10 @@ async def export_affiliate_csv(
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(['email', 'nome', 'subscrito', 'data_subscricao', 'data_registo'])
+    ref_ids = [r.referred_user_id for r in referrals if r.referred_user_id]
+    users_map = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(ref_ids)).all()} if ref_ids else {}
     for ref in referrals:
-        u = db.query(models.User).filter(models.User.id == ref.referred_user_id).first()
+        u = users_map.get(ref.referred_user_id)
         email = u.email if u else 'N/A'
         name = (u.full_name or '').strip() or ''
         sub = 'Sim' if ref.has_subscribed else 'Não'

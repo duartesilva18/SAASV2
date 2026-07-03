@@ -3,12 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User, Phone, Coins, UserCircle, 
-  CreditCard, Download, Upload,
-  Trash2, CheckCircle2, AlertCircle, Loader2,
-  ChevronRight, BellRing, Globe, Check, Send, ExternalLink,
-  Lock, Mail, X
+import {
+  Download, Upload, Loader2,
+  ChevronRight, BellRing,
+  Lock, X
 } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
@@ -28,7 +26,6 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [purging, setPurging] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
-  const [isSimulated, setIsSimulated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
@@ -81,8 +78,6 @@ export default function SettingsPage() {
         
         const user = res.data;
         setUserEmail(user.email || '');
-        const customerId = user.stripe_customer_id || '';
-        setIsSimulated(customerId.startsWith('sim_') || customerId.startsWith('test_'));
         setHasPassword(user.has_password !== false);
         
         // Parse phone number to extract country code if possible
@@ -228,25 +223,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handlePortal = async () => {
-    if (isSimulated) {
-      setAlertModal({ isOpen: true, title: t.dashboard.settings.simulationModeTitle, message: t.dashboard.settings.simulationMode, type: 'info' });
-      return;
-    }
-    try {
-      const res = await api.post('/stripe/portal');
-      if (res.data.url) {
-        window.location.href = res.data.url;
-      } else {
-        throw new Error('URL do portal não retornada');
-      }
-    } catch (err: any) {
-      console.error('Erro ao abrir portal Stripe:', err);
-      const errorMsg = err.response?.data?.detail || err.message || 'Erro ao abrir portal de faturação.';
-      setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: errorMsg || t.dashboard.settings.portalError, type: 'error' });
-    }
-  };
-
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportData = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -331,7 +307,8 @@ export default function SettingsPage() {
         isVisible: true
       });
       setShowPurgeConfirm(false);
-      window.location.href = '/dashboard';
+      // Dar tempo ao toast antes de recarregar (redirect imediato escondia a confirmação)
+      setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
     } catch (err) {
       console.error(err);
       setAlertModal({ isOpen: true, title: t.dashboard.sidebar.toastTypes.error, message: t.dashboard.settings.dangerZone.purgeError, type: 'error' });
@@ -351,287 +328,285 @@ export default function SettingsPage() {
       transition={{ duration: 0.5 }}
       className="text-white"
     >
-      <h1 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 sm:mb-6 md:mb-8">
-        {t.dashboard.settings.title}
-      </h1>
+      <div className="max-w-3xl mx-auto">
+        {/* Cabeçalho de perfil: avatar + nome + email, sem caixa */}
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-lg sm:text-xl shrink-0 shadow-lg shadow-blue-600/20 select-none">
+            {(formData.full_name || userEmail || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-white truncate">
+              {formData.full_name || t.dashboard.settings.title}
+            </h1>
+            <p className="text-slate-500 text-xs sm:text-sm truncate">{userEmail}</p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-        {/* Main Settings Form */}
-        <div className="lg:col-span-2 space-y-8">
-          <form onSubmit={handleSave} className="space-y-8">
-            {/* Personal Data Section — estilo login */}
-            <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 shadow-2xl">
-              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/10 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
-                  <User size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {t.dashboard.settings.personalData.title}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {/* Email (read-only) */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    {(t.dashboard.settings as any).accountSecurity?.emailLabel ?? t.dashboard.settings.personalData?.email ?? 'Email'}
-                  </label>
-                  <div className="relative">
-                    <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                    <input 
-                      type="email"
-                      value={userEmail}
-                      readOnly
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-slate-400 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-
-                {/* Full Name */}
+        <form onSubmit={handleSave}>
+          {/* ── Perfil ── */}
+          <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+            <div className="mb-2 md:mb-0">
+              <h2 className="text-sm font-bold text-white tracking-tight">{t.dashboard.settings.personalData.title}</h2>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed hidden md:block">
+                {(t.dashboard.settings as any).personalDataDescription ?? 'Como apareces na app e onde o bot te encontra.'}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.fullName}
                   </label>
-                  <div className="relative">
-                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                    <input 
-                      type="text"
-                      value={formData.full_name}
-                      onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={formData.full_name}
+                    onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                    className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 px-3.5 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                  />
                 </div>
-
-                {/* Gender */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     {t.dashboard.settings.personalData.gender}
                   </label>
                   <div className="relative">
-                    <UserCircle size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
-                    <select 
+                    <select
                       value={formData.gender}
                       onChange={e => setFormData({ ...formData, gender: e.target.value })}
-                      className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-8 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
+                      className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 pl-3.5 pr-9 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer transition-colors"
                     >
                       <option value="male" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.male}</option>
                       <option value="female" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.female}</option>
                       <option value="other" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.other}</option>
                       <option value="prefer_not_to_say" className="bg-slate-900">{t.dashboard.onboarding.genderOptions.prefer_not_to_say}</option>
                     </select>
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    {t.dashboard.settings.personalData.phone}
-                  </label>
-                  <div className="flex items-center bg-slate-950/60 border border-slate-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50">
-                    <div className="relative flex items-center border-r border-slate-700 min-w-[100px]">
-                      <select 
-                        value={formData.country_code}
-                        onChange={e => setFormData({ ...formData, country_code: e.target.value })}
-                        className="w-full bg-transparent pl-4 pr-8 py-2.5 sm:py-3 text-sm text-white font-bold appearance-none cursor-pointer focus:outline-none z-10"
-                      >
-                        {countries.map(c => (
-                          <option key={c.code} value={c.code} className="bg-[#0f172a] text-white">
-                            {c.flag} {c.code}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronRight size={16} className="absolute right-3 rotate-90 text-slate-500 pointer-events-none" />
-                    </div>
-                    <input 
-                      type="tel"
-                      value={formData.phone_number}
-                      onChange={e => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
-                      className="flex-1 bg-transparent border-none py-2.5 sm:py-3 px-4 text-sm focus:outline-none text-white placeholder:text-slate-500"
-                    />
+                    <ChevronRight size={15} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-slate-600 pointer-events-none" />
                   </div>
                 </div>
               </div>
-            </section>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  {t.dashboard.settings.personalData.phone}
+                </label>
+                <div className="flex items-center bg-slate-950/40 border border-slate-800 rounded-xl overflow-hidden focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/20 transition-colors">
+                  <div className="relative flex items-center border-r border-slate-800 min-w-[100px]">
+                    <select
+                      value={formData.country_code}
+                      onChange={e => setFormData({ ...formData, country_code: e.target.value })}
+                      className="w-full bg-transparent pl-3.5 pr-8 py-2.5 text-sm text-white font-bold appearance-none cursor-pointer focus:outline-none z-10"
+                    >
+                      {countries.map(c => (
+                        <option key={c.code} value={c.code} className="bg-[#0f172a] text-white">
+                          {c.flag} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight size={15} className="absolute right-2.5 rotate-90 text-slate-600 pointer-events-none" />
+                  </div>
+                  <input
+                    type="tel"
+                    value={formData.phone_number}
+                    onChange={e => setFormData({ ...formData, phone_number: e.target.value.replace(/\D/g, '') })}
+                    className="flex-1 bg-transparent border-none py-2.5 px-3.5 text-sm focus:outline-none text-white placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
-            {/* Preferências + Alterar password */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <section className="md:col-span-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md p-5 shadow-2xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
-                    <Coins size={20} />
-                  </div>
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {t.dashboard.settings.preferences.title}
-                  </h2>
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                        {t.dashboard.settings.preferences.currency}
-                      </label>
-                      <div className="relative">
-                        <Coins size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
-                        <select 
-                          value={formData.currency}
-                          onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
-                        >
-                          <option value="EUR" className="bg-slate-900">Euro (€)</option>
-                          <option value="BRL" className="bg-slate-900">Real (R$)</option>
-                          <option value="USD" className="bg-slate-900">Dollar ($)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                        {t.dashboard.settings.preferences.language}
-                      </label>
-                      <div className="relative">
-                        <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10" />
-                        <select 
-                          value={language}
-                          onChange={e => setLanguage(e.target.value as any)}
-                          className="w-full bg-slate-950/60 border border-slate-700 rounded-xl py-2.5 sm:py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
-                        >
-                          {Object.values(availableLanguages).map((lang) => (
-                            <option key={lang.code} value={lang.code} className="bg-slate-900">
-                              {lang.flag} {lang.nativeName} ({lang.locale})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  <div 
-                    onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
-                    className="flex items-center gap-3 py-3 px-4 bg-slate-950/60 border border-slate-700 rounded-xl cursor-pointer hover:bg-slate-950/80 transition-colors"
-                  >
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                      formData.marketing_opt_in ? 'bg-blue-600 border-blue-600' : 'border-slate-600 bg-slate-950'
-                    }`}>
-                      {formData.marketing_opt_in && <Check size={12} className="text-white stroke-[3]" />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{t.dashboard.settings.preferences.marketing}</p>
-                      <p className="text-[10px] text-slate-600 uppercase tracking-wider">{t.dashboard.settings.marketingChannels}</p>
-                    </div>
+          {/* ── Preferências ── */}
+          <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+            <div className="mb-2 md:mb-0">
+              <h2 className="text-sm font-bold text-white tracking-tight">{t.dashboard.settings.preferences.title}</h2>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed hidden md:block">
+                {(t.dashboard.settings as any).preferencesDescription ?? 'Moeda, idioma e comunicações.'}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    {t.dashboard.settings.preferences.currency}
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.currency}
+                      onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                      className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 pl-3.5 pr-9 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer transition-colors"
+                    >
+                      <option value="EUR" className="bg-slate-900">Euro (€)</option>
+                      <option value="BRL" className="bg-slate-900">Real (R$)</option>
+                      <option value="USD" className="bg-slate-900">Dollar ($)</option>
+                    </select>
+                    <ChevronRight size={15} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-slate-600 pointer-events-none" />
                   </div>
                 </div>
-              </section>
-
-              <div className="md:col-span-1 p-5 rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md shadow-2xl">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-                    <Lock size={20} />
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    {t.dashboard.settings.preferences.language}
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={language}
+                      onChange={e => setLanguage(e.target.value as any)}
+                      className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 pl-3.5 pr-9 text-sm text-white focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer transition-colors"
+                    >
+                      {Object.values(availableLanguages).map((lang) => (
+                        <option key={lang.code} value={lang.code} className="bg-slate-900">
+                          {lang.flag} {lang.nativeName} ({lang.locale})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight size={15} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-slate-600 pointer-events-none" />
                   </div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
-                  </h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-4">
-                  {(t.dashboard.settings as any).accountSecurity?.changePasswordDescCode ?? 'Enviaremos um código de 6 dígitos para o teu email. Usa-o no modal para definir a nova password.'}
-                </p>
+              </div>
+              {/* Toggle de marketing — switch a sério, não checkbox disfarçado */}
+              <div className="flex items-center justify-between gap-4 pt-1">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white">{t.dashboard.settings.preferences.marketing}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{t.dashboard.settings.marketingChannels}</p>
+                </div>
                 <button
                   type="button"
-                  onClick={handleRequestPasswordCode}
-                  disabled={sendingCode || !userEmail}
-                  className="h-10 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition-all w-fit"
+                  role="switch"
+                  aria-checked={formData.marketing_opt_in}
+                  onClick={() => setFormData({ ...formData, marketing_opt_in: !formData.marketing_opt_in })}
+                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer touch-manipulation ${
+                    formData.marketing_opt_in ? 'bg-blue-600' : 'bg-slate-700'
+                  }`}
                 >
-                  {sendingCode ? <Loader2 size={16} className="animate-spin" /> : <><Lock size={14} /> {t.dashboard.settings.personalData.changePassword}</>}
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    formData.marketing_opt_in ? 'translate-x-5' : ''
+                  }`} />
                 </button>
               </div>
             </div>
+          </section>
 
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-blue-600/20"
-              >
-                {saving ? <Loader2 size={18} className="animate-spin" /> : (
-                  <>
-                    {t.dashboard.settings.personalData.save}
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Guardar — discreto, alinhado à direita da grelha */}
+          <div className="flex justify-end py-5 border-b border-slate-800/80">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 min-h-[42px] px-6 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 touch-manipulation"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : t.dashboard.settings.personalData.save}
+            </button>
+          </div>
+        </form>
 
-        <div className="space-y-8">
-          <section className="rounded-2xl border border-slate-700/60 bg-slate-900/70 backdrop-blur-md p-5 shadow-2xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-700/60 flex items-center justify-center shrink-0 text-slate-300">
-                <Download size={20} />
-              </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
-                {(t.dashboard.settings as any).exportImportTitle ?? 'Exportar e importar dados'}
-              </h2>
+        {/* ── Segurança ── */}
+        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+          <div className="mb-2 md:mb-0">
+            <h2 className="text-sm font-bold text-white tracking-tight">
+              {(t.dashboard.settings as any).accountSecurity?.title ?? 'Segurança'}
+            </h2>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white">
+                {(t.dashboard.settings as any).accountSecurity?.changePasswordTitle ?? t.dashboard.settings.personalData.changePassword}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                {(t.dashboard.settings as any).accountSecurity?.changePasswordDescCode ?? 'Enviamos um código de 6 dígitos para o teu email.'}
+              </p>
             </div>
-            <p className="text-xs text-slate-500 mb-4">
-              {(t.dashboard.settings as any).exportImportDescription ?? 'Backup ou restauro da tua conta em ficheiro JSON.'}
+            <button
+              type="button"
+              onClick={handleRequestPasswordCode}
+              disabled={sendingCode || !userEmail}
+              className="shrink-0 min-h-[38px] px-4 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-200 transition-colors touch-manipulation"
+            >
+              {sendingCode ? <Loader2 size={14} className="animate-spin" /> : <><Lock size={13} /> {(t.dashboard.settings.dangerZone as any).changeAction ?? 'Alterar'}</>}
+            </button>
+          </div>
+        </section>
+
+        {/* ── Os teus dados ── */}
+        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9 border-b border-slate-800/80">
+          <div className="mb-2 md:mb-0">
+            <h2 className="text-sm font-bold text-white tracking-tight">
+              {(t.dashboard.settings as any).exportImportTitle ?? 'Os teus dados'}
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed hidden md:block">
+              {(t.dashboard.settings as any).exportImportDescription ?? 'Backup ou restauro em ficheiro JSON.'}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+          </div>
+          <div className="divide-y divide-slate-800/80">
+            <div className="flex items-center justify-between gap-4 pb-3.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Download size={15} className="text-slate-500 shrink-0" />
+                <p className="text-xs font-bold text-white truncate">{t.dashboard.settings.dangerZone.export}</p>
+              </div>
               <button
                 type="button"
                 onClick={handleExportData}
                 disabled={exporting}
-                className="flex-1 min-h-[48px] sm:h-11 px-4 py-3 sm:py-0 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors touch-manipulation"
+                className="shrink-0 min-h-[38px] px-4 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-200 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors cursor-pointer touch-manipulation"
               >
-                {exporting ? <Loader2 size={16} className="animate-spin shrink-0" /> : <><Download size={16} className="shrink-0" /> <span>{t.dashboard.settings.dangerZone.export}</span></>}
+                {exporting ? <Loader2 size={14} className="animate-spin" /> : ((t.dashboard.settings.dangerZone as any).exportAction ?? 'Descarregar')}
               </button>
-              <input
-                ref={importFileInputRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImportData}
-                disabled={importing}
-              />
+            </div>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportData}
+              disabled={importing}
+            />
+            <div className="flex items-center justify-between gap-4 pt-3.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Upload size={15} className="text-slate-500 shrink-0" />
+                <p className="text-xs font-bold text-white truncate">{(t.dashboard.settings as any).importButton ?? 'Importar dados'}</p>
+              </div>
               <button
                 type="button"
                 onClick={() => importFileInputRef.current?.click()}
                 disabled={importing}
-                className="flex-1 min-h-[48px] sm:h-11 px-4 py-3 sm:py-0 rounded-xl bg-slate-950/60 border border-slate-700 hover:border-slate-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors touch-manipulation"
+                className="shrink-0 min-h-[38px] px-4 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-200 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50 transition-colors cursor-pointer touch-manipulation"
               >
-                {importing ? <Loader2 size={16} className="animate-spin shrink-0" /> : <><Upload size={16} className="shrink-0" /> <span>{(t.dashboard.settings as any).importButton ?? 'Importar'}</span></>}
+                {importing ? <Loader2 size={14} className="animate-spin" /> : ((t.dashboard.settings.dangerZone as any).importAction ?? 'Escolher ficheiro')}
               </button>
             </div>
-          </section>
-
-          <section className="bg-red-500/[0.03] backdrop-blur-md border border-red-500/20 rounded-2xl p-4 sm:p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4 sm:mb-6">
-              <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center shrink-0">
-                <Trash2 size={18} />
-              </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-red-500/80 min-w-0 truncate">
-                {t.dashboard.settings.dangerZone.title}
-              </h2>
-            </div>
-
-            <div className="space-y-3 sm:space-y-4">
-              <button 
-                onClick={() => setShowPurgeConfirm(true)}
-                className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all border border-amber-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
-              >
-                <Trash2 size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.purge}</span>
-              </button>
-              <button 
-                onClick={() => setShowDeleteConfirm(true)}
-                className="w-full min-h-[44px] py-3 sm:py-4 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
-              >
-                <Trash2 size={14} className="shrink-0" /> <span className="truncate">{t.dashboard.settings.dangerZone.delete}</span>
-              </button>
-            </div>
-          </section>
-
-          <div className="p-4 sm:p-6 bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl text-center shadow-2xl">
-            <BellRing className="text-blue-500/60 mx-auto mb-3" size={28} />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.dashboard.settings.needHelp}</h4>
-            <p className="text-slate-500 text-xs font-medium italic">{t.dashboard.settings.supportAvailable}</p>
           </div>
+        </section>
+
+        {/* ── Zona de perigo ── */}
+        <section className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-2 md:gap-10 py-7 sm:py-9">
+          <div className="mb-2 md:mb-0">
+            <h2 className="text-sm font-bold text-red-400/90 tracking-tight">
+              {t.dashboard.settings.dangerZone.title}
+            </h2>
+          </div>
+          <div className="divide-y divide-slate-800/80">
+            <div className="flex items-center justify-between gap-4 pb-3.5">
+              <p className="text-xs font-semibold text-slate-300 min-w-0">{t.dashboard.settings.dangerZone.purge}</p>
+              <button
+                onClick={() => setShowPurgeConfirm(true)}
+                className="shrink-0 min-h-[38px] px-4 rounded-xl text-[11px] font-bold uppercase tracking-wider text-amber-400 border border-amber-500/25 bg-transparent hover:bg-amber-500/10 transition-colors cursor-pointer touch-manipulation"
+              >
+                {(t.dashboard.settings.dangerZone as any).purgeAction ?? 'Apagar'}
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-4 pt-3.5">
+              <p className="text-xs font-semibold text-slate-300 min-w-0">{t.dashboard.settings.dangerZone.delete}</p>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="shrink-0 min-h-[38px] px-4 rounded-xl text-[11px] font-bold uppercase tracking-wider text-red-400 border border-red-500/25 bg-transparent hover:bg-red-500/10 transition-colors cursor-pointer touch-manipulation"
+              >
+                {(t.dashboard.settings.dangerZone as any).deleteAction ?? 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="flex items-start gap-2.5 pt-2 pb-4">
+          <BellRing className="text-blue-500/60 shrink-0 mt-0.5" size={14} />
+          <p className="text-slate-600 text-[11px] font-medium">
+            <span className="text-slate-500 font-bold">{t.dashboard.settings.needHelp}</span>{' '}
+            — {t.dashboard.settings.supportAvailable}
+          </p>
         </div>
       </div>
 

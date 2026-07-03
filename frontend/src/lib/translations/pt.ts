@@ -757,7 +757,7 @@ export const pt = {
           keepSubscription: "Manter Subscrição",
           processing: "A processar...",
           confirmCancel: "Confirmar Cancelamento",
-          stripeInfo: "As tuas faturas são processadas pelo **Stripe**. Podes descarregar o recibo oficial em PDF para cada transação acima. Para alterar o método de pagamento, usa o botão **\"Gerir no Stripe\"**."
+          stripeInfo: "As tuas faturas são processadas pelo Stripe. Podes descarregar o recibo oficial em PDF para cada transação acima. Para alterar o método de pagamento, usa o botão \"Gerir no Stripe\"**."
       },
       analytics: {
           title: "Análise Pro",

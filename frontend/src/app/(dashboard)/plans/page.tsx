@@ -283,10 +283,10 @@ export default function PlansPage() {
             </div>
             <div>
               <h3 className="text-white font-black text-base sm:text-lg mb-1">
-                Escolhe o teu plano
+                Ativa a tua conta para continuar
               </h3>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                Ativa o teu plano para desbloquear todas as funcionalidades. Pagamento imediato e seguro — cancela quando quiseres, sem compromissos.
+                Escolhe um plano abaixo para desbloquear todas as funcionalidades. Pagamento imediato e seguro — cancela quando quiseres, sem compromissos.
               </p>
             </div>
           </div>

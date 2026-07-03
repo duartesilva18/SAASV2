@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
 import api from '@/lib/api';
-import { 
-  CreditCard, Calendar, Clock, CheckCircle2, 
+import {
+  Calendar, Clock, CheckCircle2,
   AlertCircle, ExternalLink, Download, ArrowRight,
-  ShieldCheck, Wallet, Sparkles, FileText, ChevronRight,
+  ShieldCheck, Wallet, FileText,
   X, Trash2
 } from 'lucide-react';
 import Toast from '@/components/Toast';
@@ -28,6 +28,7 @@ interface Invoice {
 interface SubscriptionData {
   status: string;
   current_period_end?: number;
+  cancel_at_period_end?: boolean;
   plan_name?: string;
 }
 
@@ -55,9 +56,43 @@ function declineMessage(code: string, isEn: boolean): string | undefined {
   return DECLINE_MESSAGES[isEn ? 'en' : 'pt'][code];
 }
 
+// Strings locais do aviso de falha e do próximo pagamento (o resto vem de t.dashboard.billing)
+const LOCAL_STRINGS = {
+  pt: {
+    paymentFailedTitle: 'Falha na cobrança automática',
+    paymentFailedDefault: 'A cobrança automática falhou. Atualiza o cartão para evitar interrupção do plano.',
+    updateCard: 'Atualizar cartão',
+    bankCode: 'Código do banco',
+    renewsOn: 'Renova a',
+    endsOn: 'Termina a',
+    accessUntil: 'Sem renovação — manténs acesso até esta data',
+  },
+  en: {
+    paymentFailedTitle: 'Automatic payment failed',
+    paymentFailedDefault: 'The automatic charge failed. Update your card to avoid plan interruption.',
+    updateCard: 'Update card',
+    bankCode: 'Bank code',
+    renewsOn: 'Renews on',
+    endsOn: 'Ends on',
+    accessUntil: 'No renewal — you keep access until this date',
+  },
+  fr: {
+    paymentFailedTitle: 'Échec du paiement automatique',
+    paymentFailedDefault: 'Le prélèvement automatique a échoué. Mettez à jour votre carte pour éviter toute interruption.',
+    updateCard: 'Mettre à jour la carte',
+    bankCode: 'Code banque',
+    renewsOn: 'Renouvelée le',
+    endsOn: 'Se termine le',
+    accessUntil: 'Sans renouvellement — accès maintenu jusqu\'à cette date',
+  },
+} as const;
+
 export default function BillingPage() {
   const { t, language, formatCurrency } = useTranslation();
   const isEn = (language || 'pt').toLowerCase().startsWith('en');
+  const langKey = ((language || 'pt').slice(0, 2) as 'pt' | 'en' | 'fr');
+  const L = LOCAL_STRINGS[langKey] ?? LOCAL_STRINGS.pt;
+  const dateLocale = langKey === 'en' ? 'en-GB' : langKey === 'fr' ? 'fr-FR' : 'pt-PT';
   const b = t.dashboard.billing;
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -78,11 +113,13 @@ export default function BillingPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [invRes, userRes] = await Promise.all([
+        const [invRes, userRes, subRes] = await Promise.all([
           api.get('/stripe/invoices'),
-          api.get('/auth/me')
+          api.get('/auth/me'),
+          // Detalhes da subscrição (data de renovação/fim) — tolerante a falha
+          api.get('/stripe/subscription-details').catch(() => null),
         ]);
-        
+
         setInvoices(invRes.data);
         const userStatus = userRes.data.subscription_status;
         const customerId = userRes.data.stripe_customer_id || '';
@@ -94,14 +131,17 @@ export default function BillingPage() {
           message: mappedMessage,
           failedAt: userRes.data?.last_payment_failed_at,
         } : null);
-        
+
         setIsSimulated(customerId.startsWith('sim_') || customerId.startsWith('test_'));
         // Usar valores diretos das traduções para evitar dependências
         const proPlan = t.dashboard.billing.proPlan;
         const basePlan = t.dashboard.billing.basePlan;
         setSubData({
           status: userStatus,
-          plan_name: ['active', 'trialing'].includes(userStatus) ? proPlan : basePlan
+          // cancel_at_period_end mantém acesso Pro até ao fim do período — continua a ser o plano Pro
+          plan_name: ['active', 'trialing', 'cancel_at_period_end'].includes(userStatus) ? proPlan : basePlan,
+          current_period_end: subRes?.data?.current_period_end,
+          cancel_at_period_end: subRes?.data?.cancel_at_period_end,
         });
       } catch (err) {
         console.error("Erro ao carregar dados de faturação:", err);
@@ -173,131 +213,128 @@ export default function BillingPage() {
     return <PageLoading message={b.loadingHistory} />;
   }
 
+  const periodEndDate = subData?.current_period_end
+    ? new Date(subData.current_period_end * 1000).toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
+  const isCancelScheduled = subData?.status === 'cancel_at_period_end' || subData?.cancel_at_period_end;
+
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8 sm:space-y-12 pb-20 px-4 md:px-8">
-      {/* Header */}
-      <section className="relative">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
-          <div className="space-y-3 sm:space-y-4 min-w-0">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 sm:px-4 py-1.5 rounded-full text-blue-400 text-xs font-bold uppercase tracking-wider">
-              <ShieldCheck size={14} /> {b.secureBilling}
-            </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter text-white uppercase leading-tight">
-              {b.title}<span className="text-blue-500 italic">{b.titleAccent}</span>
-            </h1>
-            <p className="text-slate-500 font-medium max-w-xl text-sm sm:text-base">{b.subtitle}</p>
-          </div>
-
-          <button 
-            onClick={handlePortal}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
-          >
-            <ExternalLink size={16} className="shrink-0" />
-            <span>{b.manage}</span>
-          </button>
+    <div className="max-w-[1400px] mx-auto space-y-6 sm:space-y-8 pb-20 px-4 md:px-8">
+      {/* Header compacto, alinhado com o resto da app */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
+            {b.title}{b.titleAccent}
+          </h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium italic mt-1">{b.subtitle}</p>
         </div>
-      </section>
+        <button
+          onClick={handlePortal}
+          className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 touch-manipulation"
+        >
+          <ExternalLink size={14} className="shrink-0" />
+          <span>{b.manage}</span>
+        </button>
+      </div>
 
-      {/* Aviso de falha na cobrança automática (trial/renovação) */}
+      {/* Aviso de falha na cobrança automática */}
       {paymentFailure && (
         <section className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1">
-                Falha na cobrança automática
+                {L.paymentFailedTitle}
               </p>
               <p className="text-sm text-slate-200 font-medium">
-                {paymentFailure.message || 'A cobrança automática falhou. Atualiza o cartão para evitar interrupção do plano.'}
+                {paymentFailure.message || L.paymentFailedDefault}
               </p>
               {paymentFailure.code && (
                 <p className="text-[11px] text-slate-500 mt-2">
-                  Código do banco: <span className="font-semibold">{paymentFailure.code}</span>
+                  {L.bankCode}: <span className="font-semibold">{paymentFailure.code}</span>
                 </p>
               )}
             </div>
             <button
               onClick={handlePortal}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 touch-manipulation"
             >
-              Atualizar cartão
+              {L.updateCard}
               <ArrowRight size={14} />
             </button>
           </div>
         </section>
       )}
 
-      {/* Subscription Card */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-6 md:p-8 rounded-2xl flex flex-col justify-between shadow-2xl"
-        >
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{b.currentPlan}</p>
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tighter truncate">{subData?.plan_name}</h3>
-          </div>
-          <div className="mt-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 rounded-xl text-blue-400 text-xs font-bold">
-              <Sparkles size={12} /> {b.activeBenefits}
+      {/* Resumo da subscrição — faixa única com divisórias (sem 3 caixas clone) */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 shadow-2xl"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700/50">
+          {/* Plano */}
+          <div className="py-3 md:py-1 md:pr-6 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+              <Wallet size={17} className="text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{b.currentPlan}</p>
+              <p className="text-lg font-black text-white tracking-tight truncate">{subData?.plan_name}</p>
             </div>
           </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-6 md:p-8 rounded-2xl flex flex-col justify-between shadow-2xl"
-        >
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{b.status}</p>
-            <div className={`inline-flex items-center gap-2 text-xl font-black uppercase tracking-tighter px-4 py-2 rounded-2xl ${
-              subData?.status === 'active' || subData?.status === 'trialing' 
-                ? 'text-emerald-400 bg-emerald-500/10' 
-                : subData?.status === 'cancel_at_period_end'
-                ? 'text-red-400 bg-red-500/10'
-                : 'text-amber-400 bg-amber-500/10'
+          {/* Estado */}
+          <div className="py-3 md:py-1 md:px-6 flex items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+              subData?.status === 'active' || subData?.status === 'trialing'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : isCancelScheduled
+                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
             }`}>
-              {subData?.status === 'active' || subData?.status === 'trialing' ? (
-                <CheckCircle2 size={18} />
-              ) : subData?.status === 'cancel_at_period_end' ? (
-                <AlertCircle size={18} />
-              ) : (
-                <AlertCircle size={18} />
-              )}
-              {subData?.status === 'cancel_at_period_end' 
-                ? b.states.cancel_at_period_end
-                : b.states[subData?.status as keyof typeof b.states] || subData?.status}
+              {subData?.status === 'active' || subData?.status === 'trialing' ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">{b.status}</p>
+              <p className={`text-lg font-black tracking-tight truncate ${
+                subData?.status === 'active' || subData?.status === 'trialing'
+                  ? 'text-emerald-400'
+                  : isCancelScheduled ? 'text-red-400' : 'text-amber-400'
+              }`}>
+                {subData?.status === 'cancel_at_period_end'
+                  ? b.states.cancel_at_period_end
+                  : b.states[subData?.status as keyof typeof b.states] || subData?.status}
+              </p>
             </div>
           </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 p-4 sm:p-6 md:p-8 rounded-2xl flex flex-col justify-between shadow-2xl"
-        >
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{b.nextPayment}</p>
-            <div className="flex items-center gap-3 text-white font-black text-xl tracking-tighter uppercase">
-              <Calendar size={20} className="text-blue-500" />
-              {isSimulated ? b.demoMode : b.viewInPortal}
+          {/* Próximo pagamento — data real quando disponível */}
+          <div className="py-3 md:py-1 md:pl-6 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+              <Calendar size={17} className="text-indigo-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                {isCancelScheduled && periodEndDate ? L.endsOn : b.nextPayment}
+              </p>
+              <p className="text-lg font-black text-white tracking-tight truncate tabular-nums">
+                {isSimulated ? b.demoMode : (periodEndDate ?? b.viewInPortal)}
+              </p>
+              <p className="text-[10px] font-medium text-slate-600 truncate">
+                {isSimulated ? b.noRealRenewal : isCancelScheduled ? L.accessUntil : b.autoRenewalActive}
+              </p>
             </div>
           </div>
-          <p className="text-xs font-medium text-slate-500 mt-4 uppercase tracking-wider">
-            {isSimulated ? b.noRealRenewal : b.autoRenewalActive}
-          </p>
-        </motion.div>
-      </section>
+        </div>
+      </motion.section>
 
       {/* Invoices Table */}
-      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="p-6 sm:p-8 md:p-10">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-blue-500 mb-6 flex items-center gap-2">
-            <FileText size={14} /> {b.stripeHistory}
-          </h2>
+      <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4 sm:mb-5">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <FileText size={13} className="text-blue-400" />
+            </div>
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">{b.stripeHistory}</h2>
+          </div>
 
           {invoices.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center text-center opacity-50">
@@ -330,7 +367,7 @@ export default function BillingPage() {
                             <div className="flex items-center gap-3">
                               <Calendar size={14} className="text-blue-500/50" />
                               <span className="tabular-nums">
-                                {new Date(inv.created * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                {new Date(inv.created * 1000).toLocaleDateString(dateLocale, { day: '2-digit', month: 'short', year: 'numeric' })}
                               </span>
                             </div>
                           </td>
@@ -373,15 +410,13 @@ export default function BillingPage() {
         </div>
       </section>
 
-      {/* Info Banner */}
-      <section className="bg-slate-900/70 backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center gap-4 sm:gap-6 shadow-2xl">
-        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
-          <ShieldCheck size={24} />
-        </div>
-        <p className="text-slate-400 text-sm font-medium flex-1">
+      {/* Info: sem caixa — linha discreta com ícone */}
+      <div className="flex items-start sm:items-center gap-3 px-1">
+        <ShieldCheck size={16} className="text-blue-500/70 shrink-0 mt-0.5 sm:mt-0" />
+        <p className="text-slate-500 text-xs sm:text-sm font-medium flex-1">
           {b.stripeInfo}
         </p>
-      </section>
+      </div>
 
       {/* Cancel Subscription Button - Centered below info banner */}
       {['active', 'trialing'].includes(subData?.status || '') && (

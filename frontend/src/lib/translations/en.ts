@@ -791,7 +791,7 @@ export const en = {
           keepSubscription: "Keep Subscription",
           processing: "Processing...",
           confirmCancel: "Confirm Cancellation",
-          stripeInfo: "Your invoices are processed by **Stripe**. You can download the official PDF receipt for each transaction above. To change the payment method, use the **\"Manage on Stripe\"** button."
+          stripeInfo: "Your invoices are processed by Stripe. You can download the official PDF receipt for each transaction above. To change the payment method, use the \"Manage on Stripe\"** button."
       },
       analytics: {
           title: "Pro Analytics",
