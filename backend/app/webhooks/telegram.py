@@ -131,7 +131,7 @@ def _format_amount_for_lang(amount_cents: int, language: str = 'pt') -> str:
     return formatted.replace(".", ",")
 
 
-def _check_budget_alerts(workspace_id, category_id, db, t) -> Optional[str]:
+def _check_budget_alerts(workspace_id, category_id, db, t, lang: str = 'pt') -> Optional[str]:
     """Verifica se uma transação ultrapassou ou está perto do limite de orçamento de uma categoria."""
     cat = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not cat or not cat.monthly_limit_cents or cat.monthly_limit_cents <= 0:
@@ -154,14 +154,14 @@ def _check_budget_alerts(workspace_id, category_id, db, t) -> Optional[str]:
     if percent >= 100:
         over = spent - limit_val
         return t('budget_alert_exceeded').format(
-            category=cat.name, spent=f"{spent:.2f}", limit=f"{limit_val:.2f}",
-            percent=percent, over=f"{over:.2f}",
+            category=cat.name, spent=_format_amount_for_lang(int(spent * 100), lang), limit=_format_amount_for_lang(int(limit_val * 100), lang),
+            percent=percent, over=_format_amount_for_lang(int(over * 100), lang),
         )
     elif percent >= 80:
         remaining = limit_val - spent
         return t('budget_alert_warning').format(
-            category=cat.name, spent=f"{spent:.2f}", limit=f"{limit_val:.2f}",
-            percent=percent, remaining=f"{remaining:.2f}",
+            category=cat.name, spent=_format_amount_for_lang(int(spent * 100), lang), limit=_format_amount_for_lang(int(limit_val * 100), lang),
+            percent=percent, remaining=_format_amount_for_lang(int(remaining * 100), lang),
         )
     return None
 
@@ -245,16 +245,16 @@ def _check_month_comparison(workspace_id, db, t, language='pt') -> Optional[str]
         diff = abs(prev_expenses - prev2_expenses)
         percent = int((diff / prev2_expenses) * 100)
         if prev_expenses < prev2_expenses:
-            trend = t('month_trend_better').format(diff=f"{diff:.2f}", percent=percent)
+            trend = t('month_trend_better').format(diff=_format_amount_for_lang(int(diff * 100), language), percent=percent)
         elif prev_expenses > prev2_expenses:
-            trend = t('month_trend_worse').format(diff=f"{diff:.2f}", percent=percent)
+            trend = t('month_trend_worse').format(diff=_format_amount_for_lang(int(diff * 100), language), percent=percent)
         else:
             trend = t('month_trend_equal')
     else:
         trend = ""
     return t('month_comparison').format(
-        prev_month=prev_name, prev_expenses=f"{prev_expenses:.2f}",
-        curr_month=prev2_name, curr_expenses=f"{prev2_expenses:.2f}",
+        prev_month=prev_name, prev_expenses=_format_amount_for_lang(int(prev_expenses * 100), language),
+        curr_month=prev2_name, curr_expenses=_format_amount_for_lang(int(prev2_expenses * 100), language),
         trend=trend,
     )
 
@@ -345,22 +345,30 @@ def _shorten_description_for_list(description: str, max_len: int = 45) -> str:
     return d[: max_len - 1].rstrip() + "…"
 
 
+_GENERIC_CATEGORY_NAMES = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
+
+
+def _safe_fallback_category(categories):
+    """Fallback seguro quando nada categoriza: nunca vaults, preferir a categoria genérica
+    ("Despesas gerais"/"Outros") — um gasto desconhecido pertence à genérica, não a uma específica aleatória."""
+    if not categories:
+        return None
+    non_vault = [c for c in categories if getattr(c, 'vault_type', 'none') == 'none']
+    pool = non_vault or list(categories)
+    for c in pool:
+        if c.name.lower() in _GENERIC_CATEGORY_NAMES:
+            return c
+    return pool[0]
+
+
 def _origin_line(inference_source: Optional[str], t) -> str:
-    """Returns a short origin label for category (e.g. 'Por cache') or empty string."""
+    """Etiqueta de origem só quando a categoria NÃO é confiável (fallback) — "Por cache/OpenAI" é ruído."""
     if not inference_source:
         return ""
     src = (inference_source or "").lower()
-    if "cache" in src or src == "cache_telegram":
-        key = "source_cache"
-    elif "history" in src or "similar" in src:
-        key = "source_history"
-    elif "openai" in src or "vision" in src:
-        key = "source_openai"
-    elif "explicit" in src:
-        key = "source_explicit"
-    else:
-        key = "source_fallback"
-    return t("origin_suffix", origin=t(key))
+    if src.startswith("fallback") or src == "legacy_fallback":
+        return t("origin_suffix", origin=t("source_fallback"))
+    return ""
 
 
 def _date_line(transaction_date: date, t) -> str:
@@ -877,10 +885,9 @@ def _handle_ai_transaction(
             if match:
                 category_id = match.id
         if not category_id and filtered:
-            # Prefer specific categories over generic ones (e.g., "Despesas gerais")
-            _generic = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
-            specific = [c for c in filtered if c.name.lower() not in _generic]
-            category_id = (specific[0] if specific else filtered[0]).id
+            # Fallback seguro: genérica, nunca vaults
+            fb = _safe_fallback_category(filtered)
+            category_id = fb.id if fb else None
 
         if not category_id:
             continue
@@ -1484,6 +1491,7 @@ def parse_transaction(
     MAX_AMOUNT = 999_999.99
 
     # Processar cada valor encontrado
+    prev_after_consumed = False  # o segmento "depois" do valor anterior já foi usado como descrição dele
     for i, valor_match in enumerate(valor_matches):
         # Extrair valor (suporta -15€)
         valor_str = valor_match.group(1).replace(' ', '').replace('.', '').replace(',', '.')
@@ -1499,62 +1507,67 @@ def parse_transaction(
             amount = abs(amount)
             tipo = "expense"
         
-        # Extrair descrição (texto antes do valor, ou texto entre valores) — usar text_for_values (posições dos matches)
-        if ' - ' in text_for_values or ' -' in text_for_values or '- ' in text_for_values:
-            text_parts = re.split(r'\s*-\s*', text_for_values, 1)
-            if len(text_parts) == 2:
-                first_part = text_parts[0].strip()
-                description = re.sub(r'\s*\d+[.,\s]*\d*\s*(?:€|eur|euros|e)?', '', first_part, flags=re.IGNORECASE).strip()
-                logger.info(f"Descrição após separar por hífen: '{description}'")
-            else:
-                start_pos = valor_matches[i-1].end() if i > 0 else 0
-                end_pos = valor_match.start()
-                description = text_for_values[start_pos:end_pos].strip()
-        else:
-            start_pos = valor_matches[i-1].end() if i > 0 else 0
-            end_pos = valor_match.start()
-            description = text_for_values[start_pos:end_pos].strip()
-        
-        # Limpar separadores de voz em múltiplas transações: " e gasolina", ", gasolina", " e "
-        description = re.sub(r"^[\s,]+", "", description)
-        description = re.sub(r"[\s,]+$", "", description)
-        description = re.sub(r"^\s*e\s+", "", description, flags=re.IGNORECASE)
-        description = re.sub(r"\s+e\s*$", "", description, flags=re.IGNORECASE)
-        description = description.strip()
-        
-        # Limpar descrição (remover categoria se foi especificada sem hífen)
-        words_to_remove = ['€', 'euro', 'euros', 'eur', 'e', 'gastei', 'paguei', 'recebi', 
+        # Limpeza partilhada de um segmento de descrição (separadores de voz, categoria, stopwords)
+        words_to_remove = ['€', 'euro', 'euros', 'eur', 'e', 'gastei', 'paguei', 'recebi',
                           'em', 'no', 'na', 'de', 'do', 'da', 'com', 'para']
-        
-        # Se categoria foi especificada (sem hífen), removê-la da descrição (incluindo variações parciais)
-        if specified_category and not (' - ' in text_for_values or ' -' in text_for_values or '- ' in text_for_values):
-                desc_words = description.split()
+        has_hyphen = ' - ' in text_for_values or ' -' in text_for_values or '- ' in text_for_values
+
+        def _clean_desc_segment(segment: str) -> str:
+            seg = re.sub(r"^[\s,]+", "", segment)
+            seg = re.sub(r"[\s,]+$", "", seg)
+            seg = re.sub(r"^\s*e\s+", "", seg, flags=re.IGNORECASE)
+            seg = re.sub(r"\s+e\s*$", "", seg, flags=re.IGNORECASE)
+            seg = seg.strip()
+            # Se categoria foi especificada (sem hífen), removê-la (incluindo variações parciais)
+            if specified_category and not has_hyphen:
                 category_name_normalized = normalize_text(specified_category.name)
-                # Remover palavras que correspondem à categoria (exato ou parcial)
-                filtered_words = []
-                for word in desc_words:
+                filtered = []
+                for word in seg.split():
                     word_normalized = normalize_text(word)
-                    # Verificar se a palavra é parte da categoria ou vice-versa
                     is_category_word = (
                         word_normalized == category_name_normalized or
                         category_name_normalized in word_normalized or
                         word_normalized in category_name_normalized
                     )
                     if not is_category_word:
-                        filtered_words.append(word)
-                description = " ".join(filtered_words).strip()
-                logger.info(f"Descrição após remover categoria '{specified_category.name}': '{description}'")
-        
-        desc_words = description.split()
-        final_desc_words = [w for w in desc_words if w.lower() not in words_to_remove]
-        
-        if final_desc_words:
-            description = " ".join(final_desc_words).strip()
+                        filtered.append(word)
+                seg = " ".join(filtered).strip()
+            final_words = [w for w in seg.split() if w.lower() not in words_to_remove]
+            return " ".join(final_words).strip()
+
+        # Extrair descrição: texto ANTES do valor; se ficar vazio (ex.: "Gastei 46€ em alcool"),
+        # usar o texto DEPOIS do valor (até ao próximo valor ou fim da mensagem)
+        if has_hyphen:
+            text_parts = re.split(r'\s*-\s*', text_for_values, 1)
+            if len(text_parts) == 2:
+                first_part = text_parts[0].strip()
+                raw_before = re.sub(r'\s*\d+[.,\s]*\d*\s*(?:€|eur|euros|e)?', '', first_part, flags=re.IGNORECASE).strip()
+                logger.info(f"Descrição após separar por hífen: '{raw_before}'")
+            else:
+                start_pos = valor_matches[i-1].end() if i > 0 else 0
+                raw_before = text_for_values[start_pos:valor_match.start()].strip()
         else:
-            description = "Transação Telegram"
-        description = _strip_date_from_description(description)[:255]
+            start_pos = valor_matches[i-1].end() if i > 0 else 0
+            raw_before = text_for_values[start_pos:valor_match.start()].strip()
+
+        if prev_after_consumed:
+            # O texto entre o valor anterior e este já descreveu a transação anterior
+            raw_before = ""
+        description = _clean_desc_segment(raw_before)
+        prev_after_consumed = False
         if not description:
-            description = "Transação Telegram"
+            after_end = valor_matches[i+1].start() if i + 1 < len(valor_matches) else len(text_for_values)
+            raw_after = text_for_values[valor_match.end():after_end].strip()
+            description = _clean_desc_segment(raw_after)
+            if description:
+                prev_after_consumed = True
+
+        description = _strip_date_from_description(description)[:255]
+        if description:
+            description = description[0].upper() + description[1:]
+        else:
+            # Último recurso: rótulo traduzido do tipo (evitar "Transação Telegram" genérico)
+            description = "Despesa" if tipo == "expense" else "Receita"
         
         inference_source = "fallback"
         needs_review = True
@@ -1618,11 +1631,14 @@ def parse_transaction(
                         models,
                         settings,
                         explicit_category_id=None,
-                        use_gemini=False,  # IA só para imagens; texto não chama OpenAI
+                        use_gemini=False,  # sem IA aqui; a IA corre no passo 4 se o motor não souber
                     )
-                    category_id = cat_id
-                    inference_source = source
-                    decision_reason = reason
+                    # O motor devolve SEMPRE uma categoria; se for o fallback dele ("não sei"),
+                    # rejeitar para o passo 4 (IA) poder correr — senão a IA nunca é chamada
+                    if cat_id and source and not str(source).startswith('fallback'):
+                        category_id = cat_id
+                        inference_source = source
+                        decision_reason = reason
                 except Exception as e:
                     logger.warning("Motor de categorização falhou: %s", e)
 
@@ -1633,11 +1649,11 @@ def parse_transaction(
                     from ..core.categorization_engine import check_gemini_circuit_breaker
                     if check_gemini_circuit_breaker(db, models, workspace.id):
                         logger.warning("Circuit-breaker IA aberto no Telegram; não chamar OpenAI")
-                        _generic = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
-                        _specific = [c for c in categories if c.name.lower() not in _generic]
-                        category_id = (_specific[0] if _specific else categories[0]).id if categories else None
+                        fb = _safe_fallback_category(categories)
+                        category_id = fb.id if fb else None
                         inference_source = "fallback"
                         decision_reason = "fallback:circuit_breaker"
+                        needs_review = True
                     else:
                         cat_id, suggested_name = categorize_with_ai(description, categories, tipo, text, workspace.id, db)
                         if cat_id:
@@ -1655,14 +1671,14 @@ def parse_transaction(
                 except Exception as e:
                     logger.warning("IA (último recurso) falhou: %s", e)
 
-            # 5) Fallback final: prefer specific category over generic (e.g., "Despesas gerais")
+            # 5) Fallback final seguro: genérica ("Despesas gerais"), nunca vaults, marcado para rever
             if not category_id and categories and not suggested_category_name:
                 logger.info("Sem cache/histórico/motor/IA: usando fallback do tipo '%s'", tipo)
-                _generic = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
-                _specific = [c for c in categories if c.name.lower() not in _generic]
-                category_id = (_specific[0] if _specific else categories[0]).id
+                fb = _safe_fallback_category(categories)
+                category_id = fb.id if fb else None
                 inference_source = "fallback"
-                decision_reason = "fallback:first_category"
+                decision_reason = "fallback:generic_category"
+                needs_review = True
         
         # Verificar se a categoria é de vault (investimento/emergência)
         category_obj = db.query(models.Category).filter(models.Category.id == category_id).first() if category_id else None
@@ -1818,23 +1834,29 @@ def categorize_with_ai(text: str, categories: List[models.Category], tipo: str, 
         logger.warning("OPENAI_API_KEY não configurada. Não é possível usar IA para categorizar.")
         return (None, None)
     
-    filtered_categories = [cat for cat in categories if cat.type == tipo]
+    # Excluir cofres (vaults): uma despesa desconhecida nunca deve ir parar a um cofre
+    filtered_categories = [
+        cat for cat in categories
+        if cat.type == tipo and getattr(cat, 'vault_type', 'none') == 'none'
+    ]
     if not filtered_categories:
         logger.warning(f"Nenhuma categoria do tipo '{tipo}' disponível")
         return (None, None)
-    
+
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        
+
         categories_list = [cat.name for cat in filtered_categories]
         categories_text = ", ".join(categories_list)
-        
-        prompt = f"""Categoriza: "{original_text}"
 
-Categorias: {categories_text}
+        prompt = f"""Categoriza esta transação: "{original_text}"
 
-Responde APENAS com o nome exato da categoria:"""
+Categorias existentes: {categories_text}
+
+Se uma categoria existente encaixar bem, responde APENAS com o nome exato dela.
+Se NENHUMA encaixar, responde "NOVA: <nome curto para a categoria>" (ex.: NOVA: Combustível).
+Responde só com o nome ou "NOVA: nome", nada mais:"""
         
         logger.info(f"Consultando OpenAI: '{original_text}' -> {categories_list}")
         
@@ -1852,7 +1874,16 @@ Responde APENAS com o nome exato da categoria:"""
             
             if not ai_category_name:
                 return (None, None)
-            
+
+            # Resposta "NOVA: <nome>" — a IA diz explicitamente que nenhuma categoria encaixa
+            nova_match = re.match(r'^\s*NOVA\s*:\s*(.+)$', ai_category_name, flags=re.IGNORECASE)
+            if nova_match:
+                new_name = nova_match.group(1).strip().strip('"\'')[:100]
+                if new_name:
+                    logger.info(f"IA sugere categoria nova: '{new_name}'")
+                    return (None, new_name)
+                return (None, None)
+
             # 1) Match exato
             for cat in filtered_categories:
                 if cat.name.lower() == ai_category_name.lower():
@@ -2283,13 +2314,11 @@ def _parsed_from_photo(
             decision_reason = reason
         except Exception as e:
             logger.warning("Categorização falhou para foto: %s", e)
-            _generic = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
-            _specific = [c for c in categories if c.name.lower() not in _generic]
-            category_id = (_specific[0] if _specific else categories[0]).id if categories else None
+            fb = _safe_fallback_category(categories)
+            category_id = fb.id if fb else None
     if not category_id and categories and not suggested_category_name:
-        _generic = {'despesas gerais', 'general expenses', 'dépenses générales', 'outros', 'other'}
-        _specific = [c for c in categories if c.name.lower() not in _generic]
-        category_id = (_specific[0] if _specific else categories[0]).id
+        fb = _safe_fallback_category(categories)
+        category_id = fb.id if fb else None
     # Obter category_obj da lista já carregada (evita query extra)
     category_obj = next((c for c in categories if c.id == category_id), None) if category_id else None
     is_vault_category = category_obj and getattr(category_obj, "vault_type", "none") != "none"
@@ -3272,12 +3301,12 @@ def _process_update(data: dict):
                 except Exception:
                     pass
                 msg = t('category_created_confirm').format(name=new_category_name)
-                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
+                tipo_emoji = "💸" if pending.amount_cents < 0 else "💰"
                 tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
                 msg += "\n\n" + t('transaction_pending').format(
                     description=pending.description,
                     emoji=tipo_emoji,
-                    amount=abs(pending.amount_cents) / 100,
+                    amount=_format_amount_for_lang(pending.amount_cents, user.language or 'pt'),
                     category=new_category_name,
                     type=tipo_texto,
                     origin_line=_origin_line("openai", t),
@@ -3410,12 +3439,12 @@ def _process_update(data: dict):
                     )
                 except Exception:
                     pass
-                tipo_emoji = "" if pending.amount_cents < 0 else "💰"
+                tipo_emoji = "💸" if pending.amount_cents < 0 else "💰"
                 tipo_texto = t('type_expense') if pending.amount_cents < 0 else t('type_income')
                 msg = t('transaction_pending').format(
                     description=pending.description,
                     emoji=tipo_emoji,
-                    amount=abs(pending.amount_cents) / 100,
+                    amount=_format_amount_for_lang(pending.amount_cents, user.language or 'pt'),
                     category=cat.name,
                     type=tipo_texto,
                     origin_line=_origin_line(getattr(pending, 'inference_source', None), t),
@@ -3524,7 +3553,7 @@ def _process_update(data: dict):
                         else:
                             edit_telegram_message(chat_id, message_id, t('batch_list_empty'), {"inline_keyboard": []})
                 else:
-                    tipo_emoji = "" if amount_cents_for_msg < 0 else "💰"
+                    tipo_emoji = "💸" if amount_cents_for_msg < 0 else "💰"
                     tipo_texto = t('type_expense') if amount_cents_for_msg < 0 else t('type_income')
                     category = db.query(models.Category).filter(models.Category.id == category_id_for_msg).first()
                     category_name = category.name if category else "Outros"
@@ -3532,7 +3561,7 @@ def _process_update(data: dict):
                     send_telegram_msg(chat_id, t('transaction_confirmed').format(
                         description=desc_for_msg,
                         emoji=tipo_emoji,
-                        amount=abs(amount_cents_for_msg)/100,
+                        amount=_format_amount_for_lang(amount_cents_for_msg, user.language or 'pt'),
                         category=category_name,
                         type=tipo_texto,
                         origin_line=origin_line,
@@ -3548,7 +3577,7 @@ def _process_update(data: dict):
                         send_telegram_msg(chat_id, t('tip_multi'))
                     # Budget alert e streak após confirmação
                     try:
-                        alert = _check_budget_alerts(transaction.workspace_id, category_id_for_msg, db, t)
+                        alert = _check_budget_alerts(transaction.workspace_id, category_id_for_msg, db, t, user.language or 'pt')
                         if alert:
                             send_telegram_msg(chat_id, alert)
                         streak_msg = _check_streak(transaction.workspace_id, db, t)
@@ -4658,13 +4687,13 @@ def _process_update(data: dict):
             logger.info("Transacao criada com ID: %s, workspace_id: %s, amount_cents: %s", transaction.id, workspace.id, amount_cents)
             db.commit()
             logger.info("Transacao commitada com sucesso (auto_confirm)")
-            tipo_emoji = "" if amount_cents < 0 else "💰"
+            tipo_emoji = "💸" if amount_cents < 0 else "💰"
             tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
             origin_line = _origin_line(parsed.get('inference_source'), t)
             send_telegram_msg(chat_id, t('transaction_registered').format(
                 description=parsed['description'],
                 emoji=tipo_emoji,
-                amount=abs(parsed['amount']),
+                amount=_format_amount_for_lang(amount_cents, user.language or 'pt'),
                 category=category_name,
                 type=tipo_texto,
                 origin_line=origin_line,
@@ -4672,7 +4701,7 @@ def _process_update(data: dict):
             ))
             # Budget alert e streak após auto-confirmação
             try:
-                alert = _check_budget_alerts(workspace.id, parsed['category_id'], db, t)
+                alert = _check_budget_alerts(workspace.id, parsed['category_id'], db, t, user.language or 'pt')
                 if alert:
                     send_telegram_msg(chat_id, alert)
                 streak_msg = _check_streak(workspace.id, db, t)
@@ -4697,13 +4726,13 @@ def _process_update(data: dict):
             )
             db.add(pending)
             db.commit()
-            tipo_emoji = "" if amount_cents < 0 else "💰"
+            tipo_emoji = "💸" if amount_cents < 0 else "💰"
             tipo_texto = t('type_expense') if amount_cents < 0 else t('type_income')
             origin_line = _origin_line(parsed.get('inference_source'), t)
             message_text = t('transaction_pending').format(
                 description=parsed['description'],
                 emoji=tipo_emoji,
-                amount=abs(parsed['amount']),
+                amount=_format_amount_for_lang(amount_cents, user.language or 'pt'),
                 category=category_name,
                 type=tipo_texto,
                 origin_line=origin_line,
@@ -4711,10 +4740,15 @@ def _process_update(data: dict):
             )
             pending_id_hex = pending.id.hex[:16]
             reply_markup = {
-                "inline_keyboard": [[
-                    {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
-                    {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
-                ]]
+                "inline_keyboard": [
+                    [
+                        {"text": t('button_confirm'), "callback_data": f"confirm_{pending_id_hex}"},
+                        {"text": t('button_cancel'), "callback_data": f"cancel_{pending_id_hex}"},
+                    ],
+                    [
+                        {"text": t('button_change_category'), "callback_data": f"changecat_{pending_id_hex}"},
+                    ],
+                ]
             }
             send_telegram_msg(chat_id, message_text, reply_markup)
 

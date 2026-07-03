@@ -334,13 +334,18 @@ GENERIC_CATEGORY_NAMES = frozenset({
 
 
 def _pick_fallback_category(categories: List[Any]) -> Any:
-    """Pick the best fallback category, preferring specific categories over generic ones."""
+    """Fallback seguro: nunca vaults, preferir a categoria genérica ("Despesas gerais"/"Outros").
+
+    Um gasto desconhecido pertence à genérica — o comportamento antigo escolhia a primeira
+    específica do workspace, podendo calhar num cofre de investimento."""
     if not categories:
         return None
-    for c in categories:
-        if c.name.lower() not in GENERIC_CATEGORY_NAMES:
+    non_vault = [c for c in categories if getattr(c, 'vault_type', 'none') == 'none']
+    pool = non_vault or list(categories)
+    for c in pool:
+        if c.name.lower() in GENERIC_CATEGORY_NAMES:
             return c
-    return categories[0]
+    return pool[0]
 
 
 def infer_category(
