@@ -75,6 +75,17 @@ function RegisterPageContent() {
     }
   }, [searchParams]);
 
+  // Modo casal: capturar código de convite (?winvite=) — aplicado automaticamente após o 1º login
+  useEffect(() => {
+    const winvite = (searchParams?.get('winvite') || '').trim();
+    if (winvite) {
+      try {
+        localStorage.setItem('finly_winvite', winvite.toUpperCase());
+        localStorage.setItem('finly_winvite_at', String(Date.now()));
+      } catch {}
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const code = (referralCode || '').trim();
     if (!code || code.length < 2) {

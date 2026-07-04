@@ -681,6 +681,73 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Para casais — modo partilhado */}
+        <section id="couples" className="relative py-14 sm:py-24 overflow-hidden" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08),transparent_65%)] pointer-events-none" />
+          <div className="max-w-5xl mx-auto px-4 sm:px-5 relative">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              className="text-center mb-10 sm:mb-14"
+            >
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black uppercase tracking-[0.15em] mb-5">
+                💑 Para casais
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tighter mb-3 leading-tight">
+                O dinheiro é dos dois. <span className="text-blue-500 italic">A app também.</span>
+              </h2>
+              <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+                Um plano, duas contas Telegram — cada um regista do seu telemóvel, tudo cai no mesmo sítio. E vês sempre quem gastou o quê.
+              </p>
+            </motion.div>
+
+            {/* Duas bolhas de chat → um total */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ delay: 0.1 }}
+              className="max-w-2xl mx-auto mb-10 sm:mb-14 space-y-3"
+            >
+              <div className="flex justify-start">
+                <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tl-md px-4 py-2.5 max-w-[80%]">
+                  <p className="text-[10px] font-black text-blue-400 mb-0.5">Duarte</p>
+                  <p className="text-sm text-white font-medium">Continente 34,50€ 🛒</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tr-md px-4 py-2.5 max-w-[80%]">
+                  <p className="text-[10px] font-black text-amber-400 mb-0.5 text-right">Maria</p>
+                  <p className="text-sm text-white font-medium">Farmácia 12,30€ 💊</p>
+                </div>
+              </div>
+              <div className="flex justify-center pt-2">
+                <div className="flex items-center gap-3 bg-slate-900/80 border border-blue-500/25 rounded-2xl px-5 py-3">
+                  <div className="flex -space-x-1.5">
+                    <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 border-2 border-slate-900 flex items-center justify-center text-[8px] font-black text-white">D</span>
+                    <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 border-2 border-slate-900 flex items-center justify-center text-[8px] font-black text-white">M</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Hoje juntos</span>
+                  <span className="text-base font-black text-white tabular-nums">46,80€</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ delay: 0.15 }}
+              className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-slate-400"
+            >
+              <span className="flex items-center gap-2">✅ Incluído em todos os planos — o teu parceiro não paga</span>
+              <span className="flex items-center gap-2">👀 Cada um vê quem gastou o quê</span>
+              <span className="flex items-center gap-2">⚡ Convite por link em 10 segundos</span>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Stats — números em destaque com fundo suave */}
         <section id="stats" className="py-12 sm:py-20 border-y border-slate-700/60" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8">

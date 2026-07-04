@@ -83,6 +83,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
+      // Modo casal: aplicar convite pendente capturado no registo (?winvite=)
+      try {
+        const code = (localStorage.getItem('finly_winvite') || '').trim();
+        const at = parseInt(localStorage.getItem('finly_winvite_at') || '0', 10);
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+        if (code && at && (Date.now() - at) < THIRTY_DAYS) {
+          localStorage.removeItem('finly_winvite');
+          localStorage.removeItem('finly_winvite_at');
+          api.post('/workspace/sharing/join', { code })
+            .then(() => { window.location.href = '/shared'; })
+            .catch(() => {});
+        }
+      } catch {}
     } catch (err) {
       // Token inválido ou expirado
       localStorage.removeItem('token');

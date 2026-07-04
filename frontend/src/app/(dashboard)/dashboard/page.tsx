@@ -604,6 +604,22 @@ export default function DashboardPage() {
     ? { initial: { opacity: 1 } as const, animate: { opacity: 1 } as const, transition: { duration: 0 } }
     : { initial: { opacity: 0, y: 20 } as const, animate: { opacity: 1, y: 0 } as const, transition: { duration: 0.5 } };
 
+  // Modo casal: cartão-convite dispensável (esconde-se se já houver parceiro ou dispensado)
+  const [showPartnerCard, setShowPartnerCard] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem('partner_banner_dismissed_v1') === '1') return;
+    let alive = true;
+    api.get('/workspace/sharing')
+      .then(res => {
+        if (!alive) return;
+        const d = res.data;
+        if (d?.is_owner && (d?.members?.length ?? 1) < (d?.member_limit ?? 2)) setShowPartnerCard(true);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   return (
     <motion.div
       {...motionOpts}
@@ -643,6 +659,43 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Modo casal: convite para partilhar o workspace (dispensável) */}
+      {showPartnerCard && (
+        <motion.section
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-blue-600/10 border border-blue-500/25 rounded-2xl p-4 sm:p-5"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+              <span className="text-xl shrink-0">💑</span>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white">
+                  {(t.dashboard as any).shared?.bannerTitle ?? 'Gerem o dinheiro a dois?'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {(t.dashboard as any).shared?.bannerDesc ?? 'Convida o teu parceiro — está incluído no teu plano, não paga nada.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/shared"
+                className="inline-flex items-center gap-1.5 px-4 min-h-[38px] rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer touch-manipulation"
+              >
+                {(t.dashboard as any).shared?.bannerCta ?? 'Convidar'} <ChevronRight size={13} />
+              </Link>
+              <button
+                onClick={() => { localStorage.setItem('partner_banner_dismissed_v1', '1'); setShowPartnerCard(false); }}
+                className="px-3 min-h-[38px] rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors cursor-pointer touch-manipulation"
+              >
+                {(t.dashboard as any).shared?.bannerDismiss ?? 'Agora não'}
+              </button>
+            </div>
+          </div>
+        </motion.section>
+      )}
 
       {paymentFailureCode && (
         <section className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">

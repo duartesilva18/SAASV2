@@ -36,6 +36,7 @@ interface Transaction {
   category_id: string;
   transaction_date: string;
   is_installment: boolean;
+  created_by_name?: string | null;  // modo casal: quem registou
 }
 
 interface Category {
@@ -729,6 +730,12 @@ function TransactionsPageContent() {
                                 <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color_hex || '#3b82f6' }} />
                                 <span className="text-[9px] font-bold text-slate-500 truncate">{cat?.name || t.dashboard.transactions.noCategory}</span>
                               </div>
+                              {transaction.created_by_name && (
+                                <>
+                                  <span className="text-slate-700">·</span>
+                                  <span className="text-[9px] font-bold text-slate-600 truncate shrink-0">por {transaction.created_by_name.split(' ')[0]}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -821,6 +828,9 @@ function TransactionsPageContent() {
                         </td>
                         <td className="px-5 py-3.5" onClick={() => setSelectedTransaction(transaction)}>
                           <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate max-w-[250px]">{transaction.description}</p>
+                          {transaction.created_by_name && (
+                            <p className="text-[9px] font-bold text-slate-600 truncate">por {transaction.created_by_name.split(' ')[0]}</p>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 hidden sm:table-cell" onClick={() => setSelectedTransaction(transaction)}>
                           <div className="flex items-center gap-2">

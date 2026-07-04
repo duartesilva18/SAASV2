@@ -12,7 +12,7 @@ import {
   CreditCard,
   Settings,
   Shield,
-  Landmark,
+  Landmark, Users2,
   Sparkles,
   LogOut,
   ChevronLeft,
@@ -59,6 +59,7 @@ const getMainMenu = (t: any) => [
   { name: t.dashboard.sidebar.transactions, href: '/transactions', icon: Receipt, activePaths: ['/transactions', '/categories', '/recurring'] },
   { name: t.dashboard.sidebar.analytics, href: '/analytics', icon: PieChart, activePaths: ['/analytics'] },
   { name: 'Cofre e Reservas', href: '/vault', icon: Landmark, activePaths: ['/vault', '/goals'] },
+  { name: 'Partilhado', href: '/shared', icon: Users2, isNew: true, activePaths: ['/shared'] },
   { name: 'Afiliados', href: '/affiliate', icon: Trophy, isAffiliateSection: true, activePaths: ['/affiliate'] },
   { name: t.dashboard.sidebar.settings, href: '/settings', icon: Settings, activePaths: ['/settings', '/billing', '/plans'] },
   { name: t.dashboard.sidebar.admin, href: '/admin', icon: Shield, adminOnly: true, activePaths: ['/admin'] },
@@ -260,8 +261,13 @@ export default function Sidebar({
                 )}
               </div>
               {(!isCollapsed || isMobileOpen) && (
-                <span className="text-[11px] xl:text-[13px] font-semibold text-inherit truncate">
+                <span className="text-[11px] xl:text-[13px] font-semibold text-inherit truncate flex items-center gap-1.5">
                   {item.name}
+                  {(item as any).isNew && (
+                    <span className="text-[7px] xl:text-[8px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-md shrink-0">
+                      NOVO
+                    </span>
+                  )}
                 </span>
               )}
               {isActive && (
