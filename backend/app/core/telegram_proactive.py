@@ -148,6 +148,29 @@ def _budget_pace_message(db, user, workspace, t, fmt) -> str | None:
     return t('proactive_pace_header') + body + t('proactive_pace_footer')
 
 
+def _subscription_review_message(db, user, workspace, t, fmt) -> str | None:
+    """Revisão semestral das recorrentes: quanto está a sair todos os meses e o empurrão
+    para cancelar o que já não se usa. Só despesas (amount_cents < 0) ativas."""
+    recs = db.query(models.RecurringTransaction).filter(
+        models.RecurringTransaction.workspace_id == workspace.id,
+        models.RecurringTransaction.is_active == True,
+        models.RecurringTransaction.amount_cents < 0,
+    ).order_by(models.RecurringTransaction.amount_cents.asc()).all()  # maiores primeiro (mais negativos)
+    if not recs:
+        return None
+    lang = user.language or 'pt'
+    total = sum(abs(r.amount_cents) for r in recs)
+    lines = "".join(
+        t('proactive_subs_line').format(description=r.description, amount=fmt(abs(r.amount_cents), lang))
+        for r in recs[:10]
+    )
+    return (
+        t('proactive_subs_header').format(total=fmt(total, lang), count=len(recs))
+        + lines
+        + t('proactive_subs_footer')
+    )
+
+
 def run_proactive_notifications(db) -> dict:
     """Percorre os utilizadores com Telegram ligado e envia o que houver para dizer hoje."""
     # Imports tardios para evitar ciclo (telegram.py importa muita coisa)
@@ -157,7 +180,9 @@ def run_proactive_notifications(db) -> dict:
     today = date.today()
     is_sunday = today.weekday() == 6
     is_mid_month = today.day == 15
-    if not (is_sunday or is_mid_month):
+    # Revisão de subscrições: 2 de janeiro e 2 de julho (semestral)
+    is_subs_review = today.day == 2 and today.month in (1, 7)
+    if not (is_sunday or is_mid_month or is_subs_review):
         return {'sent': 0, 'skipped': 'nothing scheduled today'}
 
     def fmt(cents: int, lang: str) -> str:
@@ -198,6 +223,12 @@ def run_proactive_notifications(db) -> dict:
                 key = f"pace:{today.strftime('%Y-%m')}"
                 if not _already_sent(db, user.id, key):
                     msg = _budget_pace_message(db, user, workspace, t, fmt)
+                    if msg:
+                        messages.append((key, msg))
+            if is_subs_review:
+                key = f"subs:{today.strftime('%Y-%m')}"
+                if not _already_sent(db, user.id, key):
+                    msg = _subscription_review_message(db, user, workspace, t, fmt)
                     if msg:
                         messages.append((key, msg))
 

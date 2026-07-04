@@ -347,6 +347,9 @@ TELEGRAM_TRANSLATIONS = {
         'insight_top_expense': "💡 <b>Insight:</b> A tua maior despesa este mês é <b>{description}</b> ({amount}€) em {category}.",
 
         # --- Comparação mensal ---
+        'proactive_subs_header': "🔎 <b>Revisão das tuas subscrições</b>\n\nEstás a pagar <b>{total}€/mês</b> em {count} despesa(s) fixa(s):\n",
+        'proactive_subs_line': "• {description} — <b>{amount}€</b>/mês\n",
+        'proactive_subs_footer': "\nAinda usas tudo? O que já não usas é dinheiro a fugir todos os meses — cancela na app em <b>Recorrentes</b>. 💸",
         'proactive_week_down': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — <b>{percent}% menos</b> que a anterior. Bom trabalho! 👏",
         'proactive_week_up': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — <b>{percent}% mais</b> que a anterior. Vale a pena espreitar onde. 👀",
         'proactive_week_flat': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — em linha com a anterior. Estável. 🧘",
@@ -734,6 +737,9 @@ TELEGRAM_TRANSLATIONS = {
         'insight_top_expense': "💡 <b>Insight:</b> Your biggest expense this month is <b>{description}</b> ({amount}€) in {category}.",
 
         # --- Monthly comparison ---
+        'proactive_subs_header': "🔎 <b>Subscription review</b>\n\nYou're paying <b>{total}€/month</b> across {count} fixed expense(s):\n",
+        'proactive_subs_line': "• {description} — <b>{amount}€</b>/month\n",
+        'proactive_subs_footer': "\nStill using everything? Whatever you don't use is money leaking every month — cancel it in the app under <b>Recurring</b>. 💸",
         'proactive_week_down': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — <b>{percent}% less</b> than last week. Well done! 👏",
         'proactive_week_up': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — <b>{percent}% more</b> than last week. Worth a look. 👀",
         'proactive_week_flat': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — in line with last week. Steady. 🧘",
