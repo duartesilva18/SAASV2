@@ -42,6 +42,11 @@ export default function AdminDashboardPage() {
   const [userLogsTotalPages, setUserLogsTotalPages] = useState(1);
   const [userLogsFilter, setUserLogsFilter] = useState('all');
   const [userLogsSearch, setUserLogsSearch] = useState('');
+  // Ficha de utilizador (drawer)
+  const [showDetailDrawer, setShowDetailDrawer] = useState(false);
+  const [detailUserRow, setDetailUserRow] = useState<any | null>(null);
+  const [detailUser, setDetailUser] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   // Audit Logs States
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditPage, setAuditPage] = useState(1);
@@ -98,6 +103,7 @@ export default function AdminDashboardPage() {
       await api.post(`/admin/users/${userId}/toggle-admin`);
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.adminStatusUpdated, type: 'success' });
       fetchData();
+      refreshDetailIfOpen();
     } catch (err) {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.adminStatusError, type: 'error' });
     }
@@ -110,6 +116,7 @@ export default function AdminDashboardPage() {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.userDeleted, type: 'success' });
       setShowDeleteConfirm(false);
       setUserToDelete(null);
+      setShowDetailDrawer(false);
       fetchData();
     } catch (err) {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.deleteUserError, type: 'error' });
@@ -138,6 +145,7 @@ export default function AdminDashboardPage() {
       setShowGrantModal(false);
       setUserToGrantPro(null);
       fetchData();
+      refreshDetailIfOpen();
     } catch (err) {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.grantProError, type: 'error' });
     } finally {
@@ -150,6 +158,7 @@ export default function AdminDashboardPage() {
       await api.post(`/admin/users/${userId}/revoke-pro`);
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.revokeProSuccess, type: 'success' });
       fetchData();
+      refreshDetailIfOpen();
     } catch (err) {
       setToast({ isVisible: true, message: t.dashboard.admin.dashboard.revokeProError, type: 'error' });
     }
@@ -187,6 +196,38 @@ export default function AdminDashboardPage() {
     if (!showUserLogsModal || !selectedUserForLogs) return;
     fetchUserLogs(selectedUserForLogs.id, userLogsPage, userLogsFilter, userLogsSearch);
   }, [userLogsPage, userLogsFilter]);
+
+  const openUserDetail = async (u: any) => {
+    setDetailUserRow(u);
+    setShowDetailDrawer(true);
+    setDetailLoading(true);
+    setDetailUser(null);
+    try {
+      const res = await api.get(`/admin/users/${u.id}`);
+      setDetailUser(res.data);
+    } catch (err) {
+      setToast({ isVisible: true, message: 'Erro ao carregar a ficha do utilizador.', type: 'error' });
+      setShowDetailDrawer(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const refreshDetailIfOpen = () => {
+    if (showDetailDrawer && detailUserRow) openUserDetail(detailUserRow);
+  };
+
+  const fmtDate = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fmtDateTime = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  const fmtTs = (ts?: number | null) =>
+    ts ? new Date(ts * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const daysAgo = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    return d <= 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d}d`;
+  };
 
   const isProGranted = (u: { pro_granted_until?: string | null }) => {
     if (!u.pro_granted_until) return false;
@@ -274,7 +315,7 @@ export default function AdminDashboardPage() {
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Estado</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Permissões</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Acessos</th>
-                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Tx Bot</th>
+                <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Telegram</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Copiloto IA</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600">Último Acesso</th>
                 <th className="pb-4 sm:pb-6 px-2 sm:px-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-slate-600 text-right">Ações</th>
@@ -289,8 +330,12 @@ export default function AdminDashboardPage() {
                         {u.email[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-black text-white truncate">{u.full_name || t.dashboard.admin.dashboard.userAnon}</p>
+                        <p className="text-xs sm:text-sm font-black text-white truncate">
+                          {u.full_name || t.dashboard.admin.dashboard.userAnon}
+                          {u.is_affiliate && <span className="ml-1.5 text-[8px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md align-middle">AFILIADO</span>}
+                        </p>
                         <p className="text-[10px] text-slate-500 font-medium truncate">{u.email}</p>
+                        <p className="text-[8px] text-slate-600 font-bold uppercase tracking-wider">desde {fmtDate(u.created_at)}</p>
                       </div>
                     </div>
                   </td>
@@ -371,10 +416,16 @@ export default function AdminDashboardPage() {
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black text-emerald-400">{u.bot_transactions_count ?? 0}</span>
-                      <span className="text-[8px] text-slate-600 uppercase font-black tracking-tighter whitespace-nowrap">Tx Bot</span>
-                    </div>
+                    {u.phone_number ? (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1 whitespace-nowrap">
+                          <CheckCircle2 size={10} className="shrink-0" /> Ligado
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">{u.bot_transactions_count ?? 0} tx{u.last_bot_tx_at ? ` · ${daysAgo(u.last_bot_tx_at)}` : ''}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-slate-600 font-bold uppercase tracking-wider whitespace-nowrap">Não ligado</span>
+                    )}
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex items-center gap-1.5">
@@ -400,48 +451,12 @@ export default function AdminDashboardPage() {
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {!u.is_admin && (
-                        isProGranted(u) ? (
-                          <button 
-                            onClick={() => handleRevokePro(u.id)}
-                            className="p-2 sm:p-2.5 bg-slate-800 hover:bg-amber-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                            title={t.dashboard.admin.dashboard.revokePro}
-                          >
-                            <X size={14} className="sm:w-4 sm:h-4" />
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => openGrantModal(u)}
-                            className="p-2 sm:p-2.5 bg-slate-800 hover:bg-emerald-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                            title={t.dashboard.admin.dashboard.grantPro}
-                          >
-                            <Gift size={14} className="sm:w-4 sm:h-4" />
-                          </button>
-                        )
-                      )}
-                      <button 
-                        onClick={() => handleToggleAdmin(u.id)}
-                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-blue-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                        title={u.is_admin ? t.dashboard.admin.dashboard.removeAdmin : t.dashboard.admin.dashboard.makeAdmin}
-                      >
-                        <Shield size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                      <button 
-                        onClick={() => openUserLogs(u)}
-                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                        title="Ver logs do utilizador"
-                      >
-                        <Activity size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteClick(u.id)}
-                        className="p-2 sm:p-2.5 bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white rounded-lg sm:rounded-xl transition-all cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center"
-                        title={t.dashboard.admin.dashboard.deleteUser}
-                      >
-                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => openUserDetail(u)}
+                      className="inline-flex items-center gap-1.5 px-3.5 min-h-[38px] bg-blue-600/10 hover:bg-blue-600 border border-blue-500/30 hover:border-blue-500 text-blue-400 hover:text-white rounded-xl transition-colors cursor-pointer text-[10px] font-bold uppercase tracking-wider touch-manipulation"
+                    >
+                      Ver detalhes <ChevronRight size={13} className="shrink-0" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -574,6 +589,190 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </section>
+
+      {/* Drawer: Ficha do utilizador */}
+      <AnimatePresence>
+        {showDetailDrawer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowDetailDrawer(false)}
+          >
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 top-0 h-full w-full sm:w-[480px] bg-slate-900 border-l border-slate-700/60 shadow-2xl overflow-y-auto custom-scrollbar"
+            >
+              {detailLoading || !detailUser ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 size={28} className="animate-spin text-blue-500" />
+                </div>
+              ) : (
+                <div className="p-5 sm:p-6 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-base shrink-0 ${detailUser.is_admin ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'}`}>
+                        {detailUser.email[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-white truncate">{detailUser.full_name || 'Sem nome'}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{detailUser.email}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setShowDetailDrawer(false)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer shrink-0">
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Badges de estado */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {(['active', 'trialing'].includes(detailUser.subscription_status) || (detailUser.pro_granted_until && new Date(detailUser.pro_granted_until) > new Date())) ? (
+                      <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Pro</span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-slate-800 text-slate-500 border border-white/5">Free</span>
+                    )}
+                    {(detailUser.subscription_status === 'canceled' || detailUser.subscription_status === 'cancel_at_period_end') && (
+                      <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-orange-500/10 text-orange-400 border border-orange-500/20">Cancelou</span>
+                    )}
+                    {detailUser.had_refund && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Reembolso</span>}
+                    {detailUser.is_admin && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">Admin</span>}
+                    {detailUser.is_affiliate && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Afiliado</span>}
+                    {detailUser.telegram_linked && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Telegram ✓</span>}
+                    {detailUser.last_payment_failure_code && <span className="px-2 py-1 rounded-md text-[9px] font-black uppercase bg-red-500/10 text-red-400 border border-red-500/20">Falha pagamento</span>}
+                  </div>
+
+                  {/* Subscrição */}
+                  <section>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 flex items-center gap-1.5"><CreditCard size={12} /> Subscrição</h4>
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-xl divide-y divide-slate-800/70 text-xs">
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Estado local</span><span className="text-white font-bold">{detailUser.subscription_status}</span></div>
+                      {detailUser.stripe?.status && <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Estado Stripe</span><span className="text-white font-bold">{detailUser.stripe.status}{detailUser.stripe.cancel_at_period_end ? ' (termina no fim do período)' : ''}</span></div>}
+                      {detailUser.stripe?.current_period_end && <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">{detailUser.stripe.cancel_at_period_end ? 'Acesso até' : 'Renova a'}</span><span className="text-white font-bold">{fmtTs(detailUser.stripe.current_period_end)}</span></div>}
+                      {detailUser.stripe?.canceled_at && <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Cancelou a</span><span className="text-orange-400 font-bold">{fmtTs(detailUser.stripe.canceled_at)}</span></div>}
+                      {detailUser.pro_granted_until && <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Pro oferecido até</span><span className="text-emerald-400 font-bold">{fmtDate(detailUser.pro_granted_until)}</span></div>}
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Cartão</span><span className="text-white font-bold">{detailUser.stripe?.card_last4 ? `${detailUser.stripe.card_brand ?? 'card'} •••• ${detailUser.stripe.card_last4}` : detailUser.has_payment_method ? 'Guardado' : 'Sem cartão'}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Trial</span><span className="text-white font-bold">{detailUser.subscription_status === 'trialing' ? `Ativo até ${fmtDate(detailUser.trial_ends_at)}` : detailUser.had_trial ? 'Já usou' : 'Nunca usou'}</span></div>
+                      {detailUser.last_payment_failure_code && (
+                        <div className="px-3.5 py-2.5">
+                          <span className="text-red-400 font-bold block">Última falha: {detailUser.last_payment_failure_code}</span>
+                          <span className="text-slate-500 text-[10px]">{detailUser.last_payment_failure_message} · {fmtDateTime(detailUser.last_payment_failed_at)}</span>
+                        </div>
+                      )}
+                      {(detailUser.stripe?.invoices?.length ?? 0) > 0 && (
+                        <div className="px-3.5 py-2.5">
+                          <span className="text-slate-500 block mb-1.5">Últimas faturas</span>
+                          <div className="space-y-1">
+                            {detailUser.stripe.invoices.map((inv: any, i: number) => (
+                              <div key={i} className="flex justify-between gap-2 text-[11px]">
+                                <span className="text-slate-400 tabular-nums">{fmtTs(inv.created)}</span>
+                                <span className={`font-bold ${inv.status === 'paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {formatCurrency((inv.status === 'paid' ? inv.amount_paid_cents : inv.amount_due_cents) / 100)} · {inv.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Telegram & Bot */}
+                  <section>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2 flex items-center gap-1.5"><BotMessageSquare size={12} /> Telegram & Bot</h4>
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-xl divide-y divide-slate-800/70 text-xs">
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Ligado</span><span className={`font-bold ${detailUser.telegram_linked ? 'text-emerald-400' : 'text-slate-500'}`}>{detailUser.telegram_linked ? 'Sim' : 'Não'}</span></div>
+                      {detailUser.telegram_linked && (
+                        <>
+                          <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Transações via bot</span><span className="text-white font-bold">{detailUser.bot_transactions_count}</span></div>
+                          <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Última utilização</span><span className="text-white font-bold">{detailUser.last_bot_tx_at ? `${fmtDate(detailUser.last_bot_tx_at)} (${daysAgo(detailUser.last_bot_tx_at)})` : 'Nunca registou'}</span></div>
+                          <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Pendentes por confirmar</span><span className="text-white font-bold">{detailUser.telegram_pending_count}</span></div>
+                          <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Auto-confirmar</span><span className="text-white font-bold">{detailUser.telegram_auto_confirm ? 'Ativo' : 'Desativado'}</span></div>
+                        </>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Utilização */}
+                  <section>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2 flex items-center gap-1.5"><Activity size={12} /> Utilização</h4>
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-xl divide-y divide-slate-800/70 text-xs">
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Transações (total)</span><span className="text-white font-bold">{detailUser.total_transactions}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Primeira / última</span><span className="text-white font-bold">{fmtDate(detailUser.first_tx_at)} → {fmtDate(detailUser.last_tx_at)}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Logins</span><span className="text-white font-bold">{detailUser.login_count} · último {fmtDateTime(detailUser.last_login)}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Copiloto IA</span><span className="text-white font-bold">{detailUser.copilot_messages_count} mensagens</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Workspaces / Categorias / Metas</span><span className="text-white font-bold">{detailUser.workspaces_count} / {detailUser.categories_count} / {detailUser.goals_count}</span></div>
+                    </div>
+                  </section>
+
+                  {/* Afiliado */}
+                  {(detailUser.is_affiliate || detailUser.referred_by_email) && (
+                    <section>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2 flex items-center gap-1.5"><Gift size={12} /> Afiliado</h4>
+                      <div className="bg-slate-950/50 border border-slate-800 rounded-xl divide-y divide-slate-800/70 text-xs">
+                        {detailUser.is_affiliate && (
+                          <>
+                            <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Código</span><span className="text-amber-400 font-black font-mono">{detailUser.affiliate_code}</span></div>
+                            <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Referências</span><span className="text-white font-bold">{detailUser.referrals_count} ({detailUser.referrals_converted} converteram)</span></div>
+                            <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Comissões</span><span className="text-white font-bold">{formatCurrency(detailUser.commissions_total_cents / 100)} total · {formatCurrency(detailUser.commissions_pending_cents / 100)} pendente</span></div>
+                            <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Stripe Connect</span><span className="text-white font-bold">{detailUser.stripe_connect_status ?? 'Não configurado'}</span></div>
+                          </>
+                        )}
+                        {detailUser.referred_by_email && (
+                          <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Veio pelo afiliado</span><span className="text-white font-bold truncate">{detailUser.referred_by_email}</span></div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Conta */}
+                  <section>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5"><Users size={12} /> Conta</h4>
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-xl divide-y divide-slate-800/70 text-xs">
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Criada</span><span className="text-white font-bold">{fmtDate(detailUser.created_at)}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Idioma / Moeda</span><span className="text-white font-bold uppercase">{detailUser.language ?? '—'} / {detailUser.currency ?? '—'}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Email verificado</span><span className={`font-bold ${detailUser.is_email_verified ? 'text-emerald-400' : 'text-red-400'}`}>{detailUser.is_email_verified ? 'Sim' : 'Não'}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Onboarding</span><span className="text-white font-bold">{detailUser.is_onboarded ? 'Completo' : 'Incompleto'}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Login</span><span className="text-white font-bold">{detailUser.has_google_login ? 'Google' : ''}{detailUser.has_google_login && detailUser.has_password ? ' + ' : ''}{detailUser.has_password ? 'Password' : ''}</span></div>
+                      <div className="flex justify-between gap-3 px-3.5 py-2.5"><span className="text-slate-500">Marketing</span><span className="text-white font-bold">{detailUser.marketing_opt_in ? 'Aceita' : 'Não aceita'}</span></div>
+                    </div>
+                  </section>
+
+                  {/* Ações — botões com rótulo completo */}
+                  <section className="pt-2 border-t border-slate-800 space-y-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Ações</h4>
+                    {!detailUser.is_admin && (
+                      (detailUser.pro_granted_until && new Date(detailUser.pro_granted_until) > new Date()) ? (
+                        <button onClick={() => handleRevokePro(detailUser.id)} className="w-full min-h-[42px] rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-400 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                          <X size={14} /> Retirar Pro oferecido
+                        </button>
+                      ) : (
+                        <button onClick={() => openGrantModal(detailUser)} className="w-full min-h-[42px] rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-400 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                          <Gift size={14} /> Oferecer Pro
+                        </button>
+                      )
+                    )}
+                    <button onClick={() => handleToggleAdmin(detailUser.id)} className="w-full min-h-[42px] rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 text-blue-400 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                      <Shield size={14} /> {detailUser.is_admin ? 'Remover permissões de admin' : 'Tornar administrador'}
+                    </button>
+                    <button onClick={() => openUserLogs(detailUser)} className="w-full min-h-[42px] rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                      <Activity size={14} /> Ver histórico de atividade
+                    </button>
+                    <button onClick={() => handleDeleteClick(detailUser.id)} className="w-full min-h-[42px] rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                      <Trash2 size={14} /> Eliminar conta permanentemente
+                    </button>
+                  </section>
+                </div>
+              )}
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ConfirmModal
         isOpen={showDeleteConfirm}

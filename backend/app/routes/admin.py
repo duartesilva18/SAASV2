@@ -612,26 +612,18 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
       - decision_reason a conter 'telegram', ou
       - descrição padrão 'Transação Telegram'.
     """
-    # Subquery: contagem de transações criadas via bot por owner_id (utilizador)
+    # Subquery: métricas de transações por owner_id (total, via bot, última via bot)
+    _is_bot_tx = or_(
+        models.Transaction.inference_source.isnot(None),
+        models.Transaction.decision_reason.ilike('%telegram%'),
+        models.Transaction.description == 'Transação Telegram',
+    )
     tx_bot_subq = (
         db.query(
             models.Workspace.owner_id.label('owner_id'),
-            func.coalesce(
-                func.sum(
-                    case(
-                        (
-                            or_(
-                                models.Transaction.inference_source.isnot(None),
-                                models.Transaction.decision_reason.ilike('%telegram%'),
-                                models.Transaction.description == 'Transação Telegram',
-                            ),
-                            1,
-                        ),
-                        else_=0,
-                    )
-                ),
-                0,
-            ).label('bot_transactions_count'),
+            func.coalesce(func.sum(case((_is_bot_tx, 1), else_=0)), 0).label('bot_transactions_count'),
+            func.count(models.Transaction.id).label('total_transactions'),
+            func.max(case((_is_bot_tx, models.Transaction.created_at), else_=None)).label('last_bot_tx_at'),
         )
         .outerjoin(models.Transaction, models.Transaction.workspace_id == models.Workspace.id)
         .group_by(models.Workspace.owner_id)
@@ -655,6 +647,8 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
             models.User,
             func.coalesce(tx_bot_subq.c.bot_transactions_count, 0).label('bot_transactions_count'),
             func.coalesce(copilot_subq.c.copilot_msg_count, 0).label('copilot_msg_count'),
+            func.coalesce(tx_bot_subq.c.total_transactions, 0).label('total_transactions'),
+            tx_bot_subq.c.last_bot_tx_at.label('last_bot_tx_at'),
         )
         .outerjoin(tx_bot_subq, tx_bot_subq.c.owner_id == models.User.id)
         .outerjoin(copilot_subq, copilot_subq.c.user_id == models.User.id)
@@ -664,7 +658,7 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
 
     users_with_metrics: List[schemas.AdminUserResponse] = []
     customer_ids: Set[str] = set()
-    for user, _, _ in rows:
+    for user, *_ in rows:
         customer_id = (user.stripe_customer_id or '').strip() if user.stripe_customer_id else ''
         if customer_id:
             customer_ids.add(customer_id)
@@ -696,10 +690,12 @@ async def get_admin_users(db: Session = Depends(get_db), admin: models.User = De
                 resolved_cards[customer_id] = has_card
                 _set_cached_customer_card_status(customer_id, has_card)
 
-    for user, bot_tx_count, copilot_count in rows:
+    for user, bot_tx_count, copilot_count, total_tx, last_bot_tx in rows:
         base = schemas.AdminUserResponse.from_orm(user).dict()
         base['bot_transactions_count'] = int(bot_tx_count or 0)
         base['copilot_messages_count'] = int(copilot_count or 0)
+        base['total_transactions'] = int(total_tx or 0)
+        base['last_bot_tx_at'] = last_bot_tx
         base['had_trial'] = bool(user.had_trial)
         customer_id = (user.stripe_customer_id or '').strip() if user.stripe_customer_id else ''
         base['has_stripe_customer'] = bool(customer_id)
@@ -725,19 +721,170 @@ async def admin_reconcile_subscriptions(db: Session = Depends(get_db), admin: mo
     return {"message": "Reconciliação concluída", **result}
 
 
-@router.get('/users/{user_id}', response_model=schemas.AdminUserDetail)
+@router.get('/users/{user_id}', response_model=schemas.AdminUserFullDetail)
 async def get_user_detail(user_id: UUID, db: Session = Depends(get_db), admin: models.User = Depends(check_admin)):
+    """Ficha completa do utilizador: conta, subscrição (Stripe em tempo real), Telegram, utilização e afiliado."""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='Utilizador não encontrado')
-    
-    workspaces = db.query(models.Workspace).filter(models.Workspace.owner_id == user_id).all()
-    logs = db.query(models.AuditLog).filter(models.AuditLog.user_id == user_id).order_by(models.AuditLog.created_at.desc()).limit(50).all()
-    
-    return schemas.AdminUserDetail(
-        **schemas.AdminUserResponse.from_orm(user).dict(),
-        workspaces=workspaces,
-        logs=logs
+
+    ws_ids = [w.id for w in db.query(models.Workspace.id).filter(models.Workspace.owner_id == user_id).all()]
+    ws_ids = [w[0] if isinstance(w, tuple) else w for w in ws_ids]
+
+    # Utilização (transações dos workspaces do user)
+    is_bot_tx = or_(
+        models.Transaction.inference_source.isnot(None),
+        models.Transaction.decision_reason.ilike('%telegram%'),
+        models.Transaction.description == 'Transação Telegram',
+    )
+    if ws_ids:
+        tx_stats = db.query(
+            func.count(models.Transaction.id),
+            func.min(models.Transaction.created_at),
+            func.max(models.Transaction.created_at),
+            func.coalesce(func.sum(case((is_bot_tx, 1), else_=0)), 0),
+            func.max(case((is_bot_tx, models.Transaction.created_at), else_=None)),
+        ).filter(models.Transaction.workspace_id.in_(ws_ids)).first()
+        total_tx, first_tx, last_tx, bot_tx, last_bot_tx = tx_stats
+        categories_count = db.query(func.count(models.Category.id)).filter(models.Category.workspace_id.in_(ws_ids)).scalar() or 0
+        goals_count = db.query(func.count(models.SavingsGoal.id)).filter(models.SavingsGoal.workspace_id.in_(ws_ids)).scalar() or 0
+    else:
+        total_tx = first_tx = last_tx = last_bot_tx = None
+        bot_tx = 0
+        categories_count = goals_count = 0
+
+    copilot_count = (
+        db.query(func.count(models.CopilotMessage.id))
+        .join(models.CopilotConversation, models.CopilotMessage.conversation_id == models.CopilotConversation.id)
+        .filter(models.CopilotConversation.user_id == user_id, models.CopilotMessage.role == 'user')
+        .scalar() or 0
+    )
+
+    # Telegram
+    telegram_pending = 0
+    if user.phone_number:
+        telegram_pending = db.query(func.count(models.TelegramPendingTransaction.id)).filter(
+            models.TelegramPendingTransaction.chat_id == str(user.phone_number)
+        ).scalar() or 0
+
+    # Afiliado
+    referrals_count = db.query(func.count(models.AffiliateReferral.id)).filter(
+        models.AffiliateReferral.referrer_id == user_id
+    ).scalar() or 0
+    referrals_converted = db.query(func.count(models.AffiliateReferral.id)).filter(
+        models.AffiliateReferral.referrer_id == user_id,
+        models.AffiliateReferral.has_subscribed == True,
+    ).scalar() or 0
+    commissions_total = db.query(func.coalesce(func.sum(models.AffiliateCommission.commission_amount_cents), 0)).filter(
+        models.AffiliateCommission.affiliate_id == user_id
+    ).scalar() or 0
+    commissions_pending = db.query(func.coalesce(func.sum(models.AffiliateCommission.commission_amount_cents), 0)).filter(
+        models.AffiliateCommission.affiliate_id == user_id,
+        models.AffiliateCommission.is_paid == False,
+    ).scalar() or 0
+    referred_by_email = None
+    if user.referrer_id:
+        referrer = db.query(models.User.email).filter(models.User.id == user.referrer_id).first()
+        referred_by_email = referrer[0] if referrer else None
+
+    # Stripe em tempo real (1 user — aceitável; tudo com fallback silencioso)
+    customer_id = (user.stripe_customer_id or '').strip()
+    is_simulated = customer_id.startswith('sim_') or customer_id.startswith('test_')
+    stripe_info = None
+    has_payment_method = False
+    if customer_id and not is_simulated and settings.STRIPE_API_KEY:
+        stripe_info = schemas.AdminUserStripeInfo()
+        try:
+            if user.stripe_subscription_id:
+                sub = stripe.Subscription.retrieve(user.stripe_subscription_id)
+                stripe_info.status = sub.get('status')
+                stripe_info.current_period_end = sub.get('current_period_end')
+                stripe_info.cancel_at_period_end = bool(sub.get('cancel_at_period_end'))
+                stripe_info.canceled_at = sub.get('canceled_at')
+                meta = sub.get('metadata') or {}
+                price_id = (meta.get('original_price_id') or '').strip() or None
+                if not price_id:
+                    items = sub.get('items', {})
+                    items_data = items.get('data', []) if isinstance(items, dict) else []
+                    if items_data:
+                        price_id = items_data[0].get('price', {}).get('id')
+                stripe_info.price_id = price_id
+        except Exception as e:
+            logger.warning(f'Admin detail: subscrição Stripe falhou para {user.email}: {e}')
+        try:
+            pms = stripe.PaymentMethod.list(customer=customer_id, type='card', limit=1)
+            if pms.data:
+                card = pms.data[0].get('card') or {}
+                stripe_info.card_brand = card.get('brand')
+                stripe_info.card_last4 = card.get('last4')
+                has_payment_method = True
+        except Exception as e:
+            logger.warning(f'Admin detail: payment methods falhou para {user.email}: {e}')
+        try:
+            invs = stripe.Invoice.list(customer=customer_id, limit=5)
+            stripe_info.invoices = [
+                {
+                    'amount_paid_cents': inv.get('amount_paid') or 0,
+                    'amount_due_cents': inv.get('amount_due') or 0,
+                    'status': inv.get('status'),
+                    'created': inv.get('created'),
+                    'invoice_pdf': inv.get('invoice_pdf'),
+                }
+                for inv in invs.data
+            ]
+        except Exception as e:
+            logger.warning(f'Admin detail: invoices falharam para {user.email}: {e}')
+
+    return schemas.AdminUserFullDetail(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        gender=user.gender,
+        language=user.language,
+        currency=user.currency,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        is_active=bool(user.is_active),
+        is_admin=bool(user.is_admin),
+        is_email_verified=bool(user.is_email_verified),
+        is_onboarded=bool(user.is_onboarded),
+        marketing_opt_in=bool(user.marketing_opt_in),
+        terms_accepted=bool(user.terms_accepted),
+        has_google_login=bool(user.google_id),
+        has_password=bool(user.password_hash),
+        login_count=int(user.login_count or 0),
+        last_login=user.last_login,
+        subscription_status=user.subscription_status or 'none',
+        pro_granted_until=user.pro_granted_until,
+        had_trial=bool(user.had_trial),
+        trial_ends_at=user.trial_ends_at,
+        had_refund=bool(user.had_refund),
+        has_stripe_customer=bool(customer_id),
+        has_payment_method=has_payment_method,
+        last_payment_failure_code=user.last_payment_failure_code,
+        last_payment_failure_message=user.last_payment_failure_message,
+        last_payment_failed_at=user.last_payment_failed_at,
+        stripe=stripe_info,
+        telegram_linked=bool(user.phone_number),
+        telegram_auto_confirm=bool(user.telegram_auto_confirm),
+        bot_transactions_count=int(bot_tx or 0),
+        last_bot_tx_at=last_bot_tx,
+        telegram_pending_count=int(telegram_pending),
+        total_transactions=int(total_tx or 0),
+        first_tx_at=first_tx,
+        last_tx_at=last_tx,
+        workspaces_count=len(ws_ids),
+        categories_count=int(categories_count),
+        goals_count=int(goals_count),
+        copilot_messages_count=int(copilot_count),
+        is_affiliate=bool(user.is_affiliate),
+        affiliate_code=user.affiliate_code,
+        referrals_count=int(referrals_count),
+        referrals_converted=int(referrals_converted),
+        commissions_total_cents=int(commissions_total),
+        commissions_pending_cents=int(commissions_pending),
+        stripe_connect_status=user.stripe_connect_account_status if user.stripe_connect_account_id else None,
+        referred_by_email=referred_by_email,
     )
 
 @router.post('/users/{user_id}/toggle-admin')

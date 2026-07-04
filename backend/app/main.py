@@ -127,7 +127,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         for e in exc.errors()
     ]
     logger.warning(f"Erro de validação em {request.url.path}: {safe_errors}")
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    # Devolver só campos serializáveis: exc.errors() pode trazer ctx com objetos Exception
+    # (ValueError de model_validators), que rebentavam o json.dumps → 500 em vez de 422.
+    return JSONResponse(status_code=422, content={"detail": safe_errors})
 
 # Handler global para erros não tratados (garantir que CORS funciona mesmo com erros)
 @app.exception_handler(Exception)

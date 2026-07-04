@@ -800,7 +800,7 @@ async def complete_onboarding(request: Request, onboarding_data: schemas.UserUpd
             )
     
     current_user.full_name = onboarding_data.full_name
-    current_user.phone_number = onboarding_data.phone_number
+    current_user.phone_number = onboarding_data.phone_number or None
     current_user.currency = onboarding_data.currency
     current_user.gender = onboarding_data.gender
     current_user.marketing_opt_in = onboarding_data.marketing_opt_in
@@ -856,7 +856,7 @@ async def update_profile(request: Request, onboarding_data: schemas.UserUpdateOn
             )
     
     current_user.full_name = onboarding_data.full_name
-    current_user.phone_number = onboarding_data.phone_number
+    current_user.phone_number = onboarding_data.phone_number or None
     current_user.currency = onboarding_data.currency
     current_user.gender = onboarding_data.gender
     current_user.marketing_opt_in = onboarding_data.marketing_opt_in

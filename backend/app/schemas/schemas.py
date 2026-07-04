@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, date
 from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -56,11 +57,25 @@ class UserResponse(UserBase):
         from_attributes = True
 
 class UserUpdateOnboarding(BaseModel):
-    full_name: str
-    phone_number: str
-    currency: str
-    gender: str
+    """Perfil/onboarding. Validação estrita: sem ela, valores como currency='teste'
+    rebentavam com 500 no Postgres (varchar(3)) em vez de 422 com mensagem clara."""
+    full_name: str = Field(..., min_length=1, max_length=100)
+    phone_number: str = Field(..., max_length=20)
+    currency: Literal['EUR', 'USD', 'BRL']
+    gender: Literal['male', 'female', 'other', 'prefer_not_to_say']
     marketing_opt_in: bool = False
+
+    @model_validator(mode='after')
+    def _validate_phone(self):
+        phone = (self.phone_number or '').replace(' ', '').strip()
+        # Só o indicativo (ex.: "+351") = utilizador não preencheu número → tratar como vazio
+        if len(phone.lstrip('+')) <= 4:
+            phone = ''
+        elif not re.fullmatch(r'\+?\d{6,15}', phone):
+            raise ValueError('Número de telemóvel inválido. Usa apenas dígitos, com indicativo (ex.: +351912345678).')
+        object.__setattr__(self, 'phone_number', phone)
+        object.__setattr__(self, 'full_name', (self.full_name or '').strip())
+        return self
 
 class UserUpdateLanguage(BaseModel):
     language: str
@@ -354,6 +369,12 @@ class AdminUserResponse(BaseModel):
     last_login: Optional[datetime] = None
     bot_transactions_count: int = 0
     copilot_messages_count: int = 0
+    # Campos extra para a lista de admin (baratos, só DB)
+    language: Optional[str] = None
+    is_affiliate: bool = False
+    is_email_verified: bool = False
+    total_transactions: int = 0
+    last_bot_tx_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -367,6 +388,79 @@ class GrantProRequest(BaseModel):
 class AdminUserDetail(AdminUserResponse):
     workspaces: List[WorkspaceResponse]
     logs: List[AuditLogResponse]
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUserStripeInfo(BaseModel):
+    """Estado real da subscrição no Stripe (ficha de utilizador)."""
+    status: Optional[str] = None
+    price_id: Optional[str] = None
+    current_period_end: Optional[int] = None
+    cancel_at_period_end: Optional[bool] = None
+    canceled_at: Optional[int] = None
+    card_brand: Optional[str] = None
+    card_last4: Optional[str] = None
+    invoices: List[dict] = []
+
+
+class AdminUserFullDetail(BaseModel):
+    """Ficha completa de utilizador para o painel admin — tudo o que se sabe."""
+    # Conta
+    id: UUID
+    email: str
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    language: Optional[str] = None
+    currency: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_active: bool = True
+    is_admin: bool = False
+    is_email_verified: bool = False
+    is_onboarded: bool = False
+    marketing_opt_in: bool = False
+    terms_accepted: bool = False
+    has_google_login: bool = False
+    has_password: bool = True
+    login_count: int = 0
+    last_login: Optional[datetime] = None
+    # Subscrição (estado local + flags)
+    subscription_status: str = 'none'
+    pro_granted_until: Optional[datetime] = None
+    had_trial: bool = False
+    trial_ends_at: Optional[datetime] = None
+    had_refund: bool = False
+    has_stripe_customer: bool = False
+    has_payment_method: bool = False
+    last_payment_failure_code: Optional[str] = None
+    last_payment_failure_message: Optional[str] = None
+    last_payment_failed_at: Optional[datetime] = None
+    stripe: Optional[AdminUserStripeInfo] = None
+    # Telegram / Bot
+    telegram_linked: bool = False
+    telegram_auto_confirm: bool = False
+    bot_transactions_count: int = 0
+    last_bot_tx_at: Optional[datetime] = None
+    telegram_pending_count: int = 0
+    # Utilização
+    total_transactions: int = 0
+    first_tx_at: Optional[datetime] = None
+    last_tx_at: Optional[datetime] = None
+    workspaces_count: int = 0
+    categories_count: int = 0
+    goals_count: int = 0
+    copilot_messages_count: int = 0
+    # Afiliado
+    is_affiliate: bool = False
+    affiliate_code: Optional[str] = None
+    referrals_count: int = 0
+    referrals_converted: int = 0
+    commissions_total_cents: int = 0
+    commissions_pending_cents: int = 0
+    stripe_connect_status: Optional[str] = None
+    referred_by_email: Optional[str] = None
 
     class Config:
         from_attributes = True
