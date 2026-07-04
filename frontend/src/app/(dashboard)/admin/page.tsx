@@ -362,40 +362,34 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
                     <div className="flex flex-col gap-1">
-                      {u.subscription_status === 'trialing' && (
-                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
-                          Free Trial
+                      {/* Linha 1: pode ser cobrado? (o que interessa ao negócio) */}
+                      {u.has_payment_method ? (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-emerald-500/10 text-emerald-400 border-emerald-500/20" title="Tem cartão guardado no Stripe — as cobranças vão funcionar.">
+                          <CreditCard size={9} className="shrink-0" /> Pode ser cobrado ✓
+                        </span>
+                      ) : u.subscription_status === 'trialing' && u.has_stripe_customer ? (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-orange-500/10 text-orange-400 border-orange-500/20" title="Está em trial mas não guardou cartão — quando o trial acabar, a cobrança vai falhar.">
+                          <CreditCard size={9} className="shrink-0" /> ⚠ Trial vai falhar (sem cartão)
+                        </span>
+                      ) : u.has_stripe_customer ? (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-amber-500/10 text-amber-400 border-amber-500/20" title="Chegou ao checkout do Stripe mas nunca guardou um cartão.">
+                          <CreditCard size={9} className="shrink-0" /> Desistiu no checkout
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-slate-800 text-slate-500 border-white/5" title="Nunca abriu o checkout — ainda não tentou pagar nada.">
+                          <CreditCard size={9} className="shrink-0" /> Nunca tentou pagar
                         </span>
                       )}
-                      {u.subscription_status !== 'trialing' && u.had_trial && (
-                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-500 border-white/5">
-                          Trial usado
+                      {/* Linha 2: situação do trial (só quando é relevante) */}
+                      {u.subscription_status === 'trialing' ? (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-cyan-500/10 text-cyan-400 border-cyan-500/20" title="Está neste momento no período de teste gratuito.">
+                          Em trial agora
                         </span>
-                      )}
-                      {u.subscription_status !== 'trialing' && !u.had_trial && (
-                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-600 border-white/5">
-                          Nunca usou trial
+                      ) : u.had_trial ? (
+                        <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex w-fit bg-slate-800 text-slate-500 border-white/5" title="Já gastou o trial gratuito — não pode usá-lo outra vez.">
+                          Trial já gasto
                         </span>
-                      )}
-                      <div className="flex items-center gap-1">
-                        {u.has_payment_method ? (
-                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                            <CreditCard size={9} className="shrink-0" /> Cartão guardado
-                          </span>
-                        ) : u.subscription_status === 'trialing' && u.has_stripe_customer ? (
-                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-orange-500/10 text-orange-400 border-orange-500/20" title="Trial ativo sem cartão guardado. A renovação pode falhar se não adicionar método de pagamento.">
-                            <CreditCard size={9} className="shrink-0" /> Trial sem cartão
-                          </span>
-                        ) : u.has_stripe_customer ? (
-                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-amber-500/10 text-amber-400 border-amber-500/20">
-                            <CreditCard size={9} className="shrink-0" /> Cliente Stripe sem cartão
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-lg text-[8px] sm:text-[9px] font-black uppercase tracking-wider border whitespace-nowrap inline-flex items-center gap-1 w-fit bg-red-500/10 text-red-400 border-red-500/20">
-                            <CreditCard size={9} className="shrink-0" /> Sem cliente Stripe
-                          </span>
-                        )}
-                      </div>
+                      ) : null}
                     </div>
                   </td>
                   <td className="py-4 sm:py-6 px-2 sm:px-4">
