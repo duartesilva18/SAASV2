@@ -280,6 +280,22 @@ def _job_trial_ending_emails():
         db.close()
 
 
+def _job_telegram_proactive():
+    """Job diário (19:00 UTC): notificações proativas do bot Telegram.
+
+    Domingo envia o resumo semanal; dia 15 o ponto de situação dos orçamentos.
+    Dedup por AuditLog — correr mais de uma vez no mesmo dia não duplica envios."""
+    from .core.telegram_proactive import run_proactive_notifications
+    db = SessionLocal()
+    try:
+        result = run_proactive_notifications(db)
+        logger.info("[Job diário] Telegram proativo: %s", result)
+    except Exception as e:
+        logger.exception(f"Erro no job telegram-proactive: {e}")
+    finally:
+        db.close()
+
+
 def _job_reconcile_subscriptions():
     """Job diário: rede de segurança para webhooks perdidos do Stripe.
 
@@ -307,6 +323,7 @@ def start_scheduler():
         scheduler.add_job(_job_affiliate_first_invoices_pending, "cron", hour=9, minute=0)
         scheduler.add_job(_job_recurring_transactions, "cron", hour=2, minute=0)
         scheduler.add_job(_job_reconcile_subscriptions, "cron", hour=3, minute=30)
+        scheduler.add_job(_job_telegram_proactive, "cron", hour=19, minute=0)
         # Modelo pay-first: já não há trials novos, por isso o aviso de "fim de trial" está
         # desligado. A função _job_trial_ending_emails fica no código (dormente) para o caso
         # de reverter. Os poucos trials existentes terminam naturalmente (Stripe cobra ao 8º dia).

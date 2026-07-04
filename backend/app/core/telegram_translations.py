@@ -347,6 +347,15 @@ TELEGRAM_TRANSLATIONS = {
         'insight_top_expense': "💡 <b>Insight:</b> A tua maior despesa este mês é <b>{description}</b> ({amount}€) em {category}.",
 
         # --- Comparação mensal ---
+        'proactive_week_down': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — <b>{percent}% menos</b> que a anterior. Bom trabalho! 👏",
+        'proactive_week_up': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — <b>{percent}% mais</b> que a anterior. Vale a pena espreitar onde. 👀",
+        'proactive_week_flat': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana — em linha com a anterior. Estável. 🧘",
+        'proactive_week_first': "📊 <b>Resumo da semana</b>\n\nGastaste <b>{amount}€</b> esta semana. Para a próxima já comparo!",
+        'proactive_pace_header': "⏳ <b>Ponto de situação dos orçamentos</b>\n\n",
+        'proactive_pace_line': "⚠️ <b>{category}</b>: a este ritmo estouras o limite por volta do dia <b>{day}</b> ({spent}€ de {limit}€ já gastos)\n",
+        'proactive_pace_footer': "\n💡 Vê os detalhes com <code>/mes</code>. Para silenciar: <code>/alertas</code>",
+        'proactive_alerts_on': "🔔 Alertas proativos <b>ativados</b>. Aviso-te ao domingo (resumo semanal) e a meio do mês (ritmo dos orçamentos).",
+        'proactive_alerts_off': "🔕 Alertas proativos <b>desativados</b>. Envia <code>/alertas</code> outra vez para voltar a ligar.",
         'month_comparison': (
             "📊 <b>Comparação Mensal</b>\n\n"
             "📅 <b>{prev_month}:</b> {prev_expenses}€ gastos\n"
@@ -725,6 +734,15 @@ TELEGRAM_TRANSLATIONS = {
         'insight_top_expense': "💡 <b>Insight:</b> Your biggest expense this month is <b>{description}</b> ({amount}€) in {category}.",
 
         # --- Monthly comparison ---
+        'proactive_week_down': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — <b>{percent}% less</b> than last week. Well done! 👏",
+        'proactive_week_up': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — <b>{percent}% more</b> than last week. Worth a look. 👀",
+        'proactive_week_flat': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week — in line with last week. Steady. 🧘",
+        'proactive_week_first': "📊 <b>Weekly summary</b>\n\nYou spent <b>{amount}€</b> this week. Next week I'll compare!",
+        'proactive_pace_header': "⏳ <b>Budget check-in</b>\n\n",
+        'proactive_pace_line': "⚠️ <b>{category}</b>: at this pace you'll blow the limit around day <b>{day}</b> ({spent}€ of {limit}€ already spent)\n",
+        'proactive_pace_footer': "\n💡 See details with <code>/mes</code>. To mute: <code>/alertas</code>",
+        'proactive_alerts_on': "🔔 Proactive alerts <b>enabled</b>. I'll ping you on Sundays (weekly summary) and mid-month (budget pace).",
+        'proactive_alerts_off': "🔕 Proactive alerts <b>disabled</b>. Send <code>/alertas</code> again to re-enable.",
         'month_comparison': (
             "📊 <b>Monthly Comparison</b>\n\n"
             "📅 <b>{prev_month}:</b> {prev_expenses}€ spent\n"

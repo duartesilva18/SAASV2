@@ -3075,6 +3075,7 @@ def setup_bot_commands():
         {"command": "revoke", "description": "🔓 Desvincular Telegram da conta"},
         {"command": "idioma", "description": "🌐 Mudar idioma (pt / en)"},
         {"command": "categoria", "description": "🏷️ Categoria por defeito (nome ou stop)"},
+        {"command": "alertas", "description": "🔔 Ligar/desligar avisos automáticos"},
     ]
     
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/setMyCommands"
@@ -3970,6 +3971,19 @@ def _process_update(data: dict):
             send_telegram_msg(chat_id, t_pend('pendentes_list').format(count=len(pendents), lines="".join(lines)))
             return {'status': 'ok'}
         
+        # Comando /alertas - Ligar/desligar notificações proativas (resumo semanal, ritmo dos orçamentos)
+        if text.strip().lower() == '/alertas':
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            from ..core.telegram_proactive import is_proactive_disabled, set_proactive_disabled
+            t_al = get_telegram_t(user.language or 'pt')
+            currently_off = is_proactive_disabled(db, user.id)
+            set_proactive_disabled(db, user.id, disabled=not currently_off)
+            send_telegram_msg(chat_id, t_al('proactive_alerts_on') if currently_off else t_al('proactive_alerts_off'))
+            return {'status': 'ok'}
+
         # Comando /revoke - Desvincular Telegram da conta
         if text.strip().lower() == '/revoke':
             user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
