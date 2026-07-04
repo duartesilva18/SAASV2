@@ -381,6 +381,27 @@ def _safe_fallback_category(categories):
     return pool[0]
 
 
+def _find_recent_duplicate(db, workspace_id, amount_cents: int, description: str, exclude_id=None, minutes: int = 10):
+    """Procura uma transação CONFIRMADA igual (mesmo valor + mesma descrição canónica) nos
+    últimos N minutos — apanha registos duplicados por engano (voz repetida, double-tap)."""
+    try:
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+        key = _description_cache_key(description or '')
+        q = db.query(models.Transaction).filter(
+            models.Transaction.workspace_id == workspace_id,
+            models.Transaction.amount_cents == amount_cents,
+            models.Transaction.created_at >= cutoff,
+        )
+        if exclude_id is not None:
+            q = q.filter(models.Transaction.id != exclude_id)
+        for tx in q.limit(20).all():
+            if _description_cache_key(tx.description or '') == key:
+                return tx
+    except Exception as e:
+        logger.warning("Verificação de duplicados falhou: %s", e)
+    return None
+
+
 def _origin_line(inference_source: Optional[str], t) -> str:
     """Etiqueta de origem só quando a categoria NÃO é confiável (fallback) — "Por cache/OpenAI" é ruído."""
     if not inference_source:
@@ -3076,6 +3097,7 @@ def setup_bot_commands():
         {"command": "idioma", "description": "🌐 Mudar idioma (pt / en)"},
         {"command": "categoria", "description": "🏷️ Categoria por defeito (nome ou stop)"},
         {"command": "alertas", "description": "🔔 Ligar/desligar avisos automáticos"},
+        {"command": "convidar", "description": "🤝 O teu link de convite (ganhas comissão)"},
     ]
     
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/setMyCommands"
@@ -3590,6 +3612,15 @@ def _process_update(data: dict):
                 db.delete(pending)
                 db.commit()
                 logger.info("Transacao confirmada e commitada com sucesso")
+                # Aviso de possível duplicado (mesmo valor + descrição nos últimos 10 min)
+                _dup = _find_recent_duplicate(db, transaction.workspace_id, transaction.amount_cents, transaction.description, exclude_id=transaction.id)
+                if _dup:
+                    _dup_user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+                    _dup_lang = (_dup_user.language if _dup_user and _dup_user.language else 'pt')
+                    send_telegram_msg(chat_id, get_telegram_t(_dup_lang)('duplicate_registered_warning').format(
+                        description=transaction.description,
+                        amount=_format_amount_for_lang(transaction.amount_cents, _dup_lang),
+                    ))
                 
                 try:
                     requests.post(
@@ -3971,6 +4002,22 @@ def _process_update(data: dict):
             send_telegram_msg(chat_id, t_pend('pendentes_list').format(count=len(pendents), lines="".join(lines)))
             return {'status': 'ok'}
         
+        # Comando /convidar - Link de afiliado pronto a reencaminhar
+        if text.strip().lower() in ('/convidar', '/invite'):
+            user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
+            if not user:
+                send_telegram_msg(chat_id, t('clear_unauthorized'))
+                return {'status': 'unauthorized'}
+            t_inv = get_telegram_t(user.language or 'pt')
+            if user.is_affiliate and user.affiliate_code:
+                link = f"{settings.FRONTEND_URL}/auth/register?ref={user.affiliate_code}"
+                send_telegram_msg(chat_id, t_inv('invite_header'))
+                # Mensagem limpa, separada, para reencaminhar tal e qual
+                send_telegram_msg(chat_id, t_inv('invite_message').format(link=link))
+            else:
+                send_telegram_msg(chat_id, t_inv('invite_not_affiliate').format(url=f"{settings.FRONTEND_URL}/affiliate"))
+            return {'status': 'ok'}
+
         # Comando /alertas - Ligar/desligar notificações proativas (resumo semanal, ritmo dos orçamentos)
         if text.strip().lower() == '/alertas':
             user = db.query(models.User).filter(models.User.phone_number == str(chat_id)).first()
@@ -4851,6 +4898,13 @@ def _process_update(data: dict):
             if smart_auto:
                 registered_msg += "\n" + t('auto_registered_hint')
             send_telegram_msg(chat_id, registered_msg)
+            # Aviso de possível duplicado (mesmo valor + descrição nos últimos 10 min)
+            dup = _find_recent_duplicate(db, workspace.id, amount_cents, parsed['description'], exclude_id=transaction.id)
+            if dup:
+                send_telegram_msg(chat_id, t('duplicate_registered_warning').format(
+                    description=parsed['description'],
+                    amount=_format_amount_for_lang(amount_cents, user.language or 'pt'),
+                ))
             # Budget alert e streak após auto-confirmação
             try:
                 alert = _check_budget_alerts(workspace.id, parsed['category_id'], db, t, user.language or 'pt')

@@ -287,6 +287,168 @@ def _append_copilot_message(db: Session, user_id, role: str, content: str):
     db.commit()
 
 
+# ── Ferramentas do Copilot: o assistente pode AGIR, não só responder ──────────
+COPILOT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "create_savings_goal",
+            "description": "Cria uma meta de poupança para o utilizador. Usa quando ele pedir explicitamente para criar uma meta/objetivo de poupança.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Nome da meta, ex.: 'Férias'"},
+                    "target_amount_eur": {"type": "number", "description": "Valor objetivo em euros"},
+                    "target_date": {"type": "string", "description": "Data limite YYYY-MM-DD (opcional; por omissão daqui a 1 ano)"},
+                },
+                "required": ["name", "target_amount_eur"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_category_limit",
+            "description": "Define (ou remove, com 0) o limite mensal de orçamento de uma categoria de despesa existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category_name": {"type": "string", "description": "Nome da categoria, ex.: 'Alimentação'"},
+                    "monthly_limit_eur": {"type": "number", "description": "Limite mensal em euros (0 remove o limite)"},
+                },
+                "required": ["category_name", "monthly_limit_eur"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_spending",
+            "description": "Consulta quanto o utilizador gastou, no total ou numa categoria, num período. Usa para perguntas tipo 'quanto gastei em farmácia este ano?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "category_name": {"type": "string", "description": "Categoria (opcional; omitir = todas)"},
+                    "period": {"type": "string", "enum": ["this_month", "last_month", "last_3_months", "this_year"], "description": "Período da consulta"},
+                },
+                "required": ["period"],
+            },
+        },
+    },
+]
+
+COPILOT_ACTIONS_PROMPT = (
+    "\n\nAÇÕES DISPONÍVEIS: além de responder, podes EXECUTAR ações com as ferramentas fornecidas "
+    "(criar metas de poupança, definir limites de orçamento por categoria, consultar gastos por categoria/período). "
+    "Usa-as quando o pedido for claro. Depois de executares, confirma ao utilizador em 1-2 frases o que foi feito, "
+    "com os valores exatos. Nunca inventes resultados: usa apenas o que a ferramenta devolver."
+)
+
+
+def _match_category(db, workspace_id, name: str):
+    """Match tolerante de categoria de despesa por nome (exato → substring)."""
+    if not name:
+        return None
+    cats = db.query(models.Category).filter(
+        models.Category.workspace_id == workspace_id,
+        models.Category.type == 'expense',
+    ).all()
+    low = name.strip().lower()
+    for c in cats:
+        if c.name.lower() == low:
+            return c
+    for c in cats:
+        if low in c.name.lower() or c.name.lower() in low:
+            return c
+    return None
+
+
+def _execute_copilot_tool(name: str, args: dict, user_id, workspace_id) -> dict:
+    """Executa uma ferramenta do copilot numa sessão própria. Devolve dict serializável
+    (o modelo usa-o para redigir a confirmação — nunca texto inventado)."""
+    from datetime import date as _date, timedelta as _td
+    _db = SessionLocal()
+    try:
+        if name == 'create_savings_goal':
+            goal_name = (args.get('name') or '').strip()[:100]
+            amount = float(args.get('target_amount_eur') or 0)
+            if not goal_name or amount <= 0 or amount > 100_000_000:
+                return {"ok": False, "error": "nome ou valor inválido"}
+            try:
+                target = _date.fromisoformat(str(args.get('target_date'))) if args.get('target_date') else None
+            except ValueError:
+                target = None
+            if not target or target <= _date.today():
+                target = _date.today() + _td(days=365)
+            goal = models.SavingsGoal(
+                workspace_id=workspace_id, name=goal_name, goal_type='expense',
+                target_amount_cents=int(round(amount * 100)), target_date=target,
+            )
+            _db.add(goal)
+            _db.commit()
+            logger.info("Copilot criou meta '%s' (%.2f€) para user %s", goal_name, amount, user_id)
+            return {"ok": True, "goal": goal_name, "target_amount_eur": amount, "target_date": target.isoformat()}
+
+        if name == 'set_category_limit':
+            cat = _match_category(_db, workspace_id, args.get('category_name') or '')
+            if not cat:
+                available = [c.name for c in _db.query(models.Category).filter(
+                    models.Category.workspace_id == workspace_id, models.Category.type == 'expense').all()]
+                return {"ok": False, "error": "categoria não encontrada", "categorias_existentes": available[:15]}
+            limit = float(args.get('monthly_limit_eur') or 0)
+            if limit < 0 or limit > 100_000_000:
+                return {"ok": False, "error": "limite inválido"}
+            cat.monthly_limit_cents = int(round(limit * 100))
+            _db.commit()
+            logger.info("Copilot definiu limite %.2f€ em '%s' para user %s", limit, cat.name, user_id)
+            return {"ok": True, "category": cat.name, "monthly_limit_eur": limit, "removed": limit == 0}
+
+        if name == 'query_spending':
+            from datetime import date as d
+            today = d.today()
+            period = args.get('period') or 'this_month'
+            if period == 'this_month':
+                start, end = today.replace(day=1), today
+            elif period == 'last_month':
+                first_this = today.replace(day=1)
+                end = first_this - _td(days=1)
+                start = end.replace(day=1)
+            elif period == 'last_3_months':
+                start, end = today - _td(days=90), today
+            else:  # this_year
+                start, end = today.replace(month=1, day=1), today
+            q = _db.query(
+                func.coalesce(func.sum(func.abs(models.Transaction.amount_cents)), 0),
+                func.count(models.Transaction.id),
+            ).filter(
+                models.Transaction.workspace_id == workspace_id,
+                models.Transaction.amount_cents < 0,
+                models.Transaction.transaction_date >= start,
+                models.Transaction.transaction_date <= end,
+                func.abs(models.Transaction.amount_cents) != 1,
+            )
+            cat = None
+            if args.get('category_name'):
+                cat = _match_category(_db, workspace_id, args['category_name'])
+                if not cat:
+                    return {"ok": False, "error": "categoria não encontrada"}
+                q = q.filter(models.Transaction.category_id == cat.id)
+            total_cents, count = q.first()
+            return {
+                "ok": True, "period": period, "from": start.isoformat(), "to": end.isoformat(),
+                "category": cat.name if cat else "todas",
+                "total_eur": round(int(total_cents or 0) / 100, 2), "transactions": int(count or 0),
+            }
+
+        return {"ok": False, "error": f"ferramenta desconhecida: {name}"}
+    except Exception as e:
+        _db.rollback()
+        logger.exception("Copilot tool '%s' falhou: %s", name, e)
+        return {"ok": False, "error": "erro interno ao executar a ação"}
+    finally:
+        _db.close()
+
+
 @router.post('/chat')
 @limiter.limit('30/hour')
 async def assistant_chat(
@@ -312,7 +474,7 @@ async def assistant_chat(
     lang = header_lang or user_lang
 
     financial_context = _build_financial_context_cached(db, current_user, workspace)
-    system_prompt = _get_system_prompt(current_user, financial_context, lang)
+    system_prompt = _get_system_prompt(current_user, financial_context, lang) + COPILOT_ACTIONS_PROMPT
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in body.history[-10:]:
@@ -330,22 +492,70 @@ async def assistant_chat(
     from openai import OpenAI
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+    ws_id = workspace.id
+
     def generate():
         full_text = []
         try:
-            stream = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=1500,
-                temperature=0.7,
-                stream=True,
-            )
-            for chunk in stream:
-                delta = chunk.choices[0].delta if chunk.choices else None
-                if delta and delta.content:
-                    full_text.append(delta.content)
-                    data = json.dumps({"type": "token", "content": delta.content}, ensure_ascii=False)
-                    yield f"data: {data}\n\n"
+            # Até 3 rondas: o modelo pode pedir ferramentas (agir) antes da resposta final.
+            convo = list(messages)
+            for _round in range(3):
+                stream = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=convo,
+                    max_tokens=1500,
+                    temperature=0.7,
+                    stream=True,
+                    tools=COPILOT_TOOLS,
+                )
+                tool_calls: dict = {}
+                finish_reason = None
+                for chunk in stream:
+                    choice = chunk.choices[0] if chunk.choices else None
+                    if not choice:
+                        continue
+                    if choice.finish_reason:
+                        finish_reason = choice.finish_reason
+                    delta = choice.delta
+                    if delta and delta.content:
+                        full_text.append(delta.content)
+                        data = json.dumps({"type": "token", "content": delta.content}, ensure_ascii=False)
+                        yield f"data: {data}\n\n"
+                    if delta and delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            entry = tool_calls.setdefault(tc.index, {"id": "", "name": "", "args": ""})
+                            if tc.id:
+                                entry["id"] = tc.id
+                            if tc.function and tc.function.name:
+                                entry["name"] = tc.function.name
+                            if tc.function and tc.function.arguments:
+                                entry["args"] += tc.function.arguments
+
+                if finish_reason != 'tool_calls' or not tool_calls:
+                    break  # resposta final já foi transmitida
+
+                # Executar as ferramentas pedidas e voltar ao modelo com os resultados
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {"id": e["id"], "type": "function",
+                         "function": {"name": e["name"], "arguments": e["args"] or "{}"}}
+                        for e in tool_calls.values()
+                    ],
+                }
+                convo.append(assistant_msg)
+                for e in tool_calls.values():
+                    try:
+                        parsed_args = json.loads(e["args"] or "{}")
+                    except json.JSONDecodeError:
+                        parsed_args = {}
+                    result = _execute_copilot_tool(e["name"], parsed_args, user_id, ws_id)
+                    convo.append({
+                        "role": "tool",
+                        "tool_call_id": e["id"],
+                        "content": json.dumps(result, ensure_ascii=False),
+                    })
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:
