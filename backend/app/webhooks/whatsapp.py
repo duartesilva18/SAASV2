@@ -11,6 +11,7 @@ from ..core.config import settings
 from ..core.dependencies import get_db
 from ..models import database as models
 from datetime import datetime
+from ..core.workspace import resolve_user_workspace
 
 logger = logging.getLogger("whatsapp_webhook")
 
@@ -114,7 +115,7 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
 
         print(f"👤 Utilizador Identificado: {user.email}")
 
-        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+        workspace = resolve_user_workspace(db, user.id)
         if not workspace:
             return {'status': 'workspace not found'}
 

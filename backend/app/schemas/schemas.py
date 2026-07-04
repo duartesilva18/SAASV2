@@ -196,6 +196,7 @@ class TransactionResponse(TransactionBase):
     workspace_id: UUID
     installment_group_id: Optional[UUID] = None
     created_at: Optional[datetime] = None
+    created_by_name: Optional[str] = None  # modo casal: quem registou (para o chip "por X")
 
     class Config:
         from_attributes = True

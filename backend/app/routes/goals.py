@@ -8,12 +8,13 @@ from ..models import database as models
 from .. import schemas
 from .auth import get_current_user
 from uuid import UUID
+from ..core.workspace import resolve_user_workspace
 
 router = APIRouter(prefix='/goals', tags=['goals'])
 
 @router.get('/', response_model=List[schemas.SavingsGoalResponse])
 async def get_goals(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     
@@ -24,7 +25,7 @@ async def get_goals(db: Session = Depends(get_db), current_user: models.User = D
 async def create_goal(request: Request, goal: schemas.SavingsGoalCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     
@@ -39,7 +40,7 @@ async def create_goal(request: Request, goal: schemas.SavingsGoalCreate, db: Ses
 async def update_goal(request: Request, goal_id: UUID, goal_update: schemas.SavingsGoalUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(models.SavingsGoal.id == goal_id, models.SavingsGoal.workspace_id == workspace.id).first()
@@ -59,7 +60,7 @@ async def update_goal(request: Request, goal_id: UUID, goal_update: schemas.Savi
 async def delete_goal(goal_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(models.SavingsGoal.id == goal_id, models.SavingsGoal.workspace_id == workspace.id).first()
@@ -84,7 +85,7 @@ async def deposit_into_goal(
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
     """Adicionar dinheiro à meta. Apenas atualiza o valor acumulado, sem criar transação."""
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(
@@ -115,7 +116,7 @@ async def close_goal(
     transaction_type = (body.transaction_type or 'income').lower()
     if transaction_type not in ('income', 'expense'):
         transaction_type = 'income'
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     db_goal = db.query(models.SavingsGoal).filter(

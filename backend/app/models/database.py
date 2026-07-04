@@ -64,8 +64,8 @@ class User(Base):
         """True se a conta foi criada com email/password; False se entrou só por Google/social."""
         return self.password_hash is not None
 
-    def has_effective_pro(self) -> bool:
-        """True se o utilizador tem acesso Pro: admin, subscrição ativa ou Pro concedido até uma data futura."""
+    def _has_own_pro(self) -> bool:
+        """Pro pelos próprios meios: admin, subscrição ativa ou Pro concedido até uma data futura."""
         from datetime import datetime, timezone
         if self.is_admin:
             return True
@@ -78,6 +78,37 @@ class User(Base):
             now = datetime.now(timezone.utc)
             return self.pro_granted_until > now
         return False
+
+    def has_effective_pro(self) -> bool:
+        """True se tem Pro próprio OU é membro de um workspace cujo dono tem Pro
+        (modo casal: "um plano para os dois" — o parceiro herda o acesso).
+        Cache por instância para não repetir a query dentro do mesmo request."""
+        if self._has_own_pro():
+            return True
+        cached = getattr(self, '_inherited_pro_cache', None)
+        if cached is not None:
+            return cached
+        inherited = False
+        try:
+            from sqlalchemy.orm import object_session
+            session = object_session(self)
+            if session is not None:
+                membership = session.query(WorkspaceMember).filter(
+                    WorkspaceMember.user_id == self.id
+                ).first()
+                if membership:
+                    owner = (
+                        session.query(User)
+                        .join(Workspace, Workspace.owner_id == User.id)
+                        .filter(Workspace.id == membership.workspace_id)
+                        .first()
+                    )
+                    if owner is not None and owner.id != self.id:
+                        inherited = owner._has_own_pro()
+        except Exception:
+            inherited = False
+        self._inherited_pro_cache = inherited
+        return inherited
 
 class Workspace(Base):
     __tablename__ = 'workspaces'
@@ -95,6 +126,34 @@ class Workspace(Base):
     recurring_transactions = relationship('RecurringTransaction', back_populates='workspace', cascade='all, delete-orphan')
     installment_groups = relationship('InstallmentGroup', back_populates='workspace', cascade='all, delete-orphan')
     savings_goals = relationship('SavingsGoal', back_populates='workspace', cascade='all, delete-orphan')
+    members = relationship('WorkspaceMember', back_populates='workspace', cascade='all, delete-orphan')
+
+
+# Modo casal: membros extra de um workspace (o owner NÃO entra aqui — é workspace.owner_id).
+# UNIQUE em user_id garante que cada pessoa só pode ser membro de UM workspace partilhado.
+class WorkspaceMember(Base):
+    __tablename__ = 'workspace_members'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    role = Column(String(20), nullable=False, server_default='member')
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    workspace = relationship('Workspace', back_populates='members')
+    user = relationship('User')
+
+
+class WorkspaceInvite(Base):
+    __tablename__ = 'workspace_invites'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='CASCADE'), nullable=False, index=True)
+    code = Column(String(12), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked = Column(Boolean, nullable=False, default=False)
+
+    workspace = relationship('Workspace')
+
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -157,9 +216,11 @@ class Transaction(Base):
     decision_reason = Column(String(255), nullable=True)
     needs_review = Column(Boolean, nullable=False, default=False)
     is_installment = Column(Boolean, nullable=False, default=False)
+    # Modo casal: quem registou (nullable — transações antigas não têm autor)
+    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-    
+
     workspace = relationship('Workspace', back_populates='transactions')
     category = relationship('Category', back_populates='transactions')
     installment_group = relationship('InstallmentGroup', back_populates='transactions')

@@ -160,12 +160,8 @@ def get_current_workspace(
     cached = getattr(request.state, 'workspace', None)
     if cached is not None:
         return cached
-    workspace = (
-        db.query(models.Workspace)
-        .filter(models.Workspace.owner_id == current_user.id)
-        .order_by(models.Workspace.created_at)
-        .first()
-    )
+    from ..core.workspace import resolve_user_workspace
+    workspace = resolve_user_workspace(db, current_user)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     request.state.workspace = workspace

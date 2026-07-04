@@ -10,6 +10,7 @@ from ..core.dependencies import get_db
 from ..models import database as models
 from .. import schemas
 from .auth import get_current_user, get_current_workspace
+from ..core.workspace import resolve_user_workspace
 
 router = APIRouter(prefix='/insights', tags=['insights'])
 
@@ -26,7 +27,7 @@ async def get_zen_insights(
     def tr(pt: str, en: str) -> str:
         return en if is_en else pt
 
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
 

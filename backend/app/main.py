@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate, support, assistant
+from .routes import auth, categories, transactions, stripe as stripe_routes, insights, recurring, admin, goals, dashboard, affiliate, support, assistant, sharing
 from .routes.auth import create_default_categories
 from .webhooks import stripe as stripe_webhooks, whatsapp as whatsapp_webhooks, telegram as telegram_webhooks
 from .webhooks.telegram import setup_bot_commands
@@ -62,6 +62,10 @@ def _ensure_runtime_indexes():
         # Fim do trial (do Stripe) para a UI mostrar "faltam X dias".
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at "
         "TIMESTAMPTZ NULL",
+        # Modo casal: autor da transação (as tabelas workspace_members/invites novas
+        # são criadas pelo create_all; esta coluna em tabela existente não).
+        "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by_user_id "
+        "UUID NULL REFERENCES users(id) ON DELETE SET NULL",
     ]
     with engine.begin() as conn:
         for stmt in statements:
@@ -169,6 +173,7 @@ app.include_router(stripe_routes.router)
 app.include_router(affiliate.router)
 app.include_router(support.router)
 app.include_router(assistant.router)
+app.include_router(sharing.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(whatsapp_webhooks.router)
 app.include_router(telegram_webhooks.router)

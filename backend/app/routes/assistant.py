@@ -21,6 +21,7 @@ from ..core.financial_engine import FinancialEngine
 from ..core.limiter import limiter
 from ..models import database as models
 from .auth import get_current_user
+from ..core.workspace import resolve_user_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -463,9 +464,7 @@ async def assistant_chat(
     if not getattr(settings, 'OPENAI_API_KEY', None):
         raise HTTPException(status_code=503, detail='AI service not configured')
 
-    workspace = db.query(models.Workspace).filter(
-        models.Workspace.owner_id == current_user.id
-    ).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
 
@@ -592,9 +591,7 @@ async def get_suggestions(
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail='Pro subscription required')
 
-    workspace = db.query(models.Workspace).filter(
-        models.Workspace.owner_id == current_user.id
-    ).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         return {"suggestions": []}
 

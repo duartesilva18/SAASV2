@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import func, case
 
 from ..models import database as models
+from .workspace import resolve_user_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +203,7 @@ def run_proactive_notifications(db) -> dict:
                 continue
             if is_proactive_disabled(db, user.id):
                 continue
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 continue
             # Gate de atividade: sem transações recentes, não incomodar

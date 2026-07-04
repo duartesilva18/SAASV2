@@ -24,6 +24,7 @@ from ..core.dependencies import get_db, SessionLocal
 from ..models import database as models
 from ..core.limiter import limiter
 from ..core.telegram_translations import get_telegram_t
+from ..core.workspace import resolve_user_workspace
 
 logger = logging.getLogger("telegram_webhook")
 
@@ -3295,6 +3296,7 @@ def _process_update(data: dict):
                         decision_reason=getattr(pending, 'decision_reason', None),
                         needs_review=getattr(pending, 'needs_review', False),
                         transaction_date=getattr(pending, 'transaction_date', None) or date.today(),
+                        created_by_user_id=user.id if user else None,
                     )
                     db.add(transaction)
                     # Aprendizagem: guardar no cache para futuras mensagens (menos IA)
@@ -3614,7 +3616,8 @@ def _process_update(data: dict):
                     inference_source=getattr(pending, 'inference_source', None),
                     decision_reason=getattr(pending, 'decision_reason', None),
                     needs_review=getattr(pending, 'needs_review', False),
-                    transaction_date=pending.transaction_date
+                    transaction_date=pending.transaction_date,
+                    created_by_user_id=user.id if user else None,
                 )
                 db.add(transaction)
                 db.flush()
@@ -3827,7 +3830,7 @@ def _process_update(data: dict):
             if not user:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -3872,7 +3875,7 @@ def _process_update(data: dict):
             if not user:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -3902,15 +3905,42 @@ def _process_update(data: dict):
             if count == 0:
                 send_telegram_msg(chat_id, t_sum('summary_empty'))
             else:
-                send_telegram_msg(
-                    chat_id,
-                    t_sum('summary_month').format(
-                        expenses=expenses_str,
-                        income=income_str,
-                        count=count,
-                        balance=balance_str,
-                    ),
+                msg = t_sum('summary_month').format(
+                    expenses=expenses_str,
+                    income=income_str,
+                    count=count,
+                    balance=balance_str,
                 )
+                # Modo casal: breakdown de despesas por pessoa quando o workspace é partilhado
+                try:
+                    has_members = db.query(models.WorkspaceMember.id).filter(
+                        models.WorkspaceMember.workspace_id == workspace.id
+                    ).first() is not None
+                    if has_members:
+                        author_expr = func.coalesce(models.Transaction.created_by_user_id, workspace.owner_id)
+                        rows = db.query(
+                            author_expr,
+                            func.coalesce(func.sum(func.abs(models.Transaction.amount_cents)), 0),
+                        ).filter(
+                            models.Transaction.workspace_id == workspace.id,
+                            models.Transaction.amount_cents < 0,
+                            models.Transaction.transaction_date >= first_day,
+                            models.Transaction.transaction_date <= today,
+                            func.abs(models.Transaction.amount_cents) != 1,
+                        ).group_by(author_expr).all()
+                        if rows:
+                            parts = []
+                            for author_id, total in sorted(rows, key=lambda r: -int(r[1])):
+                                if author_id == user.id:
+                                    label = t_sum('shared_you')
+                                else:
+                                    au = db.query(models.User).filter(models.User.id == author_id).first()
+                                    label = (au.full_name or au.email.split('@')[0]) if au else '?'
+                                parts.append(f"{label}: {_format_amount_for_lang(int(total), lang)}€")
+                            msg += "\n" + t_sum('shared_breakdown').format(parts=' · '.join(parts))
+                except Exception as be:
+                    logger.warning("Breakdown por pessoa falhou: %s", be)
+                send_telegram_msg(chat_id, msg)
             return {'status': 'ok'}
         
         # Comando /semana - Resumo da semana
@@ -3919,7 +3949,7 @@ def _process_update(data: dict):
             if not user:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -3994,7 +4024,7 @@ def _process_update(data: dict):
             if not user:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4095,7 +4125,7 @@ def _process_update(data: dict):
             if not user_cat:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace_cat = db.query(models.Workspace).filter(models.Workspace.owner_id == user_cat.id).first()
+            workspace_cat = resolve_user_workspace(db, user_cat.id)
             if not workspace_cat:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4131,7 +4161,7 @@ def _process_update(data: dict):
             language = user.language if user.language else 'pt'
             t_clear = get_telegram_t(language)
             
-            workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace = resolve_user_workspace(db, user.id)
             if not workspace:
                 send_telegram_msg(chat_id, t_clear('workspace_not_found'))
                 return {'status': 'error'}
@@ -4160,7 +4190,7 @@ def _process_update(data: dict):
             if not user_exp:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace_exp = db.query(models.Workspace).filter(models.Workspace.owner_id == user_exp.id).first()
+            workspace_exp = resolve_user_workspace(db, user_exp.id)
             if not workspace_exp:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4215,7 +4245,7 @@ def _process_update(data: dict):
             if not user_rec:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace_rec = db.query(models.Workspace).filter(models.Workspace.owner_id == user_rec.id).first()
+            workspace_rec = resolve_user_workspace(db, user_rec.id)
             if not workspace_rec:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4248,7 +4278,7 @@ def _process_update(data: dict):
             if not user_rec:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace_rec = db.query(models.Workspace).filter(models.Workspace.owner_id == user_rec.id).first()
+            workspace_rec = resolve_user_workspace(db, user_rec.id)
             if not workspace_rec:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4299,7 +4329,7 @@ def _process_update(data: dict):
             if not user_undo:
                 send_telegram_msg(chat_id, t('clear_unauthorized'))
                 return {'status': 'unauthorized'}
-            workspace_undo = db.query(models.Workspace).filter(models.Workspace.owner_id == user_undo.id).first()
+            workspace_undo = resolve_user_workspace(db, user_undo.id)
             if not workspace_undo:
                 send_telegram_msg(chat_id, t('workspace_not_found'))
                 return {'status': 'error'}
@@ -4378,7 +4408,7 @@ def _process_update(data: dict):
             db.commit()
             
             # Verificar workspace após associação
-            workspace_check = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace_check = resolve_user_workspace(db, user.id)
             logger.info(f"Conta Telegram associada: email={email_limpo[:10]}***, user_id={user.id}, workspace_id={workspace_check.id if workspace_check else None}, chat_id={chat_id}")
             
             send_telegram_msg(chat_id, t_email('account_linked_success').format(email=f"{user.email[:3]}***"), pin_message=True)
@@ -4393,7 +4423,7 @@ def _process_update(data: dict):
         if user:
             logger.info(f"telegram_auto_confirm: {user.telegram_auto_confirm}")
             # Verificar workspace do user
-            workspace_check = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+            workspace_check = resolve_user_workspace(db, user.id)
             logger.info(f"Workspace do user Telegram: {workspace_check.id if workspace_check else None}")
             # Atualizar t com a linguagem do utilizador
             language = user.language if user.language else 'pt'
@@ -4403,7 +4433,7 @@ def _process_update(data: dict):
             return {'status': 'unauthorized'}
         
         logger.info(f"Buscando workspace para user_id={user.id}")
-        workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == user.id).first()
+        workspace = resolve_user_workspace(db, user.id)
         logger.info(f"Workspace encontrado: {workspace is not None} (id: {workspace.id if workspace else None})")
         if not workspace:
             send_telegram_msg(chat_id, t('workspace_not_found'))
@@ -4785,6 +4815,7 @@ def _process_update(data: dict):
                         decision_reason=trans_data.get('decision_reason'),
                         needs_review=trans_data.get('needs_review', False),
                         transaction_date=trans_date,
+                        created_by_user_id=user.id,
                     )
                     db.add(transaction)
                     created_count += 1
@@ -4898,6 +4929,7 @@ def _process_update(data: dict):
                 decision_reason=parsed.get('decision_reason'),
                 needs_review=parsed.get('needs_review', False),
                 transaction_date=transaction_date,
+                created_by_user_id=user.id,
             )
             db.add(transaction)
             db.flush()

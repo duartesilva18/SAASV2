@@ -12,6 +12,7 @@ from .auth import get_current_user, get_current_workspace
 from uuid import UUID
 from datetime import date
 import calendar
+from ..core.workspace import resolve_user_workspace
 
 router = APIRouter(prefix='/transactions', tags=['transactions'])
 
@@ -112,14 +113,31 @@ async def get_transactions(
         func.abs(models.Transaction.amount_cents) != 1
     ).order_by(models.Transaction.created_at.desc()).offset(skip).limit(limit).all()
 
-    return transactions
+    # Modo casal: expor quem registou (só vale a pena com 2+ pessoas no workspace)
+    has_members = db.query(models.WorkspaceMember.id).filter(
+        models.WorkspaceMember.workspace_id == workspace.id
+    ).first() is not None
+    out = []
+    names: dict = {}
+    if has_members:
+        user_ids = {t.created_by_user_id for t in transactions if t.created_by_user_id}
+        user_ids.add(workspace.owner_id)
+        for u in db.query(models.User).filter(models.User.id.in_(user_ids)).all():
+            names[u.id] = u.full_name or u.email
+    for t in transactions:
+        item = schemas.TransactionResponse.from_orm(t)
+        if has_members:
+            author_id = t.created_by_user_id or workspace.owner_id
+            item.created_by_name = names.get(author_id)
+        out.append(item)
+    return out
 
 @router.post('/', response_model=schemas.TransactionResponse)
 @limiter.limit('60/minute')
 async def create_transaction(request: Request, transaction_in: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace not found')
     
@@ -215,7 +233,8 @@ async def create_transaction(request: Request, transaction_in: schemas.Transacti
     
     new_transaction = models.Transaction(
         **transaction_in.dict(),
-        workspace_id=workspace.id
+        workspace_id=workspace.id,
+        created_by_user_id=current_user.id,  # modo casal: quem registou
     )
     db.add(new_transaction)
     db.commit()
@@ -237,7 +256,7 @@ async def bulk_delete_transactions(request: Request, body: BulkDeleteRequest, db
         raise HTTPException(status_code=400, detail='Nenhuma transação selecionada.')
     if len(body.ids) > 500:
         raise HTTPException(status_code=400, detail='Máximo de 500 transações por operação.')
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
     uuids = []
@@ -260,7 +279,7 @@ async def bulk_delete_transactions(request: Request, body: BulkDeleteRequest, db
 async def update_transaction(request: Request, transaction_id: UUID, transaction_in: schemas.TransactionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_transaction = db.query(models.Transaction).filter(
@@ -312,7 +331,7 @@ async def update_transaction(request: Request, transaction_id: UUID, transaction
 async def delete_transaction(request: Request, transaction_id: UUID, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if not current_user.has_effective_pro():
         raise HTTPException(status_code=403, detail="Funcionalidade disponível apenas para utilizadores Pro.")
-    workspace = db.query(models.Workspace).filter(models.Workspace.owner_id == current_user.id).order_by(models.Workspace.created_at).first()
+    workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
         raise HTTPException(status_code=404, detail='Workspace não encontrado')
     db_transaction = db.query(models.Transaction).filter(
