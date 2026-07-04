@@ -182,7 +182,9 @@ def run_proactive_notifications(db) -> dict:
     is_mid_month = today.day == 15
     # Revisão de subscrições: 2 de janeiro e 2 de julho (semestral)
     is_subs_review = today.day == 2 and today.month in (1, 7)
-    if not (is_sunday or is_mid_month or is_subs_review):
+    # Wrapped mensal: dia 1 (resumo do mês que fechou, em imagem partilhável)
+    is_wrapped_day = today.day == 1
+    if not (is_sunday or is_mid_month or is_subs_review or is_wrapped_day):
         return {'sent': 0, 'skipped': 'nothing scheduled today'}
 
     def fmt(cents: int, lang: str) -> str:
@@ -236,6 +238,23 @@ def run_proactive_notifications(db) -> dict:
                 send_telegram_msg(chat_id, msg)
                 _mark_sent(db, user.id, key)
                 sent += 1
+
+            # Wrapped mensal (imagem) — dia 1, sobre o mês que fechou
+            if is_wrapped_day:
+                prev_month_first = (today - timedelta(days=1)).replace(day=1)
+                key = f"wrapped:{prev_month_first.strftime('%Y-%m')}"
+                if not _already_sent(db, user.id, key):
+                    try:
+                        from .telegram_wrapped import collect_month_stats, render_wrapped_image
+                        from ..webhooks.telegram import send_telegram_photo
+                        stats = collect_month_stats(db, workspace.id, prev_month_first)
+                        if stats:
+                            image = render_wrapped_image(stats, user.language or 'pt')
+                            if send_telegram_photo(chat_id, image, t('wrapped_caption')):
+                                _mark_sent(db, user.id, key)
+                                sent += 1
+                    except Exception as we:
+                        logger.warning("Wrapped falhou para %s: %s", user.email, we)
         except Exception as e:
             logger.warning("Proativo falhou para %s: %s", user.email, e)
             db.rollback()

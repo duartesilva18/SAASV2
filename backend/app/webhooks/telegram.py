@@ -2896,6 +2896,27 @@ def _chunk_text_for_telegram(text: str, max_len: int = TELEGRAM_MAX_MESSAGE_LENG
     return chunks
 
 
+def send_telegram_photo(chat_id, image_bytes: bytes, caption: str = "") -> bool:
+    """Envia uma imagem (PNG em bytes) via sendPhoto. Devolve True em sucesso."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        logger.warning("TELEGRAM_BOT_TOKEN não configurado")
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendPhoto"
+        data = {"chat_id": str(chat_id)}
+        if caption:
+            data["caption"] = caption[:1024]
+            data["parse_mode"] = "HTML"
+        resp = requests.post(url, data=data, files={"photo": ("wrapped.png", image_bytes, "image/png")}, timeout=30)
+        if resp.status_code != 200:
+            logger.warning("sendPhoto falhou (%s): %s", resp.status_code, resp.text[:200])
+            return False
+        return True
+    except Exception as e:
+        logger.warning("sendPhoto erro: %s", e)
+        return False
+
+
 def send_telegram_msg(chat_id: int, text: str, reply_markup: Optional[Dict] = None, pin_message: bool = False):
     """Envia mensagem para o Telegram. Mensagens longas são divididas em várias (limite 4096 carateres)."""
     if not settings.TELEGRAM_BOT_TOKEN:
