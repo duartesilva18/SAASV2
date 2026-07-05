@@ -102,6 +102,8 @@ export const fr = {
           }
       },
       shared: {
+        wsPersonal: "Personnel",
+        wsShared: "Partagé",
         planBadge: "Plan Partagé",
         addTransaction: "Ajouter une transaction",
         title: "Partagé",

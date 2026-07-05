@@ -132,12 +132,33 @@ async def get_sharing_state(
                 'link': _invite_link(inv.code),
                 'expires_at': inv.expires_at.isoformat() if inv.expires_at else None,
             }
+    # Seletor (v2): workspaces a que o utilizador tem acesso (próprio + partilhado onde é membro)
+    own_ws = db.query(models.Workspace).filter(
+        models.Workspace.owner_id == current_user.id
+    ).order_by(models.Workspace.created_at).first()
+    membership = db.query(models.WorkspaceMember).filter(
+        models.WorkspaceMember.user_id == current_user.id
+    ).first()
+    workspaces = []
+    if own_ws:
+        workspaces.append({'id': str(own_ws.id), 'name': own_ws.name, 'kind': 'own',
+                           'active': own_ws.id == workspace.id})
+    if membership:
+        shared_ws = db.query(models.Workspace).filter(models.Workspace.id == membership.workspace_id).first()
+        if shared_ws:
+            owner_u = db.query(models.User).filter(models.User.id == shared_ws.owner_id).first()
+            workspaces.append({'id': str(shared_ws.id), 'name': shared_ws.name, 'kind': 'shared',
+                               'owner_name': (owner_u.full_name or owner_u.email) if owner_u else None,
+                               'active': shared_ws.id == workspace.id})
+
     return {
         'workspace_name': workspace.name,
         'is_owner': is_owner,
         'members': members,
         'member_limit': MAX_WORKSPACE_MEMBERS + 1,  # incluindo o owner
         'invite': invite_payload,
+        'workspaces': workspaces,
+        'can_switch': bool(own_ws and membership and current_user._has_own_pro()),
     }
 
 
@@ -199,6 +220,44 @@ async def join_workspace(
     return result
 
 
+class SwitchRequest(BaseModel):
+    workspace_id: str
+
+
+@router.post('/switch')
+async def switch_workspace(
+    body: SwitchRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Seletor Pessoal/Partilhado: define o workspace ativo do utilizador.
+    Só faz sentido para quem tem acesso a dois workspaces; usar o pessoal exige plano próprio
+    (senão o membro 'fugia' do partilhado para uma app em paywall)."""
+    from uuid import UUID as _UUID
+    try:
+        target_id = _UUID(str(body.workspace_id))
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=422, detail='workspace_id inválido.')
+    target = db.query(models.Workspace).filter(models.Workspace.id == target_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado.')
+    is_own = target.owner_id == current_user.id
+    is_member = db.query(models.WorkspaceMember).filter(
+        models.WorkspaceMember.workspace_id == target.id,
+        models.WorkspaceMember.user_id == current_user.id,
+    ).first() is not None
+    if not (is_own or is_member):
+        raise HTTPException(status_code=403, detail='Não tens acesso a esse workspace.')
+    if is_own and not current_user._has_own_pro():
+        raise HTTPException(status_code=403, detail='O teu workspace pessoal precisa de um plano próprio. No plano partilhado usas o workspace do casal.')
+    current_user.active_workspace_id = target.id
+    db.commit()
+    await log_action(db, action='workspace_switched', user_id=current_user.id,
+                     details=f'Ativo: {target.name} ({"pessoal" if is_own else "partilhado"})', request=request)
+    return {'ok': True, 'active_workspace_id': str(target.id), 'kind': 'own' if is_own else 'shared'}
+
+
 @router.post('/leave')
 async def leave_workspace(
     request: Request,
@@ -211,6 +270,8 @@ async def leave_workspace(
     ).first()
     if not membership:
         raise HTTPException(status_code=400, detail='Não és membro de nenhum workspace partilhado.')
+    if current_user.active_workspace_id == membership.workspace_id:
+        current_user.active_workspace_id = None
     db.delete(membership)
     db.commit()
     # Garantir que volta a ter workspace próprio
@@ -241,6 +302,9 @@ async def remove_member(
     ).first()
     if not membership:
         raise HTTPException(status_code=404, detail='Membro não encontrado.')
+    removed_user = db.query(models.User).filter(models.User.id == membership.user_id).first()
+    if removed_user and removed_user.active_workspace_id == workspace.id:
+        removed_user.active_workspace_id = None
     db.delete(membership)
     db.commit()
     await log_action(db, action='workspace_member_removed', user_id=current_user.id,

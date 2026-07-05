@@ -102,6 +102,8 @@ export const pt = {
           }
       },
       shared: {
+        wsPersonal: "Pessoal",
+        wsShared: "Partilhado",
         planBadge: "Plano Partilhado",
         addTransaction: "Adicionar transação",
         title: "Partilhado",

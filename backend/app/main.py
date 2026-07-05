@@ -66,6 +66,9 @@ def _ensure_runtime_indexes():
         # são criadas pelo create_all; esta coluna em tabela existente não).
         "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by_user_id "
         "UUID NULL REFERENCES users(id) ON DELETE SET NULL",
+        # Modo casal v2: workspace ativo (seletor Pessoal/Partilhado para quem tem plano próprio)
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS active_workspace_id "
+        "UUID NULL REFERENCES workspaces(id) ON DELETE SET NULL",
     ]
     with engine.begin() as conn:
         for stmt in statements:

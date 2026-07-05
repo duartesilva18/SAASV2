@@ -86,6 +86,30 @@ export default function Sidebar({
   const { showNotifications, setShowNotifications, notifications, hasCritical, handleMarkAsRead, handleClearAll } = useNotifications();
   const [mounted, setMounted] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<{ label: string; variant: 'basic' | 'plus' | 'pro' } | null>(null);
+  // Modo casal v2: seletor Pessoal/Partilhado (só para quem tem plano próprio E é membro)
+  const [wsList, setWsList] = useState<Array<{ id: string; name: string; kind: 'own' | 'shared'; owner_name?: string; active: boolean }>>([]);
+  const [canSwitch, setCanSwitch] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    api.get('/workspace/sharing')
+      .then(res => {
+        setCanSwitch(!!res.data?.can_switch);
+        setWsList(res.data?.workspaces || []);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+  const handleSwitchWorkspace = async (wsId: string) => {
+    if (switching) return;
+    setSwitching(true);
+    try {
+      await api.post('/workspace/sharing/switch', { workspace_id: wsId });
+      window.location.reload();
+    } catch {
+      setSwitching(false);
+    }
+  };
   const router = useRouter();
 
   useEffect(() => {
@@ -209,6 +233,26 @@ export default function Sidebar({
           </>
         )}
       </div>
+
+      {canSwitch && wsList.length >= 2 && (!isCollapsed || isMobileOpen) && (
+        <div className="px-4 pt-3">
+          <div className="flex rounded-xl bg-slate-950/60 border border-slate-700/60 p-1 gap-1">
+            {wsList.map(w => (
+              <button
+                key={w.id}
+                onClick={() => !w.active && handleSwitchWorkspace(w.id)}
+                disabled={switching}
+                title={w.kind === 'shared' && w.owner_name ? `Partilhado com ${w.owner_name}` : undefined}
+                className={`flex-1 min-h-[32px] rounded-lg text-[9px] xl:text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60 ${
+                  w.active ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {w.kind === 'own' ? ((t.dashboard as any).shared?.wsPersonal ?? 'Pessoal') : ((t.dashboard as any).shared?.wsShared ?? 'Partilhado')}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 px-4 pt-4 space-y-1 overflow-y-auto no-scrollbar">
         {mainMenu.map((item: any) => {

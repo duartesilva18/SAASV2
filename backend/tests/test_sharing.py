@@ -201,3 +201,52 @@ def test_stranger_workspace_isolated(db_session, owner, partner, stranger):
     db_session.commit()
     # o resolver do stranger nunca aponta para o workspace do casal
     assert resolve_user_workspace(db_session, s).id == sws.id
+
+
+# ── Seletor de workspace (v2) ───────────────────────────────────────────────
+
+def test_active_workspace_overrides_membership(db_session, owner, partner):
+    """Pagante que se junta pode voltar ao workspace PESSOAL via active_workspace_id."""
+    o, ows = owner
+    p, pws = partner
+    p.subscription_status = 'active'  # tem plano próprio
+    db_session.add(models.WorkspaceMember(workspace_id=ows.id, user_id=p.id))
+    db_session.commit()
+    # por omissão: partilhado
+    assert resolve_user_workspace(db_session, p).id == ows.id
+    # escolhe o pessoal
+    p.active_workspace_id = pws.id
+    db_session.commit()
+    assert resolve_user_workspace(db_session, p).id == pws.id
+    # escolhe o partilhado outra vez
+    p.active_workspace_id = ows.id
+    db_session.commit()
+    assert resolve_user_workspace(db_session, p).id == ows.id
+
+
+def test_active_workspace_ignored_if_no_access(db_session, owner, partner, stranger):
+    """active_workspace_id a apontar para um workspace alheio é ignorado (sem fuga de dados)."""
+    o, ows = owner
+    p, pws = partner
+    s_, sws = stranger
+    p.active_workspace_id = sws.id  # workspace de um estranho
+    db_session.commit()
+    assert resolve_user_workspace(db_session, p).id == pws.id  # cai na regra normal
+
+
+def test_leave_clears_active_workspace(db_session, owner, partner):
+    from app.routes.sharing import apply_workspace_invite
+    o, ows = owner
+    p, pws = partner
+    _make_invite(db_session, ows, code='ATIVOTESTE')
+    apply_workspace_invite(db_session, p, 'ATIVOTESTE')
+    p.active_workspace_id = ows.id
+    db_session.commit()
+    # leave manual (replica a lógica do endpoint)
+    m = db_session.query(models.WorkspaceMember).filter_by(user_id=p.id).first()
+    if p.active_workspace_id == m.workspace_id:
+        p.active_workspace_id = None
+    db_session.delete(m)
+    db_session.commit()
+    assert p.active_workspace_id is None
+    assert resolve_user_workspace(db_session, p).id == pws.id

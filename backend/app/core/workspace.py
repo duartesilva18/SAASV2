@@ -22,6 +22,26 @@ def resolve_user_workspace(db, user):
     membership = db.query(models.WorkspaceMember).filter(
         models.WorkspaceMember.user_id == user_id
     ).first()
+    # Seletor (v2): se o utilizador escolheu um workspace ativo e ainda tem acesso a ele
+    # (é dono OU é o partilhado onde é membro), respeitar a escolha.
+    active_id = None
+    if hasattr(user, 'active_workspace_id'):
+        active_id = user.active_workspace_id
+    else:
+        u = db.query(models.User).filter(models.User.id == user_id).first()
+        active_id = u.active_workspace_id if u else None
+    if active_id:
+        allowed = (membership and membership.workspace_id == active_id)
+        if not allowed:
+            own = db.query(models.Workspace).filter(
+                models.Workspace.id == active_id,
+                models.Workspace.owner_id == user_id,
+            ).first()
+            allowed = own is not None
+        if allowed:
+            ws = db.query(models.Workspace).filter(models.Workspace.id == active_id).first()
+            if ws:
+                return ws
     if membership:
         ws = db.query(models.Workspace).filter(models.Workspace.id == membership.workspace_id).first()
         if ws:

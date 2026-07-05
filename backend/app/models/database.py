@@ -47,6 +47,9 @@ class User(Base):
     referrer_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     affiliate_requested_at = Column(DateTime(timezone=True), nullable=True)
     # Campos Stripe Connect
+    # Modo casal v2: workspace ativo escolhido pelo utilizador (seletor Pessoal/Partilhado).
+    # NULL = regra automática (membro→partilhado, senão próprio).
+    active_workspace_id = Column(UUID(as_uuid=True), ForeignKey('workspaces.id', ondelete='SET NULL'), nullable=True)
     stripe_connect_account_id = Column(String(255), unique=True, nullable=True, index=True)
     stripe_connect_onboarding_completed = Column(Boolean, nullable=False, default=False)
     stripe_connect_account_status = Column(String(50), nullable=True, default='pending')
@@ -54,7 +57,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
-    workspaces = relationship('Workspace', back_populates='owner', cascade='all, delete-orphan')
+    workspaces = relationship('Workspace', back_populates='owner', cascade='all, delete-orphan', foreign_keys='Workspace.owner_id')
     referrer = relationship('User', remote_side=[id], foreign_keys=[referrer_id])
     referrals = relationship('AffiliateReferral', foreign_keys='AffiliateReferral.referrer_id', back_populates='referrer')
     commissions = relationship('AffiliateCommission', back_populates='affiliate')
@@ -120,7 +123,7 @@ class Workspace(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     
-    owner = relationship('User', back_populates='workspaces')
+    owner = relationship('User', back_populates='workspaces', foreign_keys=[owner_id])
     categories = relationship('Category', back_populates='workspace', cascade='all, delete-orphan')
     transactions = relationship('Transaction', back_populates='workspace', cascade='all, delete-orphan')
     recurring_transactions = relationship('RecurringTransaction', back_populates='workspace', cascade='all, delete-orphan')
