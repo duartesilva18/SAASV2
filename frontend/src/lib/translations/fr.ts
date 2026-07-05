@@ -239,7 +239,18 @@ export const fr = {
             description: "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic et personnaliser le contenu. Certains sont essentiels au fonctionnement de Finly.",
             acceptAll: "Tout accepter",
             declineAll: "Essentiels uniquement",
-            settings: "Paramètres"
+            settings: "Paramètres",
+    settingsTitle: "Paramètres des cookies",
+    privacyPolicy: "Politique de confidentialité",
+    essentialTitle: "Essentiels",
+    essentialDesc: "Session et sécurité du compte. Sans eux, Finly ne fonctionne pas.",
+    functionalTitle: "Préférences",
+    functionalDesc: "Mémorisent votre langue, devise et thème.",
+    analyticsTitle: "Analytics",
+    analyticsDesc: "Statistiques d'utilisation anonymes. Nous n'utilisons actuellement aucun service — s'il est activé un jour, ce sera uniquement avec votre accord ici.",
+    alwaysOn: "Toujours actifs",
+    savePreferences: "Enregistrer les préférences",
+    manageCookies: "Gérer les cookies"
         },
   resources: {
       badge: "Ressources Premium",

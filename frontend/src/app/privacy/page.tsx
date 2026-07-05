@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Mail, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/lib/LanguageContext';
+import { openCookieSettings } from '@/components/CookieBanner';
 
 export default function PrivacyPage() {
   const { t, language } = useTranslation();
@@ -280,6 +281,13 @@ export default function PrivacyPage() {
               </ul>
               <p className="mt-4">{privacy.sections.cookies.text2}</p>
               <p>{privacy.sections.cookies.text3}</p>
+              <button
+                type="button"
+                onClick={() => openCookieSettings()}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                🍪 {(t as any).cookies?.manageCookies ?? 'Gerir cookies'}
+              </button>
             </div>
           </section>
 

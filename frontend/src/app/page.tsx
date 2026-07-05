@@ -8,6 +8,7 @@ import {
   Sparkles, ArrowRight, ShieldCheck, Zap, Trophy, MessageSquare,
   BarChart3, Globe, Star, CheckCircle2, Phone, Crown, Check, Send, ChevronDown
 } from 'lucide-react';
+import { openCookieSettings } from '@/components/CookieBanner';
 import { useTranslation } from '@/lib/LanguageContext';
 import { LanguageCode, LanguageConfig, FLAG_IMAGE_URLS } from '@/lib/languages';
 import { useUser } from '@/lib/UserContext';
@@ -969,7 +970,15 @@ export default function LandingPage() {
             <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-6">{t.footer.slogan}</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6">
               {t.footer.links.map((link: string, i: number) => {
-                const hrefMap: Record<string, string> = { 'Termos': '/terms', 'Terms': '/terms', 'Privacidade': '/privacy', 'Privacy': '/privacy', 'Cookies': '#' };
+                const hrefMap: Record<string, string> = { 'Termos': '/terms', 'Terms': '/terms', 'Privacidade': '/privacy', 'Privacy': '/privacy' };
+                // "Cookies" reabre o painel de consentimento em vez de ser um link morto
+                if (link === 'Cookies') {
+                  return (
+                    <button key={i} type="button" onClick={() => openCookieSettings()} className="text-slate-400 hover:text-white text-sm font-medium transition-colors cursor-pointer">
+                      {link}
+                    </button>
+                  );
+                }
                 return (
                   <Link key={i} href={hrefMap[link] || '#'} className="text-slate-400 hover:text-white text-sm font-medium transition-colors">
                     {link}

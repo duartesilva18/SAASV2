@@ -558,6 +558,19 @@ export default function SettingsPage() {
                     }`} />
                   </button>
                 </div>
+                <div className="flex items-center justify-between gap-4 py-4 border-t border-slate-800">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white">Cookies</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{(t as any).cookies?.description ?? 'Gerir o consentimento de cookies.'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { import('@/components/CookieBanner').then(m => m.openCookieSettings()); }}
+                    className="shrink-0 min-h-[38px] px-4 rounded-xl border border-slate-700 bg-slate-900 hover:border-slate-500 text-slate-200 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer touch-manipulation"
+                  >
+                    {(t as any).cookies?.manageCookies ?? 'Gerir'}
+                  </button>
+                </div>
                 <div className="flex justify-end pt-5 border-t border-slate-800">
                   {saveButton}
                 </div>
