@@ -288,6 +288,13 @@ export default function PlansPage() {
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
                 Escolhe um plano abaixo para desbloquear todas as funcionalidades. Pagamento imediato e seguro — cancela quando quiseres, sem compromissos.
               </p>
+              <p className="text-sm text-slate-400 mt-2">
+                💑 O teu parceiro já tem Finly?{' '}
+                <a href="/shared" className="text-blue-400 hover:text-blue-300 font-bold underline underline-offset-2">
+                  Insere o código de convite aqui
+                </a>{' '}
+                — não precisas de pagar nada.
+              </p>
             </div>
           </div>
         </motion.div>

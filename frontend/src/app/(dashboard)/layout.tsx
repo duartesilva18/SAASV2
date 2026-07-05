@@ -241,7 +241,9 @@ export default function DashboardLayout({
       }
       // Após onboarding e termos: forçar escolha de plano se sem subscrição
       // (admins e users com pro_granted_until já têm subscription_status='active' via backend)
-      const allowedWithoutSub = ['/plans', '/settings', '/billing'];
+      // /shared incluído: o parceiro convidado (conta free) precisa de lá chegar para
+      // inserir o código — depois de se juntar herda o Pro do dono e o paywall deixa de o apanhar
+      const allowedWithoutSub = ['/plans', '/settings', '/billing', '/shared'];
       const needsSubscription = (
         user.is_onboarded
         && user.terms_accepted
