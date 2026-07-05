@@ -596,14 +596,6 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  const motionOpts = isMobile
-    ? { initial: { opacity: 1 } as const, animate: { opacity: 1 } as const, transition: { duration: 0 } }
-    : { initial: { opacity: 0, y: 20 } as const, animate: { opacity: 1, y: 0 } as const, transition: { duration: 0.5 } };
-
   // Modo casal: cartão-convite dispensável (esconde-se se já houver parceiro ou dispensado)
   const [showPartnerCard, setShowPartnerCard] = useState(false);
   useEffect(() => {
@@ -619,6 +611,14 @@ export default function DashboardPage() {
       .catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  const motionOpts = isMobile
+    ? { initial: { opacity: 1 } as const, animate: { opacity: 1 } as const, transition: { duration: 0 } }
+    : { initial: { opacity: 0, y: 20 } as const, animate: { opacity: 1, y: 0 } as const, transition: { duration: 0.5 } };
 
   return (
     <motion.div
