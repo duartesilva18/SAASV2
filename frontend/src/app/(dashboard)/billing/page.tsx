@@ -139,7 +139,9 @@ export default function BillingPage() {
         setSubData({
           status: userStatus,
           // cancel_at_period_end mantém acesso Pro até ao fim do período — continua a ser o plano Pro
-          plan_name: ['active', 'trialing', 'cancel_at_period_end'].includes(userStatus) ? proPlan : basePlan,
+          plan_name: userRes.data?.is_shared_member
+            ? ((t.dashboard as any).shared?.planBadge ?? 'Plano Partilhado')
+            : ['active', 'trialing', 'cancel_at_period_end'].includes(userStatus) ? proPlan : basePlan,
           current_period_end: subRes?.data?.current_period_end,
           cancel_at_period_end: subRes?.data?.cancel_at_period_end,
         });

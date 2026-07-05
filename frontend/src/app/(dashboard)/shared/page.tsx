@@ -15,6 +15,8 @@ import { useUser } from '@/lib/UserContext';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageLoading from '@/components/PageLoading';
+import dynamic from 'next/dynamic';
+const TransactionAddModal = dynamic(() => import('@/components/TransactionAddModal'), { ssr: false });
 
 interface Member { id: string; name: string; email: string; role: string; joined_at: string | null }
 interface SharingState {
@@ -41,6 +43,8 @@ export default function SharedPage() {
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as 'success' | 'error' });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
 
   const sh = (t.dashboard as any).shared ?? {};
 
@@ -48,6 +52,7 @@ export default function SharedPage() {
     try {
       const res = await api.get('/workspace/sharing');
       setState(res.data);
+      api.get('/categories/').then(c => setCategories(c.data || [])).catch(() => {});
       if ((res.data?.members?.length ?? 0) >= 2) {
         try {
           const st = await api.get('/workspace/sharing/stats');
@@ -161,12 +166,20 @@ export default function SharedPage() {
           </p>
         </div>
         {hasPartner && (
-          <div className="flex items-center shrink-0 -space-x-2">
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-1.5 px-4 min-h-[38px] rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer touch-manipulation"
+            >
+              + {sh.addTransaction ?? 'Adicionar transação'}
+            </button>
+            <div className="flex items-center -space-x-2">
             {state.members.map((m, i) => (
               <div key={m.id} title={m.name} className={`w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-black text-white border-2 border-slate-900 ${i === 0 ? 'bg-gradient-to-br from-blue-600 to-indigo-700' : 'bg-gradient-to-br from-amber-500 to-orange-600'}`}>
                 {initials(m.name)}
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>
@@ -447,6 +460,13 @@ export default function SharedPage() {
         cancelText={sh.cancel ?? 'Cancelar'}
         variant="danger"
         isLoading={actionLoading}
+      />
+
+      <TransactionAddModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => { setShowAddModal(false); fetchAll(); }}
+        categories={categories}
       />
 
       <Toast

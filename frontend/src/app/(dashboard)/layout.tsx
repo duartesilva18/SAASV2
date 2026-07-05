@@ -242,7 +242,7 @@ export default function DashboardLayout({
       // Após onboarding e termos: forçar escolha de plano se sem subscrição
       // (admins e users com pro_granted_until já têm subscription_status='active' via backend)
       // /shared incluído: o parceiro convidado (conta free) precisa de lá chegar para
-      // inserir o código — depois de se juntar herda o Pro do dono e o paywall deixa de o apanhar
+      // inserir o código de convite
       const allowedWithoutSub = ['/plans', '/settings', '/billing', '/shared'];
       const needsSubscription = (
         user.is_onboarded
@@ -251,7 +251,9 @@ export default function DashboardLayout({
         && (!user.subscription_status || user.subscription_status === 'none')
       );
       if (needsSubscription && !allowedWithoutSub.includes(pathname || '')) {
-        router.push('/plans');
+        // Membro de workspace partilhado: a casa dele é o Partilhado (bot + dashboard do
+        // casal); a app completa fica reservada a quem tem plano próprio.
+        router.push(user.is_shared_member ? '/shared' : '/plans');
         return;
       }
 

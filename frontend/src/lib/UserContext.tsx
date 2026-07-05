@@ -5,6 +5,7 @@ import api from './api';
 import { hasProAccess } from './utils';
 
 interface User {
+  is_shared_member?: boolean;  // modo casal: membro com Pro herdado (web restrita a /shared)
   id: string;
   email: string;
   full_name?: string;

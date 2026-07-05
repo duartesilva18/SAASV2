@@ -167,11 +167,15 @@ export default function Sidebar({
     return { show: true, type: 'info' };
   };
 
+  // Membro de workspace partilhado (Pro herdado, sem plano próprio): na web só vê
+  // Partilhado + Definições — a app completa é de quem paga o plano
+  const sharedMemberHrefs = ['/shared', '/settings'];
   const mainMenu = getMainMenu(t)
     .filter((item: any) => !item.adminOnly || user?.is_admin)
+    .filter((item: any) => !user?.is_shared_member || sharedMemberHrefs.includes(item.href))
     .map((item: any) => ({
       ...item,
-      isBlocked: !isPro && !item.adminOnly && !item.isAffiliateSection && !allowedHrefsFree.includes(item.href),
+      isBlocked: !isPro && !item.adminOnly && !item.isAffiliateSection && !allowedHrefsFree.includes(item.href) && !(user?.is_shared_member && sharedMemberHrefs.includes(item.href)),
     }));
 
   const sidebarContent = (
@@ -342,11 +346,13 @@ export default function Sidebar({
                 </div>
                 <div className="flex items-center justify-between gap-2 md:gap-2">
                   <Link
-                    href="/plans"
+                    href={user.is_shared_member ? '/shared' : '/plans'}
                     data-onboarding-target="plans"
                     className={`inline-block text-[8px] xl:text-[9px] font-black uppercase px-1.5 xl:px-2 py-0.5 rounded-full border tracking-widest transition-colors hover:opacity-80 !cursor-pointer ${
                       user.is_admin 
                         ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                        : user.is_shared_member
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                         : isPro 
                           ? (currentPlan?.variant === 'basic' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : currentPlan?.variant === 'plus' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
                           : 'bg-slate-800 text-slate-500 border-white/5'
@@ -355,6 +361,8 @@ export default function Sidebar({
                   >
                     {user.is_admin
                       ? t.dashboard.sidebar.rootAdmin
+                      : user.is_shared_member
+                        ? ((t.dashboard as any).shared?.planBadge ?? 'Plano Partilhado')
                       : isPro
                         ? (user.subscription_status === 'trialing' ? 'Trial 7 dias' : (currentPlan?.label ?? t.dashboard.sidebar.planPro))
                         : t.dashboard.sidebar.planFree

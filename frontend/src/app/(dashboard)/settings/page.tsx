@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [isPro, setIsPro] = useState(false);
+  const [isSharedMember, setIsSharedMember] = useState(false);
   const [memberSince, setMemberSince] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('profile');
   const [formData, setFormData] = useState({
@@ -85,6 +86,7 @@ export default function SettingsPage() {
         setUserEmail(user.email || '');
         setHasPassword(user.has_password !== false);
         setIsPro(['active', 'trialing', 'cancel_at_period_end'].includes(user.subscription_status) || !!user.is_admin);
+        setIsSharedMember(!!user.is_shared_member);
         if (user.created_at) setMemberSince(user.created_at);
 
         // Parse phone number to extract country code if possible
@@ -381,9 +383,9 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-800">
               <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider border ${
-                isPro ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800/60 text-slate-500 border-slate-700/50'
+                isSharedMember ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : isPro ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800/60 text-slate-500 border-slate-700/50'
               }`}>
-                <Sparkles className="w-3 h-3" /> {isPro ? 'Pro' : 'Base'}
+                <Sparkles className="w-3 h-3" /> {isSharedMember ? ((t.dashboard as any).shared?.planBadge ?? 'Plano Partilhado') : isPro ? 'Pro' : 'Base'}
               </span>
               {memberSince && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider bg-slate-800/60 text-slate-500 border border-slate-700/50">

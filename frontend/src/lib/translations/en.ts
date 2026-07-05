@@ -102,6 +102,8 @@ export const en = {
           }
       },
       shared: {
+        planBadge: "Shared Plan",
+        addTransaction: "Add transaction",
         title: "Shared",
         subtitleSolo: "One plan, two people — invite whoever shares life with you.",
         subtitleShared: "Your money, in one place.",

@@ -40,6 +40,9 @@ class UserResponse(UserBase):
     onboarding_spotlight_seen: bool = False
     created_at: datetime
     has_password: bool = True  # True = conta criada com email/password; False = só Google/social
+    # Modo casal: True quando o user é membro de um workspace partilhado com Pro herdado
+    # (sem subscrição própria). A web restringe-o à página Partilhado; o bot funciona normal.
+    is_shared_member: bool = False
 
     @model_validator(mode='after')
     def admin_or_granted_has_pro(self):

@@ -766,10 +766,11 @@ async def verify_email(request: Request, token: str, ref: str = None, db: Sessio
 @router.get('/me', response_model=schemas.UserResponse)
 async def get_me(current_user: models.User = Depends(get_current_user)):
     resp = schemas.UserResponse.from_orm(current_user)
-    # Modo casal: o parceiro herda o Pro do dono do workspace (has_effective_pro cobre a
-    # membership via object_session). Sem isto, o frontend via 'none' e barrava-o no paywall.
-    if resp.subscription_status not in ('active', 'trialing', 'cancel_at_period_end') and current_user.has_effective_pro():
-        object.__setattr__(resp, 'subscription_status', 'active')
+    # Modo casal: o parceiro herda o Pro do dono APENAS para o bot/API — na web fica
+    # restrito à página Partilhado. Por isso NÃO promovemos o status; sinalizamos a
+    # condição e o frontend restringe a navegação.
+    if resp.subscription_status not in ('active', 'trialing', 'cancel_at_period_end')             and not current_user._has_own_pro() and current_user.has_effective_pro():
+        object.__setattr__(resp, 'is_shared_member', True)
     return resp
 
 
