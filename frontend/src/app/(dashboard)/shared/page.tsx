@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, PieChart, Pie, Cell,
 } from 'recharts';
 import api from '@/lib/api';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -150,7 +151,7 @@ export default function SharedPage() {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="text-white max-w-5xl space-y-5 sm:space-y-6 pb-16"
+      className="text-white space-y-5 sm:space-y-6 pb-16"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -186,7 +187,7 @@ export default function SharedPage() {
 
       {!hasPartner ? (
         /* ── ESTADO CONVITE ─────────────────────────────────────────── */
-        <>
+        <div className="max-w-3xl space-y-5 sm:space-y-6">
           <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-6 sm:p-10 shadow-2xl text-center">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-5">
               <Heart className="w-7 h-7 text-blue-400" />
@@ -266,125 +267,193 @@ export default function SharedPage() {
               </button>
             </div>
           </section>
-        </>
+        </div>
       ) : (
         /* ── DASHBOARD DO CASAL ─────────────────────────────────────── */
         <>
-          {/* KPIs do mês por pessoa */}
+          {/* KPIs — 4 cartões estilo dashboard */}
           {stats?.has_partner && (
             <>
-              <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">{sh.thisMonth ?? 'Este mês'}</p>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  {state.members.map((m, i) => {
-                    const p = stats.month.by_person[m.id] ?? { expenses_cents: 0, tx_count: 0 };
-                    return (
-                      <div key={m.id}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PERSON_COLORS[i % 2] }} />
-                          <p className="text-xs font-bold text-slate-400 truncate">{m.id === user?.id ? (sh.you ?? 'Tu') : m.name}</p>
-                        </div>
-                        <p className="text-xl sm:text-2xl font-black text-white tabular-nums">{fmt(p.expenses_cents)}</p>
-                        <p className="text-[10px] text-slate-600 font-semibold">{p.tx_count} {sh.txCount ?? 'transações'}</p>
+              <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">{sh.kpiCoupleSpend ?? 'Gastos do casal'}</p>
+                  <p className="text-xl sm:text-2xl font-black text-white tabular-nums truncate">{fmt(stats.month.total_cents)}</p>
+                  {stats.month.prev_month_total_cents > 0 && (
+                    <p className={`text-[10px] font-semibold mt-0.5 ${stats.month.total_cents <= stats.month.prev_month_total_cents ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {stats.month.total_cents <= stats.month.prev_month_total_cents ? '▼' : '▲'}{' '}
+                      {Math.abs(Math.round((stats.month.total_cents - stats.month.prev_month_total_cents) / stats.month.prev_month_total_cents * 100))}% {sh.vsPrev ?? 'vs mês anterior'}
+                    </p>
+                  )}
+                </motion.div>
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">{sh.kpiIncome ?? 'Receitas do casal'}</p>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums truncate">{fmt(stats.month.income_cents ?? 0)}</p>
+                  <p className="text-[10px] text-slate-600 font-semibold mt-0.5">
+                    {(sh.kpiBalance ?? 'Saldo: {value}').replace('{value}', `${(stats.month.income_cents ?? 0) - stats.month.total_cents >= 0 ? '+' : '−'}${fmt(Math.abs((stats.month.income_cents ?? 0) - stats.month.total_cents))}`)}
+                  </p>
+                </motion.div>
+                {state.members.map((m, i) => {
+                  const p = stats.month.by_person[m.id] ?? { expenses_cents: 0, tx_count: 0 };
+                  const pct = stats.month.total_cents > 0 ? Math.round((p.expenses_cents / stats.month.total_cents) * 100) : 0;
+                  return (
+                    <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PERSON_COLORS[i % 2] }} />
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">{m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0]}</p>
                       </div>
-                    );
-                  })}
-                </div>
-                {/* Barra de contribuição a duas cores */}
-                {stats.month.total_cents > 0 && (
-                  <div className="space-y-1.5">
-                    <div className="h-2.5 rounded-full overflow-hidden flex bg-slate-800">
-                      {state.members.map((m, i) => {
-                        const p = stats.month.by_person[m.id]?.expenses_cents ?? 0;
-                        const pct = (p / stats.month.total_cents) * 100;
-                        return <div key={m.id} style={{ width: `${pct}%`, background: PERSON_COLORS[i % 2] }} />;
-                      })}
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 font-semibold">
-                      <span>{(sh.totalTogether ?? 'Total conjunto: {total}').replace('{total}', fmt(stats.month.total_cents))}</span>
-                      {stats.month.prev_month_total_cents > 0 && (
-                        <span className={stats.month.total_cents <= stats.month.prev_month_total_cents ? 'text-emerald-400' : 'text-red-400'}>
-                          {stats.month.total_cents <= stats.month.prev_month_total_cents ? '▼' : '▲'}{' '}
-                          {Math.abs(Math.round((stats.month.total_cents - stats.month.prev_month_total_cents) / stats.month.prev_month_total_cents * 100))}% {sh.vsPrev ?? 'vs mês anterior'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      <p className="text-xl sm:text-2xl font-black text-white tabular-nums truncate">{fmt(p.expenses_cents)}</p>
+                      <p className="text-[10px] text-slate-600 font-semibold mt-0.5">{pct}% {sh.ofTotal ?? 'do total'} · {p.tx_count} tx</p>
+                    </motion.div>
+                  );
+                })}
               </section>
 
-              {/* Gráfico comparativo 6 meses */}
-              {stats.monthly_series?.length > 0 && (
-                <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3 sm:mb-4">{sh.chartTitle ?? 'Gastos por pessoa — últimos 6 meses'}</h3>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart
-                      data={stats.monthly_series.map((row: any) => ({
-                        month: row.month.slice(5) + '/' + row.month.slice(2, 4),
-                        ...Object.fromEntries(state.members.map(m => [m.id === user?.id ? (sh.you ?? 'Tu') : m.name, Math.round((row.by_person[m.id] ?? 0) / 100)])),
+              {/* Barra de contribuição a duas cores */}
+              {stats.month.total_cents > 0 && (
+                <div className="px-0.5">
+                  <div className="h-2.5 rounded-full overflow-hidden flex bg-slate-800">
+                    {state.members.map((m, i) => {
+                      const p = stats.month.by_person[m.id]?.expenses_cents ?? 0;
+                      return <div key={m.id} style={{ width: `${(p / stats.month.total_cents) * 100}%`, background: PERSON_COLORS[i % 2] }} />;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Linha 1: gasto diário 30 dias (2/3) + pie de categorias (1/3) */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="lg:col-span-2 bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3 sm:mb-4">{sh.dailyChart ?? 'Gastos diários — últimos 30 dias'}</h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart
+                      data={(stats.daily_series ?? []).map((row: any) => ({
+                        d: row.date.slice(8) + '/' + row.date.slice(5, 7),
+                        ...Object.fromEntries(state.members.map(m => [m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0], Math.round((row.by_person[m.id] ?? 0) / 100)])),
                       }))}
                       margin={{ top: 8, right: 8, bottom: 0 }}
                     >
+                      <defs>
+                        {PERSON_COLORS.map((c, i) => (
+                          <linearGradient key={i} id={`personGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={c} stopOpacity={0.35} />
+                            <stop offset="95%" stopColor={c} stopOpacity={0} />
+                          </linearGradient>
+                        ))}
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                      <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={44} />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(148,163,184,0.06)' }}
-                        contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '10px 14px' }}
-                        itemStyle={{ fontSize: 11, fontWeight: 700 }}
-                        formatter={(value: any) => `${value}€`}
-                      />
+                      <XAxis dataKey="d" stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={40} />
+                      <Tooltip cursor={false} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ fontSize: 11, fontWeight: 700 }} formatter={(value: any) => `${value}€`} />
                       {state.members.map((m, i) => (
-                        <Bar key={m.id} dataKey={m.id === user?.id ? (sh.you ?? 'Tu') : m.name} fill={PERSON_COLORS[i % 2]} radius={[6, 6, 0, 0]} maxBarSize={26} />
+                        <Area key={m.id} type="monotone" dataKey={m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0]} stroke={PERSON_COLORS[i % 2]} strokeWidth={2} fill={`url(#personGrad${i % 2})`} />
                       ))}
-                    </BarChart>
+                    </AreaChart>
                   </ResponsiveContainer>
                   <div className="flex items-center justify-center gap-4 mt-2">
                     {state.members.map((m, i) => (
                       <span key={m.id} className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500">
-                        <span className="w-2 h-2 rounded-full" style={{ background: PERSON_COLORS[i % 2] }} /> {m.id === user?.id ? (sh.you ?? 'Tu') : m.name}
+                        <span className="w-2 h-2 rounded-full" style={{ background: PERSON_COLORS[i % 2] }} /> {m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0]}
                       </span>
                     ))}
                   </div>
-                </section>
-              )}
+                </motion.section>
 
-              {/* Top categorias por pessoa */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {state.members.map((m, i) => {
-                  const tops = stats.top_categories_by_person?.[m.id] ?? [];
-                  const maxV = tops[0]?.total_cents ?? 1;
-                  return (
-                    <section key={m.id} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-white mb-3 flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: PERSON_COLORS[i % 2] }} />
-                        {(sh.whereSpends ?? 'Onde {name} gasta').replace('{name}', m.id === user?.id ? (sh.youLower ?? 'tu gastas — Tu') : m.name)}
-                      </h3>
-                      {tops.length === 0 ? (
-                        <p className="text-xs text-slate-600 italic py-4">{sh.noSpendYet ?? 'Sem gastos este mês.'}</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {tops.map((c: any, j: number) => (
-                            <div key={j}>
-                              <div className="flex justify-between text-[11px] font-bold mb-1">
-                                <span className="text-slate-300 truncate">{c.category}</span>
-                                <span className="text-white tabular-nums shrink-0">{fmt(c.total_cents)}</span>
-                              </div>
-                              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${Math.max((c.total_cents / maxV) * 100, 6)}%`, background: PERSON_COLORS[i % 2] }} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
+                <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5 flex flex-col">
+                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-2">{sh.pieChart ?? 'Onde vai o dinheiro'}</h3>
+                  {(stats.category_distribution ?? []).length === 0 ? (
+                    <p className="text-xs text-slate-600 italic py-8 text-center">{sh.noSpendYet ?? 'Sem gastos este mês.'}</p>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie data={stats.category_distribution.map((c: any) => ({ name: c.category, value: Math.round(c.total_cents / 100) }))}
+                               dataKey="value" nameKey="name" innerRadius={48} outerRadius={78} paddingAngle={3} strokeWidth={0}>
+                            {stats.category_distribution.map((c: any, i: number) => (
+                              <Cell key={i} fill={c.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '8px 12px' }} itemStyle={{ fontSize: 11, fontWeight: 700 }} formatter={(value: any) => `${value}€`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-1.5 mt-2 overflow-y-auto custom-scrollbar max-h-[120px]">
+                        {stats.category_distribution.map((c: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+                            <span className="flex items-center gap-1.5 font-bold text-slate-400 truncate">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} /> {c.category}
+                            </span>
+                            <span className="font-black text-white tabular-nums shrink-0">{fmt(c.total_cents)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </motion.section>
               </div>
 
-              {/* Últimas transações conjuntas */}
+              {/* Linha 2: 6 meses por pessoa + top categorias por pessoa */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {stats.monthly_series?.length > 0 && (
+                  <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3 sm:mb-4">{sh.chartTitle ?? 'Gastos por pessoa — últimos 6 meses'}</h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart
+                        data={stats.monthly_series.map((row: any) => ({
+                          month: row.month.slice(5) + '/' + row.month.slice(2, 4),
+                          ...Object.fromEntries(state.members.map(m => [m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0], Math.round((row.by_person[m.id] ?? 0) / 100)])),
+                        }))}
+                        margin={{ top: 8, right: 8, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                        <XAxis dataKey="month" stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis stroke="#475569" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={(v) => `${v}€`} axisLine={false} tickLine={false} width={44} />
+                        <Tooltip cursor={{ fill: 'rgba(148,163,184,0.06)' }} contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', border: '1px solid rgba(71,85,105,0.4)', borderRadius: '14px', color: '#f1f5f9', padding: '10px 14px' }} itemStyle={{ fontSize: 11, fontWeight: 700 }} formatter={(value: any) => `${value}€`} />
+                        {state.members.map((m, i) => (
+                          <Bar key={m.id} dataKey={m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0]} fill={PERSON_COLORS[i % 2]} radius={[6, 6, 0, 0]} maxBarSize={26} />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </motion.section>
+                )}
+
+                <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
+                  <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-4">{sh.topsTitle ?? 'Top categorias por pessoa'}</h3>
+                  <div className="grid grid-cols-2 gap-5">
+                    {state.members.map((m, i) => {
+                      const tops = stats.top_categories_by_person?.[m.id] ?? [];
+                      const maxV = tops[0]?.total_cents ?? 1;
+                      return (
+                        <div key={m.id}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ background: PERSON_COLORS[i % 2] }} />
+                            {m.id === user?.id ? (sh.you ?? 'Tu') : m.name.split(' ')[0]}
+                          </p>
+                          {tops.length === 0 ? (
+                            <p className="text-[10px] text-slate-600 italic">{sh.noSpendYet ?? 'Sem gastos este mês.'}</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {tops.map((c: any, j: number) => (
+                                <div key={j}>
+                                  <div className="flex justify-between text-[10px] font-bold mb-1">
+                                    <span className="text-slate-300 truncate">{c.category}</span>
+                                    <span className="text-white tabular-nums shrink-0 ml-2">{fmt(c.total_cents)}</span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width: `${Math.max((c.total_cents / maxV) * 100, 6)}%`, background: PERSON_COLORS[i % 2] }} />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.section>
+              </div>
+
+              {/* Últimos movimentos */}
               {stats.recent_transactions?.length > 0 && (
-                <section className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-2xl">
+                <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-slate-900 lg:bg-slate-900/70 lg:backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl p-4 sm:p-5">
                   <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white mb-3">{sh.recentTitle ?? 'Últimos movimentos'}</h3>
                   <div className="divide-y divide-slate-800/70">
                     {stats.recent_transactions.map((tx: any) => (
@@ -393,7 +462,7 @@ export default function SharedPage() {
                           <p className="text-xs font-bold text-white truncate">{tx.description || '—'}</p>
                           <p className="text-[10px] text-slate-500">
                             {tx.date ? new Date(tx.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) : ''}
-                            {tx.author_name && <span className="text-slate-600"> · {(sh.byAuthor ?? 'por {name}').replace('{name}', tx.author_name)}</span>}
+                            {tx.author_name && <span className="text-slate-600"> · {(sh.byAuthor ?? 'por {name}').replace('{name}', tx.author_name.split(' ')[0])}</span>}
                           </p>
                         </div>
                         <span className={`text-xs font-black tabular-nums shrink-0 ${tx.amount_cents > 0 ? 'text-emerald-400' : 'text-white'}`}>
@@ -402,7 +471,7 @@ export default function SharedPage() {
                       </div>
                     ))}
                   </div>
-                </section>
+                </motion.section>
               )}
             </>
           )}

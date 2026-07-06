@@ -102,6 +102,13 @@ export const fr = {
           }
       },
       shared: {
+        kpiCoupleSpend: "Dépenses du couple",
+        kpiIncome: "Revenus du couple",
+        kpiBalance: "Solde : {value}",
+        ofTotal: "du total",
+        dailyChart: "Dépenses quotidiennes — 30 derniers jours",
+        pieChart: "Où va l’argent",
+        topsTitle: "Top catégories par personne",
         wsPersonal: "Personnel",
         wsShared: "Partagé",
         planBadge: "Plan Partagé",

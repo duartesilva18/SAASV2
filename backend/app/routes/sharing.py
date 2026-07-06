@@ -392,13 +392,57 @@ async def get_sharing_stats(
         if len(lst) < 3:
             lst.append({'category': cat_name, 'total_cents': int(total)})
 
+    # Receitas do mês (conjunto)
+    month_income = db.query(func.coalesce(func.sum(models.Transaction.amount_cents), 0)).filter(
+        models.Transaction.workspace_id == workspace.id,
+        models.Transaction.amount_cents > 0,
+        func.abs(models.Transaction.amount_cents) != 1,
+        models.Transaction.transaction_date >= month_first,
+        models.Transaction.transaction_date <= today,
+    ).scalar() or 0
+
+    # Série diária dos últimos 30 dias por pessoa (para o gráfico de área/linhas)
+    thirty_ago = today - timedelta(days=29)
+    daily_rows = db.query(
+        models.Transaction.transaction_date,
+        author_expr.label('author'),
+        func.coalesce(func.sum(func.abs(models.Transaction.amount_cents)), 0),
+    ).filter(*base_filters,
+             models.Transaction.transaction_date >= thirty_ago,
+             models.Transaction.transaction_date <= today,
+    ).group_by(models.Transaction.transaction_date, 'author').order_by(models.Transaction.transaction_date).all()
+    daily_map: dict = {}
+    for dt_, author, total in daily_rows:
+        daily_map.setdefault(dt_.isoformat(), {})[str(author)] = int(total)
+    daily_series = [
+        {'date': (thirty_ago + timedelta(days=i)).isoformat(),
+         'by_person': daily_map.get((thirty_ago + timedelta(days=i)).isoformat(), {})}
+        for i in range((today - thirty_ago).days + 1)
+    ]
+
+    # Distribuição por categoria do mês (conjunto, com cor da categoria — para o pie)
+    dist_rows = db.query(
+        models.Category.name,
+        models.Category.color_hex,
+        func.coalesce(func.sum(func.abs(models.Transaction.amount_cents)), 0).label('total'),
+    ).join(models.Category, models.Transaction.category_id == models.Category.id).filter(
+        *base_filters,
+        models.Transaction.transaction_date >= month_first,
+        models.Category.vault_type == 'none',
+    ).group_by(models.Category.name, models.Category.color_hex).order_by(
+        func.sum(func.abs(models.Transaction.amount_cents)).desc()
+    ).limit(8).all()
+    category_distribution = [
+        {'category': n, 'color': c or '#3b82f6', 'total_cents': int(t)} for n, c, t in dist_rows
+    ]
+
     # Últimas transações com autor
     recent = db.query(models.Transaction, models.User.full_name, models.User.email).outerjoin(
         models.User, models.Transaction.created_by_user_id == models.User.id
     ).filter(
         models.Transaction.workspace_id == workspace.id,
         func.abs(models.Transaction.amount_cents) != 1,
-    ).order_by(models.Transaction.created_at.desc()).limit(8).all()
+    ).order_by(models.Transaction.created_at.desc()).limit(10).all()
     owner_row = next((m for m in members if m['role'] == 'owner'), None)
     recent_payload = []
     for tx, author_name, author_email in recent:
@@ -418,7 +462,10 @@ async def get_sharing_stats(
             'by_person': month_by_person,
             'total_cents': sum(v['expenses_cents'] for v in month_by_person.values()),
             'prev_month_total_cents': int(prev_total),
+            'income_cents': int(month_income),
         },
+        'daily_series': daily_series,
+        'category_distribution': category_distribution,
         'monthly_series': monthly_series,
         'top_categories_by_person': top_by_person,
         'recent_transactions': recent_payload,
