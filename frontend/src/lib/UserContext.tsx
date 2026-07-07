@@ -84,6 +84,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
+      // Identificação para analytics (PostHog)
+      if (typeof window !== 'undefined' && res.data?.id) {
+        window.dispatchEvent(new CustomEvent('finly:identify', {
+          detail: { id: res.data.id, props: { email: res.data.email, pro: res.data.subscription_status === 'active' } }
+        }));
+      }
       // Modo casal: aplicar convite pendente capturado no registo (?winvite=)
       try {
         const code = (localStorage.getItem('finly_winvite') || '').trim();

@@ -336,11 +336,29 @@ COPILOT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_transaction",
+            "description": "Cria uma transação de despesa/receita. Usa quando o utilizador quer registar um gasto ou receita, ex.: 'adiciona 15€ café'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "amount_eur": {"type": "number", "description": "Valor absoluto em euros (positivo para receita, registar como negativo para despesa)"},
+                    "category_name": {"type": "string", "description": "Nome da categoria, ex.: 'Alimentação', 'Transporte'"},
+                    "description": {"type": "string", "description": "Descrição breve, ex.: 'Café', 'Continente'"},
+                    "is_expense": {"type": "boolean", "description": "true=despesa (negativo), false=receita (positivo)"},
+                    "transaction_date": {"type": "string", "description": "Data YYYY-MM-DD (opcional; por omissão hoje)"},
+                },
+                "required": ["amount_eur", "category_name", "description", "is_expense"],
+            },
+        },
+    },
 ]
 
 COPILOT_ACTIONS_PROMPT = (
     "\n\nAÇÕES DISPONÍVEIS: além de responder, podes EXECUTAR ações com as ferramentas fornecidas "
-    "(criar metas de poupança, definir limites de orçamento por categoria, consultar gastos por categoria/período). "
+    "(registar transações, criar metas de poupança, definir limites de orçamento, consultar gastos). "
     "Usa-as quando o pedido for claro. Depois de executares, confirma ao utilizador em 1-2 frases o que foi feito, "
     "com os valores exatos. Nunca inventes resultados: usa apenas o que a ferramenta devolver."
 )
@@ -439,6 +457,44 @@ def _execute_copilot_tool(name: str, args: dict, user_id, workspace_id) -> dict:
                 "ok": True, "period": period, "from": start.isoformat(), "to": end.isoformat(),
                 "category": cat.name if cat else "todas",
                 "total_eur": round(int(total_cents or 0) / 100, 2), "transactions": int(count or 0),
+            }
+
+        if name == 'create_transaction':
+            amount = float(args.get('amount_eur') or 0)
+            is_expense = args.get('is_expense', True)
+            cat_name = (args.get('category_name') or '').strip()
+            desc = (args.get('description') or '').strip()[:100]
+
+            if not cat_name or not desc or amount <= 0 or amount > 1_000_000:
+                return {"ok": False, "error": "dados da transação inválidos"}
+
+            cat = _match_category(_db, workspace_id, cat_name)
+            if not cat:
+                available = [c.name for c in _db.query(models.Category).filter(
+                    models.Category.workspace_id == workspace_id).all()]
+                return {"ok": False, "error": "categoria não encontrada", "categorias": available[:15]}
+
+            try:
+                tx_date = _date.fromisoformat(str(args.get('transaction_date'))) if args.get('transaction_date') else _date.today()
+            except ValueError:
+                tx_date = _date.today()
+
+            amount_cents = int(round(amount * 100))
+            if is_expense:
+                amount_cents = -amount_cents
+
+            tx = models.Transaction(
+                workspace_id=workspace_id, category_id=cat.id, amount_cents=amount_cents,
+                description=desc, transaction_date=tx_date, created_by_user_id=user_id,
+            )
+            _db.add(tx)
+            _db.commit()
+            logger.info("Copilot criou transação %s%.2f€ em '%s' para user %s",
+                       "-" if is_expense else "+", amount, cat.name, user_id)
+            return {
+                "ok": True, "type": "expense" if is_expense else "income",
+                "amount_eur": amount, "category": cat.name, "description": desc,
+                "transaction_date": tx_date.isoformat(),
             }
 
         return {"ok": False, "error": f"ferramenta desconhecida: {name}"}

@@ -204,6 +204,8 @@ export default function ChatPanel() {
   const aiAbortRef = useRef<AbortController | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const aiScrollableRef = useRef<HTMLDivElement>(null);
+
   // Load messages from DB on mount
   useEffect(() => {
     if (!isPro) return;
@@ -222,7 +224,13 @@ export default function ChatPanel() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [aiMessages, isPro, aiStreaming]);
 
-  useEffect(() => { aiEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [aiMessages]);
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (aiScrollableRef.current) {
+        aiScrollableRef.current.scrollTop = aiScrollableRef.current.scrollHeight;
+      }
+    });
+  }, [aiMessages]);
   useEffect(() => {
     if (!isPro) return;
     api.get('/assistant/suggestions').then(r => setSuggestions(r.data?.suggestions || [])).catch(() => {});
@@ -312,10 +320,16 @@ export default function ChatPanel() {
   const [supportSending, setSupportSending] = useState(false);
   const [supportConvoId, setSupportConvoId] = useState<string | null>(null);
   const [supportLoading, setSupportLoading] = useState(false);
-  const supportEndRef = useRef<HTMLDivElement>(null);
+  const supportScrollableRef = useRef<HTMLDivElement>(null);
   const supportLoaded = useRef(false);
 
-  useEffect(() => { supportEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [supportMessages]);
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (supportScrollableRef.current) {
+        supportScrollableRef.current.scrollTop = supportScrollableRef.current.scrollHeight;
+      }
+    });
+  }, [supportMessages]);
 
   const loadSupportChat = useCallback(async (showSpinner = false) => {
     if (!user) return;
@@ -563,7 +577,7 @@ export default function ChatPanel() {
                     isStreaming={aiStreaming}
                     suggestions={suggestions}
                     sendMessage={sendAIMessage}
-                    endRef={aiEndRef}
+                    scrollableRef={aiScrollableRef}
                     t={at}
                     isPro={isPro}
                     onShowPaywall={() => { setIsOpen(false); router.push('/plans'); }}
@@ -579,7 +593,7 @@ export default function ChatPanel() {
                     sending={supportSending}
                     loading={supportLoading}
                     sendMessage={sendSupportMessage}
-                    endRef={supportEndRef}
+                    scrollableRef={supportScrollableRef}
                     t={cp}
                     conversationId={supportConvoId}
                     otherTyping={otherTyping}
@@ -600,7 +614,7 @@ export default function ChatPanel() {
 // ── AI Tab ──
 
 function AITab({
-  messages, input, setInput, isStreaming, suggestions, sendMessage, endRef, t, isPro, onShowPaywall,
+  messages, input, setInput, isStreaming, suggestions, sendMessage, scrollableRef, t, isPro, onShowPaywall,
   retryText, onRetry, isEn,
 }: {
   messages: ChatMsg[];
@@ -609,7 +623,7 @@ function AITab({
   isStreaming: boolean;
   suggestions: string[];
   sendMessage: (text: string) => void;
-  endRef: React.RefObject<HTMLDivElement | null>;
+  scrollableRef: React.RefObject<HTMLDivElement | null>;
   t: any;
   isPro: boolean;
   onShowPaywall: () => void;
@@ -638,7 +652,7 @@ function AITab({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 p-4 min-h-0">
+      <div ref={scrollableRef} className="flex-1 overflow-y-auto no-scrollbar space-y-3 p-4 min-h-0">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-5 py-6">
             <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-800/60 border border-slate-700/40 p-0.5">
@@ -684,7 +698,6 @@ function AITab({
             </button>
           </div>
         )}
-        <div ref={endRef} />
       </div>
       <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="shrink-0 p-3 border-t border-slate-800/40">
         <div className="flex items-end gap-2 bg-slate-800/30 border border-slate-700/50 rounded-xl p-1.5 focus-within:border-blue-500/30 transition-all">
@@ -762,7 +775,7 @@ const AIBubble = memo(function AIBubble({ msg, isLast, isStreaming }: { msg: Cha
 // ── Support Tab ──
 
 function SupportTab({
-  messages, input, setInput, sending, loading, sendMessage, endRef, t, conversationId, otherTyping, onTyping, isEn,
+  messages, input, setInput, sending, loading, sendMessage, scrollableRef, t, conversationId, otherTyping, onTyping, isEn,
 }: {
   messages: SupportMsg[];
   input: string;
@@ -770,7 +783,7 @@ function SupportTab({
   sending: boolean;
   loading: boolean;
   sendMessage: (imageFile?: File) => void;
-  endRef: React.RefObject<HTMLDivElement | null>;
+  scrollableRef: React.RefObject<HTMLDivElement | null>;
   t: any;
   conversationId: string | null;
   otherTyping?: boolean;
@@ -788,7 +801,7 @@ function SupportTab({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 p-4 min-h-0">
+      <div ref={scrollableRef} className="flex-1 overflow-y-auto no-scrollbar space-y-2 p-4 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 size={24} className="animate-spin text-slate-500" />
@@ -865,7 +878,6 @@ function SupportTab({
             </div>
           </div>
         )}
-        <div ref={endRef} />
       </div>
       <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="shrink-0 p-3 border-t border-slate-800/40">
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageSelect} className="hidden" />

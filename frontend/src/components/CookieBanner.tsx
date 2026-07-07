@@ -59,6 +59,8 @@ export default function CookieBanner() {
     localStorage.setItem('cookie-consent-date', new Date().toISOString());
     setIsVisible(false);
     setShowSettings(false);
+    // Notificar AnalyticsLoader sobre mudança de consentimento
+    window.dispatchEvent(new CustomEvent('finly:consent-changed', { detail: { consent } }));
   }, []);
 
   const handleAcceptAll = () => persist('all');

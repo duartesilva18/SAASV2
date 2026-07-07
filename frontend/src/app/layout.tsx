@@ -7,6 +7,7 @@ import { InstallPromptProvider } from "@/lib/InstallPromptContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/CookieBanner";
+import AnalyticsLoader from "@/components/AnalyticsLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -179,6 +180,7 @@ export default function RootLayout({
             <InstallPromptProvider>
               <LanguageProvider>
                 <UserProvider>
+                  <AnalyticsLoader />
                   {children}
                   <CookieBanner />
                 </UserProvider>
