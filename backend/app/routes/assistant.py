@@ -356,10 +356,10 @@ COPILOT_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "amount_eur": {"type": "number", "description": "Valor absoluto em euros (positivo para receita, registar como negativo para despesa)"},
+                    "amount_eur": {"type": "number", "description": "Valor em euros, SEMPRE positivo (ex.: 220.00). O sinal é determinado por is_expense."},
                     "category_name": {"type": "string", "description": "Nome da categoria, ex.: 'Alimentação', 'Transporte'"},
                     "description": {"type": "string", "description": "Descrição breve, ex.: 'Café', 'Continente'"},
-                    "is_expense": {"type": "boolean", "description": "true=despesa (negativo), false=receita (positivo)"},
+                    "is_expense": {"type": "boolean", "description": "true=despesa, false=receita"},
                     "transaction_date": {"type": "string", "description": "Data YYYY-MM-DD (opcional; por omissão hoje)"},
                 },
                 "required": ["amount_eur", "category_name", "description", "is_expense"],
@@ -472,13 +472,37 @@ def _execute_copilot_tool(name: str, args: dict, user_id, workspace_id) -> dict:
             }
 
         if name == 'create_transaction':
-            amount = float(args.get('amount_eur') or 0)
-            is_expense = args.get('is_expense', True)
-            cat_name = (args.get('category_name') or '').strip()
-            desc = (args.get('description') or '').strip()[:100]
+            # Modelos mais pequenos enviam args imperfeitos ("220,00 €" como string,
+            # is_expense como "true", descrição omitida) — normalizar em vez de rejeitar,
+            # e devolver erros ESPECÍFICOS para o modelo se autocorrigir na ronda seguinte.
+            raw_amount = args.get('amount_eur')
+            if isinstance(raw_amount, str):
+                raw_amount = (raw_amount.replace('€', '').replace('EUR', '')
+                              .replace(' ', '').replace(',', '.'))
+            try:
+                amount = float(raw_amount or 0)
+            except (ValueError, TypeError):
+                logger.warning("create_transaction: amount_eur não numérico: %r", args.get('amount_eur'))
+                return {"ok": False, "error": "amount_eur inválido: envia um número, ex.: 220.00"}
 
-            if not cat_name or not desc or amount <= 0 or amount > 1_000_000:
-                return {"ok": False, "error": "dados da transação inválidos"}
+            is_expense = args.get('is_expense', True)
+            if isinstance(is_expense, str):
+                is_expense = is_expense.strip().lower() not in ('false', '0', 'no', 'nao', 'não')
+
+            cat_name = (args.get('category_name') or '').strip()
+            # Sem descrição → usar o nome da categoria (melhor registar do que falhar)
+            desc = (args.get('description') or '').strip()[:100] or cat_name
+
+            # Se o modelo enviar negativo (intenção óbvia: despesa), aceitar — o sinal
+            # final é sempre decidido por is_expense.
+            amount = abs(amount)
+
+            if not cat_name:
+                return {"ok": False, "error": "falta category_name: indica a categoria da transação"}
+            if amount == 0:
+                return {"ok": False, "error": "amount_eur em falta ou zero: envia o valor em euros, ex.: 220.00"}
+            if amount > 1_000_000:
+                return {"ok": False, "error": "amount_eur demasiado alto: confirma o valor com o utilizador"}
 
             cat_type = 'expense' if is_expense else 'income'
             cat = _match_category(_db, workspace_id, cat_name, cat_type)
