@@ -355,27 +355,31 @@ async def delete_transaction(request: Request, transaction_id: UUID, db: Session
 @limiter.limit('10/hour')
 async def export_csv(
     request: Request,
-    period: str = 'this_month',  # this_month, last_month, this_year, all
+    period: str = 'this_month',
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Exporta transações em CSV. Período: this_month|last_month|this_year|all"""
+    """Exporta transações em CSV profissional com relatório estruturado."""
     from datetime import datetime, timedelta
     today = date.today()
 
     if period == 'this_month':
         start = today.replace(day=1)
         end = today
+        period_label = f'Mês de {today.strftime("%B de %Y")}'
     elif period == 'last_month':
         first_this = today.replace(day=1)
         end = first_this - timedelta(days=1)
         start = end.replace(day=1)
+        period_label = f'Mês de {start.strftime("%B de %Y")}'
     elif period == 'this_year':
         start = today.replace(month=1, day=1)
         end = today
+        period_label = f'Ano de {today.year}'
     else:  # all
         start = date(2000, 1, 1)
         end = today
+        period_label = 'Todo o histórico'
 
     workspace = resolve_user_workspace(db, current_user.id)
     if not workspace:
@@ -387,42 +391,241 @@ async def export_csv(
         models.Transaction.transaction_date <= end,
     ).order_by(models.Transaction.transaction_date.desc()).all()
 
-    # Gerar CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
+    # Calcular totais
+    total_income = sum(tx.amount_cents for tx in transactions if tx.amount_cents > 0)
+    total_expenses = sum(abs(tx.amount_cents) for tx in transactions if tx.amount_cents < 0)
+    balance = total_income - total_expenses
 
-    # Cabeçalho
-    writer.writerow(['Data', 'Descrição', 'Categoria', 'Valor (€)', 'Tipo', 'Criado por'])
-
-    # Linhas
+    # Agrupar por categoria
+    by_category = {}
     for tx in transactions:
         cat_name = db.query(models.Category).filter(models.Category.id == tx.category_id).first()
         cat_name = cat_name.name if cat_name else 'Sem categoria'
+        if cat_name not in by_category:
+            by_category[cat_name] = {'transactions': [], 'total': 0}
+        by_category[cat_name]['transactions'].append(tx)
+        by_category[cat_name]['total'] += abs(tx.amount_cents)
+
+    # Gerar CSV estruturado
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow(['FINLY - EXTRATO DE TRANSAÇÕES'])
+    writer.writerow([])
+    writer.writerow(['Utilizador:', current_user.full_name or current_user.email])
+    writer.writerow(['Período:', period_label])
+    writer.writerow(['Data de export:', today.isoformat()])
+    writer.writerow([])
+
+    # Resumo
+    writer.writerow(['RESUMO FINANCEIRO'])
+    writer.writerow(['Receitas (€)', f'{total_income/100:.2f}'])
+    writer.writerow(['Despesas (€)', f'{total_expenses/100:.2f}'])
+    writer.writerow(['Saldo (€)', f'{balance/100:.2f}'])
+    writer.writerow([])
+
+    # Transações por categoria
+    for category in sorted(by_category.keys()):
+        data = by_category[category]
+        writer.writerow([f'CATEGORIA: {category}'])
+        writer.writerow(['Data', 'Descrição', 'Valor (€)', 'Tipo', 'Criado por'])
+
+        for tx in sorted(data['transactions'], key=lambda t: t.transaction_date, reverse=True):
+            creator = 'Eu'
+            if tx.created_by_user_id and tx.created_by_user_id != current_user.id:
+                creator_user = db.query(models.User).filter(models.User.id == tx.created_by_user_id).first()
+                creator = creator_user.full_name if creator_user else 'Outro'
+
+            amount_eur = abs(tx.amount_cents) / 100
+            tx_type = 'Despesa' if tx.amount_cents < 0 else 'Receita'
+
+            writer.writerow([
+                tx.transaction_date.isoformat(),
+                tx.description,
+                f'{amount_eur:.2f}',
+                tx_type,
+                creator,
+            ])
+
+        writer.writerow(['Subtotal categoria:', f'{data["total"]/100:.2f} €'])
+        writer.writerow([])
+
+    # Footer
+    writer.writerow(['---'])
+    writer.writerow(['Finly - Gestão Financeira Pessoal'])
+    writer.writerow(['www.finlybot.com'])
+
+    content = output.getvalue()
+    output.close()
+
+    return StreamingResponse(
+        iter([content]),
+        media_type='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="finly_extrato_{period}_{today.isoformat()}.csv"'}
+    )
+
+@router.get('/export/pdf')
+@limiter.limit('10/hour')
+async def export_pdf(
+    request: Request,
+    period: str = 'this_month',
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Exporta transações em PDF profissional."""
+    from datetime import datetime, timedelta
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+    today = date.today()
+
+    if period == 'this_month':
+        start = today.replace(day=1)
+        end = today
+        period_label = f'Mês de {today.strftime("%B de %Y")}'
+    elif period == 'last_month':
+        first_this = today.replace(day=1)
+        end = first_this - timedelta(days=1)
+        start = end.replace(day=1)
+        period_label = f'Mês de {start.strftime("%B de %Y")}'
+    elif period == 'this_year':
+        start = today.replace(month=1, day=1)
+        end = today
+        period_label = f'Ano de {today.year}'
+    else:
+        start = date(2000, 1, 1)
+        end = today
+        period_label = 'Todo o histórico'
+
+    workspace = resolve_user_workspace(db, current_user.id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
+
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.workspace_id == workspace.id,
+        models.Transaction.transaction_date >= start,
+        models.Transaction.transaction_date <= end,
+    ).order_by(models.Transaction.transaction_date.desc()).all()
+
+    total_income = sum(tx.amount_cents for tx in transactions if tx.amount_cents > 0)
+    total_expenses = sum(abs(tx.amount_cents) for tx in transactions if tx.amount_cents < 0)
+    balance = total_income - total_expenses
+
+    # Criar PDF
+    pdf_buffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=15*mm, bottomMargin=15*mm)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1e293b'),
+        spaceAfter=6,
+        alignment=TA_CENTER,
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor=colors.HexColor('#0f172a'),
+        spaceAfter=6,
+        spaceBefore=12,
+    )
+
+    # Título
+    elements.append(Paragraph('FINLY', title_style))
+    elements.append(Paragraph('Extrato de Transações', styles['Heading2']))
+    elements.append(Spacer(1, 8*mm))
+
+    # Info do utilizador
+    info_data = [
+        ['Utilizador:', current_user.full_name or current_user.email],
+        ['Período:', period_label],
+        ['Data de export:', today.isoformat()],
+    ]
+    info_table = Table(info_data, colWidths=[40*mm, 120*mm])
+    info_table.setStyle(TableStyle([
+        ('FONT', (0, 0), (-1, -1), 'Helvetica', 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#475569')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 10*mm))
+
+    # Resumo financeiro
+    elements.append(Paragraph('Resumo Financeiro', heading_style))
+    summary_data = [
+        ['Receitas', f'€ {total_income/100:,.2f}'],
+        ['Despesas', f'€ {total_expenses/100:,.2f}'],
+        ['Saldo', f'€ {balance/100:,.2f}'],
+    ]
+    summary_table = Table(summary_data, colWidths=[80*mm, 80*mm])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0f9ff')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#0f172a')),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 11),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+        ('PADDING', (0, 0), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.HexColor('#f8fafc'), colors.HexColor('#f0f9ff')]),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 10*mm))
+
+    # Transações
+    elements.append(Paragraph('Transações Detalhadas', heading_style))
+    tx_data = [['Data', 'Descrição', 'Categoria', 'Valor (€)', 'Tipo', 'Por']]
+
+    for tx in transactions:
+        cat_name = db.query(models.Category).filter(models.Category.id == tx.category_id).first()
+        cat_name = cat_name.name if cat_name else '—'
 
         creator = 'Eu'
         if tx.created_by_user_id and tx.created_by_user_id != current_user.id:
             creator_user = db.query(models.User).filter(models.User.id == tx.created_by_user_id).first()
-            creator = creator_user.full_name if creator_user else 'Outro'
+            creator = creator_user.full_name[:10] if creator_user else 'Outro'
 
         amount_eur = abs(tx.amount_cents) / 100
-        tx_type = 'Despesa' if tx.amount_cents < 0 else 'Receita'
+        tx_type = 'D' if tx.amount_cents < 0 else 'R'
 
-        writer.writerow([
-            tx.transaction_date.isoformat(),
-            tx.description,
+        tx_data.append([
+            tx.transaction_date.strftime('%d/%m/%Y'),
+            tx.description[:30],
             cat_name,
             f'{amount_eur:.2f}',
             tx_type,
             creator,
         ])
 
-    # Retornar como download
-    content = output.getvalue()
-    output.close()
+    tx_table = Table(tx_data, colWidths=[18*mm, 50*mm, 40*mm, 25*mm, 15*mm, 22*mm])
+    tx_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e293b')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
+        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
+        ('FONT', (0, 1), (-1, -1), 'Helvetica', 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ('PADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(tx_table)
+
+    # Build PDF
+    doc.build(elements)
+    pdf_buffer.seek(0)
 
     return StreamingResponse(
-        iter([content]),
-        media_type='text/csv',
-        headers={'Content-Disposition': f'attachment; filename="finly_export_{period}_{today.isoformat()}.csv"'}
+        iter([pdf_buffer.getvalue()]),
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="finly_extrato_{period}_{today.isoformat()}.pdf"'}
     )
 

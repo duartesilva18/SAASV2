@@ -21,4 +21,5 @@ alembic==1.14.0
 APScheduler==3.10.4
 pypdf>=4.0.0
 openpyxl>=3.1.0
+reportlab>=4.0.0
 

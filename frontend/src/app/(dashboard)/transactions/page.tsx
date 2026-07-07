@@ -10,7 +10,7 @@ import {
   Calendar, Tag, History, Check, X, Wallet,
   ChevronDown, Sparkles, Activity, CreditCard,
   Edit2, Trash2, Info, Filter, SearchX,
-  ArrowUpCircle, ArrowDownCircle, Download
+  ArrowUpCircle, ArrowDownCircle, Download, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -533,6 +533,19 @@ function TransactionsPageContent() {
           <div className="flex flex-col sm:flex-row gap-2 shrink-0">
             <button
               onClick={() => {
+                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/transactions/export/pdf?period=this_month`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.click();
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
+              title="Exportar como PDF (profissional)"
+            >
+              <FileText size={16} className="shrink-0" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+            <button
+              onClick={() => {
                 const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/transactions/export/csv?period=this_month`;
                 const a = document.createElement('a');
                 a.href = url;
@@ -542,7 +555,7 @@ function TransactionsPageContent() {
               title="Exportar como CSV"
             >
               <Download size={16} className="shrink-0" />
-              <span className="hidden sm:inline">Exportar</span>
+              <span className="hidden sm:inline">CSV</span>
             </button>
             <button
               onClick={() => {
