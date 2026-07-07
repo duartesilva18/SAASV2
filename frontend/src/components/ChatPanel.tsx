@@ -200,7 +200,6 @@ export default function ChatPanel() {
   // Texto da última mensagem que falhou (para o botão "tentar novamente").
   const [aiRetryText, setAiRetryText] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const aiEndRef = useRef<HTMLDivElement>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -224,13 +223,17 @@ export default function ChatPanel() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [aiMessages, isPro, aiStreaming]);
 
+  // Scroll para o fundo: em mensagens novas E ao abrir o painel/mudar de tab
+  // (ao abrir, o div acabou de montar e está no topo — as mensagens não mudaram).
+  // Duplo rAF: garante que o layout (framer-motion mount) já assentou antes de medir scrollHeight.
   useEffect(() => {
-    requestAnimationFrame(() => {
+    if (!isOpen || activeTab !== 'ai') return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       if (aiScrollableRef.current) {
         aiScrollableRef.current.scrollTop = aiScrollableRef.current.scrollHeight;
       }
-    });
-  }, [aiMessages]);
+    }));
+  }, [aiMessages, isOpen, activeTab]);
   useEffect(() => {
     if (!isPro) return;
     api.get('/assistant/suggestions').then(r => setSuggestions(r.data?.suggestions || [])).catch(() => {});
@@ -324,12 +327,13 @@ export default function ChatPanel() {
   const supportLoaded = useRef(false);
 
   useEffect(() => {
-    requestAnimationFrame(() => {
+    if (!isOpen || activeTab !== 'support') return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       if (supportScrollableRef.current) {
         supportScrollableRef.current.scrollTop = supportScrollableRef.current.scrollHeight;
       }
-    });
-  }, [supportMessages]);
+    }));
+  }, [supportMessages, isOpen, activeTab]);
 
   const loadSupportChat = useCallback(async (showSpinner = false) => {
     if (!user) return;

@@ -72,7 +72,28 @@ function TransactionsPageContent() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [evolutionPeriod, setEvolutionPeriod] = useState<'weekly' | 'daily'>('weekly');
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const itemsPerPage = 13;
+
+  // Download autenticado: o axios injeta o Bearer token; um <a href> direto não envia auth.
+  const handleExport = async (format: 'csv' | 'pdf') => {
+    setExporting(format);
+    try {
+      const res = await api.get(`/transactions/export/${format}?period=this_month`, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `finly_extrato_${getLocalDateISO()}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      setToastInfo({ message: 'Erro ao exportar. Tenta novamente.', type: 'error', isVisible: true });
+    } finally {
+      setExporting(null);
+    }
+  };
   
   const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -532,29 +553,21 @@ function TransactionsPageContent() {
           </div>
           <div className="flex flex-col sm:flex-row gap-2 shrink-0">
             <button
-              onClick={() => {
-                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/transactions/export/pdf?period=this_month`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.click();
-              }}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
+              onClick={() => handleExport('pdf')}
+              disabled={exporting !== null}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
               title="Exportar como PDF (profissional)"
             >
-              <FileText size={16} className="shrink-0" />
+              <FileText size={16} className={`shrink-0 ${exporting === 'pdf' ? 'animate-pulse' : ''}`} />
               <span className="hidden sm:inline">PDF</span>
             </button>
             <button
-              onClick={() => {
-                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/transactions/export/csv?period=this_month`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.click();
-              }}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
+              onClick={() => handleExport('csv')}
+              disabled={exporting !== null}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
               title="Exportar como CSV"
             >
-              <Download size={16} className="shrink-0" />
+              <Download size={16} className={`shrink-0 ${exporting === 'csv' ? 'animate-pulse' : ''}`} />
               <span className="hidden sm:inline">CSV</span>
             </button>
             <button

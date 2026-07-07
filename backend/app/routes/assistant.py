@@ -364,13 +364,13 @@ COPILOT_ACTIONS_PROMPT = (
 )
 
 
-def _match_category(db, workspace_id, name: str):
-    """Match tolerante de categoria de despesa por nome (exato → substring)."""
+def _match_category(db, workspace_id, name: str, cat_type: str = 'expense'):
+    """Match tolerante de categoria por nome (exato → substring)."""
     if not name:
         return None
     cats = db.query(models.Category).filter(
         models.Category.workspace_id == workspace_id,
-        models.Category.type == 'expense',
+        models.Category.type == cat_type,
     ).all()
     low = name.strip().lower()
     for c in cats:
@@ -468,10 +468,12 @@ def _execute_copilot_tool(name: str, args: dict, user_id, workspace_id) -> dict:
             if not cat_name or not desc or amount <= 0 or amount > 1_000_000:
                 return {"ok": False, "error": "dados da transação inválidos"}
 
-            cat = _match_category(_db, workspace_id, cat_name)
+            cat_type = 'expense' if is_expense else 'income'
+            cat = _match_category(_db, workspace_id, cat_name, cat_type)
             if not cat:
                 available = [c.name for c in _db.query(models.Category).filter(
-                    models.Category.workspace_id == workspace_id).all()]
+                    models.Category.workspace_id == workspace_id,
+                    models.Category.type == cat_type).all()]
                 return {"ok": False, "error": "categoria não encontrada", "categorias": available[:15]}
 
             try:
