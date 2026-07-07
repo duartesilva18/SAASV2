@@ -5,12 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useSubmit } from '@/lib/useSubmit';
 import { getLocalDateISO, isLocalDateAfterToday } from '@/lib/dateLocal';
-import { 
-  Plus, Search, ArrowUpRight, ArrowDownRight, 
-  Calendar, Tag, History, Check, X, Wallet, 
+import {
+  Plus, Search, ArrowUpRight, ArrowDownRight,
+  Calendar, Tag, History, Check, X, Wallet,
   ChevronDown, Sparkles, Activity, CreditCard,
   Edit2, Trash2, Info, Filter, SearchX,
-  ArrowUpCircle, ArrowDownCircle
+  ArrowUpCircle, ArrowDownCircle, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/LanguageContext';
@@ -530,17 +530,32 @@ function TransactionsPageContent() {
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm font-medium italic">{t.dashboard.transactions.activity}</p>
           </div>
-          <button
-            onClick={() => {
-              setEditingTransaction(null);
-              setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: getLocalDateISO() });
-              setShowAddModal(true);
-            }}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
-          >
-            <Plus size={16} className="shrink-0" />
-            <span>{t.dashboard.transactions.addNew}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+            <button
+              onClick={() => {
+                const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/transactions/export/csv?period=this_month`;
+                const a = document.createElement('a');
+                a.href = url;
+                a.click();
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0 w-full sm:w-auto border border-slate-700/60"
+              title="Exportar como CSV"
+            >
+              <Download size={16} className="shrink-0" />
+              <span className="hidden sm:inline">Exportar</span>
+            </button>
+            <button
+              onClick={() => {
+                setEditingTransaction(null);
+                setFormData({ transaction_type: '' as '' | 'income' | 'expense', amount: '', description: '', category_id: '', transaction_date: getLocalDateISO() });
+                setShowAddModal(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-lg shadow-blue-600/20 shrink-0 w-full sm:w-auto"
+            >
+              <Plus size={16} className="shrink-0" />
+              <span>{t.dashboard.transactions.addNew}</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats row */}

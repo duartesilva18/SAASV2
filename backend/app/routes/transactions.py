@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -12,6 +13,8 @@ from .auth import get_current_user, get_current_workspace
 from uuid import UUID
 from datetime import date
 import calendar
+import csv
+import io
 from ..core.workspace import resolve_user_workspace
 
 router = APIRouter(prefix='/transactions', tags=['transactions'])
@@ -344,7 +347,82 @@ async def delete_transaction(request: Request, transaction_id: UUID, db: Session
     
     db.delete(db_transaction)
     db.commit()
-    
+
     await log_action(db, action='delete_transaction', user_id=current_user.id, details=f'id: {transaction_id}', request=request)
     return {'message': 'Transação eliminada com sucesso'}
+
+@router.get('/export/csv')
+@limiter.limit('10/hour')
+async def export_csv(
+    request: Request,
+    period: str = 'this_month',  # this_month, last_month, this_year, all
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Exporta transações em CSV. Período: this_month|last_month|this_year|all"""
+    from datetime import datetime, timedelta
+    today = date.today()
+
+    if period == 'this_month':
+        start = today.replace(day=1)
+        end = today
+    elif period == 'last_month':
+        first_this = today.replace(day=1)
+        end = first_this - timedelta(days=1)
+        start = end.replace(day=1)
+    elif period == 'this_year':
+        start = today.replace(month=1, day=1)
+        end = today
+    else:  # all
+        start = date(2000, 1, 1)
+        end = today
+
+    workspace = resolve_user_workspace(db, current_user.id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail='Workspace não encontrado')
+
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.workspace_id == workspace.id,
+        models.Transaction.transaction_date >= start,
+        models.Transaction.transaction_date <= end,
+    ).order_by(models.Transaction.transaction_date.desc()).all()
+
+    # Gerar CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Cabeçalho
+    writer.writerow(['Data', 'Descrição', 'Categoria', 'Valor (€)', 'Tipo', 'Criado por'])
+
+    # Linhas
+    for tx in transactions:
+        cat_name = db.query(models.Category).filter(models.Category.id == tx.category_id).first()
+        cat_name = cat_name.name if cat_name else 'Sem categoria'
+
+        creator = 'Eu'
+        if tx.created_by_user_id and tx.created_by_user_id != current_user.id:
+            creator_user = db.query(models.User).filter(models.User.id == tx.created_by_user_id).first()
+            creator = creator_user.full_name if creator_user else 'Outro'
+
+        amount_eur = abs(tx.amount_cents) / 100
+        tx_type = 'Despesa' if tx.amount_cents < 0 else 'Receita'
+
+        writer.writerow([
+            tx.transaction_date.isoformat(),
+            tx.description,
+            cat_name,
+            f'{amount_eur:.2f}',
+            tx_type,
+            creator,
+        ])
+
+    # Retornar como download
+    content = output.getvalue()
+    output.close()
+
+    return StreamingResponse(
+        iter([content]),
+        media_type='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="finly_export_{period}_{today.isoformat()}.csv"'}
+    )
 
