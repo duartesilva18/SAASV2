@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = os.getenv('TELEGRAM_BOT_TOKEN', '').strip().strip('"')
     TELEGRAM_WEBHOOK_SECRET: str = os.getenv('TELEGRAM_WEBHOOK_SECRET', '').strip().strip('"')
     OPENAI_API_KEY: str = os.getenv('OPENAI_API_KEY', '').strip().strip('"')
+    # Modelo do copiloto. gpt-4o-mini: ~3-5x mais rápido e ~15x mais barato que gpt-4o;
+    # subir para 'gpt-4o' via env se a qualidade das respostas o justificar.
+    OPENAI_CHAT_MODEL: str = os.getenv('OPENAI_CHAT_MODEL', 'gpt-4o-mini').strip().strip('"')
     
     MAIL_USERNAME: str = os.getenv('MAIL_USERNAME', '').strip()
     MAIL_PASSWORD: str = os.getenv('MAIL_PASSWORD', '').strip()

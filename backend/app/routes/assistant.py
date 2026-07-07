@@ -256,6 +256,18 @@ import time as _time
 _context_cache: dict = {}
 _CONTEXT_TTL_SECONDS = 90
 
+# Cliente OpenAI partilhado: criar um por request perdia o pool de ligações do httpx
+# (um handshake TLS novo por chamada — e as ações com ferramentas fazem 2 chamadas).
+_openai_client = None
+
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        from openai import OpenAI
+        _openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    return _openai_client
+
 
 def _build_financial_context_cached(db: Session, user: models.User, workspace: models.Workspace) -> str:
     key = str(workspace.id)
@@ -533,9 +545,12 @@ async def assistant_chat(
     financial_context = _build_financial_context_cached(db, current_user, workspace)
     system_prompt = _get_system_prompt(current_user, financial_context, lang) + COPILOT_ACTIONS_PROMPT
 
+    # Histórico aparado: 8 mensagens, cada uma até 1500 chars (respostas antigas com
+    # [CHART] gigantes inflavam o prompt → mais tokens de entrada → primeira palavra mais lenta).
     messages = [{"role": "system", "content": system_prompt}]
-    for msg in body.history[-10:]:
-        messages.append({"role": msg.role, "content": msg.content})
+    for msg in body.history[-8:]:
+        content = msg.content if len(msg.content) <= 1500 else msg.content[:1500] + ' […]'
+        messages.append({"role": msg.role, "content": content})
     messages.append({"role": "user", "content": body.message})
 
     # Persistir a mensagem do utilizador imediatamente (fonte de verdade no servidor).
@@ -546,8 +561,7 @@ async def assistant_chat(
         db.rollback()
         logger.warning(f"Falha ao persistir mensagem do utilizador: {e}")
 
-    from openai import OpenAI
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    client = _get_openai_client()
 
     ws_id = workspace.id
 
@@ -558,9 +572,9 @@ async def assistant_chat(
             convo = list(messages)
             for _round in range(3):
                 stream = client.chat.completions.create(
-                    model="gpt-4o",
+                    model=settings.OPENAI_CHAT_MODEL,
                     messages=convo,
-                    max_tokens=1500,
+                    max_tokens=1200,
                     temperature=0.7,
                     stream=True,
                     tools=COPILOT_TOOLS,
