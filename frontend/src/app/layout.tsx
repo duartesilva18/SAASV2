@@ -28,17 +28,17 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.finlybot.com';
 
 export const metadata: Metadata = {
   title: {
-    default: "Finly | Gestão Financeira Pessoal Inteligente",
-    template: "%s | Finly"
+    default: "Finlybot | Gestão Financeira Pessoal no Telegram",
+    template: "%s | Finlybot"
   },
-  description: "Finly é a app de gestão financeira pessoal que te permite registar despesas pelo Telegram em 3 segundos. Finly oferece gráficos inteligentes, categorização automática por IA e insights financeiros. Controla o teu dinheiro com o Finly.",
+  description: "Finlybot é a app de gestão financeira pessoal que te permite registar despesas pelo Telegram em 3 segundos. O Finlybot oferece gráficos inteligentes, categorização automática por IA e insights financeiros. Controla o teu dinheiro com o Finlybot.",
   keywords: [
+    "Finlybot",
+    "Finlybot app",
+    "Finlybot finanças",
+    "Finlybot bot Telegram",
+    "Finlybot Portugal",
     "Finly",
-    "Finly app",
-    "Finly finanças",
-    "Finly gestão financeira",
-    "Finly bot",
-    "Finly Portugal",
     "gestão financeira pessoal",
     "controlo de despesas",
     "app finanças pessoais",
@@ -49,19 +49,19 @@ export const metadata: Metadata = {
     "gestão de dinheiro",
     "app finanças Portugal",
     "expense tracker",
-    "finance app",
-    "Finly expense tracker"
+    "finance app telegram",
+    "Finlybot expense tracker"
   ],
-  authors: [{ name: "Finly" }],
-  creator: "Finly",
-  publisher: "Finly",
+  authors: [{ name: "Finlybot" }],
+  creator: "Finlybot",
+  publisher: "Finlybot",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   metadataBase: new URL(siteUrl),
-  applicationName: "Finly",
+  applicationName: "Finlybot",
   // Favicon em URL absoluta para evitar cache/redirecionamentos; browsers guardam ícone muito tempo
   icons: {
     icon: [
@@ -89,22 +89,22 @@ export const metadata: Metadata = {
     locale: 'pt_PT',
     alternateLocale: ['en_US', 'fr_FR'],
     url: '/',
-    siteName: 'Finly',
-    title: 'Finly | Gestão Financeira Pessoal Inteligente',
-    description: 'Finly é a app de gestão financeira pessoal com Telegram bot. Regista despesas em 3 segundos, gráficos inteligentes e IA. Experimenta o Finly.',
+    siteName: 'Finlybot',
+    title: 'Finlybot | Gestão Financeira Pessoal no Telegram',
+    description: 'Finlybot é a app de gestão financeira pessoal com bot de Telegram. Regista despesas em 3 segundos, gráficos inteligentes e IA. Experimenta o Finlybot.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Finly - App de Gestão Financeira Pessoal',
+        alt: 'Finlybot - App de Gestão Financeira Pessoal no Telegram',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Finly | Gestão Financeira Pessoal Inteligente',
-    description: 'Finly é a app de gestão financeira pessoal com Telegram bot. Regista despesas em 3 segundos e controla o teu dinheiro com o Finly.',
+    title: 'Finlybot | Gestão Financeira Pessoal no Telegram',
+    description: 'Finlybot é a app de gestão financeira pessoal com bot de Telegram. Regista despesas em 3 segundos e controla o teu dinheiro com o Finlybot.',
     images: ['/og-image.png'],
     creator: '@finlypt',
   },
@@ -123,7 +123,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Finly",
+    title: "Finlybot",
   },
 };
 
@@ -143,11 +143,11 @@ export default function RootLayout({
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Finly',
-    alternateName: ['Finly App', 'Finly Bot', 'Finly Finanças', 'finlybot'],
+    name: 'Finlybot',
+    alternateName: ['Finlybot App', 'Finlybot Finanças', 'Finly'],
     url: siteUrl,
     logo: `${siteUrl}/images/logo/logo-semfundo.png`,
-    description: 'Finly é a app de gestão financeira pessoal com bot Telegram. Regista despesas em segundos com o Finly.',
+    description: 'Finlybot é a app de gestão financeira pessoal com bot de Telegram. Regista despesas em segundos com o Finlybot.',
     sameAs: [
       'https://t.me/FinanZenApp_bot',
       ...(process.env.NEXT_PUBLIC_TWITTER_URL ? [process.env.NEXT_PUBLIC_TWITTER_URL] : []),
@@ -157,13 +157,13 @@ export default function RootLayout({
   const websiteJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Finly',
-    alternateName: ['Finly App', 'Finly Bot', 'finlybot'],
+    name: 'Finlybot',
+    alternateName: ['Finlybot App', 'Finlybot Bot', 'Finly'],
     url: siteUrl,
-    description: 'Finly - Gestão financeira pessoal inteligente com bot Telegram.',
+    description: 'Finlybot - Gestão financeira pessoal inteligente com bot de Telegram.',
     publisher: {
       '@type': 'Organization',
-      name: 'Finly',
+      name: 'Finlybot',
     },
   };
 

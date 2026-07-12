@@ -10,7 +10,7 @@ export const fr = {
       title1: "Votre ",
       titleAccent: "sérénité financière",
       title2: " commence par un SMS.",
-      description: "Finly élimine la confusion des comptes. Enregistrez vos dépenses sur Telegram en 3 secondes et détendez-vous.",
+      description: "Finlybot élimine la confusion des comptes. Enregistrez vos dépenses sur Telegram en 3 secondes et détendez-vous.",
       cta: "Essayer gratuitement",
       seeHow: "Voir comment ça marche"
   },
@@ -1711,7 +1711,7 @@ export const fr = {
           recognizesIncome: "Reconnaît des mots comme « salaire », « reçu »",
           openTelegramBot: "Ouvrir le bot Telegram",
           goToDashboard: "Aller au tableau de bord",
-          finlyBot: "Bot Finly",
+          finlyBot: "Finlybot",
           onlineAlwaysReady: "En ligne • Toujours prêt",
           confirm: "✓ Confirmer",
           cancel: "✗ Annuler",

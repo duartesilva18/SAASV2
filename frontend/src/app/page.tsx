@@ -220,15 +220,15 @@ export default function LandingPage() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Finly",
-    "alternateName": ["Finly App", "Finly Bot", "Finly Finanças", "finlybot", "Finly gestão financeira"],
+    "name": "Finlybot",
+    "alternateName": ["Finlybot App", "Finlybot Bot Telegram", "Finlybot Finanças", "Finly", "Finlybot gestão financeira"],
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Telegram",
     "offers": { "@type": "Offer", "price": "9.99", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
     "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "2800" },
     "description": t.hero.description,
     "featureList": t.resources.items.slice(0, 5).map((r: { d: string }) => r.d.split('.')[0]),
-    "author": { "@type": "Organization", "name": "Finly" },
+    "author": { "@type": "Organization", "name": "Finlybot" },
     "url": "https://app.finlybot.com"
   };
 
@@ -268,9 +268,9 @@ export default function LandingPage() {
               href="/"
               className="flex items-center gap-2 shrink-0 min-w-0 rounded-lg py-1 pr-1 -ml-1 active:scale-[0.98] transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 touch-manipulation"
             >
-              <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-8 w-8 sm:h-11 sm:w-11 object-contain shrink-0" draggable={false} />
+              <img src="/images/logo/logo-semfundo.png" alt="Finlybot" className="h-8 w-8 sm:h-11 sm:w-11 object-contain shrink-0" draggable={false} />
               <span className="text-white font-bold tracking-tight text-xl sm:text-3xl truncate" style={{ fontFamily: 'var(--font-brand), sans-serif' }}>
-                Finly
+                Finlybot
               </span>
             </Link>
 
@@ -963,9 +963,9 @@ export default function LandingPage() {
           <div className="max-w-[90rem] mx-auto px-4 sm:px-5 lg:px-8 text-center relative">
             <div className="flex items-center justify-center gap-2 mb-3">
               <motion.div whileHover={{ scale: 1.05 }} className="shrink-0">
-                <img src="/images/logo/logo-semfundo.png" alt="Finly" className="h-9 w-9 sm:h-10 sm:w-10 object-contain" draggable={false} loading="lazy" />
+                <img src="/images/logo/logo-semfundo.png" alt="Finlybot" className="h-9 w-9 sm:h-10 sm:w-10 object-contain" draggable={false} loading="lazy" />
               </motion.div>
-              <span className="text-lg sm:text-xl font-black tracking-tight text-white">Finly</span>
+              <span className="text-lg sm:text-xl font-black tracking-tight text-white">Finlybot</span>
             </div>
             <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest mb-6">{t.footer.slogan}</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6">

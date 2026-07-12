@@ -10,7 +10,7 @@ export const pt = {
       title1: "A sua ",
       titleAccent: "paz financeira",
       title2: " começa com um SMS.",
-      description: "O Finly elimina a confusão das contas. Registe despesas no Telegram em 3 segundos e relaxe.",
+      description: "O Finlybot elimina a confusão das contas. Registe despesas no Telegram em 3 segundos e relaxe.",
       cta: "Experimentar Grátis",
       seeHow: "Ver Como Funciona"
   },
@@ -1784,7 +1784,7 @@ export const pt = {
           recognizesIncome: "Reconhece receitas automaticamente.",
           openTelegramBot: "Abrir Bot Telegram",
           goToDashboard: "Ir para Dashboard",
-          finlyBot: "Finly Bot",
+          finlyBot: "Finlybot",
           onlineAlwaysReady: "Online • Sempre pronto",
           confirm: "✓ Confirmar",
           cancel: "✗ Cancelar",

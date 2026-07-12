@@ -10,7 +10,7 @@ export const en = {
       title1: "Your ",
       titleAccent: "financial peace",
       title2: " starts with a text.",
-      description: "Finly eliminates the confusion of bills. Log expenses on Telegram in 3 seconds and relax.",
+      description: "Finlybot eliminates the confusion of bills. Log expenses on Telegram in 3 seconds and relax.",
       cta: "Try for Free",
       seeHow: "See How It Works"
   },
@@ -1741,7 +1741,7 @@ export const en = {
           recognizesIncome: "Recognizes words like \"salary\", \"received\"",
           openTelegramBot: "Open Telegram Bot",
           goToDashboard: "Go to Dashboard",
-          finlyBot: "Finly Bot",
+          finlyBot: "Finlybot",
           onlineAlwaysReady: "Online • Always ready",
           confirm: "✓ Confirm",
           cancel: "✗ Cancel",
