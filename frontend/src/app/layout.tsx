@@ -79,6 +79,11 @@ export const metadata: Metadata = {
       'fr': '/',
     },
   },
+  // Verificação da Google Search Console sem tocar em código: cola o código
+  // (content do meta tag que a GSC te dá) na env NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? {
+    verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
+  } : {}),
   openGraph: {
     type: 'website',
     locale: 'pt_PT',
